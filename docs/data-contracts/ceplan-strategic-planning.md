@@ -3,13 +3,27 @@
 - Fuente oficial: CEPLAN — Centro Nacional de Planeamiento Estratégico
 - URLs clave:
   - GeoServer: https://geo.ceplan.gob.pe
-  - ObservaPerú: https://observa.ceplan.gob.pe
+  - ObservaPerú: https://observaperu.ceplan.gob.pe (corregido 2026-08-17 — la URL
+    `observa.ceplan.gob.pe` documentada originalmente no resuelve)
   - Pulso SINAPLAN: https://pulso.sinaplan.gob.pe
-  - Aplicativo CEPLAN V.01: https://aplicativo.ceplan.gob.pe
+  - Aplicativo CEPLAN V.01: https://aplicativo.ceplan.gob.pe — **caído/no resuelve**,
+    confirmado en vivo el 2026-08-17
 - Owner del conector: equipo App 05 (CEPLAN Strategic Planning)
 - Confirmado en vivo el 2026-08-17 (investigación de servicios públicos programáticos).
 
-## Estado: PARCIALMENTE CONFIRMADO
+## Estado: PARCIALMENTE CONFIRMADO — granularidad solo agregada, no per-entidad
+
+**Hallazgo clave (2026-08-17, reverse engineering en vivo)**: el único dataset público
+realmente descargable de ObservaPerú (`/explorar-datos` → pestaña "Datos Abiertos" →
+`indicadores_gestion_estrategica_estado_2024.xlsx`) trae los indicadores **agregados por
+nivel de gobierno** (`GN`/`GR`/`MP`/`MD`/`Total`, vía una columna `Filtros` con JSON tipo
+`{"nivelGobierno":"GN"}`), **no por entidad/pliego individual**. El modelo canónico
+per-entidad descrito más abajo (`strategic_objectives.entity_code`,
+`poi_activities.entity_code` cruzando 1:1 con `radar-ejecucion.entities.entity_code`) **no
+es alcanzable con esta fuente** — solo sería posible vía el Aplicativo CEPLAN V.01, que
+está caído. Ver ADR-0003 para la decisión revisada: se ingiere el agregado y el cruce con
+`radar-ejecucion` se hace a nivel de gobierno (GN/GR únicamente — `radar-ejecucion` no
+distingue MP de MD).
 
 CEPLAN **no expone una API REST institucional general y documentada** tipo `api.ceplan.gob.pe/v1/...`, pero sí ofrece tres capas de datos integrables:
 
@@ -26,30 +40,36 @@ Este data contract cubre la capa **estratégica** (PEI/POI/Metas), no la geoespa
 
 ### 1. ObservaPerú — Datasets descargables
 
-**Método de acceso**: Descarga directa de Excel/CSV desde la interfaz web (no API documentada).
+**Método de acceso**: Botón de descarga directa en `/explorar-datos` → pestaña "Datos
+Abiertos" (no requiere formulario ni sesión — confirmado en vivo).
 
-**Ejemplos de indicadores disponibles**:
-- `CUMP01`: Cumplimiento de metas institucionales a nivel de objetivos estratégicos
-- `CUMP02`: Ejecución física del POI
-- `CUMP03`: Ejecución presupuestal de actividades operativas e inversiones
-- `PN03`: Nivel de implementación de políticas nacionales
-- Indicadores fiscales, sociales y económicos
+**Dataset relevante**: `indicadores_gestion_estrategica_estado_2024.xlsx` (el otro
+dataset de esa pestaña, `indicadores_panorama_pais_2024.xlsx`, es macroeconómico —
+PBI/inflación/desempleo — sin relación con presupuesto/planificación institucional).
 
-**Dimensiones disponibles** (según formularios de consulta pública):
-- Nivel de gobierno
-- Sector
-- Pliego
-- Objetivo estratégico institucional
-- Acción estratégica institucional
-- Unidad ejecutora
-- Actividad operativa
-- POI
+**Estructura confirmada** (2 hojas):
+- `Indicadores` (catálogo, 36 filas): `Código`, `Indicador`, `Pilar`, `Dimensión`,
+  `Subdimensión`, `Tipo`, `Unidad`, `Frecuencia`, `Sentido deseable`,
+  `Institución fuente`, `Documento fuente`.
+- `Observaciones` (series temporales, 130 filas): `Código`, `Indicador`, `Dimensión`,
+  `Subdimensión`, `Serie ID`, `Serie`, `Filtros` (JSON, ej. `{"nivelGobierno":"GN"}`),
+  `Periodo`, `Valor`, `Unidad`, `Nota`.
 
-**Formato**: Excel/CSV (requiere reverse engineering de los exports para determinar estructura exacta).
+**Indicadores confirmados**: `CUMP01`-`CUMP04` (cumplimiento OEI, ejecución física POI,
+ejecución presupuestal, presupuesto no ejecutado), `PN01`-`PN07` (políticas nacionales),
+`PLAN01`-`PLAN03` (cobertura PEI/POI/PDC), `INV01`-`INV02` (inversiones sectoriales),
+más `SOC*`/`AMB*`/`ECO*`/`INST*`/`ALRT01` (resultados de desarrollo, sin relación directa
+con ejecución presupuestal por entidad).
+
+**Granularidad real**: todas las observaciones de `CUMP*`/`PLAN*` vienen agregadas por
+`nivelGobierno` (`GN`, `GR`, `MP`, `MD`, `Total`) — no hay fila por pliego/entidad
+individual. Ver nota de "Estado" arriba.
 
 **Cautelas**:
-- No hay API documentada — la ingesta requiere scraping de la interfaz de descarga o inspección de endpoints internos
-- La frecuencia de actualización no está documentada
+- No hay API documentada, pero el botón de descarga sí es un enlace directo estable (no
+  requiere reverse engineering de formularios)
+- La frecuencia de actualización no está documentada (el dataset trae su propio
+  "ACTUALIZADO: 30 may. 2025" en la UI)
 - Puede haber cambios en la estructura de los datasets sin aviso previo
 
 ---
@@ -118,7 +138,13 @@ Ejecución
 
 ## Entidades del modelo canónico
 
-Basado en la estructura de datos inferida del Aplicativo CEPLAN V.01:
+Basado en la estructura de datos inferida del Aplicativo CEPLAN V.01. **`strategic_objectives`,
+`strategic_actions`, `poi_activities` y `physical_targets` quedan sin poblar en el Sprint 1**:
+requieren datos por pliego individual que solo existirían en el Aplicativo CEPLAN V.01, hoy
+caído (ver "Estado" arriba). Las tablas se conservan en las migraciones para cuando esa fuente
+vuelva a estar disponible. Solo `strategic_indicators` se ingiere en este sprint, con un campo
+`nivel_gobierno` adicional (no en el diseño original) para reflejar la granularidad real de
+ObservaPerú.
 
 ### `strategic_objectives`
 - `id`: UUID
@@ -165,7 +191,8 @@ Basado en la estructura de datos inferida del Aplicativo CEPLAN V.01:
 
 ### `strategic_indicators`
 - `id`: UUID
-- `entity_code`: VARCHAR
+- `entity_code`: VARCHAR — no poblado en Sprint 1 (no hay dato per-entidad, ver arriba)
+- `nivel_gobierno`: VARCHAR — agregado en Sprint 1: `GN`/`GR`/`MP`/`MD`/`TOTAL`
 - `indicator_code`: VARCHAR — (ej. CUMP01, CUMP02, PN03)
 - `indicator_name`: TEXT
 - `value`: NUMERIC
@@ -190,17 +217,31 @@ Basado en la estructura de datos inferida del Aplicativo CEPLAN V.01:
 
 ## Cruces con otras apps
 
-### Con `radar-ejecucion`
-- **Cruce por**: `entity_code` (SEC_EJEC)
-- **Propósito**: conectar gasto con objetivos estratégicos
-- **API endpoint**: `GET /api/crossref?entity_code={code}`
-- **Matcher**: exacto (no fuzzy)
+### Con `radar-ejecucion` (Sprint 1, revisado)
+- **Cruce por**: `nivel_gobierno`, no `entity_code` — sin dato per-entidad disponible
+  (ver "Estado" arriba)
+- **Buckets cruzables**: solo `GN` y `GR` — `radar-ejecucion.entities.nivel_gobierno` no
+  distingue `MP` (municipalidad provincial) de `MD` (municipalidad distrital), ambos caen
+  bajo "GOBIERNOS LOCALES" en esa app, así que no hay bucket equivalente exacto. `MP`,
+  `MD` y `Total` se exponen en `GET /api/indicators` como indicadores informativos, sin
+  intento de cruce (mismo criterio que `compras-publicas`: sin match exacto, se omite, no
+  se fuerza)
+- **Propósito**: conectar ejecución presupuestal agregada con indicadores de gestión
+  estratégica (SEG, Execution Efficiency) al nivel de gobierno
+- **API endpoint**: `GET /api/crossref` en `ceplan-estrategico/api`
+- **Matcher**: exacto por bucket (`GN`↔`GOBIERNO NACIONAL`, `GR`↔`GOBIERNOS REGIONALES`)
+- **Caveat confirmado en vivo (2026-08-17)**: los años de referencia de las dos fuentes no
+  coinciden — CEPLAN reporta hasta 2024/2025 (retrospectivo), `radar-ejecucion` solo tiene
+  ingerido el año fiscal 2026 (corriente). El endpoint compara el año más reciente
+  disponible en cada fuente por separado y devuelve ambos (`anioCeplan`,
+  `anioRadarEjecucion`) en vez de forzar coincidencia. Además, la muestra parcial de
+  `radar-ejecucion` para 2026 tiene `pim = 0` en las 968 filas ingeridas (ver su propio
+  TODO de ingesta parcial en `mef-connector.ts`) — por eso `ejecucionPresupuestalRadarEjecucion`
+  y los indicadores derivados (SEG, Execution Efficiency) devuelven `null` hoy: no es un bug
+  del cruce, es que la fuente aguas arriba no trae PIM utilizable en esta muestra.
 
 ### Con `radar-inversiones`
-- **Cruce por**: `entity_code` (SEC_EJEC)
-- **Propósito**: conectar inversiones con objetivos estratégicos
-- **API endpoint**: `GET /api/crossref?entity_code={code}`
-- **Matcher**: exacto
+- Pendiente — no evaluado en Sprint 1, mismo criterio de granularidad aplicaría.
 
 ---
 

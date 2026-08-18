@@ -1,5 +1,17 @@
 # ADR-0003: CEPLAN Estratégico — App standalone y connector ObservaPerú
 
+> **Actualización 2026-08-17 (Sprint 1, reverse engineering en vivo)**: el modelo per-entidad
+> descrito en este ADR (cruce por `entity_code` exacto con `radar-ejecucion`) **no es
+> alcanzable** con los datos públicos de ObservaPerú (`observaperu.ceplan.gob.pe`, URL
+> corregida — la documentada aquí originalmente no resolvía). El único dataset descargable
+> real trae los indicadores agregados por `nivelGobierno` (`GN`/`GR`/`MP`/`MD`/`Total`), no
+> por pliego individual. La fuente que sí tendría ese detalle (Aplicativo CEPLAN V.01) está
+> caída. Decisión: ingestar el agregado tal cual y cruzar con `radar-ejecucion` a nivel de
+> gobierno (solo `GN`/`GR`, ver `docs/data-contracts/ceplan-strategic-planning.md`). Las
+> tablas `strategic_objectives`/`strategic_actions`/`poi_activities`/`physical_targets` se
+> mantienen en las migraciones pero no se pueblan en este sprint. El resto de este documento
+> (arquitectura general, connector, endpoints) sigue vigente salvo por esa granularidad.
+
 ## Contexto
 
 CEPLAN ofrece tres capas de datos integrables (GeoServer, ObservaPerú, Pulso SINAPLAN/Aplicativo CEPLAN V.01), pero no expone una API REST institucional documentada. Para integrar la capa estratégica (PEI/POI/Metas) en Follow the Sol, necesitamos construir una app standalone siguiendo el patrón establecido por las apps existentes (radar-ejecucion, compras-publicas, radar-inversiones, infobras).
