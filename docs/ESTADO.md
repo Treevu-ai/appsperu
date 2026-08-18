@@ -108,6 +108,19 @@ de `radar-ejecucion` para 2026, en `docs/data-contracts/ceplan-strategic-plannin
 - **Plan–Budget Alignment**: conexión entre discurso estratégico y asignación real de recursos
 - **Enriquecimiento territorial**: contexto geoespacial para obras e inversiones
 
+## Fix de datos — PIM=0 en `radar-ejecucion` (2026-08-18)
+
+`budget_execution.pim` estaba en 0 en el 100% de las filas ingeridas: el MEF no puebla
+`MONTO_PIA`/`MONTO_PIM` en las filas de movimiento mensual del CSV (`MES_EJE` 1-7), solo en
+filas separadas `MES_EJE=0` (que a su vez traen `MONTO_DEVENGADO` en 0). Una ingesta de una
+sola ventana de bytes solo capturaba uno de los dos campos. Se implementó
+`ingestMefFullYearForDepartamento` — descarga las 16 secciones (2 niveles de gobierno × 8
+meses) necesarias para LA LIBERTAD, agrega todo en una sola pasada y escribe PIA/PIM/devengado
+coherentes en las mismas filas. Resultado real verificado: Gobiernos Regionales 49.2% de
+avance (S/2,242.1M devengado / S/4,558.8M PIM), Gobiernos Locales 39.9%
+(S/1,092.5M / S/2,738.0M). Detalle completo en
+`docs/data-contracts/mef-presupuesto-ejecucion.md`.
+
 ## Pendientes conocidos (no bloqueantes, para cuando se retome)
 
 1. `ceplan-estrategico`: modelo per-entidad (PEI/POI/metas por pliego) si el Aplicativo
