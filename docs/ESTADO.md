@@ -1,10 +1,11 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-08-16.
+Última actualización: 2026-08-17.
 
-Cuatro apps standalone construidas, probadas y verificadas contra datos reales. Cada una
-sigue el mismo patrón: Postgres propio (Docker Compose), API Express propia, frontend Next.js
-propio, mismo lenguaje visual (`globals.css` compartido por copia, no por paquete).
+Cinco apps standalone construidas, probadas y verificadas contra datos reales (las primeras
+4 desde el inicio, `ceplan-estrategico` desde el Sprint 1 de esta fecha). Cada una sigue el
+mismo patrón: Postgres propio (Docker Compose), API Express propia, frontend Next.js propio,
+mismo lenguaje visual (`globals.css` compartido por copia, no por paquete).
 
 ## Apps
 
@@ -80,7 +81,7 @@ Tras investigación detallada de CEPLAN, se identificaron 2 nuevas apps para int
 
 | App | Dominio | API | Web | Postgres | Estado |
 |---|---|---|---|---|---|
-| `ceplan-estrategico` | Gestión estratégica del Estado (ObservaPerú, agregado por nivel de gobierno) | 4004 | 3004 | 5436 | API Sprint 1 construida y probada con datos reales; web pendiente |
+| `ceplan-estrategico` | Gestión estratégica del Estado (ObservaPerú, agregado por nivel de gobierno) | 4004 | 3004 | 5436 | Construida, probada, verificada |
 | `ceplan-geo` | GeoServer (capas territoriales/infraestructura) | 4005 | 3005 | 5437 | 📋 Planificado |
 
 ### `ceplan-estrategico` — Sprint 1 (2026-08-17)
@@ -89,9 +90,11 @@ Ingesta real desde `https://observaperu.ceplan.gob.pe` (JSON estático, no requi
 ver data contract). El modelo per-entidad planeado originalmente no fue posible con datos
 públicos: se ingieren indicadores agregados por nivel de gobierno (`GN`/`GR`/`MP`/`MD`/`Total`),
 no por pliego. `GET /api/indicators` expone el catálogo completo; `GET /api/crossref` cruza
-con `radar-ejecucion` solo en `GN`/`GR` (único bucket exacto entre las dos fuentes). Detalle
-completo, incluida la limitación de PIM=0 en la muestra de `radar-ejecucion` para 2026, en
-`docs/data-contracts/ceplan-strategic-planning.md`.
+con `radar-ejecucion` (GN/GR únicamente, único bucket exacto entre las dos fuentes). Web:
+página de indicadores (`/`, filtro por nivel de gobierno) y de cruce (`/cruce`), mismo
+lenguaje visual (`globals.css`) que las otras 4 apps. Probado en vivo end-to-end (API + web +
+datos reales de ObservaPerú). Detalle completo, incluida la limitación de PIM=0 en la muestra
+de `radar-ejecucion` para 2026, en `docs/data-contracts/ceplan-strategic-planning.md`.
 
 ### Documentación de planificación
 - Data contracts: `docs/data-contracts/ceplan-strategic-planning.md`, `docs/data-contracts/ceplan-geo.md`
@@ -107,7 +110,10 @@ completo, incluida la limitación de PIM=0 en la muestra de `radar-ejecucion` pa
 
 ## Pendientes conocidos (no bloqueantes, para cuando se retome)
 
-1. Implementación de `ceplan-estrategico` (Sprint 1-2 del roadmap CEPLAN)
+1. `ceplan-estrategico`: modelo per-entidad (PEI/POI/metas por pliego) si el Aplicativo
+   CEPLAN V.01 vuelve a estar disponible — hoy solo hay datos agregados por nivel de
+   gobierno (ver Sprint 1 arriba). `strategic_objectives`/`strategic_actions`/
+   `poi_activities`/`physical_targets` siguen sin poblar.
 2. Implementación de `ceplan-geo` (Sprint 3-4 del roadmap CEPLAN)
 3. El resto del PRD de INFOBRAS (sprints 1-6: MCP tools, resolución de identidad avanzada,
    dashboard consolidado) — quedó fuera de alcance de la rebanada construida hoy.
