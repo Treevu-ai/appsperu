@@ -64,6 +64,34 @@ gasto (específica/subespecífica), no una fila por entidad-año. La normalizaci
 `(SEC_EJEC, FUNCION, ANO_EJE)` antes de insertar en `budget_execution` — insertar filas crudas
 directas produciría múltiples registros por entidad/año en vez de un consolidado.
 
+### Hallazgo crítico sobre `MONTO_PIA`/`MONTO_PIM` (confirmado en vivo 2026-08-18)
+
+**`MONTO_PIA`/`MONTO_PIM` vienen en 0 en las filas de movimiento mensual** (`MES_EJE` 1-7 — el
+año fiscal 2026 solo lleva hasta julio al momento de escribir esto). Solo `MONTO_DEVENGADO` es
+real en esas filas. El presupuesto de apertura/modificado vive en filas **separadas** con
+`MES_EJE = "0"` — ahí `MONTO_PIA`/`MONTO_PIM` son reales pero `MONTO_DEVENGADO` siempre es 0.
+
+Una ingesta parcial de una sola ventana de bytes (como hacía la versión original del conector,
+descargando desde el byte 0) cae en un solo `MES_EJE`, así que solo trae uno de los dos campos
+— nunca ambos para las mismas filas. Esto produjo `budget_execution.pim = 0` en el 100% de las
+filas ingeridas inicialmente, aunque `devengado` fuera real.
+
+**Estructura del archivo** (confirmada escaneando `2026-Gasto-Mensual.csv`, ~6.2 GB, completo):
+agrupa primero por `NIVEL_GOBIERNO_NOMBRE` (Regional → Local → Nacional), luego dentro de cada
+nivel por `MES_EJE` descendente (empieza en el mes corriente, baja hasta 0), y dentro de cada
+mes, por `DEPARTAMENTO_EJECUTORA_NOMBRE` en orden alfabético. Por eso una ingesta correcta y
+completa para un departamento requiere **descargar por separado cada combinación (nivel de
+gobierno, mes)** — 16 secciones para LA LIBERTAD (2 niveles de gobierno con entidades ahí ×
+8 meses incluyendo el 0) — y recién agregar (`SUM`) sobre el conjunto combinado antes de
+escribir, no upsert incremental sección por sección (eso pisaría `devengado` con el de la
+última sección ingerida en vez de sumarlo).
+
+Implementado en `ingestMefFullYearForDepartamento` (`mef-connector.ts`), con los 16 offsets de
+byte observados para LA LIBERTAD como constantes documentadas (`SECTION_OFFSETS_LA_LIBERTAD`)
+— son posiciones observadas, no garantizadas por el MEF; la función falla fuerte si una sección
+deja de tener filas del departamento pedido, en vez de dejar `pim`/`devengado` en 0 en
+silencio.
+
 ### Formato del archivo
 
 CSV con comillas dobles, separador coma, encabezado en la primera fila (confirmado en

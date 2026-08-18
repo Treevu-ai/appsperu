@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 import { parse } from "csv-parse/sync";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
-import { CONFIRMED_MEF_FIELD_MAPPING } from "./field-mapping.js";
+import { CONFIRMED_MEF_FIELD_MAPPING, type MefFieldMapping } from "./field-mapping.js";
 import { normalizeMefRows } from "./normalize.js";
 
 const FILES_BASE_URL = "https://fs.datosabiertos.mef.gob.pe/datastorefiles";
@@ -23,6 +23,59 @@ const FILES_BASE_URL = "https://fs.datosabiertos.mef.gob.pe/datastorefiles";
  * millones de filas no cabe razonablemente en una columna jsonb.
  */
 const DEFAULT_MAX_BYTES = 25 * 1024 * 1024; // 25 MB — suficiente para una muestra real de miles de filas
+
+/**
+ * Hallazgo confirmado en vivo el 2026-08-18: `MONTO_PIA`/`MONTO_PIM` NO están
+ * pobladas en las filas de movimiento mensual (`MES_EJE` 1-7 — el año fiscal
+ * 2026 solo lleva hasta julio) — ahí siempre vienen en 0, solo
+ * `MONTO_DEVENGADO` es real. El presupuesto de apertura/modificado vive en
+ * filas separadas con `MES_EJE = "0"` (devengado = 0 en esas filas). Por eso
+ * una ingesta parcial de una sola ventana de bytes (que cae en un solo mes)
+ * solo trae uno de los dos campos, nunca ambos para las mismas filas.
+ *
+ * El archivo agrupa primero por `NIVEL_GOBIERNO_NOMBRE` (Regional → Local →
+ * Nacional, confirmado en ese orden), luego dentro de cada nivel por
+ * `MES_EJE` descendente (empieza en el mes corriente y baja hasta 0), y
+ * dentro de cada mes, por departamento en orden alfabético. Los offsets de
+ * abajo — uno por (nivel de gobierno, mes) para LA LIBERTAD — se ubicaron
+ * escaneando el archivo completo (~6.2 GB) en pasos de 8-30 MB. Son
+ * posiciones OBSERVADAS, no garantizadas por el MEF: si el archivo cambia de
+ * tamaño/orden, la ventana puede dejar de contener filas de La Libertad.
+ * `ingestMefFullYearForDepartamento` falla fuerte (no en silencio) si una
+ * sección no trae ninguna fila del departamento pedido.
+ *
+ * Gobierno Nacional no se mapeó (no hay entidades con sede en La Libertad en
+ * ese nivel — ver execution.ts, "gasto nacional dirigido a X" es un
+ * concepto aparte, filtrado por DEPARTAMENTO_META, no por sede).
+ */
+const SECTION_OFFSETS_LA_LIBERTAD: Record<string, Record<string, number>> = {
+  "GOBIERNOS REGIONALES": {
+    "7": 120_000_000,
+    "6": 320_000_000,
+    "5": 500_000_000,
+    "4": 680_000_000,
+    "3": 840_000_000,
+    "2": 984_000_000,
+    "1": 1_112_000_000,
+    "0": 1_368_000_000,
+  },
+  "GOBIERNOS LOCALES": {
+    "7": 1_760_000_000,
+    "6": 2_150_000_000,
+    "5": 2_525_000_000,
+    "4": 2_900_000_000,
+    "3": 3_275_000_000,
+    "2": 3_605_000_000,
+    "1": 3_875_000_000,
+    "0": 4_415_000_000,
+  },
+};
+// Cada offset es un punto DENTRO del bloque del departamento, no
+// necesariamente su inicio — se retrocede 20 MB para no perder el arranque
+// del bloque, y se piden 60 MB en total (el bloque observado de La Libertad
+// dentro de un mes ronda 30-40 MB).
+const SECTION_LOOKBACK_BYTES = 20 * 1024 * 1024;
+const SECTION_WINDOW_BYTES = 60 * 1024 * 1024;
 
 function checksumOf(text: string): string {
   return createHash("sha256").update(text).digest("hex");
@@ -275,30 +328,149 @@ export async function ingestMefBudgetExecution(
   }
 }
 
+export interface FullYearIngestSummary {
+  batchIds: number[];
+  entidadesActualizadas: number;
+  seccionesSinDatos: string[];
+}
+
+/**
+ * Ingesta comprensiva para un departamento (hoy solo tiene offsets
+ * conocidos para LA LIBERTAD, ver `SECTION_OFFSETS_LA_LIBERTAD`): descarga
+ * las 16 secciones (8 meses × 2 niveles de gobierno), junta TODAS las filas
+ * crudas de ese departamento en un solo array, y recién ahí llama a
+ * `normalizeMefRows` UNA vez — así el devengado de los 8 meses se SUMA
+ * correctamente (agregación por entidad+función+año) y el PIA/PIM de la
+ * sección MES_EJE=0 queda en las MISMAS filas que su devengado, no en filas
+ * separadas sin match. Escribe budget_execution en un solo upsert final,
+ * reemplazando pia/pim/devengado por completo (ahora sí correcto, porque la
+ * fuente ya está completa para este departamento+año, a diferencia de
+ * `ingestMefBudgetExecution`, pensada para una sola ventana parcial).
+ */
+export async function ingestMefFullYearForDepartamento(
+  filename: string,
+  ejecutoraDepartamento: string,
+  mapping: MefFieldMapping = CONFIRMED_MEF_FIELD_MAPPING
+): Promise<FullYearIngestSummary> {
+  const wantedDepartamento = ejecutoraDepartamento.toUpperCase().trim();
+  const offsetsByNivel = SECTION_OFFSETS_LA_LIBERTAD;
+
+  const batchIds: number[] = [];
+  const seccionesSinDatos: string[] = [];
+  const allRecords: Record<string, unknown>[] = [];
+
+  for (const [nivelGobierno, mesOffsets] of Object.entries(offsetsByNivel)) {
+    for (const [mesEje, approxByte] of Object.entries(mesOffsets)) {
+      const startByte = Math.max(0, approxByte - SECTION_LOOKBACK_BYTES);
+      const { rows: fetchedRecords, rawText } = await fetchMefCsv(filename, SECTION_WINDOW_BYTES, startByte);
+
+      const records = fetchedRecords.filter(
+        (r) =>
+          String(r.MES_EJE ?? "").trim() === mesEje &&
+          String(r[mapping.departamentoNombre] ?? "").toUpperCase().trim() === wantedDepartamento
+      );
+
+      if (records.length === 0) {
+        seccionesSinDatos.push(`${nivelGobierno}/mes=${mesEje}`);
+        continue;
+      }
+
+      const client = await pool.connect();
+      try {
+        const batchId = await saveRawBatch(
+          client,
+          `${filename}#nivel=${nivelGobierno}#mes=${mesEje}`,
+          rawText,
+          records.length
+        );
+        batchIds.push(batchId);
+      } finally {
+        client.release();
+      }
+
+      allRecords.push(...records);
+    }
+  }
+
+  if (allRecords.length === 0) {
+    throw new Error(
+      `No se encontró ninguna fila de "${ejecutoraDepartamento}" en ninguna de las 16 secciones configuradas. ` +
+        `Los offsets de SECTION_OFFSETS_LA_LIBERTAD pueden haber quedado desactualizados — ` +
+        `hay que volver a escanear el archivo.`
+    );
+  }
+
+  const { rows } = normalizeMefRows(allRecords, mapping);
+  const fechaCorte = new Date().toISOString().slice(0, 10);
+  const lastBatchId = batchIds[batchIds.length - 1];
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    for (const row of rows) {
+      await client.query(
+        `INSERT INTO budget_execution
+           (entity_code, funcion, anio_fiscal, pia, pim, devengado, fecha_corte, source_batch_id, meta_departamento)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULL)
+         ON CONFLICT (entity_code, funcion, anio_fiscal, fecha_corte, COALESCE(meta_departamento, '')) DO UPDATE
+           SET pia = EXCLUDED.pia, pim = EXCLUDED.pim, devengado = EXCLUDED.devengado,
+               source_batch_id = EXCLUDED.source_batch_id`,
+        [row.entityCode, row.funcion, row.anioFiscal, row.pia, row.pim, row.devengado, fechaCorte, lastBatchId]
+      );
+    }
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  return { batchIds, entidadesActualizadas: rows.length, seccionesSinDatos };
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const filename = process.env.MEF_DATA_FILENAME;
   if (!filename) {
     console.error("Define MEF_DATA_FILENAME en .env (ej. 2026-Gasto-Mensual.csv) antes de ingerir.");
     process.exit(1);
   }
-  const startByte = process.env.MEF_RANGE_START_BYTES ? Number(process.env.MEF_RANGE_START_BYTES) : 0;
-  const maxBytes = process.env.MEF_RANGE_MAX_BYTES ? Number(process.env.MEF_RANGE_MAX_BYTES) : undefined;
-  const departamento = process.env.MEF_FILTER_DEPARTAMENTO;
-  const ejecutoraDepartamento = process.env.MEF_FILTER_EJECUTORA_DEPARTAMENTO;
 
-  ingestMefBudgetExecution(filename, { startByte, maxBytes, departamento, ejecutoraDepartamento })
-    .then((summary) => {
-      console.log("Ingesta completada:", summary);
-      if (summary.isPartial) {
-        console.warn(
-          "AVISO: esta es una ingesta PARCIAL (rango de bytes acotado). " +
-            "El archivo completo pesa varios GB — ver TODO en mef-connector.ts antes de producción."
-        );
-      }
-      return pool.end();
-    })
-    .catch((err) => {
-      console.error("Ingesta falló:", err);
+  if (process.env.MEF_INGESTA_ANIO_COMPLETO === "true") {
+    const ejecutoraDepartamento = process.env.MEF_FILTER_EJECUTORA_DEPARTAMENTO;
+    if (!ejecutoraDepartamento) {
+      console.error("Define MEF_FILTER_EJECUTORA_DEPARTAMENTO para la ingesta de año completo.");
       process.exit(1);
-    });
+    }
+    ingestMefFullYearForDepartamento(filename, ejecutoraDepartamento)
+      .then((summary) => {
+        console.log("Ingesta de año completo (PIA/PIM + devengado) completada:", summary);
+        return pool.end();
+      })
+      .catch((err) => {
+        console.error("Ingesta de año completo falló:", err);
+        process.exit(1);
+      });
+  } else {
+    const startByte = process.env.MEF_RANGE_START_BYTES ? Number(process.env.MEF_RANGE_START_BYTES) : 0;
+    const maxBytes = process.env.MEF_RANGE_MAX_BYTES ? Number(process.env.MEF_RANGE_MAX_BYTES) : undefined;
+    const departamento = process.env.MEF_FILTER_DEPARTAMENTO;
+    const ejecutoraDepartamento = process.env.MEF_FILTER_EJECUTORA_DEPARTAMENTO;
+
+    ingestMefBudgetExecution(filename, { startByte, maxBytes, departamento, ejecutoraDepartamento })
+      .then((summary) => {
+        console.log("Ingesta completada:", summary);
+        if (summary.isPartial) {
+          console.warn(
+            "AVISO: esta es una ingesta PARCIAL (rango de bytes acotado). " +
+              "El archivo completo pesa varios GB — ver TODO en mef-connector.ts antes de producción."
+          );
+        }
+        return pool.end();
+      })
+      .catch((err) => {
+        console.error("Ingesta falló:", err);
+        process.exit(1);
+      });
+  }
 }
