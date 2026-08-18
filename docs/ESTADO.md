@@ -80,8 +80,18 @@ Tras investigación detallada de CEPLAN, se identificaron 2 nuevas apps para int
 
 | App | Dominio | API | Web | Postgres | Estado |
 |---|---|---|---|---|---|
-| `ceplan-estrategico` | Planificación estratégica (PEI/POI/Metas) | 4004 | 3004 | 5436 | 🏗️ Scaffold completado |
+| `ceplan-estrategico` | Gestión estratégica del Estado (ObservaPerú, agregado por nivel de gobierno) | 4004 | 3004 | 5436 | API Sprint 1 construida y probada con datos reales; web pendiente |
 | `ceplan-geo` | GeoServer (capas territoriales/infraestructura) | 4005 | 3005 | 5437 | 📋 Planificado |
+
+### `ceplan-estrategico` — Sprint 1 (2026-08-17)
+
+Ingesta real desde `https://observaperu.ceplan.gob.pe` (JSON estático, no requiere sesión —
+ver data contract). El modelo per-entidad planeado originalmente no fue posible con datos
+públicos: se ingieren indicadores agregados por nivel de gobierno (`GN`/`GR`/`MP`/`MD`/`Total`),
+no por pliego. `GET /api/indicators` expone el catálogo completo; `GET /api/crossref` cruza
+con `radar-ejecucion` solo en `GN`/`GR` (único bucket exacto entre las dos fuentes). Detalle
+completo, incluida la limitación de PIM=0 en la muestra de `radar-ejecucion` para 2026, en
+`docs/data-contracts/ceplan-strategic-planning.md`.
 
 ### Documentación de planificación
 - Data contracts: `docs/data-contracts/ceplan-strategic-planning.md`, `docs/data-contracts/ceplan-geo.md`
