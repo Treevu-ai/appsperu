@@ -1,0 +1,69 @@
+# ADR 0002 — INFOBRAS como app standalone, parser propio y cruce por CUI
+
+- Estado: Aceptado
+- Fecha: 2026-08-16
+- Ámbito: App 04 (INFOBRAS — obras públicas), su relación con las apps existentes.
+
+## Contexto
+
+El usuario trajo un PRD completo para integrar INFOBRAS (obras públicas, Contraloría) a
+Follow the Sol, con 6 sprints y un alcance amplio (resolución de CUI con niveles de confianza,
+señales de Cost Drift/Gap físico-financiero/Paralización, MCP tools). El PRD exige su propio
+Sprint 0 de investigación en vivo ("gate obligatorio") antes de comprometerse con un esquema.
+
+## Decisiones
+
+### 1. App standalone, no extensión de una app existente
+
+INFOBRAS es su propio dominio (obras físicas), distinto de presupuesto (radar-ejecucion),
+inversiones (radar-inversiones) y contrataciones (compras-publicas). Se creó
+`apps/infobras/{api,web}` (API 4003, web 3003, Postgres 5435) siguiendo el mismo patrón
+establecido: Postgres propio vía Docker Compose con `name:` explícito (evita la colisión de
+proyecto ya sufrida entre radar-ejecucion y compras-publicas), Express propio con
+`asyncHandler` + middleware de error desde el día uno, Next.js propio con el mismo
+`globals.css`.
+
+### 2. Alcance recortado: una rebanada vertical, no el PRD completo
+
+Se construyó conector → schema → API → frontend con datos reales de La Libertad, verificado
+end-to-end — el mismo patrón de entrega incremental de App01-03. El resto del PRD (6 sprints,
+MCP tools, resolución de identidad avanzada) queda fuera; se retoma si el usuario lo pide.
+
+### 3. Parser XLSX propio en vez de una librería estándar
+
+El plan original proponía `exceljs`'s `WorkbookReader` (streaming, la opción "battle-tested"
+recomendada por las reglas de estilo). **Falló en la práctica**: devolvió 0 filas contra el
+archivo real. El XML interno del export de INFOBRAS usa el prefijo de namespace `x:` en cada
+etiqueta (`<x:row>`, `<x:c>`, `<x:v>`) en vez del namespace por defecto que `exceljs` espera —
+un export no estándar de este sistema en particular. Se reemplazó por un parser streaming
+propio (regex sobre el XML crudo, extraído del zip vía `unzipper` sin escribir a disco aparte),
+el mismo enfoque ya validado a mano durante la investigación de Sprint 0.
+
+**Lección**: "preferir librería battle-tested" es la heurística correcta por defecto, pero no
+sustituye la verificación contra el archivo real — se probó contra datos reales antes de
+confiar en el resultado, y el fallo se detectó ahí, no en producción.
+
+### 4. Cruce con radar-inversiones por CUI, no por nombre
+
+La hipótesis inicial (Sprint 0) era cruzar con `radar-ejecucion`/`radar-inversiones` por nombre
+de entidad, reutilizando el matcher difuso de `compras-publicas` — porque `codigo Entidad` de
+INFOBRAS no calza en formato con `SEC_EJEC` de MEF. Pero INFOBRAS sí trae CUI directo
+(`Codigo unico de inversión`), y `radar-inversiones` también (`investments.cui`, de
+Invierte.pe) — un match exacto por ID es más fuerte que cualquier matching por nombre. Se
+implementó `GET /api/crossref` en `infobras/api` con este patrón (mismo que el cruce SEC_EJEC
+de App02: agregación en vivo + join en la capa de aplicación, sin tabla de crosswalk
+persistida, porque la clave es exacta y no hace falta cachear un score de confianza).
+
+El cruce con `radar-ejecucion` por nombre (la idea original) queda pendiente — no descartada,
+solo no priorizada porque el cruce por CUI ya cubre el caso de uso principal (avance físico
++ dato financiero del proyecto).
+
+## Consecuencias
+
+- Cualquier futura ingesta de un dataset XLSX de otra fuente gubernamental peruana debe
+  **verificar el XML crudo primero**, no asumir que una librería estándar funcionará — este es
+  el segundo caso en el proyecto (tras el CSV "space-as-decimal" del mismo dataset) de un
+  formato no estándar en una fuente de datos abiertos del Estado.
+- El patrón de cruce "por ID exacto cuando existe, por nombre difuso cuando no" ya tiene tres
+  implementaciones reales en el proyecto (SEC_EJEC en App02, CUI en App04, nombre en App03) —
+  es candidato a extraerse como utilidad compartida si aparece una cuarta.

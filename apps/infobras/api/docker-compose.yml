@@ -1,0 +1,16 @@
+name: infobras
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: infobras
+      POSTGRES_PASSWORD: infobras
+      POSTGRES_DB: infobras
+    ports:
+      - "127.0.0.1:5435:5432"
+    volumes:
+      - infobras_pgdata:/var/lib/postgresql/data
+
+volumes:
+  infobras_pgdata:

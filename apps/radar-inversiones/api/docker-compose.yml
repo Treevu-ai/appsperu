@@ -1,0 +1,16 @@
+name: radar-inversiones
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: inversiones
+      POSTGRES_PASSWORD: inversiones
+      POSTGRES_DB: radar_inversiones
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - inversiones_pgdata:/var/lib/postgresql/data
+
+volumes:
+  inversiones_pgdata:

@@ -1,0 +1,12 @@
+name: ceplan-estrategico
+
+# Servicios opcionales de solo-desarrollo. No se levantan con
+# `docker compose up` por defecto — solo cuando se necesitan explícitamente:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d adminer
+services:
+  adminer:
+    image: adminer:latest
+    ports:
+      - "127.0.0.1:8085:8080"
+    depends_on:
+      - postgres

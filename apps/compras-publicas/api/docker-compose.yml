@@ -1,0 +1,16 @@
+name: compras-publicas
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: compras
+      POSTGRES_PASSWORD: compras
+      POSTGRES_DB: compras_publicas
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - compras_pgdata:/var/lib/postgresql/data
+
+volumes:
+  compras_pgdata:

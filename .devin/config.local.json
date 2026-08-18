@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Exec(docker compose)",
+      "Exec(npm run)",
+      "Exec(curl)"
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+name: radar-ejecucion
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: radar
+      POSTGRES_PASSWORD: radar
+      POSTGRES_DB: radar_ejecucion
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - radar_pgdata:/var/lib/postgresql/data
+
+volumes:
+  radar_pgdata:
+    name: api_radar_pgdata
+    external: true

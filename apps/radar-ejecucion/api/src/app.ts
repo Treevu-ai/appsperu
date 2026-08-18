@@ -1,0 +1,31 @@
+import express, { type ErrorRequestHandler } from "express";
+import { executionRouter } from "./routes/execution.js";
+import { benchmarkRouter } from "./routes/benchmark.js";
+import { metaRouter } from "./routes/meta.js";
+import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
+
+const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+  console.error("Error no manejado en un request:", err);
+  res.status(500).json({ error: "Error interno del servidor." });
+};
+
+export function createApp() {
+  const app = express();
+  app.use(helmetMiddleware);
+  app.use(corsMiddleware);
+  app.use(express.json());
+
+  app.get("/health", (_req, res) => res.json({ status: "ok" }));
+
+  app.use("/api", apiRateLimit);
+  app.use("/api/execution", executionRouter);
+  app.use("/api/benchmark", benchmarkRouter);
+  app.use("/api/meta", metaRouter);
+
+  // Debe ir al final: sin esto, un rechazo dentro de un handler async
+  // se vuelve un unhandled rejection que tumba el proceso entero en vez
+  // de devolver un 500 (bug real encontrado en radar-inversiones).
+  app.use(errorHandler);
+
+  return app;
+}
