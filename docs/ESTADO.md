@@ -74,6 +74,8 @@ ninguna de estas apps procesa CSS de usuario ni sube imágenes, así que esas CV
 - `docs/adr/` — decisiones arquitectónicas con su razón, no solo el qué.
 - `docs/Follow_the_Sol_Peru_Public_Spending_Graph.pdf` — el documento fuente original con el
   roadmap de apps.
+- `docs/analisis-la-libertad-2026-08.md` — primer análisis de contenido (brechas y
+  competitividad) construido con datos reales de las 5 apps, con draft de post listo.
 
 ## Nuevas apps planificadas (CEPLAN Integration)
 
