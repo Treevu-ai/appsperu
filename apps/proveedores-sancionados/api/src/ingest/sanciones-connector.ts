@@ -64,7 +64,15 @@ async function fetchReporteHtml(): Promise<string> {
   if (!exportRes.ok) {
     throw new Error(`RNP devolvió ${exportRes.status} al exportar el reporte`);
   }
-  return exportRes.text();
+
+  // El Content-Type real declara "Charset=ISO-8859-1" (confirmado en vivo el
+  // 2026-08-20) — `.text()` decodificaría como UTF-8 por defecto y corrompe
+  // cualquier tilde/ñ que venga como byte crudo en vez de entidad HTML
+  // (`&oacute;`). Bug real encontrado al revisar el resultado en el
+  // navegador: "resolución" salía como "resoluci�n". Se decodifica el buffer
+  // crudo como Latin-1 explícitamente, igual que el padrón RUC de SUNAT.
+  const buffer = await exportRes.arrayBuffer();
+  return Buffer.from(buffer).toString("latin1");
 }
 
 function checksumOf(text: string): string {

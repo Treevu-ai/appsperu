@@ -12,6 +12,7 @@ const CELL_TEXT_RE = /<font[^>]*>([\s\S]*?)<\/font>/gi;
 
 function decodeHtmlEntities(text: string): string {
   return text
+    .replace(/<br\s*\/?>/gi, " — ") // celdas de infracción real traen <br> real dentro del texto, no solo entre celdas
     .replace(/&nbsp;/gi, " ")
     .replace(/&oacute;/gi, "ó")
     .replace(/&aacute;/gi, "á")
