@@ -1,5 +1,7 @@
 # Data contract — MEF: Presupuesto y ejecución de gasto
 
+> Ficha técnica del conector: [`docs/conectores.md#radar-ejecucion`](../conectores.md#radar-ejecucion)
+
 - Fuente oficial: Portal de Datos Abiertos del MEF — https://datosabiertos.mef.gob.pe/dataset/presupuesto-y-ejecucion-de-gasto
 - Owner del conector: equipo App 01 (Radar de ejecución)
 - Confirmado en vivo el 2026-08-16 (navegación real del portal, no supuestos).
@@ -98,6 +100,58 @@ CSV con comillas dobles, separador coma, encabezado en la primera fila (confirma
 `Gastos_Diccionario.csv`; asumir igual para los archivos de datos — **verificar delimitador real
 la primera vez que se parsee un archivo de datos**, algunos exports de "Consulta Amigable" usan
 `;` en vez de `,`).
+
+## Clasificación económica del gasto (genérica) — confirmado en vivo 2026-08-21
+
+Vía `ADR-0006`. El mismo `Gastos_Diccionario.csv` documenta una jerarquía completa de
+clasificador económico de gasto, hoy sin usar por `radar-ejecucion` (solo se lee `FUNCION`):
+
+| Columna | Descripción (tal como aparece en el diccionario) |
+|---|---|
+| `TIPO_TRANSACCION` | Número que identifica si es Gasto (2) o Ingreso (1) |
+| `GENERICA` | Mayor nivel de agregación de los clasificadores de gasto |
+| `GENERICA_NOMBRE` | Descripción de la Genérica |
+| `SUBGENERICA` | Nivel intermedio de agregación (subgenérica nivel 1) |
+| `SUBGENERICA_NOMBRE` | Descripción de la subgenérica |
+| `SUBGENERICA_DET` | Nivel intermedio de agregación (subgenérica nivel 2) |
+| `SUBGENERICA_DET_NOMBRE` | Descripción de la subgenérica detalle |
+| `ESPECIFICA` | Código de específica nivel 1 — detalle del gasto |
+| `ESPECIFICA_NOMBRE` | Descripción de la específica |
+| `ESPECIFICA_DET` | Código de específica nivel 2 — detalle del gasto |
+| `ESPECIFICA_DET_NOMBRE` | Descripción de la específica detalle |
+
+No confirmado aún si existe `PROGRAMA_PRESUPUESTAL`/`FUENTE_FINANCIAMIENTO` — pendiente,
+relevante para identificar gasto de "Reconstrucción con Cambios" sin depender de matching de
+texto sobre `EJECUTORA_NOMBRE` (ver siguiente sección y ADR-0006).
+
+Plan de ingesta: agregar solo `GENERICA`/`GENERICA_NOMBRE` (nivel más alto, ~7-8 categorías:
+personal, bienes y servicios, inversión, etc.) a `budget_execution`, sin bajar a
+específica/subespecífica — sin caso de uso concreto hoy para ese nivel de detalle. Detalle
+completo de la decisión y el cambio de schema en `ADR-0006`.
+
+## Gasto de Gobierno Nacional dirigido a La Libertad (`DEPARTAMENTO_META`) — confirmado en vivo 2026-08-21
+
+Hallazgo, vía revisión del propio código de `mef-connector.ts` (no de la fuente): la ingesta
+comprensiva de año completo (`ingestMefFullYearForDepartamento`, ver más arriba) **excluye
+explícitamente Gobierno Nacional** — el comentario del código dice literalmente "no hay
+entidades con sede en La Libertad en ese nivel". Como consecuencia, todo el gasto que
+ministerios/programas nacionales con sede en Lima ejecutan **físicamente en La Libertad**
+(vía `DEPARTAMENTO_META`, no `DEPARTAMENTO_EJECUTORA`) está ausente de `budget_execution` hoy —
+incluido el gasto de reconstrucción post-Niño costero/Yaku que hoy ejecuta la ANIN (Autoridad
+Nacional de Infraestructura).
+
+Investigación adicional (2026-08-21) sobre si ANIN publica una fuente propia de datos: su
+Portal de Transparencia Estándar (`transparencia.gob.pe`, `id_entidad=78976`) no tiene dataset
+propio de proyectos — sus dos enlaces de "Proyectos" reexportan **Invierte.pe** e **INFOBRAS**,
+ya ingeridos por `radar-inversiones` e `infobras` respectivamente. No hay API ni export nuevo
+que agregar por ese lado — el gap real está en `radar-ejecucion`, no en una fuente externa
+faltante.
+
+El schema ya tiene lo necesario para esto: `budget_execution.meta_departamento` (migraciones
+`002_meta_departamento.sql`/`003_fix_meta_departamento_uniqueness.sql`) y el conector base
+`ingestMefBudgetExecution` ya sabe filtrar por `DEPARTAMENTO_META` en una sola ventana de
+bytes. Falta la versión **comprensiva** (año completo, todas las secciones de Gobierno
+Nacional) — ver `ADR-0006` para la decisión y los offsets pendientes de escanear.
 
 ## Licencia / uso
 
