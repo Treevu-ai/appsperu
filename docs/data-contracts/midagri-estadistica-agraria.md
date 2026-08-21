@@ -27,10 +27,26 @@ Dataset: `MIDAGRI-03. Reportes de Insumos y Servicios Agropecuarios`
 
 **Columnas confirmadas por previsualización en vivo**: `Región`, `Año`, `Ene`, `Feb`, `Mar`,
 `Abr`, `May`, `Jun`, `Jul`, `Ago`, `Set`, `Oct`, `Nov`, `Dic` — **210 registros**, cobertura
-2018-2026, granularidad **mensual por región**. Filas verificadas en vivo para Amazonas,
-Apurímac, Ancash, Arequipa, Ayacucho, Cajamarca, Cusco (no se llegó a confirmar la fila exacta
-de La Libertad por scroll, pero el dataset es evidentemente el universo completo de regiones,
-no una muestra — La Libertad es una región agrícola grande, altamente improbable que falte).
+2018-2026, granularidad **mensual por región**.
+
+**LA LIBERTAD confirmada en vivo (2026-08-21, filtro `q=La Libertad` sobre el grid)** — 9 filas,
+una por año 2018-2026, sin huecos:
+
+| Año | Ene | Feb | Mar | Abr | May | Jun | Jul | Ago | Set | Oct | Nov | Dic |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2018 | 34 | 35 | 34 | 34 | 34 | 34 | 34 | 34 | 34 | 34 | 34 | 34 |
+| 2019 | 35 | 35 | 35 | 35 | 35 | 35 | 35 | 36 | 40 | 38 | 35 | 38 |
+| 2020 | 38 | – | – | – | – | – | 35 | 30 | 38 | 38 | 40 | 40 |
+| 2021 | 45 | 43 | 42.5 | 42.5 | 42.5 | 42.5 | 42.5 | 42.5 | 42.5 | 42.5 | 42.5 | 42.5 |
+| 2022 | 42.5 | 42.5 | 45 | 45 | 45 | 45 | 45 | 45 | 45 | 47.5 | 45 | 47.5 |
+| 2023 | 47.5 | 50 | 50 | 50 | 50 | 50 | 48 | 48 | 48 | 45 | 50 | 50 |
+| 2024 | 51 | 59 | 50 | 45 | 45 | 45 | 45 | 50 | 49 | 48.5 | 47 | 45.5 |
+| 2025 | 48 | 49 | 47 | 48 | 48 | 48 | 48 | 49 | 49 | 43 | 49 | 49 |
+| 2026 | 48 | 48.76 | | | | | | | | | | |
+
+Valor del jornal agrícola en La Libertad: S/34 (ene-2018) → S/48-49 (2025-2026), ~42% de alza
+nominal en 8 años. Los guiones (`–`) en 2020 (abr-jul) coinciden con el inicio de la pandemia —
+consistente con un hueco real de reporte, no un error de lectura.
 
 Los otros 4 recursos del mismo dataset (mismo patrón, no previsualizados individualmente en
 este spike, pero mismo dataset padre y misma estructura esperada):
@@ -81,14 +97,46 @@ abajo (la fuente subyacente de este mismo Power BI), no contra el iframe de Powe
 patrón de decisión que CEPLAN: el botón/dashboard visual no es el punto de integración, el
 dataset descargable sí.
 
+### Corrección (2026-08-21): "MIDAGRI - Información Estadística Agrícola" no existe como tal
+
+Se revisó el catálogo **completo** de datasets con la etiqueta MIDAGRI en la PNDA — 23 datasets
+en 3 páginas, listado exhaustivo vía `www.datosabiertos.gob.pe/search/type/dataset?query=MIDAGRI`.
+El dataset "MIDAGRI - Información Estadística Agrícola" (superficie sembrada/cosechada,
+rendimiento, precio en chacra) que aparecía en el primer pase de este spike (vía snippet de
+búsqueda, no navegación directa) **no corresponde a ningún dataset real actual del portal** —
+era una referencia desactualizada o mal indexada por el buscador externo, no un hallazgo válido.
+
+**Catálogo completo confirmado (23 datasets, numeración `MIDAGRI-01` a `MIDAGRI-17` + varios sin
+numerar)**: cobertizos/PMHF, `MIDAGRI-01` Desarrollo ganadero, `MIDAGRI-02` VBP (nacional, ver
+arriba) **y también un `MIDAGRI-02` distinto: "Datero Agrario"** (mismo prefijo numérico
+reutilizado — inconsistencia de catalogación del propio portal, no error de esta
+investigación), `MIDAGRI-03` Insumos y Servicios Agropecuarios (el confirmado arriba),
+`MIDAGRI-04` Calendario de Eventos, `MIDAGRI-06` Secigra Agrario, `MIDAGRI-11` Normas legales,
+`MIDAGRI-12` Estudios de Suelos 2024-25, `MIDAGRI-15` Ejecución Presupuesto Pliego 013,
+`MIDAGRI-16` Plan Anual de Transferencias, `MIDAGRI-17` Seguro Agrícola Catastrófico (SAC),
+Núcleos Ejecutores, Catastro Forestal (SERFOR), Registro Nacional de Infractores (SERFOR),
+Ejecución física presupuestal SENASA 2021-2026 (desagregado regionalmente), presupuesto Sector
+13 Agrario 2014-2022, Estudios de Suelos aprobados julio 2026 (PDF). **Ninguno trae
+superficie sembrada/cosechada/rendimiento/precio en chacra por cultivo** con ese nivel de
+detalle — esa promesa específica del primer pase de este spike queda descartada.
+
+### Candidato más cercano encontrado: `MIDAGRI-02: Datero Agrario`
+
+"Servicio de consulta, vía teléfono celular, de precios promedio de productos agropecuarios
+comercializados en los mercados mayoristas de Lima Metropolitana y **26 principales ciudades
+del país**" — 42 archivos CSV. No es lo mismo que "precio en chacra" (este es precio
+**mayorista**, no precio al productor), pero sí tiene granularidad por ciudad. **No
+previsualizado en este spike** — pendiente confirmar si trae Trujillo/La Libertad y si el
+formato de los 42 CSV es consistente entre ciudades.
+
 ### Otros datasets identificados (grupo MIDAGRI, PNDA) — estructura aún sin previsualizar
 
 | Dataset | Contenido reportado | Regional |
 |---|---|---|
-| `MIDAGRI - Información Estadística Agrícola` | Superficie sembrada/cosechada, producción, rendimiento, precio en chacra por cultivo | No confirmado — candidato a ser la fuente real del VBP regional del dashboard SIEA |
-| `MIDAGRI - Información Estadística Pecuaria` | Producción, población pecuaria, precios al productor, rendimientos | No confirmado |
+| `MIDAGRI-02: Datero Agrario` | Precios mayoristas de productos agropecuarios, Lima + 26 ciudades | Sí, por ciudad (no confirmado si incluye Trujillo) |
+| `Ejecución física presupuestal SENASA 2021-2026` | Acciones de sanidad agraria, desagregado regionalmente | Sí, según descripción del dataset |
 | `Datos Agroindustriales 2023-2025` | Producción y venta de productos terminados, ingreso y utilización de materia prima | No confirmado |
-| `MIDAGRI: Estudios Económicos` | Sin detalle | No confirmado |
+| `MIDAGRI: Estudios Económicos` | Sin detalle | No confirmado — no apareció en el catálogo completo revisado, posible que tampoco exista con ese nombre |
 
 ### Portal operacional SIEA (`siea.midagri.gob.pe/portal/`)
 
@@ -106,19 +154,23 @@ dashboard en vez de CSV descargable). Módulos identificados por el propio sitio
 
 ### Lo que falta confirmar antes de escribir el ADR de app + conector
 
-1. Confirmar la fila exacta de LA LIBERTAD en `MIDAGRI-03.03` (se verificó la estructura y
-   varias regiones, no se hizo scroll hasta esa fila específica — el grid de previsualización
-   tiene su propio scroll interno, no el de la página).
-2. URL real de descarga del archivo (patrón CKAN de `datosabiertos.gob.pe`, ej.
+1. URL real de descarga del archivo (patrón CKAN de `datosabiertos.gob.pe`, ej.
    `/dataset/<slug>/resource/<id>/download/<archivo>.csv` — no confirmado el patrón exacto
    todavía, solo que el botón "Descargar" existe y la previsualización sí trae el dato completo
    vía la API interna del portal).
-3. Previsualizar `MIDAGRI - Información Estadística Agrícola` (candidata a ser la fuente real
-   del VBP/rendimiento regional que se ve en el dashboard SIEA — el dataset `MIDAGRI-02` VBP
-   resultó ser nacional, no esa fuente).
+2. Previsualizar `MIDAGRI-02: Datero Agrario` (42 CSV, precios mayoristas por ciudad) para
+   confirmar si incluye Trujillo/La Libertad — único candidato pendiente a un segundo recurso
+   ingeribles además de `MIDAGRI-03.03`.
+3. Si el VBP/rendimiento regional visto en el dashboard Power BI del SIEA tiene *algún*
+   dataset público equivalente en la PNDA — no localizado en el catálogo completo revisado
+   (23 datasets); puede que ese cálculo no tenga fuente CSV pública propia.
 4. Si el monitoreo satelital distrital de siembras (SIEA) es descargable o solo visual — no
-   explorado en ninguna de las dos pasadas.
+   explorado en ninguna de las tres pasadas.
 5. Separador real del CSV (coma vs. `;`) y encoding — no confirmado sin descargar el archivo.
+
+Lo que **ya está confirmado y no requiere más spike**: `MIDAGRI-03.03` (estructura, columnas,
+La Libertad presente con 9 años de datos) es suficiente por sí solo para justificar el ADR de
+app standalone — los pendientes de arriba son de profundización, no bloqueantes.
 
 ## Cautelas
 

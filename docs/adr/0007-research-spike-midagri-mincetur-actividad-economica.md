@@ -153,17 +153,34 @@ conector) tomando `MIDAGRI-03.03` como primer recurso a ingerir, con
 VBP/rendimiento regional. MINCETUR se mantiene en pausa (PDF, mayor costo). PRODUCE y PCM
 siguen sin investigar.
 
+## Actualización 2026-08-21 (cuarta pasada) — La Libertad confirmada, corrección sobre el "segundo dataset"
+
+1. **LA LIBERTAD confirmada en `MIDAGRI-03.03`**: 9 filas (2018-2026), valor de jornal agrícola
+   subiendo de S/34 a S/48-49 (~42% nominal en 8 años), con un hueco real abr-jul 2020
+   (consistente con inicio de pandemia). Detalle completo en el data contract.
+2. **"MIDAGRI - Información Estadística Agrícola" no existe** — se revisó el catálogo completo
+   de MIDAGRI en la PNDA (23 datasets, 3 páginas) y ningún dataset trae superficie
+   sembrada/cosechada/rendimiento/precio en chacra por cultivo con ese nombre. Era una
+   referencia del snippet de búsqueda original, no un dataset real — se descarta como pendiente.
+3. Candidato más cercano encontrado en su lugar: **`MIDAGRI-02: Datero Agrario`** — precios
+   mayoristas (no en chacra) de productos agropecuarios en Lima + 26 ciudades, 42 archivos CSV.
+   No previsualizado todavía; pendiente confirmar si incluye Trujillo.
+4. El VBP/rendimiento regional del dashboard Power BI del SIEA **no tiene dataset CSV
+   equivalente localizado** en el catálogo completo — puede ser un cálculo interno del SIEA sin
+   fuente pública propia en la PNDA.
+
+Esto no cambia la decisión de fondo: `MIDAGRI-03.03` por sí solo ya es suficiente para justificar
+el ADR de app standalone — no era necesario un "segundo dataset" para eso, solo se investigó
+porque se había prometido explorarlo.
+
 ## Pendientes concretos
 
-1. Confirmar la fila de LA LIBERTAD en `MIDAGRI-03.03` (estructura ya confirmada, falta la
-   fila específica — ver data contract).
-2. Previsualizar `MIDAGRI - Información Estadística Agrícola` para localizar la fuente real del
-   VBP/rendimiento regional.
-3. Confirmar patrón de URL de descarga directa (no solo el botón de UI) para poder automatizar
+1. Previsualizar `MIDAGRI-02: Datero Agrario` para confirmar cobertura de Trujillo/La Libertad.
+2. Confirmar patrón de URL de descarga directa (no solo el botón de UI) para poder automatizar
    el conector sin depender de un click.
-4. MINCETUR: explorar `datosturismo.mincetur.gob.pe` (el portal operacional, no el compendio de
+3. MINCETUR: explorar `datosturismo.mincetur.gob.pe` (el portal operacional, no el compendio de
    PDFs de `gob.pe`) para confirmar si tiene un dataset tabular alternativo.
-5. Reintentar PRODUCE (`ogeiee.produce.gob.pe`) y PCM (`sgp.pcm.gob.pe`) con Chrome real,
+4. Reintentar PRODUCE (`ogeiee.produce.gob.pe`) y PCM (`sgp.pcm.gob.pe`) con Chrome real,
    recordando probar también con `www.` si el dominio raíz falla.
 
 ## Referencias
