@@ -85,35 +85,62 @@ Se evaluaron brevemente en la conversación previa pero quedan fuera de este ADR
   CEPLAN/`salud-institucional` (Execution Efficiency), así que merece su propio spike cuando el
   entorno de red lo permita, en vez de forzar una conclusión sin datos.
 
+## Actualización 2026-08-21 (segunda pasada, Chrome real vía `claude-in-chrome`)
+
+El pase con WebFetch (arriba) quedó bloqueado por red en ambas fuentes. Repetir con un browser
+real destrabó MINCETUR por completo y confirmó MIDAGRI a nivel de dashboard (no de dataset
+descargable) — **invierte el orden de prioridad** planteado originalmente:
+
+- **MIDAGRI**: confirmado en vivo que el portal SIEA existe, funciona, y su dashboard "Perfil
+  Productivo Departamental" (Power BI público) sí filtra por región incluyendo La Libertad con
+  datos reales y ricos (VBP por subsector, top cultivos, rendimientos, agroexportaciones por
+  producto/destino). **Pero el dashboard no tiene opción de exportar datos** (confirmado por
+  clic derecho: sin "Exportar datos" en el menú contextual) — la vía de ingesta real seguiría
+  siendo los datasets CSV de `datosabiertos.gob.pe`, que **siguió sin resolver ni desde Chrome
+  real** — no es un bloqueo del tooling de este proyecto, es la red del entorno de investigación
+  actual. Queda confirmado que el dato existe con la granularidad necesaria; falta solo destrabar
+  el acceso a la PNDA (desde otra red) para confirmar el formato de descarga.
+- **MINCETUR**: confirmado en vivo que "Reporte Regional de Turismo 2025" es un **PDF por
+  departamento** (26 archivos, ~800KB-1MB c/u, incl. "LA LIBERTAD - Año 2025"), no un dataset
+  tabular. Esto lo baja de prioridad frente a MIDAGRI: ninguna de las 8 apps del proyecto
+  parsea PDF hoy (INFOBRAS es XLSX, no PDF) — sería el primer conector de ese tipo, mayor
+  esfuerzo de implementación que cualquier fuente ya integrada.
+
 ## Decisión
 
-**No se decide construir ninguna app todavía.** Este ADR deja registrado:
+**No se decide construir ninguna app todavía.** Este ADR deja registrado, con la prioridad
+invertida respecto al borrador inicial:
 
-1. MIDAGRI es el candidato de mayor confianza para un próximo spike de verificación en vivo
-   (browser real, no bot-blocked) — objetivo: confirmar URLs de descarga directa, columnas
-   exactas y si `Insumos y Servicios Agropecuarios` u otro dataset trae La Libertad
-   específicamente, antes de escribir el ADR de app standalone (patrón ADR-0002/0003) y el data
-   contract con el rigor habitual del proyecto.
-2. MINCETUR queda como candidato secundario, mismo tipo de spike pendiente, prioridad menor a
-   MIDAGRI hasta confirmar si "Reporte Regional de Turismo" es tabular o narrativo.
+1. **MIDAGRI pasa a ser el candidato de mayor prioridad** para el siguiente paso — no un nuevo
+   spike de descubrimiento (ya se hizo), sino específicamente destrabar el acceso a
+   `datosabiertos.gob.pe` (desde una red donde resuelva) para confirmar URLs de descarga directa
+   y columnas exactas de los datasets ya identificados, antes de escribir el ADR de app
+   standalone (patrón ADR-0002/0003).
+2. **MINCETUR baja de prioridad** — el hallazgo de que es PDF, no CSV, lo hace más caro de
+   implementar que cualquier fuente actual del proyecto; no descartado, pero no es el siguiente
+   paso natural.
 3. PRODUCE y PCM quedan fuera de alcance de este spike — no descartados, solo no investigados
    con suficiente profundidad para documentar un hallazgo útil.
-4. Si se decide avanzar, el patrón a seguir es el mismo de `ceplan-estrategico`
-   (ADR-0003/data contract con "Estado: CONFIRMADO/PARCIALMENTE CONFIRMADO"): abrir el portal
-   real en un browser, confirmar estructura de descarga, y solo entonces escribir el ADR de
-   app + migraciones.
+4. Si se decide avanzar con MIDAGRI, el patrón a seguir es el mismo de `ceplan-estrategico`
+   (ADR-0003/data contract con "Estado: CONFIRMADO/PARCIALMENTE CONFIRMADO"): el punto de
+   integración es el dataset descargable de la PNDA, no el iframe de Power BI del SIEA — mismo
+   principio que ya aplicó ADR-0006 para descartar scraping del dashboard de ANIN.
 
-## Pendientes concretos para el próximo spike
+## Pendientes concretos
 
-1. Verificar en vivo (browser real) las URLs de descarga directa de los datasets MIDAGRI
-   listados arriba — confirmar si `Insumos y Servicios Agropecuarios` desagrega por
-   departamento incluyendo La Libertad.
+1. **Bloqueante único para MIDAGRI**: acceder a `datosabiertos.gob.pe` desde una red donde
+   resuelva (falló por DNS/conexión tanto en WebFetch como en Chrome real desde este entorno,
+   2026-08-21) — confirmar URL de descarga directa, formato (CSV/XLSX) y columnas exactas de
+   `Insumos y Servicios Agropecuarios` (el dataset con "por región" explícito) y
+   `MIDAGRI - Información Estadística Agrícola`.
 2. Confirmar si el monitoreo satelital distrital de siembras (SIEA) es descargable o solo
-   visualización.
-3. Abrir el "Reporte Regional de Turismo 2025" de MINCETUR y determinar si es PDF o dataset.
-4. Reintentar PRODUCE (`ogeiee.produce.gob.pe`) y PCM (`sgp.pcm.gob.pe`) cuando la
-   conectividad del entorno lo permita — ninguno de los dos se descartó, solo quedaron sin
-   investigar.
+   visualización — no explorado en el pase con Chrome (foco fue "Perfil Productivo
+   Departamental").
+3. MINCETUR: explorar `datosturismo.mincetur.gob.pe` (el portal operacional, no el compendio de
+   PDFs de `gob.pe`) para confirmar si tiene un dataset tabular alternativo antes de descartar
+   la vía CSV/API para esta fuente.
+4. Reintentar PRODUCE (`ogeiee.produce.gob.pe`) y PCM (`sgp.pcm.gob.pe`) — no investigados
+   todavía con Chrome real.
 
 ## Referencias
 

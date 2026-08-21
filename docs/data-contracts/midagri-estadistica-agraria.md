@@ -7,12 +7,45 @@
   Plataforma Nacional de Datos Abiertos, `https://datosabiertos.gob.pe`.
 - Owner del conector: sin asignar — este data contract nace de un research spike (ADR-0007),
   no de una app en construcción.
-- **No confirmado en vivo** — a diferencia del resto de data contracts del proyecto (todos
-  navegados en vivo), este viene de resultados de búsqueda indexados. `datosabiertos.gob.pe`
-  no resolvió por DNS en ningún intento de este spike (2026-08-21). Verificar con browser real
-  antes de implementar cualquier conector.
+- **Confirmado en vivo el 2026-08-21 vía Chrome real** (`siea.midagri.gob.pe`, navegación
+  directa con filtro aplicado) — pero `datosabiertos.gob.pe` **sigue sin resolver ni siquiera
+  desde un browser real** (no es limitación de WebFetch, es la red/máquina de este entorno):
+  la existencia y granularidad regional de los datos quedó confirmada, la estructura exacta de
+  descarga (CSV/API) de la PNDA sigue pendiente.
 
-## Estado: PARCIALMENTE CONFIRMADO — por listado del portal, no por descarga directa
+## Estado: PARCIALMENTE CONFIRMADO — portal operacional navegado en vivo, PNDA aún sin acceso
+
+### Hallazgo en vivo (2026-08-21): dashboard Power BI, sin exportación de datos
+
+`siea.midagri.gob.pe/herramientas/estadistica-agropecuarias` → **"Perfil Productivo
+Departamental"** abre un reporte de **Power BI público** (`app.powerbi.com/view?r=...`) con un
+slicer de `Departamento` que sí incluye LA LIBERTAD y filtra correctamente. Datos reales
+observados para La Libertad, 2024 (fuente propia: "SIEA-MIDAGRI, IV CENAGRO 2012, SUNAT"):
+
+- VBP: Agropecuario +6.2%, Agrícola +10.4%, Pecuario +0% (var. interanual)
+- Principales productos (%VBP): Ave 26%, Arándano 15%, Espárrago 9%, Arroz 7%, Palta 7%, Papa 6%
+- Rendimiento/superficie cosechada por cultivo (maíz chala, maíz amarillo duro, cebada, maíz
+  amiláceo, frijol/haba/arveja grano seco, chocho o tarhui) — región vs. nacional
+- Agroexportaciones 2020-2024 (miles US$ FOB) por producto y país destino: Arándano 49.35%,
+  Palta 16.26%, Espárrago 13.65%, Preparaciones 11.78%, Uva 4.96%, hacia EE.UU. (45%), Ecuador
+  (11%), Holanda (16%), España (8%)
+- Superficie agrícola: 2,524,943 ha (25% del total nacional), 116 mil productores
+
+**No hay opción de exportar datos**: clic derecho sobre cualquier visual del reporte muestra
+solo `Expandir / Contraer / Mostrar como tabla / Incluir / Excluir / Borrar selecciones` — sin
+`Exportar datos` (restricción típica de los reportes Power BI en modo "publicar en la web"
+público). "Mostrar como tabla" sí existe pero solo expone la tabla de dimensión del propio
+slicer (lista de departamentos), no la tabla de hechos detrás del visual — no sirve como método
+de extracción masiva.
+
+**Conclusión de arquitectura**: este dashboard **no es la vía de ingesta** — confirma que el
+dato existe y tiene la granularidad regional que el proyecto necesita, pero el conector real
+tendría que ir contra los datasets CSV de la Plataforma Nacional de Datos Abiertos listados
+abajo (la fuente subyacente de este mismo Power BI), no contra el iframe de Power BI. Mismo
+patrón de decisión que CEPLAN: el botón/dashboard visual no es el punto de integración, el
+dataset descargable sí.
+
+### Datasets identificados (Plataforma Nacional de Datos Abiertos, grupo MIDAGRI) — estructura sin confirmar
 
 ### Datasets identificados (Plataforma Nacional de Datos Abiertos, grupo MIDAGRI)
 
@@ -43,13 +76,19 @@ dashboard en vez de CSV descargable). Módulos identificados por el propio sitio
 ### Lo que falta confirmar antes de escribir el ADR de app + conector
 
 1. URL de descarga directa (¿API CKAN estándar de `datosabiertos.gob.pe`, tipo
-   `/api/3/action/datastore_search`, o solo botón de descarga como MEF/CEPLAN?).
+   `/api/3/action/datastore_search`, o solo botón de descarga como MEF/CEPLAN?) — **bloqueado
+   en este entorno**: `datosabiertos.gob.pe` no resolvió ni desde Chrome real el 2026-08-21,
+   reintentar desde otra red/máquina.
 2. Formato real de archivo (CSV/XLSX) y separador.
 3. Si `Insumos y Servicios Agropecuarios` (el único con "por región" confirmado en el título)
    incluye La Libertad y con qué frecuencia se actualiza.
 4. Si el monitoreo satelital distrital es exportable o solo visual.
 5. Columnas exactas — ninguna se confirmó contra un diccionario real (a diferencia del CSV del
    MEF, donde sí se leyó `Gastos_Diccionario.csv` en vivo).
+
+Lo que **ya no** hace falta confirmar (resuelto en vivo 2026-08-21): que el portal existe, que
+tiene datos reales y actualizados para La Libertad, y que la granularidad regional es real (no
+solo agregados nacionales) — visto directamente en el Power BI del SIEA.
 
 ## Cautelas
 

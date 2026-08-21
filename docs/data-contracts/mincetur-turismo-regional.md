@@ -6,12 +6,37 @@
   Turismo", `https://datosturismo.mincetur.gob.pe/`, y datasets propios en la Plataforma
   Nacional de Datos Abiertos, `https://datosabiertos.gob.pe`.
 - Owner del conector: sin asignar — research spike (ADR-0007), no app en construcción.
-- **No confirmado en vivo**: `datosturismo.mincetur.gob.pe` sí respondió (nivel de página raíz,
-  sin explorar módulos internos), pero `gob.pe/institucion/mincetur/informes-publicaciones/...`
-  devolvió `418 I'm a Teapot` (bloqueo anti-bot) al intentar leer el detalle del reporte
-  regional. Confianza más baja que el resto de data contracts del proyecto.
+- **Confirmado en vivo el 2026-08-21 vía Chrome real**: el bloqueo `418` que dio WebFetch contra
+  `gob.pe` no se repitió con un browser real — la página cargó normal y reveló el hallazgo
+  decisivo de este data contract (ver abajo).
 
-## Estado: PARCIALMENTE CONFIRMADO — portal real, formato de descarga sin confirmar
+## Estado: PARCIALMENTE CONFIRMADO — reporte regional es PDF, no dataset tabular
+
+### Hallazgo en vivo (2026-08-21): "Reporte Regional de Turismo 2025" es un PDF por departamento
+
+`gob.pe/institucion/mincetur/informes-publicaciones/6659083-...` es un compendio de **26 PDFs
+individuales**, uno por departamento (incluidos Lima y Callao por separado) más un consolidado
+nacional. Confirmado el recurso exacto para el piloto:
+
+> **Reporte Regional de Turismo LA LIBERTAD - Año 2025** — PDF, 845.8 KB, publicado el
+> 2026-04-10 (fecha del portal, revisar si corresponde a datos de 2025 o si "2025" es el año
+> del reporte y no del dato).
+
+Esto **cambia la prioridad frente a MIDAGRI**: no es un dataset CSV/XLSX descargable ni una API
+— es un documento narrativo/tabular en PDF, mismo tipo de fuente que INFOBRAS (XLSX, más
+fácil) no, más parecido en fricción a tener que extraer tablas de un PDF (no hay precedente de
+ese tipo de conector en el proyecto todavía — ninguna de las 8 apps existentes parsea PDF). Un
+conector viable requeriría extracción de tablas desde PDF (librería tipo `pdf-parse` +
+heurística de tablas, o revisar si el PDF trae datos en formato consistente entre regiones) en
+vez de un `csv-parse` directo — mayor esfuerzo de implementación que cualquier otra fuente ya
+integrada en el proyecto.
+
+### Portal operacional (`datosturismo.mincetur.gob.pe`) — sin explorar en este spike
+
+No se repitió la navegación de este portal en el pase con Chrome real (foco del spike fue
+confirmar el reporte regional, que resultó ser el hallazgo decisivo). Sigue pendiente: explorar
+si "Estadísticas"/"Reportes regionales" dentro de ese portal expone algo distinto al compendio
+de PDFs de `gob.pe` — mismo tipo de dashboard vs. dataset real que se encontró para MIDAGRI.
 
 ### Portal operacional (`datosturismo.mincetur.gob.pe`)
 
