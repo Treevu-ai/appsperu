@@ -162,25 +162,29 @@ siguen sin investigar.
    de MIDAGRI en la PNDA (23 datasets, 3 páginas) y ningún dataset trae superficie
    sembrada/cosechada/rendimiento/precio en chacra por cultivo con ese nombre. Era una
    referencia del snippet de búsqueda original, no un dataset real — se descarta como pendiente.
-3. Candidato más cercano encontrado en su lugar: **`MIDAGRI-02: Datero Agrario`** — precios
-   mayoristas (no en chacra) de productos agropecuarios en Lima + 26 ciudades, 42 archivos CSV.
-   No previsualizado todavía; pendiente confirmar si incluye Trujillo.
+3. Candidato investigado en su lugar: **`MIDAGRI-02: Datero Agrario`** — **descartado**. Su
+   título promete precios mayoristas por ciudad, pero el contenido real (confirmado
+   previsualizando el último de sus 42 recursos) es telemetría de uso del servicio telefónico
+   de consulta (`CONSULTAS`, `USUARIO`, `MODULOS`, `OPERADOR` — Movistar/Bitel), sin precios ni
+   ciudad/región. Además está congelado desde mayo 2020 (los 42 archivos no dejan margen de
+   duda: cubren exactamente 2015-2020/mayo y ninguno más reciente).
 4. El VBP/rendimiento regional del dashboard Power BI del SIEA **no tiene dataset CSV
    equivalente localizado** en el catálogo completo — puede ser un cálculo interno del SIEA sin
    fuente pública propia en la PNDA.
 
-Esto no cambia la decisión de fondo: `MIDAGRI-03.03` por sí solo ya es suficiente para justificar
-el ADR de app standalone — no era necesario un "segundo dataset" para eso, solo se investigó
-porque se había prometido explorarlo.
+**No se encontró segundo dataset viable.** Esto no cambia la decisión de fondo: `MIDAGRI-03.03`
+por sí solo ya es suficiente para justificar el ADR de app standalone — un solo recurso bien
+confirmado (estructura, columnas, cobertura de La Libertad) pesa más que dos recursos sin
+verificar, y el proyecto ya tiene precedente de apps con un solo conector real (`ceplan-geo`
+sigue sin construir, pero varias apps existentes arrancaron con un único dataset).
 
 ## Pendientes concretos
 
-1. Previsualizar `MIDAGRI-02: Datero Agrario` para confirmar cobertura de Trujillo/La Libertad.
-2. Confirmar patrón de URL de descarga directa (no solo el botón de UI) para poder automatizar
+1. Confirmar patrón de URL de descarga directa (no solo el botón de UI) para poder automatizar
    el conector sin depender de un click.
-3. MINCETUR: explorar `datosturismo.mincetur.gob.pe` (el portal operacional, no el compendio de
+2. MINCETUR: explorar `datosturismo.mincetur.gob.pe` (el portal operacional, no el compendio de
    PDFs de `gob.pe`) para confirmar si tiene un dataset tabular alternativo.
-4. Reintentar PRODUCE (`ogeiee.produce.gob.pe`) y PCM (`sgp.pcm.gob.pe`) con Chrome real,
+3. Reintentar PRODUCE (`ogeiee.produce.gob.pe`) y PCM (`sgp.pcm.gob.pe`) con Chrome real,
    recordando probar también con `www.` si el dominio raíz falla.
 
 ## Referencias

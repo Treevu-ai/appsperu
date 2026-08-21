@@ -120,23 +120,39 @@ Ejecución física presupuestal SENASA 2021-2026 (desagregado regionalmente), pr
 superficie sembrada/cosechada/rendimiento/precio en chacra por cultivo** con ese nivel de
 detalle — esa promesa específica del primer pase de este spike queda descartada.
 
-### Candidato más cercano encontrado: `MIDAGRI-02: Datero Agrario`
+### Descartado (2026-08-21): `MIDAGRI-02: Datero Agrario` no es lo que su descripción sugiere
 
-"Servicio de consulta, vía teléfono celular, de precios promedio de productos agropecuarios
-comercializados en los mercados mayoristas de Lima Metropolitana y **26 principales ciudades
-del país**" — 42 archivos CSV. No es lo mismo que "precio en chacra" (este es precio
-**mayorista**, no precio al productor), pero sí tiene granularidad por ciudad. **No
-previsualizado en este spike** — pendiente confirmar si trae Trujillo/La Libertad y si el
-formato de los 42 CSV es consistente entre ciudades.
+Previsualizado en vivo el último de los 42 recursos (`Reporte de Transacciones 2020 Mayo`,
+`Mayo20_5.xlsx`). El título del dataset promete "precios promedio de productos agropecuarios
+comercializados en los mercados mayoristas de Lima Metropolitana y 26 principales ciudades del
+país" — pero el contenido real es otra cosa: **estadísticas de uso del propio servicio
+telefónico de consulta**, no precios. Columnas confirmadas: `AÑO`, `MES`, `CONSULTAS`,
+`USUARIO`, `MODULOS` (valores vistos: `PRECIOS`, `SENAMHI`, `ANA` — el módulo consultado, no el
+precio en sí), `OPERADOR` (`Movistar Peru`, `Bitel Peru` — el operador telefónico). Solo 4
+registros para mayo 2020, sin ciudad ni región.
+
+Dos problemas adicionales que descartan esta fuente por completo:
+1. **Sin dato de precio real** — es telemetría de uso de un IVR/servicio de mensajería, no la
+   serie de precios que el nombre del dataset sugiere.
+2. **Congelado desde mayo 2020** — el último de los 42 recursos es "Mayo 2020"; los 42 archivos
+   cubren exactamente 2015 (1) + 2016 (1) + 2017 (12) + 2018 (12) + 2019 (11, falta agosto) +
+   2020 (5, hasta mayo) = 42, sin nada posterior en más de 6 años, pese a que la metadata del
+   dataset dice "Fecha modificada: 2026-06-15" (ese timestamp es de la ficha, no de datos
+   nuevos).
+
+**Conclusión**: no hay segundo dataset viable identificado en este spike. `MIDAGRI-03.03`
+queda como el único recurso confirmado y listo para ingerir.
 
 ### Otros datasets identificados (grupo MIDAGRI, PNDA) — estructura aún sin previsualizar
 
 | Dataset | Contenido reportado | Regional |
 |---|---|---|
-| `MIDAGRI-02: Datero Agrario` | Precios mayoristas de productos agropecuarios, Lima + 26 ciudades | Sí, por ciudad (no confirmado si incluye Trujillo) |
 | `Ejecución física presupuestal SENASA 2021-2026` | Acciones de sanidad agraria, desagregado regionalmente | Sí, según descripción del dataset |
 | `Datos Agroindustriales 2023-2025` | Producción y venta de productos terminados, ingreso y utilización de materia prima | No confirmado |
-| `MIDAGRI: Estudios Económicos` | Sin detalle | No confirmado — no apareció en el catálogo completo revisado, posible que tampoco exista con ese nombre |
+
+`MIDAGRI-02: Datero Agrario` se retira de esta tabla — descartado (ver arriba). `MIDAGRI: Estudios
+Económicos` tampoco aparece en la tabla — no apareció en el catálogo completo de 23 datasets
+revisado, probablemente tampoco existe con ese nombre exacto.
 
 ### Portal operacional SIEA (`siea.midagri.gob.pe/portal/`)
 
@@ -158,10 +174,7 @@ dashboard en vez de CSV descargable). Módulos identificados por el propio sitio
    `/dataset/<slug>/resource/<id>/download/<archivo>.csv` — no confirmado el patrón exacto
    todavía, solo que el botón "Descargar" existe y la previsualización sí trae el dato completo
    vía la API interna del portal).
-2. Previsualizar `MIDAGRI-02: Datero Agrario` (42 CSV, precios mayoristas por ciudad) para
-   confirmar si incluye Trujillo/La Libertad — único candidato pendiente a un segundo recurso
-   ingeribles además de `MIDAGRI-03.03`.
-3. Si el VBP/rendimiento regional visto en el dashboard Power BI del SIEA tiene *algún*
+2. Si el VBP/rendimiento regional visto en el dashboard Power BI del SIEA tiene *algún*
    dataset público equivalente en la PNDA — no localizado en el catálogo completo revisado
    (23 datasets); puede que ese cálculo no tenga fuente CSV pública propia.
 4. Si el monitoreo satelital distrital de siembras (SIEA) es descargable o solo visual — no
