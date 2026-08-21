@@ -93,19 +93,42 @@ CREATE INDEX IF NOT EXISTS idx_agricultural_wage_lookup
   ON agricultural_wage (departamento, anio);
 ```
 
-**Nota de normalización pendiente de confirmar al implementar**: la previsualización en vivo
-mostró una columna final sin nombre claro con un valor tipo promedio anual junto a la fila 2026
-(`48`, `48.76` en dos columnas para esa fila, distinto del patrón de 12 columnas mensuales de
-los demás años) — verificar contra el archivo real si es un promedio del año en curso o un
-artefacto de la previsualización antes de fijar el schema definitivo.
+**Duda de la fila 2026 resuelta (2026-08-21, archivo real descargado y verificado)**: no es un
+promedio ni un artefacto de la previsualización — 2026 es simplemente el año en curso, con solo
+Enero/Febrero reportados y Marzo-Diciembre **vacíos** (string vacío, no `-`). El CSV usa dos
+marcadores de ausencia distintos: `-` para "mes con dato reportado como no disponible" (ej.
+La Libertad abr-jul 2020) vs. campo vacío para "mes que aún no ha ocurrido/reportado" (todo
+2026 después de febrero). El connector debe distinguir ambos como `NULL` en `valor_soles`, sin
+necesidad de una columna adicional — la distinción no cambia el schema, solo la lógica de
+parseo (ambos casos son "no hay valor", el motivo no se persiste).
 
 ### Connector
 
-`jornal-agricola-connector.ts`: descarga directa del CSV vía el patrón CKAN de
-`www.datosabiertos.gob.pe` (URL de descarga exacta pendiente de confirmar — el botón "Descargar"
-existe y funciona, falta capturar la URL real del recurso, no solo el enlace de UI). Parseo con
-`csv-parse` (mismo patrón que el resto del proyecto). Sin Range requests — el archivo es de
-16.36 KB, cabe completo en memoria sin ningún truco de streaming.
+`jornal-agricola-connector.ts`: descarga directa GET del CSV, **URL confirmada en vivo**:
+
+```
+https://www.datosabiertos.gob.pe/sites/default/files/Valor%20de%20Jornal.xlsx%20-%20C.102_0.csv
+```
+
+No es un endpoint CKAN estándar (`/api/3/action/datastore_search`) ni requiere el patrón Range
+del MEF — es un archivo estático servido por Drupal (`/sites/default/files/<nombre>`), GET
+simple, sin autenticación. **Cautela de red confirmada**: el portal está detrás de un WAF
+(CloudWAF) que bloquea requests sin headers de navegador — un `fetch`/`curl` sin `User-Agent`
+realista devuelve una página de bloqueo en chino en vez del CSV (confirmado en vivo, 2026-08-21).
+El connector necesita fijar un `User-Agent` de navegador estándar en la request.
+
+**Formato del archivo confirmado (descarga real, no solo previsualización)**:
+- Separador `;`, no `,` (mismo tipo de sorpresa ya documentado para el CSV del MEF).
+- BOM UTF-8 al inicio del archivo — el parser debe descartarlo o usar una librería que lo
+  maneje sola (`csv-parse` con `bom: true`).
+- Cada fila termina en `;` extra (columna vacía al final, artefacto del export de Excel) — se
+  descarta al parsear, no es una columna real.
+- Valores con 2 decimales fijos (`"35.00"`), parseable directo a `NUMERIC`.
+- Dos marcadores de ausencia de valor: `-` (mes reportado sin dato) y campo vacío (mes futuro
+  sin reportar todavía) — ambos se normalizan a `NULL` en `valor_soles`.
+
+Parseo con `csv-parse` (mismo patrón que el resto del proyecto). Sin Range requests — el archivo
+es de 16.36 KB, cabe completo en memoria sin ningún truco de streaming.
 
 **Frecuencia**: manual (`npm run ingest:jornal`), igual que todo el proyecto — sin scheduler.
 
@@ -155,8 +178,6 @@ decisión arquitectónica — se resuelve en la fase de connector, no bloquea el
   problema de `DATABASE_URL no está definida` que tuvieron las otras 6 apps.
 
 ### Negativas
-- URL de descarga directa sin confirmar todavía — riesgo menor, ya se navegó el botón real y
-  funciona, falta solo capturar el patrón de URL en la fase de connector.
 - El cruce con `radar-ejecucion` por `departamento` es débil comparado con cruces por ID exacto
   (`SEC_EJEC`, `CUI`, RUC) del resto del proyecto — es una aproximación territorial, no
   institucional, y debe documentarse como tal en el data contract (mismo caveat que ya tiene el

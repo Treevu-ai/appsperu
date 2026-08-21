@@ -1,0 +1,16 @@
+name: actividad-agraria
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: agraria
+      POSTGRES_PASSWORD: agraria
+      POSTGRES_DB: actividad_agraria
+    ports:
+      - "127.0.0.1:5440:5432"
+    volumes:
+      - agraria_pgdata:/var/lib/postgresql/data
+
+volumes:
+  agraria_pgdata:
