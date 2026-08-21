@@ -126,21 +126,45 @@ invertida respecto al borrador inicial:
    integración es el dataset descargable de la PNDA, no el iframe de Power BI del SIEA — mismo
    principio que ya aplicó ADR-0006 para descartar scraping del dashboard de ANIN.
 
+## Actualización 2026-08-21 (tercera pasada, retry) — MIDAGRI queda CONFIRMADO
+
+El bloqueo de `datosabiertos.gob.pe` no era una caída del portal: **el dominio raíz no
+resuelve, pero `www.datosabiertos.gob.pe` sí** — error de investigación en las dos pasadas
+anteriores, no un problema real de la fuente. Con eso corregido:
+
+- **`MIDAGRI-03.03: Valor de Jornal Agrícola por región 2018-2026`** queda confirmado con el
+  mismo rigor que el resto de data contracts del proyecto: CSV real, 16.36 KB, columnas
+  `Región/Año/Ene..Dic`, 210 registros, botón de descarga funcional, licencia Open Data Commons
+  Attribution. Detalle completo en `docs/data-contracts/midagri-estadistica-agraria.md`.
+- Se descubrió que `MIDAGRI-02` (VBP) es **nacional, no regional** — corrige la lectura inicial
+  de este ADR, que asumía que el "por región" del título de `Insumos y Servicios Agropecuarios`
+  era la única señal regional disponible. Ahora está confirmado en el dataset mismo, no en el
+  título.
+- El VBP/rendimiento regional que sí se ve en el dashboard Power BI del SIEA no tiene todavía
+  un dataset CSV equivalente confirmado — candidato: `MIDAGRI - Información Estadística
+  Agrícola`, pendiente de previsualizar.
+
+## Decisión final de este spike
+
+**MIDAGRI ya no necesita más investigación exploratoria** — el siguiente paso natural es
+escribir el ADR de app standalone (patrón ADR-0002/0003: nombre, puertos, migraciones,
+conector) tomando `MIDAGRI-03.03` como primer recurso a ingerir, con
+`MIDAGRI - Información Estadística Agrícola` como segundo objetivo si se confirma que trae el
+VBP/rendimiento regional. MINCETUR se mantiene en pausa (PDF, mayor costo). PRODUCE y PCM
+siguen sin investigar.
+
 ## Pendientes concretos
 
-1. **Bloqueante único para MIDAGRI**: acceder a `datosabiertos.gob.pe` desde una red donde
-   resuelva (falló por DNS/conexión tanto en WebFetch como en Chrome real desde este entorno,
-   2026-08-21) — confirmar URL de descarga directa, formato (CSV/XLSX) y columnas exactas de
-   `Insumos y Servicios Agropecuarios` (el dataset con "por región" explícito) y
-   `MIDAGRI - Información Estadística Agrícola`.
-2. Confirmar si el monitoreo satelital distrital de siembras (SIEA) es descargable o solo
-   visualización — no explorado en el pase con Chrome (foco fue "Perfil Productivo
-   Departamental").
-3. MINCETUR: explorar `datosturismo.mincetur.gob.pe` (el portal operacional, no el compendio de
-   PDFs de `gob.pe`) para confirmar si tiene un dataset tabular alternativo antes de descartar
-   la vía CSV/API para esta fuente.
-4. Reintentar PRODUCE (`ogeiee.produce.gob.pe`) y PCM (`sgp.pcm.gob.pe`) — no investigados
-   todavía con Chrome real.
+1. Confirmar la fila de LA LIBERTAD en `MIDAGRI-03.03` (estructura ya confirmada, falta la
+   fila específica — ver data contract).
+2. Previsualizar `MIDAGRI - Información Estadística Agrícola` para localizar la fuente real del
+   VBP/rendimiento regional.
+3. Confirmar patrón de URL de descarga directa (no solo el botón de UI) para poder automatizar
+   el conector sin depender de un click.
+4. MINCETUR: explorar `datosturismo.mincetur.gob.pe` (el portal operacional, no el compendio de
+   PDFs de `gob.pe`) para confirmar si tiene un dataset tabular alternativo.
+5. Reintentar PRODUCE (`ogeiee.produce.gob.pe`) y PCM (`sgp.pcm.gob.pe`) con Chrome real,
+   recordando probar también con `www.` si el dominio raíz falla.
 
 ## Referencias
 

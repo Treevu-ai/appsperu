@@ -7,13 +7,49 @@
   Plataforma Nacional de Datos Abiertos, `https://datosabiertos.gob.pe`.
 - Owner del conector: sin asignar — este data contract nace de un research spike (ADR-0007),
   no de una app en construcción.
-- **Confirmado en vivo el 2026-08-21 vía Chrome real** (`siea.midagri.gob.pe`, navegación
-  directa con filtro aplicado) — pero `datosabiertos.gob.pe` **sigue sin resolver ni siquiera
-  desde un browser real** (no es limitación de WebFetch, es la red/máquina de este entorno):
-  la existencia y granularidad regional de los datos quedó confirmada, la estructura exacta de
-  descarga (CSV/API) de la PNDA sigue pendiente.
+- **Confirmado en vivo el 2026-08-21 vía Chrome real**, incluida la PNDA
+  (`www.datosabiertos.gob.pe` — nota: **el dominio sin `www.` no resuelve, con `www.` sí**;
+  el "no accesible" de la primera pasada de este spike era eso, no una caída real del portal).
 
-## Estado: PARCIALMENTE CONFIRMADO — portal operacional navegado en vivo, PNDA aún sin acceso
+## Estado: CONFIRMADO — dataset real, descargable, con columna de región
+
+### Hallazgo decisivo (2026-08-21, segunda pasada con Chrome): `MIDAGRI-03.03` es el dataset correcto
+
+Dataset: `MIDAGRI-03. Reportes de Insumos y Servicios Agropecuarios`
+(`www.datosabiertos.gob.pe/dataset/midagri-03-reportes-de-insumos-y-servicios-agropecuarios-ministerio-de-desarrollo-agrario-y`),
+5 recursos CSV. El relevante para el proyecto:
+
+> **`MIDAGRI-03.03: Valor de Jornal Agrícola por región 2018-2026`** — archivo
+> `Valor de Jornal.xlsx - C.102.csv`, **16.36 KB**, `mimetype: text/csv`, `resource type: file
+> upload`, última actualización `2026-05-26`. Licencia: Open Data Commons Attribution License.
+> Botón "Descargar" presente y funcional (no se ejecutó la descarga en este spike, solo
+> "Previsualizar", que renderiza el dato completo vía el visor propio del portal).
+
+**Columnas confirmadas por previsualización en vivo**: `Región`, `Año`, `Ene`, `Feb`, `Mar`,
+`Abr`, `May`, `Jun`, `Jul`, `Ago`, `Set`, `Oct`, `Nov`, `Dic` — **210 registros**, cobertura
+2018-2026, granularidad **mensual por región**. Filas verificadas en vivo para Amazonas,
+Apurímac, Ancash, Arequipa, Ayacucho, Cajamarca, Cusco (no se llegó a confirmar la fila exacta
+de La Libertad por scroll, pero el dataset es evidentemente el universo completo de regiones,
+no una muestra — La Libertad es una región agrícola grande, altamente improbable que falte).
+
+Los otros 4 recursos del mismo dataset (mismo patrón, no previsualizados individualmente en
+este spike, pero mismo dataset padre y misma estructura esperada):
+- `MIDAGRI-03.01`: Importación de Insumos Agropecuarios 2015-2026 (nacional, no por región)
+- `MIDAGRI-03.02`: Producción de Guano de la Isla 2015-2026 (nacional, no por región)
+- `MIDAGRI-03.04`: Precio de Alquiler de Tractor Agrícola por Región 2018-2026 (S/.)
+- `MIDAGRI-03.05`: Precio de Alquiler de Yunta por Región 2018-2026 (S/.)
+
+### Corrección sobre `MIDAGRI-02` (VBP) — no es regional
+
+El dataset `MIDAGRI-02.01: VBP Agropecuario, Agrícola y Pecuario, 2020-2026` (el primero que se
+investigó en este spike) **es una serie nacional mensual, sin columna de región** — columnas
+confirmadas: `AÑOS`, `mes`, `VBP_Agropecuario_%`, `VBP_Agricolacola_%` (sic, typo del dataset
+original), `VBP_Pecuario_%`. El VBP regional que se ve en el dashboard Power BI del SIEA
+("Perfil Productivo Departamental") **no corresponde a este dataset de la PNDA** — es otra
+fuente, probablemente `MIDAGRI - Información Estadística Agrícola` (sin previsualizar todavía,
+ver pendientes) o un cálculo propio del dashboard sin dataset público equivalente.
+
+### Estado previo del portal operacional (SIEA, Power BI) — sin cambios
 
 ### Hallazgo en vivo (2026-08-21): dashboard Power BI, sin exportación de datos
 
@@ -45,19 +81,14 @@ abajo (la fuente subyacente de este mismo Power BI), no contra el iframe de Powe
 patrón de decisión que CEPLAN: el botón/dashboard visual no es el punto de integración, el
 dataset descargable sí.
 
-### Datasets identificados (Plataforma Nacional de Datos Abiertos, grupo MIDAGRI) — estructura sin confirmar
+### Otros datasets identificados (grupo MIDAGRI, PNDA) — estructura aún sin previsualizar
 
-### Datasets identificados (Plataforma Nacional de Datos Abiertos, grupo MIDAGRI)
-
-| Dataset | Contenido reportado | Cobertura temporal | Regional |
-|---|---|---|---|
-| `VBP Agropecuario, Agrícola y Pecuario` | Valor Bruto de Producción agropecuaria/agrícola/pecuaria | 2019–2025 | No confirmado |
-| `MIDAGRI - Información Estadística Agrícola` | Superficie sembrada, superficie cosechada, producción, rendimiento, precio en chacra por cultivo | No confirmado | No confirmado (es la fuente base del SIEA, que sí tiene reportes por región) |
-| `MIDAGRI - Información Estadística Pecuaria` | Producción, población pecuaria, precios al productor, rendimientos | No confirmado | No confirmado |
-| `Datos Agroindustriales 2023-2025` | Producción y venta de productos terminados, ingreso y utilización de materia prima | 2023–2025 | No confirmado |
-| `Insumos y Servicios Agropecuarios` | Importación de insumos, producción de guano, **valor de jornal agrícola por región**, **precio de alquiler de tractor agrícola por región** | 2018–2024 | **Sí, explícito ("por región") según el título del dataset** |
-| `MIDAGRI: Estudios Económicos` | Sin detalle | — | No confirmado |
-| `MIDAGRI: Catálogo de datasets publicados` | Meta-dataset (catálogo de los anteriores) | — | N/A |
+| Dataset | Contenido reportado | Regional |
+|---|---|---|
+| `MIDAGRI - Información Estadística Agrícola` | Superficie sembrada/cosechada, producción, rendimiento, precio en chacra por cultivo | No confirmado — candidato a ser la fuente real del VBP regional del dashboard SIEA |
+| `MIDAGRI - Información Estadística Pecuaria` | Producción, población pecuaria, precios al productor, rendimientos | No confirmado |
+| `Datos Agroindustriales 2023-2025` | Producción y venta de productos terminados, ingreso y utilización de materia prima | No confirmado |
+| `MIDAGRI: Estudios Económicos` | Sin detalle | No confirmado |
 
 ### Portal operacional SIEA (`siea.midagri.gob.pe/portal/`)
 
@@ -75,27 +106,26 @@ dashboard en vez de CSV descargable). Módulos identificados por el propio sitio
 
 ### Lo que falta confirmar antes de escribir el ADR de app + conector
 
-1. URL de descarga directa (¿API CKAN estándar de `datosabiertos.gob.pe`, tipo
-   `/api/3/action/datastore_search`, o solo botón de descarga como MEF/CEPLAN?) — **bloqueado
-   en este entorno**: `datosabiertos.gob.pe` no resolvió ni desde Chrome real el 2026-08-21,
-   reintentar desde otra red/máquina.
-2. Formato real de archivo (CSV/XLSX) y separador.
-3. Si `Insumos y Servicios Agropecuarios` (el único con "por región" confirmado en el título)
-   incluye La Libertad y con qué frecuencia se actualiza.
-4. Si el monitoreo satelital distrital es exportable o solo visual.
-5. Columnas exactas — ninguna se confirmó contra un diccionario real (a diferencia del CSV del
-   MEF, donde sí se leyó `Gastos_Diccionario.csv` en vivo).
-
-Lo que **ya no** hace falta confirmar (resuelto en vivo 2026-08-21): que el portal existe, que
-tiene datos reales y actualizados para La Libertad, y que la granularidad regional es real (no
-solo agregados nacionales) — visto directamente en el Power BI del SIEA.
+1. Confirmar la fila exacta de LA LIBERTAD en `MIDAGRI-03.03` (se verificó la estructura y
+   varias regiones, no se hizo scroll hasta esa fila específica — el grid de previsualización
+   tiene su propio scroll interno, no el de la página).
+2. URL real de descarga del archivo (patrón CKAN de `datosabiertos.gob.pe`, ej.
+   `/dataset/<slug>/resource/<id>/download/<archivo>.csv` — no confirmado el patrón exacto
+   todavía, solo que el botón "Descargar" existe y la previsualización sí trae el dato completo
+   vía la API interna del portal).
+3. Previsualizar `MIDAGRI - Información Estadística Agrícola` (candidata a ser la fuente real
+   del VBP/rendimiento regional que se ve en el dashboard SIEA — el dataset `MIDAGRI-02` VBP
+   resultó ser nacional, no esa fuente).
+4. Si el monitoreo satelital distrital de siembras (SIEA) es descargable o solo visual — no
+   explorado en ninguna de las dos pasadas.
+5. Separador real del CSV (coma vs. `;`) y encoding — no confirmado sin descargar el archivo.
 
 ## Cautelas
 
-- Nivel de confianza más bajo que el resto de este proyecto — toda la información viene de
-  snippets de búsqueda, no de navegación directa. No usar como base de una migración de schema
-  sin antes repetir el mismo proceso de verificación en vivo que se hizo para CEPLAN/ObservaPerú
-  (`docs/data-contracts/ceplan-strategic-planning.md`).
-- `datosabiertos.gob.pe` no resolvió por DNS en este entorno de investigación (mismo problema ya
-  visto al investigar ANIN, ver ADR-0006) — probar desde un entorno de red distinto antes de
-  concluir que el portal no es accesible programáticamente.
+- Uno de los cinco recursos del dataset (`MIDAGRI-03.03`) quedó confirmado con el mismo nivel de
+  rigor que el resto del proyecto (navegación en vivo, columnas reales, no snippets de
+  búsqueda). Los otros datasets de la tabla de arriba siguen sin ese nivel de confirmación —
+  no asumir que tienen la misma estructura solo por pertenecer al mismo grupo MIDAGRI.
+- Recordar para cualquier investigación futura contra `datosabiertos.gob.pe`: **usar el
+  subdominio `www.`** — el dominio raíz no resuelve en esta red, lo cual generó una falsa
+  alarma de "portal caído" en la primera pasada de este spike.
