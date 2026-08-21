@@ -1,12 +1,13 @@
 # Data contract — MIDAGRI: Estadística agraria (SIEA / Plataforma Nacional de Datos Abiertos)
 
 > Ficha técnica: `docs/adr/0007-research-spike-midagri-mincetur-actividad-economica.md`
+  (investigación) y `docs/adr/0008-actividad-agraria-app-standalone-y-connector-midagri.md`
+  (decisión de app standalone, connector propuesto).
 
 - Fuente oficial: Ministerio de Desarrollo Agrario y Riego (MIDAGRI) — Sistema Integrado de
   Estadística Agraria (SIEA), `https://siea.midagri.gob.pe/portal/`, y datasets propios en la
   Plataforma Nacional de Datos Abiertos, `https://datosabiertos.gob.pe`.
-- Owner del conector: sin asignar — este data contract nace de un research spike (ADR-0007),
-  no de una app en construcción.
+- Owner del conector: app `actividad-agraria` (propuesta en ADR-0008, no construida todavía).
 - **Confirmado en vivo el 2026-08-21 vía Chrome real**, incluida la PNDA
   (`www.datosabiertos.gob.pe` — nota: **el dominio sin `www.` no resuelve, con `www.` sí**;
   el "no accesible" de la primera pasada de este spike era eso, no una caída real del portal).
