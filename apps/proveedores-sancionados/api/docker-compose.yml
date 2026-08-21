@@ -1,0 +1,16 @@
+name: proveedores-sancionados
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sanciones
+      POSTGRES_PASSWORD: sanciones
+      POSTGRES_DB: proveedores_sancionados
+    ports:
+      - "127.0.0.1:5439:5432"
+    volumes:
+      - sanciones_pgdata:/var/lib/postgresql/data
+
+volumes:
+  sanciones_pgdata:
