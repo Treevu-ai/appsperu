@@ -125,6 +125,90 @@ export function normalizeMefRows(
   return { rows, rejected };
 }
 
+export interface CanonicalProyectoRow {
+  entityCode: string;
+  funcion: string;
+  generica: string | null;
+  proyectoNombre: string;
+  programaPptoNombre: string | null;
+  anioFiscal: number;
+  devengado: number;
+}
+
+export interface NormalizeProyectosResult {
+  rows: CanonicalProyectoRow[];
+  rejected: RejectedRow[];
+}
+
+/**
+ * Igual espíritu que `normalizeMefRows` pero agregando por
+ * (entity_code, funcion, generica, proyecto) en vez de solo
+ * (entity_code, funcion, generica) — el nivel de detalle que responde "qué
+ * construye" una entidad, no solo "cuánto gasta en qué función" (ver
+ * ADR-0006, hallazgo de los nombres reales de proyecto de ANIN). Solo
+ * agrega `devengado`: PIA/PIM viven en filas separadas (MES_EJE=0) que no
+ * necesariamente comparten el mismo `ACTIVIDAD_ACCION_OBRA_NOMBRE` fila por
+ * fila, y el caso de uso de esta tabla es "cuánto se gastó en X proyecto
+ * real", no el avance presupuestal — eso ya lo cubre `budget_execution`.
+ */
+export function normalizeMefProyectos(
+  rawRows: Record<string, unknown>[],
+  mapping: MefFieldMapping
+): NormalizeProyectosResult {
+  const rejected: RejectedRow[] = [];
+  const aggregates = new Map<string, CanonicalProyectoRow>();
+
+  for (const raw of rawRows) {
+    const entityCode = raw[mapping.entityCode];
+    const anioFiscal = toNumber(raw[mapping.anioFiscal]);
+    const devengado = toNumber(raw[mapping.devengado]);
+    const funcion = raw[mapping.funcion];
+    const proyectoNombre = String(raw[mapping.proyectoNombre] ?? "").trim();
+
+    if (typeof entityCode !== "string" || entityCode.trim() === "") {
+      rejected.push({ raw, reason: "entity_code ausente o vacío" });
+      continue;
+    }
+    if (typeof funcion !== "string" || funcion.trim() === "") {
+      rejected.push({ raw, reason: "funcion ausente o vacía" });
+      continue;
+    }
+    if (anioFiscal === null) {
+      rejected.push({ raw, reason: "anio_fiscal no numérico" });
+      continue;
+    }
+    if (devengado === null) {
+      rejected.push({ raw, reason: "devengado no numérico" });
+      continue;
+    }
+    if (proyectoNombre === "") {
+      rejected.push({ raw, reason: "ACTIVIDAD_ACCION_OBRA_NOMBRE ausente o vacío" });
+      continue;
+    }
+
+    const generica = String(raw[mapping.generica] ?? "").trim() || null;
+    const key = `${entityCode}|${funcion}|${generica ?? ""}|${proyectoNombre}|${anioFiscal}`;
+    const existing = aggregates.get(key);
+
+    if (existing) {
+      existing.devengado += devengado;
+      continue;
+    }
+
+    aggregates.set(key, {
+      entityCode: entityCode.trim(),
+      funcion: funcion.trim(),
+      generica,
+      proyectoNombre,
+      programaPptoNombre: String(raw[mapping.programaPptoNombre] ?? "").trim() || null,
+      anioFiscal,
+      devengado,
+    });
+  }
+
+  return { rows: [...aggregates.values()], rejected };
+}
+
 export function avancePct(row: Pick<CanonicalBudgetRow, "pim" | "devengado">): number | null {
   if (row.pim <= 0) return null;
   return Math.round((row.devengado / row.pim) * 10000) / 100;

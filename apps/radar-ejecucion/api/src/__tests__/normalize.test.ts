@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeMefRows, avancePct } from "../ingest/normalize.js";
+import { normalizeMefRows, normalizeMefProyectos, avancePct } from "../ingest/normalize.js";
 import { CONFIRMED_MEF_FIELD_MAPPING } from "../ingest/field-mapping.js";
 
 const mapping = CONFIRMED_MEF_FIELD_MAPPING;
@@ -125,6 +125,46 @@ describe("normalizeMefRows", () => {
     expect(result).toHaveLength(1);
     expect(result[0].generica).toBeNull();
     expect(result[0].devengado).toBe(300);
+  });
+});
+
+describe("normalizeMefProyectos", () => {
+  it("aggregates devengado by entidad+función+generica+proyecto, keeping distinct proyectos separate", () => {
+    const rows = [
+      rawRow({
+        GENERICA: "6",
+        ACTIVIDAD_ACCION_OBRA_NOMBRE: "RECUPERACION DE HOSPITALES",
+        PROGRAMA_PPTO_NOMBRE: "ASIGNACIONES PRESUPUESTARIAS QUE NO RESULTAN EN PRODUCTOS",
+        MONTO_DEVENGADO: "1000000",
+      }),
+      rawRow({
+        GENERICA: "6",
+        ACTIVIDAD_ACCION_OBRA_NOMBRE: "RECUPERACION DE HOSPITALES",
+        MONTO_DEVENGADO: "500000",
+      }),
+      rawRow({
+        GENERICA: "6",
+        ACTIVIDAD_ACCION_OBRA_NOMBRE: "CONTROL DE INUNDACIONES Y DEFENSAS RIBEREÑAS",
+        MONTO_DEVENGADO: "300000",
+      }),
+    ];
+    const { rows: result, rejected } = normalizeMefProyectos(rows, mapping);
+    expect(rejected).toHaveLength(0);
+    expect(result).toHaveLength(2);
+    expect(result.find((r) => r.proyectoNombre === "RECUPERACION DE HOSPITALES")?.devengado).toBe(1500000);
+    expect(result.find((r) => r.proyectoNombre === "CONTROL DE INUNDACIONES Y DEFENSAS RIBEREÑAS")?.devengado).toBe(
+      300000
+    );
+  });
+
+  it("rejects rows without ACTIVIDAD_ACCION_OBRA_NOMBRE instead of aggregating them under an empty name", () => {
+    const { rows, rejected } = normalizeMefProyectos(
+      [rawRow({ ACTIVIDAD_ACCION_OBRA_NOMBRE: "" })],
+      mapping
+    );
+    expect(rows).toHaveLength(0);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].reason).toMatch(/ACTIVIDAD_ACCION_OBRA_NOMBRE/);
   });
 });
 

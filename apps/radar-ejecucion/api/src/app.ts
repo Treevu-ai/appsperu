@@ -2,6 +2,7 @@ import express, { type ErrorRequestHandler } from "express";
 import { executionRouter } from "./routes/execution.js";
 import { benchmarkRouter } from "./routes/benchmark.js";
 import { metaRouter } from "./routes/meta.js";
+import { proyectosRouter } from "./routes/proyectos.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 
 const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
@@ -21,6 +22,7 @@ export function createApp() {
   app.use("/api/execution", executionRouter);
   app.use("/api/benchmark", benchmarkRouter);
   app.use("/api/meta", metaRouter);
+  app.use("/api/proyectos", proyectosRouter);
 
   // Debe ir al final: sin esto, un rechazo dentro de un handler async
   // se vuelve un unhandled rejection que tumba el proceso entero en vez

@@ -4,7 +4,7 @@ import { parse } from "csv-parse/sync";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
 import { CONFIRMED_MEF_FIELD_MAPPING, type MefFieldMapping } from "./field-mapping.js";
-import { normalizeMefRows } from "./normalize.js";
+import { normalizeMefRows, normalizeMefProyectos } from "./normalize.js";
 
 const FILES_BASE_URL = "https://fs.datosabiertos.mef.gob.pe/datastorefiles";
 
@@ -188,6 +188,61 @@ async function upsertEntity(
            ubigeo = COALESCE(EXCLUDED.ubigeo, entities.ubigeo)`,
     [entityCode, entityName, nivelGobierno, ubigeo]
   );
+}
+
+async function insertProyectosRaw(
+  client: PoolClient,
+  batchId: number,
+  fechaCorte: string,
+  metaDepartamento: string | null,
+  proyectos: ReturnType<typeof normalizeMefProyectos>["rows"]
+): Promise<void> {
+  for (const p of proyectos) {
+    await client.query(
+      `INSERT INTO budget_execution_proyectos
+         (entity_code, funcion, generica, proyecto_nombre, programa_ppto_nombre, anio_fiscal, devengado, fecha_corte, source_batch_id, meta_departamento)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT (entity_code, funcion, proyecto_nombre, anio_fiscal, fecha_corte, COALESCE(generica, ''), COALESCE(meta_departamento, '')) DO UPDATE
+         SET devengado = EXCLUDED.devengado, source_batch_id = EXCLUDED.source_batch_id,
+             programa_ppto_nombre = EXCLUDED.programa_ppto_nombre`,
+      [
+        p.entityCode,
+        p.funcion,
+        p.generica,
+        p.proyectoNombre,
+        p.programaPptoNombre,
+        p.anioFiscal,
+        p.devengado,
+        fechaCorte,
+        batchId,
+        metaDepartamento,
+      ]
+    );
+  }
+}
+
+/**
+ * Aísla `insertProyectosRaw` del resto de la transacción con un SAVEPOINT:
+ * si falla (ej. heurístico de PIM de `normalizeMefRows` rechazó una fila
+ * cuya entidad nunca se sembró en `entities`, violando la FK de esta tabla),
+ * se hace ROLLBACK solo hasta el savepoint y el resto del run (budget_execution,
+ * ya escrito antes en la misma transacción) sigue en pie hacia el COMMIT.
+ */
+async function insertProyectos(
+  client: PoolClient,
+  batchId: number,
+  fechaCorte: string,
+  metaDepartamento: string | null,
+  proyectos: ReturnType<typeof normalizeMefProyectos>["rows"]
+): Promise<void> {
+  await client.query("SAVEPOINT proyectos_detalle");
+  try {
+    await insertProyectosRaw(client, batchId, fechaCorte, metaDepartamento, proyectos);
+    await client.query("RELEASE SAVEPOINT proyectos_detalle");
+  } catch (err) {
+    await client.query("ROLLBACK TO SAVEPOINT proyectos_detalle");
+    console.error("insertProyectos falló, se omite el detalle de proyecto sin tumbar la ingesta:", err);
+  }
 }
 
 export interface IngestSummary {
@@ -449,6 +504,8 @@ export async function ingestMefFullYearForDepartamento(
         [lastBatchId, JSON.stringify(bad.raw), bad.reason]
       );
     }
+    const { rows: proyectos } = normalizeMefProyectos(allRecords, mapping);
+    await insertProyectos(client, lastBatchId, fechaCorte, null, proyectos);
     await client.query("COMMIT");
   } catch (err) {
     await client.query("ROLLBACK");
@@ -692,6 +749,8 @@ export async function ingestMefFullYearForMetaDepartamento(
         [lastBatchId, JSON.stringify(bad.raw), bad.reason]
       );
     }
+    const { rows: proyectos } = normalizeMefProyectos(allRecords, mapping);
+    await insertProyectos(client, lastBatchId, fechaCorte, wantedMetaDepartamento, proyectos);
     await client.query("COMMIT");
   } catch (err) {
     await client.query("ROLLBACK");
