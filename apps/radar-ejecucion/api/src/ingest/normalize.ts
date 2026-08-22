@@ -5,6 +5,8 @@ export interface CanonicalBudgetRow {
   entityName: string;
   nivelGobierno: string;
   funcion: string;
+  generica: string | null;
+  genericaNombre: string | null;
   ubigeo: string | null;
   departamentoNombre: string | null;
   provinciaNombre: string | null;
@@ -74,7 +76,8 @@ export function normalizeMefRows(
       continue;
     }
 
-    const key = `${entityCode}|${funcion}|${anioFiscal}`;
+    const generica = String(raw[mapping.generica] ?? "").trim() || null;
+    const key = `${entityCode}|${funcion}|${generica ?? ""}|${anioFiscal}`;
     const existing = aggregates.get(key);
 
     if (existing) {
@@ -89,6 +92,8 @@ export function normalizeMefRows(
       entityName: String(raw[mapping.entityName] ?? "").trim() || entityCode.trim(),
       nivelGobierno: String(raw[mapping.nivelGobierno] ?? "").trim() || "NO_ESPECIFICADO",
       funcion: funcion.trim(),
+      generica,
+      genericaNombre: String(raw[mapping.genericaNombre] ?? "").trim() || null,
       ubigeo: buildUbigeo(
         raw[mapping.departamentoCodigo],
         raw[mapping.provinciaCodigo],
