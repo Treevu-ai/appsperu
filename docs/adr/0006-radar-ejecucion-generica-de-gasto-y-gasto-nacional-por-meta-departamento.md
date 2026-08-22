@@ -1,5 +1,28 @@
 # ADR-0006: `radar-ejecucion` — clasificación económica del gasto (genérica) y gasto de Gobierno Nacional dirigido a un departamento (caso Reconstrucción con Cambios / ANIN en La Libertad)
 
+> **Actualización 2026-08-22 — Decisión 2 implementada y verificada con datos reales.**
+> `ingestMefFullYearForMetaDepartamento` (nueva función en `mef-connector.ts`) corrió contra el
+> archivo real y confirmó el hallazgo que motivó este ADR: **AUTORIDAD NACIONAL DE
+> INFRAESTRUCTURA - ANIN** aparece como la entidad #1 por devengado dirigido a La Libertad
+> (S/272.9M, función ORDEN PUBLICO Y SEGURIDAD — no AGROPECUARIA, dato real corrige la hipótesis
+> inicial de que caería bajo función agropecuaria). Total: **90 entidades nacionales distintas**,
+> **S/1,936.1M de devengado** y **S/3,359.3M de PIM** dirigidos a La Libertad desde Gobierno
+> Nacional, 148 filas — completamente invisibles en `budget_execution` antes de esta corrida.
+> Para la función AGROPECUARIA específicamente (la que ya cruza `actividad-agraria`, ver
+> ADR-0008): PIM nacional S/191.6M + devengado S/65.0M (10 entidades) se suman a los S/249.3M/
+> S/95.2M que ya se veían de GR/GL — **43% más de PIM agropecuario real del que el dato
+> mostraba hasta ayer**. Tres problemas de implementación reales encontrados y resueltos en el
+> camino (documentados en el código): (1) las filas dirigidas a un departamento están
+> *dispersas* en el bloque Nacional, no contiguas — obligó a descargar cada sección de mes
+> COMPLETA (~150-330 MB) en vez de una ventana angosta con lookback; (2) la sección `mes=0`
+> (311 MB) excedía el límite de Postgres para strings JSONB (268,435,455 bytes) — se resolvió
+> guardando solo las filas ya filtradas en el lake de evidencia, no la sección cruda completa;
+> (3) las entidades de Gobierno Nacional nunca habían sido sembradas en `entities` por ningún
+> otro conector — se agregó `upsertEntity`/`upsertTerritoryFromMef` al loop de escritura final,
+> ausente en el diseño original de este ADR. Detalle completo de los 3 hallazgos en los
+> comentarios de `mef-connector.ts` (`saveFilteredBatch`, `NACIONAL_MES_START_BYTE`, el upsert
+> de entidades antes del INSERT final). La Decisión 1 (genérica de gasto) sigue sin implementar.
+
 ## Contexto
 
 Al revisar qué otra data pública digerible falta para el piloto de La Libertad, surgieron dos
