@@ -429,6 +429,241 @@ export async function ingestMefFullYearForDepartamento(
   return { batchIds, entidadesActualizadas: rows.length, seccionesSinDatos };
 }
 
+/**
+ * Offsets del bloque "GOBIERNO NACIONAL" del archivo `2026-Gasto-Mensual.csv`
+ * (confirmado en vivo el 2026-08-21 vía búsqueda binaria sobre bytes reales
+ * del archivo remoto — no es una estimación). El bloque nacional viene
+ * DESPUÉS de "GOBIERNOS LOCALES" (que termina cerca del byte 4,767,552,175)
+ * y ocupa el resto del archivo hasta EOF. Tamaño total del archivo
+ * confirmado por `Content-Range` en la respuesta HTTP: 6,240,885,549 bytes.
+ *
+ * A diferencia de `SECTION_OFFSETS_LA_LIBERTAD` (offsets *por departamento*,
+ * porque el archivo ordena Regional/Local por `DEPARTAMENTO_EJECUTORA_NOMBRE`
+ * y un departamento cae en un bloque contiguo angosto), estos offsets son
+ * *por mes únicamente* — el orden interno del bloque Nacional sigue siendo
+ * por departamento de la entidad ejecutora (mayormente Lima, sede de los
+ * ministerios), no por `DEPARTAMENTO_META_NOMBRE`. Las filas dirigidas a un
+ * departamento destino específico (ej. LA LIBERTAD) están **dispersas en
+ * todo el bloque del mes**, no en una ventana angosta — por eso la ingesta
+ * de abajo descarga cada sección de mes COMPLETA (decenas a cientos de MB),
+ * no una ventana con lookback como el caso GR/GL. Esto hace que estos
+ * offsets sirvan para filtrar por *cualquier* `DEPARTAMENTO_META_NOMBRE`, no
+ * solo La Libertad — son offsets del bloque Nacional, no de un departamento.
+ */
+const NACIONAL_MES_START_BYTE: Record<string, number> = {
+  "7": 4_767_552_175,
+  "6": 4_962_111_870,
+  "5": 5_128_297_026,
+  "4": 5_295_149_068,
+  "3": 5_454_753_275,
+  "2": 5_614_487_230,
+  "1": 5_768_701_506,
+  "0": 5_914_421_330,
+};
+const NACIONAL_FILE_END_BYTE = 6_240_885_549;
+
+/**
+ * Ingesta comprensiva de Gobierno Nacional filtrado por `DEPARTAMENTO_META`
+ * (a dónde se dirige el gasto, no dónde tiene sede la entidad) — ver
+ * ADR-0006. Cierra el blind spot documentado en `SECTION_OFFSETS_LA_LIBERTAD`
+ * arriba: `ingestMefFullYearForDepartamento` nunca ingiere Gobierno Nacional,
+ * así que gasto de ministerios/programas con sede en Lima pero ejecutado
+ * físicamente en un departamento (ej. reconstrucción post-desastre) era
+ * invisible en `budget_execution` hasta esta función.
+ *
+ * Mismo patrón de agregación que `ingestMefFullYearForDepartamento`: junta
+ * TODAS las filas de los 8 meses en un solo array y agrega una sola vez, para
+ * que devengado (de los meses 1-7) y PIA/PIM (de MES_EJE=0) terminen en la
+ * MISMA fila agregada por entidad+función+año, no en filas separadas sin
+ * PIM/devengado completo.
+ */
+/**
+ * Busca un lote ya descargado en una corrida anterior (mismo `resource_id`)
+ * y devuelve sus filas crudas ya parseadas, sin volver a pedirlas por red.
+ * Hace que la ingesta sea reanudable: cada sección de mes se descarga (~150-
+ * 330 MB) una sola vez aunque el proceso se interrumpa a mitad de las 8 —
+ * necesario porque una corrida completa (~1.47 GB, 8 secciones) puede
+ * exceder el límite de tiempo de un proceso en background en este entorno
+ * (confirmado en vivo el 2026-08-21: dos corridas completas fueron
+ * terminadas externamente entre los 10 y 15 minutos, mucho antes de
+ * completar las 8 secciones).
+ */
+async function loadCachedSection(
+  resourceId: string,
+  mesEje: string,
+  mapping: MefFieldMapping,
+  wantedMetaDepartamento: string
+): Promise<{ id: number; rows: Record<string, unknown>[] } | null> {
+  const { rows } = await pool.query<{ id: number; payload: { rows?: Record<string, unknown>[]; csv?: string } }>(
+    `SELECT id, payload FROM raw_mef_batches WHERE resource_id = $1 ORDER BY fetched_at DESC LIMIT 1`,
+    [resourceId]
+  );
+  if (rows.length === 0) return null;
+
+  // Compatibilidad con lotes guardados antes de `saveFilteredBatch`
+  // (formato viejo: CSV crudo sin filtrar completo — ver el comentario de
+  // esa función sobre por qué se cambió el formato para mes=0).
+  if (rows[0].payload.rows) {
+    return { id: rows[0].id, rows: rows[0].payload.rows };
+  }
+
+  const parsedRows = parse(rows[0].payload.csv ?? "", {
+    columns: true,
+    skip_empty_lines: true,
+    trim: true,
+    relax_column_count: true,
+  }) as Record<string, unknown>[];
+  const filtered = parsedRows.filter(
+    (r) =>
+      String(r.MES_EJE ?? "").trim() === mesEje &&
+      String(r[mapping.metaDepartamentoNombre] ?? "").toUpperCase().trim() === wantedMetaDepartamento
+  );
+  return { id: rows[0].id, rows: filtered };
+}
+
+/**
+ * Guarda solo las filas YA FILTRADAS por `DEPARTAMENTO_META` (no la sección
+ * completa sin filtrar, a diferencia del resto del proyecto). Esto es una
+ * desviación deliberada del principio "el lake de evidencia nunca se filtra
+ * antes de guardarse": la sección `mes=0` completa pesa ~311 MB de texto, y
+ * Postgres rechaza strings JSONB de más de 268,435,455 bytes
+ * (`error: string too long to represent as jsonb string`, confirmado en vivo
+ * el 2026-08-21 — la primera versión de este connector intentaba guardar el
+ * texto crudo completo y falló exactamente así). Las filas ya filtradas
+ * (miles, no cientos de miles) pesan unos pocos MB — muy por debajo del
+ * límite. El costo real: si `DEPARTAMENTO_META_NOMBRE` tuviera un bug de
+ * normalización, las filas descartadas no quedan en ningún lado para
+ * auditoría — aceptable acá porque el filtro es una comparación de string
+ * exacta y trivial de verificar, no una heurística.
+ */
+async function saveFilteredBatch(
+  client: PoolClient,
+  resourceId: string,
+  filteredRows: Record<string, unknown>[]
+): Promise<number> {
+  const payload = JSON.stringify({ rows: filteredRows });
+  const result = await client.query<{ id: number }>(
+    `INSERT INTO raw_mef_batches (resource_id, query, checksum, record_count, payload)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id`,
+    [resourceId, `meta-departamento-download:${resourceId}`, checksumOf(payload), filteredRows.length, payload]
+  );
+  return result.rows[0].id;
+}
+
+export async function ingestMefFullYearForMetaDepartamento(
+  filename: string,
+  metaDepartamento: string,
+  mapping: MefFieldMapping = CONFIRMED_MEF_FIELD_MAPPING
+): Promise<FullYearIngestSummary> {
+  const wantedMetaDepartamento = metaDepartamento.toUpperCase().trim();
+  const meses = ["7", "6", "5", "4", "3", "2", "1", "0"];
+
+  const batchIds: number[] = [];
+  const seccionesSinDatos: string[] = [];
+  const allRecords: Record<string, unknown>[] = [];
+
+  for (let i = 0; i < meses.length; i++) {
+    const mesEje = meses[i];
+    const resourceId = `${filename}#nivel=GOBIERNO NACIONAL#mes=${mesEje}#meta=${wantedMetaDepartamento}`;
+
+    const cached = await loadCachedSection(resourceId, mesEje, mapping, wantedMetaDepartamento);
+    if (cached) {
+      // El payload cacheado YA está filtrado (ver `saveFilteredBatch`) — no
+      // hace falta re-filtrar.
+      console.log(`  [cache] mes=${mesEje}: ${cached.rows.length} filas de ${wantedMetaDepartamento} (sección ya descargada)`);
+      batchIds.push(cached.id);
+      allRecords.push(...cached.rows);
+      continue;
+    }
+
+    const startByte = NACIONAL_MES_START_BYTE[mesEje];
+    const nextStartByte = i + 1 < meses.length ? NACIONAL_MES_START_BYTE[meses[i + 1]] : NACIONAL_FILE_END_BYTE;
+    const sectionBytes = nextStartByte - startByte;
+
+    console.log(`  [red] mes=${mesEje}: descargando ${(sectionBytes / 1024 / 1024).toFixed(0)} MB...`);
+    const { rows: fetchedRecords } = await fetchMefCsv(filename, sectionBytes, startByte);
+
+    const records = fetchedRecords.filter(
+      (r) =>
+        String(r.MES_EJE ?? "").trim() === mesEje &&
+        String(r[mapping.metaDepartamentoNombre] ?? "").toUpperCase().trim() === wantedMetaDepartamento
+    );
+
+    if (records.length === 0) {
+      seccionesSinDatos.push(`GOBIERNO NACIONAL/mes=${mesEje}`);
+      continue;
+    }
+
+    const client = await pool.connect();
+    try {
+      const batchId = await saveFilteredBatch(client, resourceId, records);
+      batchIds.push(batchId);
+    } finally {
+      client.release();
+    }
+
+    console.log(`  [red] mes=${mesEje}: ${records.length} filas de ${wantedMetaDepartamento} guardadas`);
+    allRecords.push(...records);
+  }
+
+  if (allRecords.length === 0) {
+    throw new Error(
+      `No se encontró ninguna fila de Gobierno Nacional dirigida a "${metaDepartamento}" en ninguna de las 8 ` +
+        `secciones mensuales. Los offsets de NACIONAL_MES_START_BYTE pueden haber quedado desactualizados — ` +
+        `hay que volver a escanear el archivo.`
+    );
+  }
+
+  const { rows } = normalizeMefRows(allRecords, mapping);
+  const fechaCorte = new Date().toISOString().slice(0, 10);
+  const lastBatchId = batchIds[batchIds.length - 1];
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    for (const row of rows) {
+      // Entidades de Gobierno Nacional (ministerios/programas) nunca fueron
+      // sembradas por otro conector — a diferencia de GR/GL, que ya existen
+      // en `entities` porque `ingestMefBudgetExecution` corrió antes para
+      // ellas. Sin este upsert, el INSERT de abajo viola la FK
+      // `budget_execution_entity_code_fkey` (confirmado en vivo 2026-08-21).
+      if (row.ubigeo) {
+        await upsertTerritoryFromMef(client, row.ubigeo, row.departamentoNombre, row.provinciaNombre, row.distritoNombre);
+      }
+      await upsertEntity(client, row.entityCode, row.entityName, row.nivelGobierno, row.ubigeo);
+
+      await client.query(
+        `INSERT INTO budget_execution
+           (entity_code, funcion, anio_fiscal, pia, pim, devengado, fecha_corte, source_batch_id, meta_departamento)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         ON CONFLICT (entity_code, funcion, anio_fiscal, fecha_corte, COALESCE(meta_departamento, '')) DO UPDATE
+           SET pia = EXCLUDED.pia, pim = EXCLUDED.pim, devengado = EXCLUDED.devengado,
+               source_batch_id = EXCLUDED.source_batch_id`,
+        [
+          row.entityCode,
+          row.funcion,
+          row.anioFiscal,
+          row.pia,
+          row.pim,
+          row.devengado,
+          fechaCorte,
+          lastBatchId,
+          wantedMetaDepartamento,
+        ]
+      );
+    }
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  return { batchIds, entidadesActualizadas: rows.length, seccionesSinDatos };
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const filename = process.env.MEF_DATA_FILENAME;
   if (!filename) {
@@ -436,7 +671,22 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     process.exit(1);
   }
 
-  if (process.env.MEF_INGESTA_ANIO_COMPLETO === "true") {
+  if (process.env.MEF_INGESTA_META_DEPARTAMENTO === "true") {
+    const metaDepartamento = process.env.MEF_FILTER_DEPARTAMENTO;
+    if (!metaDepartamento) {
+      console.error("Define MEF_FILTER_DEPARTAMENTO para la ingesta de Gobierno Nacional por meta.");
+      process.exit(1);
+    }
+    ingestMefFullYearForMetaDepartamento(filename, metaDepartamento)
+      .then((summary) => {
+        console.log("Ingesta de Gobierno Nacional por meta_departamento completada:", summary);
+        return pool.end();
+      })
+      .catch((err) => {
+        console.error("Ingesta de Gobierno Nacional por meta_departamento falló:", err);
+        process.exit(1);
+      });
+  } else if (process.env.MEF_INGESTA_ANIO_COMPLETO === "true") {
     const ejecutoraDepartamento = process.env.MEF_FILTER_EJECUTORA_DEPARTAMENTO;
     if (!ejecutoraDepartamento) {
       console.error("Define MEF_FILTER_EJECUTORA_DEPARTAMENTO para la ingesta de año completo.");
