@@ -17,12 +17,16 @@ const ExecutionQuerySchema = z.object({
    * tenga sede la entidad ejecutora. Distinto de `departamento`, que filtra
    * por la sede de la entidad. */
   metaDepartamento: z.string().min(1).optional(),
+  /** Clasificación económica de primer nivel (personal, bienes y servicios,
+   * inversión, etc.) — ver ADR-0006 Decisión 1. Filtra por código GENERICA
+   * (ej. "2.1"), no por nombre. */
+  generica: z.string().min(1).optional(),
 });
 
 executionRouter.get("/", asyncHandler(async (req, res) => {
   const parsed = parseQuery(ExecutionQuerySchema, req.query, res);
   if (!parsed) return;
-  const { nivel, funcion, anio, ubigeo, departamento, metaDepartamento } = parsed;
+  const { nivel, funcion, anio, ubigeo, departamento, metaDepartamento, generica } = parsed;
 
   const conditions: string[] = [];
   const params: unknown[] = [];
@@ -51,12 +55,16 @@ executionRouter.get("/", asyncHandler(async (req, res) => {
     params.push(metaDepartamento.toUpperCase());
     conditions.push(`b.meta_departamento = $${params.length}`);
   }
+  if (generica) {
+    params.push(generica);
+    conditions.push(`b.generica = $${params.length}`);
+  }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   const { rows } = await pool.query(
     `SELECT b.entity_code, e.nombre, e.nivel_gobierno, b.funcion, b.anio_fiscal,
-            b.pia, b.pim, b.devengado, b.fecha_corte, rb.resource_id
+            b.pia, b.pim, b.devengado, b.fecha_corte, rb.resource_id, b.generica, b.generica_nombre
      FROM budget_execution b
      JOIN entities e ON e.entity_code = b.entity_code
      JOIN raw_mef_batches rb ON rb.id = b.source_batch_id
@@ -73,6 +81,8 @@ executionRouter.get("/", asyncHandler(async (req, res) => {
       nombre: r.nombre,
       nivelGobierno: r.nivel_gobierno,
       funcion: r.funcion,
+      generica: r.generica,
+      genericaNombre: r.generica_nombre,
       anioFiscal: r.anio_fiscal,
       pia: Number(r.pia),
       pim: Number(r.pim),
@@ -87,7 +97,8 @@ executionRouter.get("/", asyncHandler(async (req, res) => {
 executionRouter.get("/:entityCode", asyncHandler(async (req, res) => {
   const { rows } = await pool.query(
     `SELECT b.entity_code, e.nombre, e.nivel_gobierno, b.funcion, b.anio_fiscal,
-            b.pia, b.pim, b.devengado, b.fecha_corte, rb.resource_id, rb.fetched_at
+            b.pia, b.pim, b.devengado, b.fecha_corte, rb.resource_id, rb.fetched_at,
+            b.generica, b.generica_nombre
      FROM budget_execution b
      JOIN entities e ON e.entity_code = b.entity_code
      JOIN raw_mef_batches rb ON rb.id = b.source_batch_id
@@ -107,6 +118,8 @@ executionRouter.get("/:entityCode", asyncHandler(async (req, res) => {
     nivelGobierno: rows[0].nivel_gobierno,
     linea_de_tiempo: rows.map((r) => ({
       funcion: r.funcion,
+      generica: r.generica,
+      genericaNombre: r.generica_nombre,
       anioFiscal: r.anio_fiscal,
       pia: Number(r.pia),
       pim: Number(r.pim),

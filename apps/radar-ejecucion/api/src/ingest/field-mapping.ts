@@ -24,6 +24,12 @@ export interface MefFieldMapping {
    * tiene sede la entidad ejecutora. Relevante para programas nacionales con
    * sede en Lima que ejecutan metas en otros departamentos. */
   metaDepartamentoNombre: string;
+  /** Clasificación económica de primer nivel del gasto (personal, bienes y
+   * servicios, inversión, etc.) — ver ADR-0006 Decisión 1. Nivel más alto de
+   * la jerarquía GENERICA→SUBGENERICA→...→ESPECIFICA_DET; los niveles más
+   * finos existen en el CSV pero no se ingieren (sin caso de uso hoy). */
+  generica: string;
+  genericaNombre: string;
   anioFiscal: string;
   pia: string;
   pim: string;
@@ -42,6 +48,8 @@ export const CONFIRMED_MEF_FIELD_MAPPING: MefFieldMapping = {
   distritoCodigo: "DISTRITO_EJECUTORA",
   distritoNombre: "DISTRITO_EJECUTORA_NOMBRE",
   metaDepartamentoNombre: "DEPARTAMENTO_META_NOMBRE",
+  generica: "GENERICA",
+  genericaNombre: "GENERICA_NOMBRE",
   anioFiscal: "ANO_EJE",
   pia: "MONTO_PIA",
   pim: "MONTO_PIM",

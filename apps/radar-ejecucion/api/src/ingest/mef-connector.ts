@@ -282,11 +282,11 @@ export async function ingestMefBudgetExecution(
       await upsertEntity(client, row.entityCode, row.entityName, row.nivelGobierno, row.ubigeo);
       await client.query(
         `INSERT INTO budget_execution
-           (entity_code, funcion, anio_fiscal, pia, pim, devengado, fecha_corte, source_batch_id, meta_departamento)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         ON CONFLICT (entity_code, funcion, anio_fiscal, fecha_corte, COALESCE(meta_departamento, '')) DO UPDATE
+           (entity_code, funcion, anio_fiscal, pia, pim, devengado, fecha_corte, source_batch_id, meta_departamento, generica, generica_nombre)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         ON CONFLICT (entity_code, funcion, anio_fiscal, fecha_corte, COALESCE(meta_departamento, ''), COALESCE(generica, '')) DO UPDATE
            SET pia = EXCLUDED.pia, pim = EXCLUDED.pim, devengado = EXCLUDED.devengado,
-               source_batch_id = EXCLUDED.source_batch_id`,
+               source_batch_id = EXCLUDED.source_batch_id, generica_nombre = EXCLUDED.generica_nombre`,
         [
           row.entityCode,
           row.funcion,
@@ -297,6 +297,8 @@ export async function ingestMefBudgetExecution(
           fechaCorte,
           batchId,
           metaDepartamentoToPersist,
+          row.generica,
+          row.genericaNombre,
         ]
       );
     }
@@ -332,6 +334,18 @@ export interface FullYearIngestSummary {
   batchIds: number[];
   entidadesActualizadas: number;
   seccionesSinDatos: string[];
+  /** Grupos entidad+función(+generica) descartados por `normalizeMefRows`
+   * (ej. devengado agregado excede PIM en más de 50%) — antes de ADR-0006
+   * Decisión 1 este campo no existía y las filas caían sin dejar rastro (ni
+   * en `budget_execution_rejected` ni en el resumen), confirmado en vivo el
+   * 2026-08-22: al desagregar por `generica`, algunas combinaciones quedan
+   * con devengado real pero PIM=0 para esa genérica específica (el PIM de
+   * MES_EJE=0 puede concentrarse en una sola genérica mientras el devengado
+   * de los meses 1-7 se reparte en varias) — el heurístico de "PIM=0 con
+   * devengado real" fue calibrado para la agregación más gruesa (sin
+   * generica) y ahora rechaza de más. No se ajustó el heurístico todavía;
+   * se prioriza no perder el rastro de lo rechazado.*/
+  rechazados: number;
 }
 
 /**
@@ -400,7 +414,7 @@ export async function ingestMefFullYearForDepartamento(
     );
   }
 
-  const { rows } = normalizeMefRows(allRecords, mapping);
+  const { rows, rejected } = normalizeMefRows(allRecords, mapping);
   const fechaCorte = new Date().toISOString().slice(0, 10);
   const lastBatchId = batchIds[batchIds.length - 1];
 
@@ -410,12 +424,29 @@ export async function ingestMefFullYearForDepartamento(
     for (const row of rows) {
       await client.query(
         `INSERT INTO budget_execution
-           (entity_code, funcion, anio_fiscal, pia, pim, devengado, fecha_corte, source_batch_id, meta_departamento)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULL)
-         ON CONFLICT (entity_code, funcion, anio_fiscal, fecha_corte, COALESCE(meta_departamento, '')) DO UPDATE
+           (entity_code, funcion, anio_fiscal, pia, pim, devengado, fecha_corte, source_batch_id, meta_departamento, generica, generica_nombre)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULL, $9, $10)
+         ON CONFLICT (entity_code, funcion, anio_fiscal, fecha_corte, COALESCE(meta_departamento, ''), COALESCE(generica, '')) DO UPDATE
            SET pia = EXCLUDED.pia, pim = EXCLUDED.pim, devengado = EXCLUDED.devengado,
-               source_batch_id = EXCLUDED.source_batch_id`,
-        [row.entityCode, row.funcion, row.anioFiscal, row.pia, row.pim, row.devengado, fechaCorte, lastBatchId]
+               source_batch_id = EXCLUDED.source_batch_id, generica_nombre = EXCLUDED.generica_nombre`,
+        [
+          row.entityCode,
+          row.funcion,
+          row.anioFiscal,
+          row.pia,
+          row.pim,
+          row.devengado,
+          fechaCorte,
+          lastBatchId,
+          row.generica,
+          row.genericaNombre,
+        ]
+      );
+    }
+    for (const bad of rejected) {
+      await client.query(
+        `INSERT INTO budget_execution_rejected (source_batch_id, raw_row, reason) VALUES ($1, $2, $3)`,
+        [lastBatchId, JSON.stringify(bad.raw), bad.reason]
       );
     }
     await client.query("COMMIT");
@@ -426,7 +457,7 @@ export async function ingestMefFullYearForDepartamento(
     client.release();
   }
 
-  return { batchIds, entidadesActualizadas: rows.length, seccionesSinDatos };
+  return { batchIds, entidadesActualizadas: rows.length, seccionesSinDatos, rechazados: rejected.length };
 }
 
 /**
@@ -615,7 +646,7 @@ export async function ingestMefFullYearForMetaDepartamento(
     );
   }
 
-  const { rows } = normalizeMefRows(allRecords, mapping);
+  const { rows, rejected } = normalizeMefRows(allRecords, mapping);
   const fechaCorte = new Date().toISOString().slice(0, 10);
   const lastBatchId = batchIds[batchIds.length - 1];
 
@@ -635,11 +666,11 @@ export async function ingestMefFullYearForMetaDepartamento(
 
       await client.query(
         `INSERT INTO budget_execution
-           (entity_code, funcion, anio_fiscal, pia, pim, devengado, fecha_corte, source_batch_id, meta_departamento)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         ON CONFLICT (entity_code, funcion, anio_fiscal, fecha_corte, COALESCE(meta_departamento, '')) DO UPDATE
+           (entity_code, funcion, anio_fiscal, pia, pim, devengado, fecha_corte, source_batch_id, meta_departamento, generica, generica_nombre)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         ON CONFLICT (entity_code, funcion, anio_fiscal, fecha_corte, COALESCE(meta_departamento, ''), COALESCE(generica, '')) DO UPDATE
            SET pia = EXCLUDED.pia, pim = EXCLUDED.pim, devengado = EXCLUDED.devengado,
-               source_batch_id = EXCLUDED.source_batch_id`,
+               source_batch_id = EXCLUDED.source_batch_id, generica_nombre = EXCLUDED.generica_nombre`,
         [
           row.entityCode,
           row.funcion,
@@ -650,7 +681,15 @@ export async function ingestMefFullYearForMetaDepartamento(
           fechaCorte,
           lastBatchId,
           wantedMetaDepartamento,
+          row.generica,
+          row.genericaNombre,
         ]
+      );
+    }
+    for (const bad of rejected) {
+      await client.query(
+        `INSERT INTO budget_execution_rejected (source_batch_id, raw_row, reason) VALUES ($1, $2, $3)`,
+        [lastBatchId, JSON.stringify(bad.raw), bad.reason]
       );
     }
     await client.query("COMMIT");
@@ -661,7 +700,7 @@ export async function ingestMefFullYearForMetaDepartamento(
     client.release();
   }
 
-  return { batchIds, entidadesActualizadas: rows.length, seccionesSinDatos };
+  return { batchIds, entidadesActualizadas: rows.length, seccionesSinDatos, rechazados: rejected.length };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

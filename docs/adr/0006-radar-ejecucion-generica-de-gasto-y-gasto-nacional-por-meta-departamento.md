@@ -4,14 +4,30 @@
 > `ingestMefFullYearForMetaDepartamento` (nueva función en `mef-connector.ts`) corrió contra el
 > archivo real y confirmó el hallazgo que motivó este ADR: **AUTORIDAD NACIONAL DE
 > INFRAESTRUCTURA - ANIN** aparece como la entidad #1 por devengado dirigido a La Libertad
-> (S/272.9M, función ORDEN PUBLICO Y SEGURIDAD — no AGROPECUARIA, dato real corrige la hipótesis
-> inicial de que caería bajo función agropecuaria). Total: **90 entidades nacionales distintas**,
-> **S/1,936.1M de devengado** y **S/3,359.3M de PIM** dirigidos a La Libertad desde Gobierno
-> Nacional, 148 filas — completamente invisibles en `budget_execution` antes de esta corrida.
-> Para la función AGROPECUARIA específicamente (la que ya cruza `actividad-agraria`, ver
-> ADR-0008): PIM nacional S/191.6M + devengado S/65.0M (10 entidades) se suman a los S/249.3M/
-> S/95.2M que ya se veían de GR/GL — **43% más de PIM agropecuario real del que el dato
-> mostraba hasta ayer**. Tres problemas de implementación reales encontrados y resueltos en el
+> (**S/311.3M**, 87.6% de eso bajo `ADQUISICION DE ACTIVOS NO FINANCIEROS` — inversión real —
+> clasificada bajo la función ORDEN PUBLICO Y SEGURIDAD, no AGROPECUARIA ni una etiqueta obvia de
+> reconstrucción). Total: **90 entidades nacionales distintas**, **S/1,848.1M de devengado** y
+> **S/3,359.3M de PIM** dirigidos a La Libertad desde Gobierno Nacional, 278 filas
+> (desagregadas por `generica`, ver Decisión 1 abajo) — completamente invisibles en
+> `budget_execution` antes de esta corrida. Para la función AGROPECUARIA específicamente (la
+> que ya cruza `actividad-agraria`, ver ADR-0008): PIM nacional S/191.6M + devengado S/58.9M
+> (10 entidades) se suman a los S/249.3M/S/95.2M que ya se veían de GR/GL — **~35% más de PIM
+> agropecuario real del que el dato mostraba hasta ayer**.
+>
+> **Corrección 2026-08-22 (mismo día)**: las primeras cifras reportadas aquí y en PR #16
+> (S/1,936.1M devengado, ANIN S/272.9M, AGROPECUARIA nacional S/65.0M) estaban contaminadas por
+> 37 filas de una tabla de pruebas de 2026-08-16 (`meta_departamento='LA LIBERTAD'`,
+> `generica IS NULL`) que nunca se habían limpiado — al sumar sin filtrar por `generica` antes
+> de aplicar la migración 004, esas filas se mezclaban con el resultado real. Se identificó al
+> notar que el total no cuadraba tras desagregar por generica (Decisión 1), se depuraron las
+> filas viejas (`DELETE ... WHERE meta_departamento='LA LIBERTAD' AND generica IS NULL`) y se
+> confirmaron los montos limpios arriba. El PIM no se afectó (la tabla de pruebas tenía PIM=0 en
+> todas sus filas). Lección: cualquier suma sobre `budget_execution` sin filtrar por
+> `generica`/`meta_departamento` explícitos puede arrastrar datos de pruebas anteriores si la
+> tabla no se limpia entre iteraciones de desarrollo — no hay ambiente de staging separado del
+> de desarrollo en este proyecto.
+>
+> Tres problemas de implementación reales encontrados y resueltos en el
 > camino (documentados en el código): (1) las filas dirigidas a un departamento están
 > *dispersas* en el bloque Nacional, no contiguas — obligó a descargar cada sección de mes
 > COMPLETA (~150-330 MB) en vez de una ventana angosta con lookback; (2) la sección `mes=0`
@@ -21,7 +37,23 @@
 > otro conector — se agregó `upsertEntity`/`upsertTerritoryFromMef` al loop de escritura final,
 > ausente en el diseño original de este ADR. Detalle completo de los 3 hallazgos en los
 > comentarios de `mef-connector.ts` (`saveFilteredBatch`, `NACIONAL_MES_START_BYTE`, el upsert
-> de entidades antes del INSERT final). La Decisión 1 (genérica de gasto) sigue sin implementar.
+> de entidades antes del INSERT final).
+>
+> **La Decisión 1 (genérica de gasto) también quedó implementada el mismo día** (migración
+> `004_generica_gasto.sql`, campo agregado a `field-mapping.ts`/`normalize.ts`, clave de
+> agregación de `budget_execution` ahora incluye `generica`). Confirmó en vivo el hallazgo de
+> ANIN: 87.6% de su gasto en La Libertad (S/272.9M de S/311.3M) es
+> `ADQUISICION DE ACTIVOS NO FINANCIEROS` (inversión real), no personal ni bienes y servicios —
+> la función "ORDEN PUBLICO Y SEGURIDAD" realmente esconde una inversión de capital, confirmado
+> con la desagregación económica, no solo inferido del nombre de la entidad. Búsqueda de
+> patrones similares en las otras 89 entidades (2026-08-22): **ningún otro caso a la escala de
+> ANIN** — el resto de entidades caen bajo funciones institucionalmente coherentes (salud bajo
+> SALUD, universidades bajo EDUCACION, programas MIDIS bajo PROTECCION SOCIAL, PNP/Ejército bajo
+> ORDEN PUBLICO/DEFENSA, esto último esperable, no "escondido"). Sí hay un patrón secundario más
+> leve: SUNAT, SUNARP, RENIEC y Contraloría (S/62.5M combinado) caen bajo la función genérica
+> "PLANEAMIENTO, GESTION Y RESERVA DE CONTINGENCIA" — no es gasto mal etiquetado como ANIN, pero
+> sí es una función "cajón de sastre" que agrupa control/administración pública sin que el
+> nombre de la función lo sugiera, dificultando encontrarlo por búsqueda temática.
 
 ## Contexto
 

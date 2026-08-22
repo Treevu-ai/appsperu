@@ -94,6 +94,38 @@ describe("normalizeMefRows", () => {
     const { rows } = normalizeMefRows([rawRow({ EJECUTORA_NOMBRE: "" })], mapping);
     expect(rows[0].entityName).toBe("001");
   });
+
+  it("captures generica/genericaNombre on the canonical row (ADR-0006 Decisión 1)", () => {
+    const { rows } = normalizeMefRows(
+      [rawRow({ GENERICA: "2.1", GENERICA_NOMBRE: "PERSONAL Y OBLIGACIONES SOCIALES" })],
+      mapping
+    );
+    expect(rows[0].generica).toBe("2.1");
+    expect(rows[0].genericaNombre).toBe("PERSONAL Y OBLIGACIONES SOCIALES");
+  });
+
+  it("does NOT aggregate rows with different generica under the same entidad+función+año", () => {
+    // Antes de ADR-0006 Decisión 1 estas dos filas se sumaban en una sola —
+    // eso mezclaba planilla con inversión bajo el mismo total, perdiendo
+    // justo la desagregación que se busca.
+    const rows = [
+      rawRow({ GENERICA: "2.1", GENERICA_NOMBRE: "PERSONAL Y OBLIGACIONES SOCIALES", MONTO_DEVENGADO: "400000" }),
+      rawRow({ GENERICA: "2.6", GENERICA_NOMBRE: "ADQUISICION DE ACTIVOS NO FINANCIEROS", MONTO_DEVENGADO: "300000" }),
+    ];
+    const { rows: result, rejected } = normalizeMefRows(rows, mapping);
+    expect(rejected).toHaveLength(0);
+    expect(result).toHaveLength(2);
+    expect(result.find((r) => r.generica === "2.1")?.devengado).toBe(400000);
+    expect(result.find((r) => r.generica === "2.6")?.devengado).toBe(300000);
+  });
+
+  it("treats missing generica as null, not as a string, and still aggregates rows that both lack it", () => {
+    const rows = [rawRow({ MONTO_DEVENGADO: "100" }), rawRow({ MONTO_DEVENGADO: "200" })];
+    const { rows: result } = normalizeMefRows(rows, mapping);
+    expect(result).toHaveLength(1);
+    expect(result[0].generica).toBeNull();
+    expect(result[0].devengado).toBe(300);
+  });
 });
 
 describe("avancePct", () => {
