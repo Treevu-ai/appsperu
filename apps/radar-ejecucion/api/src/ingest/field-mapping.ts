@@ -30,6 +30,12 @@ export interface MefFieldMapping {
    * finos existen en el CSV pero no se ingieren (sin caso de uso hoy). */
   generica: string;
   genericaNombre: string;
+  /** Nombre real del proyecto/actividad/obra — el nivel de detalle que
+   * confirma QUÉ construye una entidad, no solo bajo qué función/genérica
+   * cae (ej. "RECUPERACION DE HOSPITALES" para ANIN). Se usa en
+   * `budget_execution_proyectos`, no en el modelo agregado principal. */
+  proyectoNombre: string;
+  programaPptoNombre: string;
   anioFiscal: string;
   pia: string;
   pim: string;
@@ -50,6 +56,8 @@ export const CONFIRMED_MEF_FIELD_MAPPING: MefFieldMapping = {
   metaDepartamentoNombre: "DEPARTAMENTO_META_NOMBRE",
   generica: "GENERICA",
   genericaNombre: "GENERICA_NOMBRE",
+  proyectoNombre: "ACTIVIDAD_ACCION_OBRA_NOMBRE",
+  programaPptoNombre: "PROGRAMA_PPTO_NOMBRE",
   anioFiscal: "ANO_EJE",
   pia: "MONTO_PIA",
   pim: "MONTO_PIM",
