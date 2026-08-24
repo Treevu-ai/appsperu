@@ -11,7 +11,7 @@ if (!Number.isInteger(year) || year < 2020 || year > 2100) {
 }
 
 try {
-  const [source, materialized, bySource, byEntityType] = await Promise.all([
+  const [source, materialized, legacyCollection, bySource, byEntityType] = await Promise.all([
     pool.query(
       `SELECT id,fetched_at,record_count,
               COALESCE((payload->'pageable'->>'totalElements')::integer, record_count) AS total_elements,
@@ -35,6 +35,19 @@ try {
          JOIN municipalities e ON e.municipality_id=c.municipality_id
         WHERE e.department='LA LIBERTAD' AND c.year=$1`,
       [year],
+    ),
+    pool.query(
+      `SELECT COUNT(DISTINCT payload->'entity'->>'ruc')::integer AS entity_rucs_queried,
+              COUNT(DISTINCT page_from)::integer AS months_queried,
+              COUNT(DISTINCT (payload->'entity'->>'ruc', page_from))::integer AS entity_months_queried,
+              COUNT(*) FILTER (WHERE record_count=0)::integer AS entity_months_without_orders,
+              COUNT(*)::integer AS raw_batches,
+              (SELECT COUNT(*)::integer FROM raw_minor_contract_artifacts a
+                JOIN raw_minor_contract_batches b ON b.id=a.minor_source_batch_id
+               WHERE b.source_system=$1 AND b.year=$2) AS artifacts
+         FROM raw_minor_contract_batches
+        WHERE source_system=$1 AND year=$2`,
+      ["OECE SEACE órdenes históricas (interfaz pública observada)", year],
     ),
     pool.query(
       `SELECT CASE WHEN c.data_version='oece-seace-legacy-orders-v1' THEN 'SEACE_LEGACY_ENTITY_RUC' ELSE 'SEACE_PUBLIC_INTERFACE' END AS source,
@@ -61,6 +74,9 @@ try {
 
   const materializedSummary = materialized.rows[0] ?? { territorial_districts: 0 };
   const observedDistricts = Number(materializedSummary.territorial_districts ?? 0);
+  const legacySummary = legacyCollection.rows[0] ?? {};
+  const entityMonthsQueried = Number(legacySummary.entity_months_queried ?? 0);
+  const expectedEntityMonths = LA_LIBERTAD_EXPECTED_DISTRICTS * 8;
   console.log(JSON.stringify({
     scope: {
       department: "LA LIBERTAD",
@@ -74,7 +90,19 @@ try {
       observedDistricts,
       missingDistricts: Math.max(0, LA_LIBERTAD_EXPECTED_DISTRICTS - observedDistricts),
       status: observedDistricts === LA_LIBERTAD_EXPECTED_DISTRICTS ? "COMPLETE_IN_DECLARED_LOCATIONS" : "INCOMPLETE",
-      limitation: "El denominador territorial no prueba que todo distrito tenga una entidad o un contrato registrado; sirve para impedir que ausencia de registros se lea como cero actividad.",
+      limitation: "Este indicador cuenta distritos con al menos una orden menor a 8 UIT materializada; no mide si fueron consultados ni permite leer una ausencia como cero actividad.",
+    },
+    legacyEntityRucCollection: {
+      expectedEntities: LA_LIBERTAD_EXPECTED_DISTRICTS,
+      expectedEntityMonths,
+      entityRucsQueried: Number(legacySummary.entity_rucs_queried ?? 0),
+      monthsQueried: Number(legacySummary.months_queried ?? 0),
+      entityMonthsQueried,
+      entityMonthsWithoutOrders: Number(legacySummary.entity_months_without_orders ?? 0),
+      rawBatches: Number(legacySummary.raw_batches ?? 0),
+      artifacts: Number(legacySummary.artifacts ?? 0),
+      status: entityMonthsQueried === expectedEntityMonths ? "COMPLETE_FOR_CONFIGURED_ENTITY_MONTHS" : "INCOMPLETE",
+      limitation: "Una consulta sin órdenes o sin órdenes <=8 UIT es evidencia de respuesta de la fuente, no una inferencia de cero contratación total.",
     },
     byContractingEntityType: byEntityType.rows,
     bySource: bySource.rows,
