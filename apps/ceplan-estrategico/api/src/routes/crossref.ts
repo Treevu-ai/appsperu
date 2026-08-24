@@ -49,8 +49,13 @@ crossrefRouter.get(
       : [];
     const { rows: radarRows } = anioRadarEjecucion
       ? await ejecucionPool.query(
-          `SELECT e.nivel_gobierno, SUM(b.pim) AS pim, SUM(b.devengado) AS devengado
-           FROM budget_execution b
+          `WITH latest_budget AS (
+             SELECT DISTINCT ON (entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, '')) *
+             FROM budget_execution
+             ORDER BY entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, ''), fecha_corte DESC, id DESC
+           )
+           SELECT e.nivel_gobierno, SUM(b.pim) AS pim, SUM(b.devengado) AS devengado
+           FROM latest_budget b
            JOIN entities e ON e.entity_code = b.entity_code
            WHERE b.anio_fiscal = $1 AND e.nivel_gobierno = ANY($2)
            GROUP BY e.nivel_gobierno`,

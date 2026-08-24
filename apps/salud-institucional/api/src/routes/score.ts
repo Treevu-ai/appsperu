@@ -41,10 +41,15 @@ scoreRouter.get("/", asyncHandler(async (req, res) => {
 
   // 1. Universo de entidades + ejecución presupuestal (radar-ejecucion, fuente primaria).
   const { rows: entityRows } = await ejecucionPool.query(
-    `SELECT e.entity_code, e.nombre, SUM(b.pim) AS pim, SUM(b.devengado) AS devengado
+    `WITH latest_budget AS (
+       SELECT DISTINCT ON (entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, '')) *
+       FROM budget_execution
+       ORDER BY entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, ''), fecha_corte DESC, id DESC
+     )
+     SELECT e.entity_code, e.nombre, SUM(b.pim) AS pim, SUM(b.devengado) AS devengado
      FROM entities e
      JOIN territories t ON t.ubigeo = e.ubigeo
-     LEFT JOIN budget_execution b ON b.entity_code = e.entity_code AND b.anio_fiscal = $2
+     LEFT JOIN latest_budget b ON b.entity_code = e.entity_code AND b.anio_fiscal = $2
      WHERE t.departamento = $1
      GROUP BY e.entity_code, e.nombre`,
     [wantedDepartamento, anio]

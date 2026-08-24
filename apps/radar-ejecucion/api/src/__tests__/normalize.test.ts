@@ -129,7 +129,7 @@ describe("normalizeMefRows", () => {
 });
 
 describe("normalizeMefProyectos", () => {
-  it("aggregates devengado by entidad+función+generica+proyecto, keeping distinct proyectos separate", () => {
+  it("aggregates PIA/PIM/devengado by entidad+función+generica+proyecto, keeping distinct proyectos separate", () => {
     const rows = [
       rawRow({
         GENERICA: "6",
@@ -151,7 +151,10 @@ describe("normalizeMefProyectos", () => {
     const { rows: result, rejected } = normalizeMefProyectos(rows, mapping);
     expect(rejected).toHaveLength(0);
     expect(result).toHaveLength(2);
-    expect(result.find((r) => r.proyectoNombre === "RECUPERACION DE HOSPITALES")?.devengado).toBe(1500000);
+    const hospitales = result.find((r) => r.proyectoNombre === "RECUPERACION DE HOSPITALES");
+    expect(hospitales?.pia).toBe(2000000);
+    expect(hospitales?.pim).toBe(2400000);
+    expect(hospitales?.devengado).toBe(1500000);
     expect(result.find((r) => r.proyectoNombre === "CONTROL DE INUNDACIONES Y DEFENSAS RIBEREÑAS")?.devengado).toBe(
       300000
     );

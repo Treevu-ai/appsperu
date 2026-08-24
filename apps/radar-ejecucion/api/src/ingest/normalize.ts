@@ -132,6 +132,8 @@ export interface CanonicalProyectoRow {
   proyectoNombre: string;
   programaPptoNombre: string | null;
   anioFiscal: number;
+  pia: number;
+  pim: number;
   devengado: number;
 }
 
@@ -146,10 +148,11 @@ export interface NormalizeProyectosResult {
  * (entity_code, funcion, generica) — el nivel de detalle que responde "qué
  * construye" una entidad, no solo "cuánto gasta en qué función" (ver
  * ADR-0006, hallazgo de los nombres reales de proyecto de ANIN). Solo
- * agrega `devengado`: PIA/PIM viven en filas separadas (MES_EJE=0) que no
- * necesariamente comparten el mismo `ACTIVIDAD_ACCION_OBRA_NOMBRE` fila por
- * fila, y el caso de uso de esta tabla es "cuánto se gastó en X proyecto
- * real", no el avance presupuestal — eso ya lo cubre `budget_execution`.
+ * agrega PIA, PIM y `devengado` por actividad reportada por el MEF. PIA/PIM
+ * viven en las filas MES_EJE=0 y el devengado en los meses de ejecución;
+ * cuando el nombre de actividad no aparece en la fila MES_EJE=0, el PIM de
+ * esa actividad queda en cero. Esa ausencia se expone como "no atribuible",
+ * no se reparte el PIM agregado de la entidad entre actividades por heurística.
  */
 export function normalizeMefProyectos(
   rawRows: Record<string, unknown>[],
@@ -161,6 +164,8 @@ export function normalizeMefProyectos(
   for (const raw of rawRows) {
     const entityCode = raw[mapping.entityCode];
     const anioFiscal = toNumber(raw[mapping.anioFiscal]);
+    const pia = toNumber(raw[mapping.pia]);
+    const pim = toNumber(raw[mapping.pim]);
     const devengado = toNumber(raw[mapping.devengado]);
     const funcion = raw[mapping.funcion];
     const proyectoNombre = String(raw[mapping.proyectoNombre] ?? "").trim();
@@ -177,8 +182,8 @@ export function normalizeMefProyectos(
       rejected.push({ raw, reason: "anio_fiscal no numérico" });
       continue;
     }
-    if (devengado === null) {
-      rejected.push({ raw, reason: "devengado no numérico" });
+    if (pia === null || pim === null || devengado === null) {
+      rejected.push({ raw, reason: "PIA/PIM/devengado no numérico" });
       continue;
     }
     if (proyectoNombre === "") {
@@ -191,6 +196,8 @@ export function normalizeMefProyectos(
     const existing = aggregates.get(key);
 
     if (existing) {
+      existing.pia += pia;
+      existing.pim += pim;
       existing.devengado += devengado;
       continue;
     }
@@ -202,6 +209,8 @@ export function normalizeMefProyectos(
       proyectoNombre,
       programaPptoNombre: String(raw[mapping.programaPptoNombre] ?? "").trim() || null,
       anioFiscal,
+      pia,
+      pim,
       devengado,
     });
   }

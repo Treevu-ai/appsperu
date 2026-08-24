@@ -27,6 +27,19 @@ otras 5 bases.
 Puerto 4005/3005/5437 quedó reservado para `ceplan-geo` y no se reutilizó en las apps
 construidas después.
 
+## `mcp-server` (2026-08-21)
+
+Servidor MCP standalone (`mcp-server/`, transporte stdio) que expone las 8 APIs como 39 tools de
+solo lectura para un agente Claude — un tool por endpoint `GET /api/*` real, sin transformar el
+shape de la respuesta. Catálogo derivado de `docs/conectores.md` (cada `description` de tool
+incluye cobertura parcial/completa y el recordatorio de que ninguna ingesta tiene scheduler).
+Validado manualmente: registro del catálogo, llamada con query params reales contra una API
+fake, y manejo de error de conectividad cuando la API de destino no responde — sin test
+automatizado contra las 8 APIs reales corriendo. No incluye las ingestas (`npm run ingest:*`,
+fuera de alcance) ni autenticación (mismo estado que las 8 APIs que agrega — ver
+`mcp-server/README.md`, sección "Alcance actual y lo que falta", antes de exponerlo fuera de
+`localhost`).
+
 ## Cruces entre apps (todos verificados con datos reales)
 
 - **radar-inversiones ↔ radar-ejecucion**, por `SEC_EJEC` (match exacto, sin fuzzy) —
@@ -127,6 +140,8 @@ sin necesitar la migración; las 8 webs ya construidas se quedan como están, si
 
 ## Documentación
 
+- `docs/conectores.md` — ficha técnica por conector (qué hace, cómo, con qué frecuencia,
+  fuente de datos), con link al data contract correspondiente para el detalle profundo.
 - `docs/data-contracts/` — un archivo por fuente externa (MEF, OECE, Invierte.pe, INFOBRAS,
   ObservaPerú/CEPLAN, Padrón RUC de SUNAT, Tribunal de Contrataciones vía RNP/OECE), con lo
   confirmado en vivo: URLs reales, formato real, anomalías de datos, tasas de cobertura.
@@ -230,3 +245,13 @@ avance (S/2,242.1M devengado / S/4,558.8M PIM), Gobiernos Locales 39.9%
 5. Migración a Next 16 + React 19 (resuelve el residual de `npm audit`) — diferida a
    propósito, ver "Riesgo de dependencias aceptado" arriba. Revisar antes de cualquier
    despliegue público.
+6. **Candidato evaluado, no implementado — comercio exterior (BCRP)**: se exploró la API
+   pública de BCRPData (`estadisticas.bcrp.gob.pe/estadisticas/series/api`) como posible
+   novena fuente para sector producción/comercio exterior. Es el único conector candidato
+   con API REST real documentada, sin sesión ni scraping. El desagregado por departamento
+   (`RD38085BM`-`RD38111BM`) está congelado en Dic-2022/Dic-2023 (re-verificado en vivo, sin
+   dato posterior). El agregado nacional (`PN38714BM`-`PN38723BM`, exportaciones/
+   importaciones/balanza comercial) sí está al día a jun-2026 (validado en vivo) — es la vía
+   recomendada si se construye, pero es un solo número por mes, sin desagregar por producto
+   ni empresa, sin cruce `entity_code`. Detalle completo en
+   `docs/data-contracts/bcrp-comercio-exterior.md`.

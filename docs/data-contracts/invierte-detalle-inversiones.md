@@ -1,5 +1,7 @@
 # Data contract — MEF: Detalle de inversiones (Invierte.pe / Banco de Inversiones)
 
+> Ficha técnica del conector: [`docs/conectores.md#radar-inversiones`](../conectores.md#radar-inversiones)
+
 - Fuente: Plataforma Nacional de Datos Abiertos — `www.datosabiertos.gob.pe/dataset/detalle-de-inversiones`
   (nota: sin `www.` el dominio no resuelve — mismo patrón que otras fuentes de este proyecto).
 - Confirmado en vivo el 2026-08-17.

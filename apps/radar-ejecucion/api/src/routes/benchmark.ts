@@ -4,6 +4,7 @@ import { pool } from "../db/pool.js";
 import { computeBenchmark, DEFAULT_COHORT_RULES } from "../cohorts/rules.js";
 import { asyncHandler } from "../lib/async-handler.js";
 import { parseQuery } from "../lib/validate-query.js";
+import { LATEST_BUDGET_CTE } from "../db/budget-coverage.js";
 
 export const benchmarkRouter = Router();
 
@@ -37,8 +38,9 @@ benchmarkRouter.get("/:entityCode", asyncHandler(async (req, res) => {
   }
 
   const { rows: cohortRows } = await pool.query(
-    `SELECT b.entity_code, b.pim, b.devengado
-     FROM budget_execution b
+    `${LATEST_BUDGET_CTE}
+     SELECT b.entity_code, b.pim, b.devengado
+     FROM latest_budget b
      JOIN entities e ON e.entity_code = b.entity_code
      WHERE e.nivel_gobierno = $1 AND b.anio_fiscal = $2`,
     [nivelGobierno, anio]

@@ -54,7 +54,7 @@ Nombres de env var por app: `RADAR_EJECUCION_API_URL`, `COMPRAS_PUBLICAS_API_URL
 
 ## Catálogo de tools
 
-25 tools, uno por endpoint `GET /api/*` real de las 8 apps (`src/catalog.ts` es la fuente de
+39 tools, uno por endpoint `GET /api/*` real de las 8 apps (`src/catalog.ts` es la fuente de
 verdad — cada entrada mapea 1:1 a un `routes/*.ts` existente, sin inventar parámetros). Nombrados
 `<app>_<recurso>`, ej. `radar_ejecucion_execution`, `compras_publicas_suppliers`,
 `salud_institucional_score`.
@@ -75,7 +75,7 @@ como si fuera completo.
 - **No incluye las ingestas** (`npm run ingest:*`) — este servidor es de solo lectura. Disparar
   ingestas desde un agente es una superficie de riesgo distinta (ejecución de scripts contra
   Postgres) que se dejó fuera de alcance a propósito.
-- Validado manualmente: registro de los 25 tools, llamada con query params reales, manejo de
+- Validado manualmente: registro de los 26 tools, llamada con query params reales, manejo de
   error de conectividad cuando la app de destino no responde, y passthrough de una respuesta 200
   con body JSON. No hay suite automatizada contra las 8 APIs reales corriendo (requeriría
   levantar las 8 en CI) — pendiente si se necesita cobertura automatizada.

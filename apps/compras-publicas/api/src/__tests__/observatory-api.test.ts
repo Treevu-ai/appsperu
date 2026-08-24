@@ -44,6 +44,32 @@ describe("GET /api/signals", () => {
   });
 });
 
+describe("GET /api/identities", () => {
+  it("returns only verified links when requested and never invents a MEF code", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{
+      subject_id: "seace:entity:1", source_identifier_type: "MUNICIPALITY_ID", source_identifier_value: "seace:entity:1",
+      target_identifier_type: "RUC", target_identifier_value: "20123456789", strength: "VERIFICADA",
+    }] });
+    const response = await request(createApp()).get("/api/identities").query({ identifier: "20123456789", soloVerificadas: "true" });
+    expect(response.status).toBe(200);
+    expect(response.body.resultados[0].target_identifier_type).toBe("RUC");
+    expect(queryMock.mock.calls[0][0]).toMatch(/strength IN \('EXACTA','VERIFICADA'\)/);
+  });
+});
+
+describe("GET /api/signals/:id", () => {
+  it("returns the append-only human review history alongside source evidence", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ signal_id: "S01:example" }] })
+      .mockResolvedValueOnce({ rows: [{ evidence_id: 1 }] })
+      .mockResolvedValueOnce({ rows: [{ review_event_id: 2, decision: "REVIEWED", reviewer_role: "analista" }] });
+    const response = await request(createApp()).get("/api/signals/S01%3Aexample");
+    expect(response.status).toBe(200);
+    expect(response.body.reviews).toEqual([{ review_event_id: 2, decision: "REVIEWED", reviewer_role: "analista" }]);
+    expect(queryMock.mock.calls[2][0]).toMatch(/signal_review_events/);
+  });
+});
+
 describe("GET /api/semantic-review-queue", () => {
   it("returns a dedicated, non-conclusive queue built from S12/S13", async () => {
     queryMock.mockResolvedValueOnce({ rows: [] });

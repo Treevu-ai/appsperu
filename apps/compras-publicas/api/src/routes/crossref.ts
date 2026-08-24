@@ -47,8 +47,13 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
 
   const [devengadoResult, comprasResult] = await Promise.all([
     radarPool.query(
-      `SELECT entity_code, SUM(devengado) AS devengado
-       FROM budget_execution
+      `WITH latest_budget AS (
+         SELECT DISTINCT ON (entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, '')) *
+         FROM budget_execution
+         ORDER BY entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, ''), fecha_corte DESC, id DESC
+       )
+       SELECT entity_code, SUM(devengado) AS devengado, array_agg(DISTINCT fecha_corte) AS cortes
+       FROM latest_budget
        WHERE entity_code = ANY($1)
        GROUP BY entity_code`,
       [entityCodes]
@@ -62,7 +67,7 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
     ),
   ]);
 
-  const devengadoByEntity = new Map(devengadoResult.rows.map((r) => [r.entity_code, Number(r.devengado)]));
+  const devengadoByEntity = new Map(devengadoResult.rows.map((r) => [r.entity_code, { devengado: Number(r.devengado), cortes: r.cortes }]));
   const comprasByBuyer = new Map(
     comprasResult.rows.map((r) => [r.buyer_id, { procesos: Number(r.procesos), valorTotal: Number(r.valor_total) || 0 }])
   );
@@ -77,7 +82,10 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
         oeceBuyerName: r.oece_buyer_name,
         confidence: r.confidence,
         score: Number(r.score),
-        devengado: devengadoByEntity.get(r.mef_entity_code) ?? 0,
+        devengado: devengadoByEntity.get(r.mef_entity_code)?.devengado ?? 0,
+        coberturaTemporal: devengadoByEntity.has(r.mef_entity_code)
+          ? { cortesUsados: devengadoByEntity.get(r.mef_entity_code)!.cortes, estado: "PARCIAL" }
+          : null,
         comprasProcesos: compras.procesos,
         comprasValorTotal: compras.valorTotal,
         computedAt: r.computed_at,

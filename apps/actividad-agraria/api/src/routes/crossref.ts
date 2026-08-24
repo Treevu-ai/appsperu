@@ -45,8 +45,13 @@ crossrefRouter.get(
     );
 
     const { rows: regionalRows } = await ejecucionPool.query<{ pim: string; devengado: string }>(
-      `SELECT COALESCE(SUM(b.pim), 0) AS pim, COALESCE(SUM(b.devengado), 0) AS devengado
-       FROM budget_execution b
+      `WITH latest_budget AS (
+         SELECT DISTINCT ON (entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, '')) *
+         FROM budget_execution
+         ORDER BY entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, ''), fecha_corte DESC, id DESC
+       )
+       SELECT COALESCE(SUM(b.pim), 0) AS pim, COALESCE(SUM(b.devengado), 0) AS devengado
+       FROM latest_budget b
        JOIN entities e ON e.entity_code = b.entity_code
        JOIN territories t ON t.ubigeo = e.ubigeo
        WHERE b.funcion = 'AGROPECUARIA' AND b.anio_fiscal = $1 AND t.departamento = $2
@@ -59,9 +64,14 @@ crossrefRouter.get(
       devengado: string;
       entidades: string;
     }>(
-      `SELECT COALESCE(SUM(b.pim), 0) AS pim, COALESCE(SUM(b.devengado), 0) AS devengado,
+      `WITH latest_budget AS (
+         SELECT DISTINCT ON (entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, '')) *
+         FROM budget_execution
+         ORDER BY entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, ''), fecha_corte DESC, id DESC
+       )
+       SELECT COALESCE(SUM(b.pim), 0) AS pim, COALESCE(SUM(b.devengado), 0) AS devengado,
               COUNT(DISTINCT b.entity_code) AS entidades
-       FROM budget_execution b
+       FROM latest_budget b
        WHERE b.funcion = 'AGROPECUARIA' AND b.anio_fiscal = $1 AND b.meta_departamento = $2`,
       [anio, departamento]
     );
