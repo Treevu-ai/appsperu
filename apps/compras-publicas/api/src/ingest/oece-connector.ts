@@ -19,6 +19,14 @@ export interface FetchReleasesParams {
   mainProcurementCategory?: string;
 }
 
+export function releasesPageUrl(page: number, params: FetchReleasesParams = {}): string {
+  const qs = new URLSearchParams({ page: String(page), order: "desc" });
+  if (params.startDate) qs.set("startDate", params.startDate);
+  if (params.endDate) qs.set("endDate", params.endDate);
+  if (params.mainProcurementCategory) qs.set("mainProcurementCategory", params.mainProcurementCategory);
+  return `${API_BASE_URL}/releases?${qs.toString()}`;
+}
+
 /**
  * Descarga una página de `/releases`. A diferencia del MEF, esto es JSON real
  * — sin Range requests ni parseo CSV. Confirmado en vivo el 2026-08-16:
@@ -28,12 +36,7 @@ export async function fetchReleasesPage(
   page: number,
   params: FetchReleasesParams = {}
 ): Promise<ReleasesPageResponse> {
-  const qs = new URLSearchParams({ page: String(page), order: "desc" });
-  if (params.startDate) qs.set("startDate", params.startDate);
-  if (params.endDate) qs.set("endDate", params.endDate);
-  if (params.mainProcurementCategory) qs.set("mainProcurementCategory", params.mainProcurementCategory);
-
-  const res = await fetchWithTimeout(`${API_BASE_URL}/releases?${qs.toString()}`);
+  const res = await fetchWithTimeout(releasesPageUrl(page, params));
   if (!res.ok) {
     throw new Error(`OECE devolvió ${res.status} para la página ${page}`);
   }
@@ -48,19 +51,22 @@ async function saveRawBatch(
   client: PoolClient,
   pageFrom: number,
   pageTo: number,
-  releases: OcdsRelease[]
+  releases: OcdsRelease[],
+  params: FetchReleasesParams
 ): Promise<number> {
+  const sourceUrl = releasesPageUrl(pageFrom, params);
   const result = await client.query<{ id: number }>(
-    `INSERT INTO raw_ocds_batches (page_from, page_to, checksum, record_count, payload)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO raw_ocds_batches (page_from, page_to, checksum, record_count, payload, source_endpoint, source_url, query_params)
+     VALUES ($1, $2, $3, $4, $5, '/releases', $6, $7::jsonb)
      RETURNING id`,
-    [pageFrom, pageTo, checksumOf(releases), releases.length, JSON.stringify(releases)]
+    [pageFrom, pageTo, checksumOf(releases), releases.length, JSON.stringify(releases), sourceUrl, JSON.stringify(params)]
   );
   return result.rows[0].id;
 }
 
 export interface IngestOptions {
   maxPages?: number;
+  startPage?: number;
   departamento?: string;
   params?: FetchReleasesParams;
 }
@@ -82,17 +88,21 @@ export interface IngestSummary {
  * upsert por `ocid` (cada release ya es una fila, sin agregación).
  */
 export async function ingestOecdReleases(options: IngestOptions = {}): Promise<IngestSummary> {
-  const { maxPages = DEFAULT_MAX_PAGES, departamento, params = {} } = options;
+  const { maxPages = DEFAULT_MAX_PAGES, startPage = 1, departamento, params = {} } = options;
+  if (!Number.isInteger(maxPages) || maxPages < 0) throw new Error("maxPages debe ser entero >= 0; 0 recorre toda la ventana solicitada.");
+  if (!Number.isInteger(startPage) || startPage < 1) throw new Error("startPage debe ser un entero >= 1.");
   const wantedDepartamento = departamento?.toUpperCase().trim();
 
   const allReleases: OcdsRelease[] = [];
-  let page = 1;
+  let page = startPage;
   let pagesFetched = 0;
+  let hasNext = false;
 
-  for (; pagesFetched < maxPages; pagesFetched++) {
+  for (; maxPages === 0 || pagesFetched < maxPages; pagesFetched++) {
     const { releases, links } = await fetchReleasesPage(page, params);
     allReleases.push(...releases);
-    if (!links?.next) {
+    hasNext = Boolean(links?.next);
+    if (!hasNext) {
       pagesFetched += 1;
       break;
     }
@@ -102,7 +112,7 @@ export async function ingestOecdReleases(options: IngestOptions = {}): Promise<I
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const batchId = await saveRawBatch(client, 1, page, allReleases);
+    const batchId = await saveRawBatch(client, startPage, page - (hasNext ? 1 : 0), allReleases, params);
 
     const { rows: allRows, rejected } = normalizeOcdsReleases(allReleases);
     const rows = wantedDepartamento
@@ -162,7 +172,7 @@ export async function ingestOecdReleases(options: IngestOptions = {}): Promise<I
       accepted: rows.length,
       skippedOtherDepartamento,
       rejected: rejected.length,
-      isPartial: true,
+      isPartial: hasNext,
     };
   } catch (err) {
     await client.query("ROLLBACK");

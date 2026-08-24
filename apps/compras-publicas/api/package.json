@@ -10,6 +10,10 @@
     "migrate": "tsx src/db/migrate.ts",
     "ingest:oece": "tsx src/ingest/oece-connector.ts",
     "ingest:awards": "tsx src/ingest/oece-records-connector.ts",
+    "ingest:processes:range": "tsx src/ingest/run-oece-releases.ts",
+    "ingest:awards:range": "tsx src/ingest/run-oece-records.ts",
+    "ingest:processes:full": "tsx src/ingest/run-oece-releases-full.ts",
+    "ingest:awards:full": "tsx src/ingest/run-oece-records-full.ts",
     "ingest:minor-contracts": "tsx src/ingest/run-minor-contracts.ts",
     "ingest:minor-contracts:full": "tsx src/ingest/run-minor-contracts.ts --full",
     "ingest:legacy-orders": "tsx src/ingest/run-legacy-seace-orders.ts",
@@ -29,7 +33,6 @@
     "express-rate-limit": "^8.6.2",
     "helmet": "^8.3.0",
     "pg": "^8.12.0",
-    "xlsx": "^0.18.5",
     "xlsx": "^0.18.5",
     "zod": "^4.4.3"
   },

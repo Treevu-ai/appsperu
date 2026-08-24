@@ -14,14 +14,27 @@ interface RecordsPageResponse {
   links?: { next?: string | null; prev?: string | null };
 }
 
+export interface FetchRecordsParams {
+  startDate?: string;
+  endDate?: string;
+  mainProcurementCategory?: string;
+}
+
 /**
  * A diferencia de `/releases`, `/records` sí trae `compiledRelease.awards`
  * — confirmado en vivo el 2026-08-17. Densidad baja: solo los procesos que
  * ya llegaron a la etapa de adjudicación tienen awards no vacío.
  */
-export async function fetchRecordsPage(page: number): Promise<RecordsPageResponse> {
+export function recordsPageUrl(page: number, params: FetchRecordsParams = {}): string {
   const qs = new URLSearchParams({ page: String(page), order: "desc" });
-  const res = await fetchWithTimeout(`${API_BASE_URL}/records?${qs.toString()}`);
+  if (params.startDate) qs.set("startDate", params.startDate);
+  if (params.endDate) qs.set("endDate", params.endDate);
+  if (params.mainProcurementCategory) qs.set("mainProcurementCategory", params.mainProcurementCategory);
+  return `${API_BASE_URL}/records?${qs.toString()}`;
+}
+
+export async function fetchRecordsPage(page: number, params: FetchRecordsParams = {}): Promise<RecordsPageResponse> {
+  const res = await fetchWithTimeout(recordsPageUrl(page, params));
   if (!res.ok) {
     throw new Error(`OECE devolvió ${res.status} para la página ${page} de /records`);
   }
@@ -38,19 +51,22 @@ export function filterRecordsByDepartment(records: OcdsRecord[], departamento?: 
   return records.filter((record) => findBuyerDepartamento(record)?.toUpperCase().trim() === wanted);
 }
 
-async function saveRawBatch(client: PoolClient, pageFrom: number, pageTo: number, records: OcdsRecord[]): Promise<number> {
+async function saveRawBatch(client: PoolClient, pageFrom: number, pageTo: number, records: OcdsRecord[], params: FetchRecordsParams): Promise<number> {
+  const sourceUrl = recordsPageUrl(pageFrom, params);
   const result = await client.query<{ id: number }>(
-    `INSERT INTO raw_ocds_batches (page_from, page_to, checksum, record_count, payload)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO raw_ocds_batches (page_from, page_to, checksum, record_count, payload, source_endpoint, source_url, query_params)
+     VALUES ($1, $2, $3, $4, $5, '/records', $6, $7::jsonb)
      RETURNING id`,
-    [pageFrom, pageTo, checksumOf(records), records.length, JSON.stringify(records)]
+    [pageFrom, pageTo, checksumOf(records), records.length, JSON.stringify(records), sourceUrl, JSON.stringify(params)]
   );
   return result.rows[0].id;
 }
 
 export interface IngestAwardsOptions {
   maxPages?: number;
+  startPage?: number;
   departamento?: string;
+  params?: FetchRecordsParams;
 }
 
 export interface IngestAwardsSummary {
@@ -74,17 +90,21 @@ export interface IngestAwardsSummary {
  * y hace upsert por (ocid, award_id, supplier_id) en awards y (ocid, bidder_id) en bidders.
  */
 export async function ingestAwards(options: IngestAwardsOptions = {}): Promise<IngestAwardsSummary> {
-  const { maxPages = DEFAULT_MAX_PAGES, departamento } = options;
+  const { maxPages = DEFAULT_MAX_PAGES, startPage = 1, departamento, params = {} } = options;
+  if (!Number.isInteger(maxPages) || maxPages < 0) throw new Error("maxPages debe ser entero >= 0; 0 recorre toda la ventana solicitada.");
+  if (!Number.isInteger(startPage) || startPage < 1) throw new Error("startPage debe ser un entero >= 1.");
   const wantedDepartamento = departamento?.toUpperCase().trim();
 
   const allRecords: OcdsRecord[] = [];
-  let page = 1;
+  let page = startPage;
   let pagesFetched = 0;
+  let hasNext = false;
 
-  for (; pagesFetched < maxPages; pagesFetched++) {
-    const { records, links } = await fetchRecordsPage(page);
+  for (; maxPages === 0 || pagesFetched < maxPages; pagesFetched++) {
+    const { records, links } = await fetchRecordsPage(page, params);
     allRecords.push(...records);
-    if (!links?.next) {
+    hasNext = Boolean(links?.next);
+    if (!hasNext) {
       pagesFetched += 1;
       break;
     }
@@ -98,7 +118,7 @@ export async function ingestAwards(options: IngestAwardsOptions = {}): Promise<I
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const batchId = await saveRawBatch(client, 1, page, allRecords);
+    const batchId = await saveRawBatch(client, startPage, page - (hasNext ? 1 : 0), allRecords, params);
 
     // Procesar awards
     const { rows: allRows, rejected } = normalizeAwards(allRecords);
@@ -163,7 +183,7 @@ export async function ingestAwards(options: IngestAwardsOptions = {}): Promise<I
       accepted: rows.length,
       skippedOtherDepartamento,
       rejected: rejected.length,
-      isPartial: true,
+      isPartial: hasNext,
       biddersInserted,
       biddersFailed,
       biddersRejected: biddersRejected.length,
