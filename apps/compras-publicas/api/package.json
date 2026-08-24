@@ -8,6 +8,10 @@
     "migrate": "tsx src/db/migrate.ts",
     "ingest:oece": "tsx src/ingest/oece-connector.ts",
     "ingest:awards": "tsx src/ingest/oece-records-connector.ts",
+    "ingest:minor-contracts": "tsx src/ingest/oece-minor-contracts-connector.ts",
+    "materialize:minor-contracts": "tsx src/minor-contracts/sync.ts",
+    "signals:minor-contracts": "tsx src/minor-contracts/run-signals.ts",
+    "embeddings:minor-contracts": "tsx src/minor-contracts/generate-embeddings.ts",
     "crossref:build": "tsx src/crossref/build-crosswalk.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
