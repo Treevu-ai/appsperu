@@ -248,6 +248,63 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: {},
   },
   {
+    name: "radar_ejecucion_infrastructure_assets",
+    app: "radar-ejecucion",
+    description:
+      "Activos de infraestructura materializados para La Libertad: CUI/obra cuando existe, y evidencia separada de cierre, operador, mantenimiento, disponibilidad y servicio. " +
+      "Avance físico, presupuesto o inauguración no se presentan como operación. " + SIN_SCHEDULER,
+    pathTemplate: "/api/infraestructura/activos",
+    pathParams: [],
+    querySchema: { departamento: z.string().min(1).optional(), sector: z.enum(["DRENAJE", "EDUCACION", "AGUA_SANEAMIENTO", "TRANSPORTE", "RIEGO", "OTRA"]).optional() },
+  },
+  {
+    name: "radar_ejecucion_infrastructure_asset",
+    app: "radar-ejecucion",
+    description:
+      "Ficha completa de un activo: identidad, obra INFOBRAS por CUI exacto, recepción/cierre, operador, mantenimiento, disponibilidad, indicadores y vacíos de evidencia. " +
+      "No certifica calidad, seguridad ni impacto. " + SIN_SCHEDULER,
+    pathTemplate: "/api/infraestructura/activos/{assetId}",
+    pathParams: ["assetId"],
+    querySchema: {},
+  },
+  {
+    name: "radar_ejecucion_infrastructure_operation",
+    app: "radar-ejecucion",
+    description:
+      "Evidencia de recepción, operador y disponibilidad de un activo. La ausencia de estos registros es un vacío de ALSOL, no prueba de que el activo no funcione. " + SIN_SCHEDULER,
+    pathTemplate: "/api/infraestructura/activos/{assetId}/operacion",
+    pathParams: ["assetId"],
+    querySchema: {},
+  },
+  {
+    name: "radar_ejecucion_infrastructure_maintenance",
+    app: "radar-ejecucion",
+    description:
+      "Evidencia de mantenimiento atribuida a un activo. PIM/devengado identifica financiamiento o ejecución registrada, no prueba por sí solo mantenimiento realizado o disponibilidad. " + SIN_SCHEDULER,
+    pathTemplate: "/api/infraestructura/activos/{assetId}/mantenimiento",
+    pathParams: ["assetId"],
+    querySchema: { anio: z.string().regex(/^\d{4}$/).optional() },
+  },
+  {
+    name: "radar_ejecucion_infrastructure_integrity",
+    app: "radar-ejecucion",
+    description:
+      "Control de integridad de infraestructura: verifica qué activos tienen cierre, operador, mantenimiento, disponibilidad e indicador. " +
+      "Con estricto=true devuelve 409 si no existe evidencia mínima para presentarlos como infraestructura que funciona. " + SIN_SCHEDULER,
+    pathTemplate: "/api/infraestructura/integridad",
+    pathParams: [],
+    querySchema: { departamento: z.string().min(1).optional(), sector: z.enum(["DRENAJE", "EDUCACION", "AGUA_SANEAMIENTO", "TRANSPORTE", "RIEGO", "OTRA"]).optional(), estricto: z.enum(["true", "false"]).optional() },
+  },
+  {
+    name: "radar_ejecucion_infrastructure_evidence_queue",
+    app: "radar-ejecucion",
+    description:
+      "Cola de evidencia faltante por activo: recepción, operador, mantenimiento o disponibilidad. Es una prioridad de revisión, no una lista de infraestructura inoperativa. " + SIN_SCHEDULER,
+    pathTemplate: "/api/infraestructura/evidencia-pendiente",
+    pathParams: [],
+    querySchema: { estado: z.enum(["PENDING", "REVIEWED", "DISMISSED", "NEEDS_EVIDENCE"]).optional() },
+  },
+  {
     name: "radar_ejecucion_sector_review_queue",
     app: "radar-ejecucion",
     description:

@@ -27,6 +27,13 @@
     "alimentacion:evidencia": "tsx src/cli/food-traceability.ts --accion evidencia-pendiente",
     "alimentacion:revision": "tsx src/cli/food-evidence-review.ts",
     "proveedores:observaciones": "tsx src/cli/provider-observations.ts",
+    "infraestructura:activos": "tsx src/cli/infrastructure.ts --accion activos",
+    "infraestructura:ficha": "tsx src/cli/infrastructure.ts --accion ficha",
+    "infraestructura:operacion": "tsx src/cli/infrastructure.ts --accion operacion",
+    "infraestructura:mantenimiento": "tsx src/cli/infrastructure.ts --accion mantenimiento",
+    "infraestructura:integridad": "tsx src/cli/infrastructure.ts --accion integridad",
+    "infraestructura:evidencia": "tsx src/cli/infrastructure.ts --accion evidencia",
+    "infraestructura:revision": "tsx src/cli/infrastructure-evidence-review.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
