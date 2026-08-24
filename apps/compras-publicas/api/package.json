@@ -27,6 +27,10 @@
     "signals:minor-contracts": "tsx src/minor-contracts/run-signals.ts",
     "embeddings:minor-contracts": "tsx src/minor-contracts/generate-embeddings.ts",
     "crossref:build": "tsx src/crossref/build-crosswalk.ts",
+    "identities:seed": "tsx src/cli/seed-entity-identities.ts",
+    "tablero:territorio": "tsx src/cli/territorial-minor-contracts.ts",
+    "signals:review": "tsx src/cli/review-signal.ts",
+    "integrity:report": "tsx src/cli/integrity-report.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

@@ -1,5 +1,7 @@
 # Data contract — SUNAT (Padrón Reducido RUC)
 
+> Ficha técnica del conector: [`docs/conectores.md#identidad-fiscal`](../conectores.md#identidad-fiscal)
+
 Investigación en vivo: 2026-08-20.
 
 ## Fuente confirmada

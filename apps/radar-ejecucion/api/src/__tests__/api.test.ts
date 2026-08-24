@@ -98,6 +98,73 @@ describe("GET /api/execution (validación de query)", () => {
   });
 });
 
+describe("GET /api/lluvias/seguimiento", () => {
+  it("returns the terminal-ready columns without presenting an entity seat as beneficiary district", async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          entity_code: "029",
+          entidad_responsable: "AUTORIDAD NACIONAL DE INFRAESTRUCTURA",
+          proyecto_nombre: "CREACION DEL SERVICIO DE DRENAJE PLUVIAL",
+          programa_ppto_nombre: "ASIGNACIONES PRESUPUESTALES",
+          anio_fiscal: 2026,
+          pia: "11490390",
+          pim: "11490390",
+          devengado: "1000000",
+          meta_departamento: "LA LIBERTAD",
+          fecha_corte: "2026-08-24",
+          resource_id: "2026-Gasto-Mensual.csv",
+          departamento_ejecutora: "LIMA",
+          provincia_ejecutora: "LIMA",
+          distrito_ejecutora: "LIMA",
+        },
+      ],
+    });
+    queryMock.mockResolvedValueOnce({
+      rows: [{
+        cui: "2539202",
+        entidad_responsable: "AUTORIDAD NACIONAL DE INFRAESTRUCTURA (ANIN)",
+        actividad_literal: "CREACION DEL SERVICIO DE DRENAJE PLUVIAL",
+        pia_legal: "11490390",
+        pim: null,
+        devengado: null,
+        estado_pim: "NO_PUBLICADO_EN_FUENTE_DE_PROYECTO",
+        alerta_consistencia_territorial: "Las fuentes publican 5 y 6 distritos.",
+        observed_at: "2026-08-24",
+        distritos: [{ distrito: "TRUJILLO" }, { distrito: "EL PORVENIR" }],
+        fuentes: [{ etiqueta: "Ley de Presupuesto", url: "https://example.test", detalle: "CUI y PIA" }],
+      }],
+    });
+
+    const app = createApp();
+    const res = await request(app).get("/api/lluvias/seguimiento").query({ anio: "2026", busqueda: "drenaje" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.resultados[0]).toMatchObject({
+      entidadResponsable: "AUTORIDAD NACIONAL DE INFRAESTRUCTURA",
+      cui: null,
+      cuiEstado: "NO_PUBLICADO_EN_CSV_MEF_GASTO",
+      actividad: "CREACION DEL SERVICIO DE DRENAJE PLUVIAL",
+      pim: 11490390,
+      devengado: 1000000,
+      distritoBeneficiado: null,
+      distritoBeneficiadoEstado: "NO_PUBLICADO_EN_CSV_MEF_GASTO",
+      pimCobertura: "ATRIBUIDO_A_LA_ACTIVIDAD_POR_FILA_MEF",
+    });
+    expect(res.body.resultados[0].alcanceTerritorial).toEqual({ tipo: "DEPARTAMENTO_META", departamento: "LA LIBERTAD" });
+    expect(queryMock.mock.calls[0][1]).toEqual(["LA LIBERTAD", 2026, "%DRENAJE%"]);
+    expect(res.body.proyectosTerritoriales[0]).toMatchObject({
+      cui: "2539202",
+      entidadResponsable: "AUTORIDAD NACIONAL DE INFRAESTRUCTURA (ANIN)",
+      piaLegal: 11490390,
+      pim: null,
+      devengado: null,
+      distritoBeneficiado: expect.arrayContaining(["TRUJILLO", "EL PORVENIR"]),
+    });
+    expect(res.body.cobertura.conciliacion).toMatch(/No hay cruce automático/);
+  });
+});
+
 describe("GET /api/execution/:entityCode", () => {
   it("returns 404 when the entity has no ingested data", async () => {
     queryMock.mockResolvedValueOnce({ rows: [] });

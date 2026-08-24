@@ -135,6 +135,7 @@ describe("GET /api/crossref/ejecucion", () => {
         confidence: "confirmada",
         score: 1,
         devengado: 500000,
+        coberturaTemporal: { estado: "PARCIAL" },
         obras: 3,
         obrasParalizadas: 1,
         computedAt: "2026-08-17T00:00:00.000Z",

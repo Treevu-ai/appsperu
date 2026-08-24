@@ -31,9 +31,17 @@ cp .env.example .env
 npm run dev
 ```
 
+## Agente MCP
+
+[`mcp-server/`](mcp-server/) expone las 8 APIs como tools de solo lectura para un agente Claude
+vía MCP (transporte stdio). Requiere que las apps ya estén corriendo — ver
+[`mcp-server/README.md`](mcp-server/README.md).
+
 ## Documentación
 
 - [`docs/ESTADO.md`](docs/ESTADO.md) — estado actual, cruces entre apps, pendientes.
+- [`docs/conectores.md`](docs/conectores.md) — ficha técnica por conector: qué hace, cómo,
+  con qué frecuencia y de qué fuente.
 - [`docs/data-contracts/`](docs/data-contracts/) — un archivo por fuente externa (MEF, OECE,
   Invierte.pe, INFOBRAS) con lo confirmado en vivo.
 - [`docs/adr/`](docs/adr/) — decisiones arquitectónicas con su razón.

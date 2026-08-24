@@ -1,5 +1,7 @@
 # Data contract — INFOBRAS (Obras Públicas)
 
+> Ficha técnica del conector: [`docs/conectores.md#infobras`](../conectores.md#infobras)
+
 Investigación en vivo: 2026-08-16.
 
 ## Fuente confirmada

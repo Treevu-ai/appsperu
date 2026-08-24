@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db/pool.js";
 import { avancePct } from "../ingest/normalize.js";
+import { LATEST_BUDGET_CTE } from "../db/budget-coverage.js";
 import { asyncHandler } from "../lib/async-handler.js";
 import { parseQuery } from "../lib/validate-query.js";
 
@@ -63,9 +64,10 @@ executionRouter.get("/", asyncHandler(async (req, res) => {
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   const { rows } = await pool.query(
-    `SELECT b.entity_code, e.nombre, e.nivel_gobierno, b.funcion, b.anio_fiscal,
-            b.pia, b.pim, b.devengado, b.fecha_corte, rb.resource_id, b.generica, b.generica_nombre
-     FROM budget_execution b
+    `${LATEST_BUDGET_CTE}
+     SELECT b.entity_code, e.nombre, e.nivel_gobierno, b.funcion, b.anio_fiscal,
+            b.pia, b.pim, b.devengado, b.fecha_corte, b.meta_departamento, rb.resource_id, b.generica, b.generica_nombre
+     FROM latest_budget b
      JOIN entities e ON e.entity_code = b.entity_code
      JOIN raw_mef_batches rb ON rb.id = b.source_batch_id
      LEFT JOIN territories t ON t.ubigeo = e.ubigeo
@@ -75,7 +77,20 @@ executionRouter.get("/", asyncHandler(async (req, res) => {
     params
   );
 
+  const cortesUsados = [...new Map(rows.map((r) => [
+    `${r.meta_departamento ?? "SEDE_EJECUTORA"}:${r.fecha_corte}`,
+    {
+      particion: r.meta_departamento ? `META_DEPARTAMENTO:${r.meta_departamento}` : "SEDE_EJECUTORA",
+      fechaCorte: r.fecha_corte,
+    },
+  ])).values()];
+
   res.json({
+    coberturaTemporal: {
+      estado: "PARCIAL",
+      cortesUsados,
+      limitacion: "Cada observación usa su último corte disponible; los cortes pueden diferir entre particiones de cobertura.",
+    },
     resultados: rows.map((r) => ({
       entityCode: r.entity_code,
       nombre: r.nombre,
@@ -96,10 +111,11 @@ executionRouter.get("/", asyncHandler(async (req, res) => {
 
 executionRouter.get("/:entityCode", asyncHandler(async (req, res) => {
   const { rows } = await pool.query(
-    `SELECT b.entity_code, e.nombre, e.nivel_gobierno, b.funcion, b.anio_fiscal,
+    `${LATEST_BUDGET_CTE}
+     SELECT b.entity_code, e.nombre, e.nivel_gobierno, b.funcion, b.anio_fiscal,
             b.pia, b.pim, b.devengado, b.fecha_corte, rb.resource_id, rb.fetched_at,
             b.generica, b.generica_nombre
-     FROM budget_execution b
+     FROM latest_budget b
      JOIN entities e ON e.entity_code = b.entity_code
      JOIN raw_mef_batches rb ON rb.id = b.source_batch_id
      WHERE b.entity_code = $1
@@ -128,5 +144,9 @@ executionRouter.get("/:entityCode", asyncHandler(async (req, res) => {
       fechaCorte: r.fecha_corte,
       fuente: { dataset: "MEF - Presupuesto y ejecución de gasto", resourceId: r.resource_id, extraidoEl: r.fetched_at },
     })),
+    coberturaTemporal: {
+      estado: "PARCIAL",
+      cortesUsados: [...new Set(rows.map((r) => String(r.fecha_corte)))].map((fechaCorte) => ({ fechaCorte })),
+    },
   });
 }));

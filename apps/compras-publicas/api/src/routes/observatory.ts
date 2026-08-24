@@ -254,8 +254,11 @@ observatoryRouter.get("/semantic-review-clusters", asyncHandler(async (req, res)
 observatoryRouter.get("/signals/:id", asyncHandler(async (req, res) => {
   const signal = await pool.query(`SELECT cs.*,m.official_name AS municipality_name,s.legal_name AS supplier_name,c.object_original,sr.executed_at,sr.rule_version AS run_rule_version,sr.model_version AS run_model_version,sr.normative_version FROM contract_signals cs JOIN municipalities m ON m.municipality_id=cs.municipality_id LEFT JOIN supplier_profiles s ON s.supplier_id=cs.supplier_id LEFT JOIN minor_contracts c ON c.contracting_id=cs.contracting_id JOIN signal_runs sr ON sr.signal_run_id=cs.signal_run_id WHERE cs.signal_id=$1`, [req.params.id]);
   if (signal.rows.length === 0) { res.status(404).json({ error: "Señal no encontrada." }); return; }
-  const evidence = await pool.query(`SELECT * FROM contract_evidence WHERE signal_id=$1 ORDER BY capture_timestamp DESC`, [req.params.id]);
-  res.json({ signal: signal.rows[0], evidence: evidence.rows, limitation: "Esta señal identifica un patrón que merece revisión. No determina corrupción, favorecimiento, fraccionamiento ni incumplimiento." });
+  const [evidence, reviews] = await Promise.all([
+    pool.query(`SELECT * FROM contract_evidence WHERE signal_id=$1 ORDER BY capture_timestamp DESC`, [req.params.id]),
+    pool.query(`SELECT review_event_id,decision,reviewer_role,note,evidence_urls,reviewed_at FROM signal_review_events WHERE signal_id=$1 ORDER BY reviewed_at DESC,review_event_id DESC`, [req.params.id]),
+  ]);
+  res.json({ signal: signal.rows[0], evidence: evidence.rows, reviews: reviews.rows, limitation: "Esta señal identifica un patrón que merece revisión. No determina corrupción, favorecimiento, fraccionamiento ni incumplimiento." });
 }));
 
 observatoryRouter.get("/meta/freshness", asyncHandler(async (_req, res) => {

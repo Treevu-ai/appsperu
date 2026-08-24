@@ -42,8 +42,14 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
   const secEjecCodes = invRows.map((r) => r.sec_ejec);
 
   const { rows: devengadoRows } = await ejecucionPool.query(
-    `SELECT b.entity_code AS entity_code, e.nombre AS nombre, SUM(b.devengado) AS devengado
-     FROM budget_execution b
+    `WITH latest_budget AS (
+       SELECT DISTINCT ON (entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, '')) *
+       FROM budget_execution
+       ORDER BY entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, ''), fecha_corte DESC, id DESC
+     )
+     SELECT b.entity_code AS entity_code, e.nombre AS nombre, SUM(b.devengado) AS devengado,
+            array_agg(DISTINCT b.fecha_corte) AS cortes
+     FROM latest_budget b
      JOIN entities e ON e.entity_code = b.entity_code
      WHERE b.entity_code = ANY($1)
      GROUP BY b.entity_code, e.nombre`,
@@ -51,7 +57,7 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
   );
 
   const devengadoByEntity = new Map(
-    devengadoRows.map((r) => [r.entity_code, { nombre: r.nombre, devengado: Number(r.devengado) }])
+    devengadoRows.map((r) => [r.entity_code, { nombre: r.nombre, devengado: Number(r.devengado), cortes: r.cortes }])
   );
 
   res.json({
@@ -66,6 +72,7 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
         montoViableTotal: Number(r.monto_viable_total) || 0,
         costoActualizadoTotal: Number(r.costo_actualizado_total) || 0,
         devengado: presupuesto?.devengado ?? 0,
+        coberturaTemporal: presupuesto ? { cortesUsados: presupuesto.cortes, estado: "PARCIAL" } : null,
       };
     }),
   });

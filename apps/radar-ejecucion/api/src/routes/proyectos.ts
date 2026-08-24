@@ -48,9 +48,19 @@ proyectosRouter.get(
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
     const { rows } = await pool.query(
-      `SELECT p.entity_code, e.nombre, p.funcion, p.generica, p.programa_ppto_nombre,
+      `WITH latest_projects AS (
+         SELECT DISTINCT ON (
+           p.entity_code, p.funcion, p.anio_fiscal, p.proyecto_nombre,
+           COALESCE(p.meta_departamento, ''), COALESCE(p.generica, '')
+         ) p.*
+         FROM budget_execution_proyectos p
+         ORDER BY p.entity_code, p.funcion, p.anio_fiscal, p.proyecto_nombre,
+                  COALESCE(p.meta_departamento, ''), COALESCE(p.generica, ''),
+                  p.fecha_corte DESC, p.id DESC
+       )
+       SELECT p.entity_code, e.nombre, p.funcion, p.generica, p.programa_ppto_nombre,
               p.proyecto_nombre, p.anio_fiscal, p.devengado, p.meta_departamento
-       FROM budget_execution_proyectos p
+       FROM latest_projects p
        JOIN entities e ON e.entity_code = p.entity_code
        ${where}
        ORDER BY p.devengado DESC

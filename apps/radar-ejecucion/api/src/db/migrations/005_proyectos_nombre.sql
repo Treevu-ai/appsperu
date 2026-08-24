@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS budget_execution_proyectos (
   proyecto_nombre     TEXT NOT NULL,
   programa_ppto_nombre TEXT,
   anio_fiscal         INTEGER NOT NULL,
+  pia                 NUMERIC(18, 2) NOT NULL DEFAULT 0,
+  pim                 NUMERIC(18, 2) NOT NULL DEFAULT 0,
   devengado           NUMERIC(18, 2) NOT NULL,
   fecha_corte         DATE NOT NULL,
   source_batch_id     BIGINT NOT NULL REFERENCES raw_mef_batches(id),

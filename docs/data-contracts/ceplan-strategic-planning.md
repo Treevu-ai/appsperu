@@ -1,5 +1,7 @@
 # Data contract — CEPLAN: Strategic Planning (PEI/POI/Metas)
 
+> Ficha técnica del conector: [`docs/conectores.md#ceplan-estrategico`](../conectores.md#ceplan-estrategico)
+
 - Fuente oficial: CEPLAN — Centro Nacional de Planeamiento Estratégico
 - URLs clave:
   - GeoServer: https://geo.ceplan.gob.pe

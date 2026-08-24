@@ -80,6 +80,21 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: [],
     querySchema: {},
   },
+  {
+    name: "radar_ejecucion_lluvias_seguimiento",
+    app: "radar-ejecucion",
+    description:
+      "Tablero terminal de seguimiento ante lluvias: actividad MEF con PIA/PIM/devengado y, en una sección separada, proyectos territoriales con CUI verificado. " +
+      "No une ambas secciones por similitud de nombre ni inventa PIM, CUI o distrito beneficiado. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/lluvias/seguimiento",
+    pathParams: [],
+    querySchema: {
+      anio: z.string().regex(/^\d{4}$/).optional().describe("Año fiscal; omitir para incluir todos los años disponibles."),
+      departamento: z.string().min(1).optional().describe("Departamento meta o de sede; por defecto LA LIBERTAD."),
+      busqueda: z.string().min(2).max(160).optional().describe("Texto dentro de la actividad u programa presupuestal, ej. DRENAJE."),
+    },
+  },
 
   // ---- compras-publicas (OECE/OCDS) ----
   {

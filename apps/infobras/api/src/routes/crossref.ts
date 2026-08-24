@@ -119,8 +119,13 @@ crossrefRouter.get(
 
     const [devengadoResult, obrasResult] = await Promise.all([
       ejecucionPool.query(
-        `SELECT entity_code, SUM(devengado) AS devengado
-         FROM budget_execution
+        `WITH latest_budget AS (
+           SELECT DISTINCT ON (entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, '')) *
+           FROM budget_execution
+           ORDER BY entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, ''), fecha_corte DESC, id DESC
+         )
+         SELECT entity_code, SUM(devengado) AS devengado, array_agg(DISTINCT fecha_corte) AS cortes
+         FROM latest_budget
          WHERE entity_code = ANY($1)
          GROUP BY entity_code`,
         [entityCodes]
@@ -136,7 +141,7 @@ crossrefRouter.get(
       ),
     ]);
 
-    const devengadoByEntity = new Map(devengadoResult.rows.map((r) => [r.entity_code, Number(r.devengado)]));
+    const devengadoByEntity = new Map(devengadoResult.rows.map((r) => [r.entity_code, { devengado: Number(r.devengado), cortes: r.cortes }]));
     const obrasByCodigoEntidad = new Map(
       obrasResult.rows.map((r) => [
         r.codigo_entidad,
@@ -154,7 +159,10 @@ crossrefRouter.get(
           infobrasEntidadNombre: r.infobras_entidad_nombre,
           confidence: r.confidence,
           score: Number(r.score),
-          devengado: devengadoByEntity.get(r.ejecucion_entity_code) ?? 0,
+          devengado: devengadoByEntity.get(r.ejecucion_entity_code)?.devengado ?? 0,
+          coberturaTemporal: devengadoByEntity.has(r.ejecucion_entity_code)
+            ? { cortesUsados: devengadoByEntity.get(r.ejecucion_entity_code)!.cortes, estado: "PARCIAL" }
+            : null,
           obras: obras.obras,
           obrasParalizadas: obras.obrasParalizadas,
           computedAt: r.computed_at,

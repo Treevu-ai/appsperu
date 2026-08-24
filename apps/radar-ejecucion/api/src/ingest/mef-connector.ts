@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 import { parse } from "csv-parse/sync";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
+import { refreshBudgetCoverageSnapshots } from "../db/budget-coverage.js";
 import { CONFIRMED_MEF_FIELD_MAPPING, type MefFieldMapping } from "./field-mapping.js";
 import { normalizeMefRows, normalizeMefProyectos } from "./normalize.js";
 
@@ -200,10 +201,10 @@ async function insertProyectosRaw(
   for (const p of proyectos) {
     await client.query(
       `INSERT INTO budget_execution_proyectos
-         (entity_code, funcion, generica, proyecto_nombre, programa_ppto_nombre, anio_fiscal, devengado, fecha_corte, source_batch_id, meta_departamento)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         (entity_code, funcion, generica, proyecto_nombre, programa_ppto_nombre, anio_fiscal, pia, pim, devengado, fecha_corte, source_batch_id, meta_departamento)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        ON CONFLICT (entity_code, funcion, proyecto_nombre, anio_fiscal, fecha_corte, COALESCE(generica, ''), COALESCE(meta_departamento, '')) DO UPDATE
-         SET devengado = EXCLUDED.devengado, source_batch_id = EXCLUDED.source_batch_id,
+         SET pia = EXCLUDED.pia, pim = EXCLUDED.pim, devengado = EXCLUDED.devengado, source_batch_id = EXCLUDED.source_batch_id,
              programa_ppto_nombre = EXCLUDED.programa_ppto_nombre`,
       [
         p.entityCode,
@@ -212,6 +213,8 @@ async function insertProyectosRaw(
         p.proyectoNombre,
         p.programaPptoNombre,
         p.anioFiscal,
+        p.pia,
+        p.pim,
         p.devengado,
         fechaCorte,
         batchId,
@@ -366,6 +369,7 @@ export async function ingestMefBudgetExecution(
       );
     }
 
+    await refreshBudgetCoverageSnapshots(client);
     await client.query("COMMIT");
 
     return {
@@ -506,6 +510,7 @@ export async function ingestMefFullYearForDepartamento(
     }
     const { rows: proyectos } = normalizeMefProyectos(allRecords, mapping);
     await insertProyectos(client, lastBatchId, fechaCorte, null, proyectos);
+    await refreshBudgetCoverageSnapshots(client);
     await client.query("COMMIT");
   } catch (err) {
     await client.query("ROLLBACK");
@@ -751,6 +756,7 @@ export async function ingestMefFullYearForMetaDepartamento(
     }
     const { rows: proyectos } = normalizeMefProyectos(allRecords, mapping);
     await insertProyectos(client, lastBatchId, fechaCorte, wantedMetaDepartamento, proyectos);
+    await refreshBudgetCoverageSnapshots(client);
     await client.query("COMMIT");
   } catch (err) {
     await client.query("ROLLBACK");

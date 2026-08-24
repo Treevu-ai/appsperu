@@ -1,5 +1,7 @@
 # Data contract — Score de salud institucional
 
+> Ficha técnica: [`docs/conectores.md#salud-institucional`](../conectores.md#salud-institucional)
+
 Construido en vivo: 2026-08-20.
 
 ## Qué es

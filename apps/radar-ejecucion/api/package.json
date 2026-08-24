@@ -9,6 +9,9 @@
     "start": "node dist/index.js",
     "migrate": "tsx src/db/migrate.ts",
     "ingest:mef": "tsx src/ingest/mef-connector.ts",
+    "ingest:mef:meta": "tsx src/cli/reingest-meta-departamento.ts",
+    "tablero:lluvias": "tsx src/cli/lluvias-seguimiento.ts",
+    "integrity:budget": "tsx src/cli/integrity-budget.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

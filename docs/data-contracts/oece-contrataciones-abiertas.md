@@ -1,5 +1,9 @@
 # Data contract — OECE: Contrataciones Abiertas (OCDS)
 
+> Fichas técnicas de los conectores: [`docs/conectores.md#compras-publicas-releases`](../conectores.md#compras-publicas-releases)
+> (`oece-connector.ts`) y [`docs/conectores.md#compras-publicas-records`](../conectores.md#compras-publicas-records)
+> (`oece-records-connector.ts`)
+
 - Fuente oficial: Portal de Contrataciones Abiertas de la Compra Pública, OECE
   (Organismo Especializado para las Contrataciones Públicas Eficientes — antes OSCE).
 - Confirmado en vivo el 2026-08-16 navegando el portal real.
