@@ -2,6 +2,7 @@ import express, { type ErrorRequestHandler } from "express";
 import { indicatorsRouter } from "./routes/indicators.js";
 import { crossrefRouter } from "./routes/crossref.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
+import { pool } from "./db/pool.js";
 
 const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   console.error("Error no manejado en un request:", err);
@@ -15,6 +16,7 @@ export function createApp() {
   app.use(express.json());
 
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
+  app.get("/readyz", async (_req, res) => { try { await pool.query("SELECT 1"); res.json({ status: "ready", database: "ok" }); } catch { res.status(503).json({ status: "not_ready", database: "unavailable" }); } });
 
   app.use("/api", apiRateLimit);
   app.use("/api/indicators", indicatorsRouter);

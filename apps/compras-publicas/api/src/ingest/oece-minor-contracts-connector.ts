@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
+import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
 import { normalizeContractObject } from "../minor-contracts/normalize-object.js";
 import { MINOR_CONTRACT_LIMIT_2026, MINOR_CONTRACT_NORMALIZER_VERSION } from "../minor-contracts/types.js";
 
@@ -100,7 +101,7 @@ function locationFrom(item: NonNullable<PublicMinorContractDetail["uitContratoIt
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { headers: { Accept: "application/json" } });
+  const response = await fetchWithTimeout(url, { headers: { Accept: "application/json" } });
   if (!response.ok) throw new Error(`SEACE devolvió ${response.status} para ${url}`);
   return (await response.json()) as T;
 }

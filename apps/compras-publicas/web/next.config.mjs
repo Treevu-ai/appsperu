@@ -9,6 +9,7 @@ const nextConfig = {
   // Evita que Next use C:\Users\acuba como raíz al detectar lockfiles fuera
   // del repo; además mantiene el trazado de producción acotado al workspace.
   outputFileTracingRoot: appRoot,
+  experimental: { externalDir: true },
 };
 
 export default nextConfig;

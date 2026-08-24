@@ -32,6 +32,7 @@ const semanticQueueQuerySchema = z.object({
   municipalityId: z.string().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
+const semanticClusterQuerySchema = z.object({ limit: z.coerce.number().int().min(1).max(100).default(50) });
 const asNumber = (value: unknown): number | null => value === null || value === undefined ? null : Number(value);
 
 function territorialAggregationQuery(level: "province" | "district", where: string) {
@@ -209,11 +210,69 @@ observatoryRouter.get("/semantic-review-queue", asyncHandler(async (req, res) =>
   });
 }));
 
+observatoryRouter.get("/semantic-review-clusters", asyncHandler(async (req, res) => {
+  const query = parseQuery(semanticClusterQuerySchema, req.query, res); if (!query) return;
+  const { rows } = await pool.query(
+    `SELECT cs.signal_id,cs.signal_type,cs.confidence,cs.human_review_status,cs.model_version,cs.observed_value,
+            m.official_name AS municipality_name,
+            c.contracting_id,c.source_contracting_id,c.object_original,c.awarded_amount,c.publication_date,c.source_url,
+            related.contracting_id AS compared_contracting_id,related.source_contracting_id AS compared_source_contracting_id,
+            related.object_original AS compared_object_original,related.awarded_amount AS compared_awarded_amount,
+            related.publication_date AS compared_publication_date,related.source_url AS compared_source_url
+       FROM contract_signals cs
+       JOIN municipalities m ON m.municipality_id=cs.municipality_id
+       JOIN minor_contracts c ON c.contracting_id=cs.contracting_id
+       JOIN minor_contracts related ON related.contracting_id=cs.observed_value->>'comparedContractingId'
+      WHERE cs.signal_run_id=(SELECT signal_run_id FROM signal_runs ORDER BY executed_at DESC LIMIT 1)
+        AND cs.signal_type IN ('S12','S13')
+        AND c.source_contracting_id <> related.source_contracting_id
+      ORDER BY cs.confidence DESC`,
+  );
+  const parent = new Map<string, string>();
+  const find = (value: string): string => { const root = parent.get(value) ?? value; if (root === value) return root; const resolved = find(root); parent.set(value, resolved); return resolved; };
+  const join = (left: string, right: string) => { const leftRoot = find(left); const rightRoot = find(right); if (leftRoot !== rightRoot) parent.set(rightRoot, leftRoot); };
+  for (const row of rows) { parent.set(row.contracting_id, parent.get(row.contracting_id) ?? row.contracting_id); parent.set(row.compared_contracting_id, parent.get(row.compared_contracting_id) ?? row.compared_contracting_id); join(row.contracting_id, row.compared_contracting_id); }
+  type ClusterContract = { contractingId: string; object: string | null; awardedAmount: number | null; publicationDate: string | null; sourceUrl: string };
+  type Cluster = { municipality: string; contracts: Map<string, ClusterContract>; signals: Set<string>; models: Set<string>; confidences: number[]; statuses: Set<string> };
+  const clusters = new Map<string, Cluster>();
+  const addContract = (cluster: Cluster, id: string, object: unknown, amount: unknown, publicationDate: unknown, sourceUrl: unknown) => cluster.contracts.set(id, { contractingId: id, object: typeof object === "string" ? object : null, awardedAmount: asNumber(amount), publicationDate: typeof publicationDate === "string" ? publicationDate : null, sourceUrl: typeof sourceUrl === "string" ? sourceUrl : "" });
+  for (const row of rows) {
+    const clusterId = find(row.contracting_id); const cluster: Cluster = clusters.get(clusterId) ?? { municipality: row.municipality_name, contracts: new Map<string, ClusterContract>(), signals: new Set<string>(), models: new Set<string>(), confidences: [], statuses: new Set<string>() };
+    addContract(cluster, row.contracting_id, row.object_original, row.awarded_amount, row.publication_date, row.source_url);
+    addContract(cluster, row.compared_contracting_id, row.compared_object_original, row.compared_awarded_amount, row.compared_publication_date, row.compared_source_url);
+    cluster.signals.add(row.signal_type); if (row.model_version) cluster.models.add(row.model_version); cluster.confidences.push(Number(row.confidence)); cluster.statuses.add(row.human_review_status); clusters.set(clusterId, cluster);
+  }
+  const resultados = [...clusters.values()].map((cluster) => {
+    const contracts = [...cluster.contracts.values()].sort((left, right) => String(left.publicationDate ?? "").localeCompare(String(right.publicationDate ?? "")));
+    const reviewStatus = cluster.statuses.has("PENDING") ? "PENDING" : cluster.statuses.has("REVIEWED") ? "REVIEWED" : "DISMISSED";
+    return { clusterId: contracts.map((contract) => contract.contractingId).join("::"), municipality: cluster.municipality, contracts,
+      contractCount: contracts.length, totalAmount: contracts.reduce((sum, contract) => sum + (Number(contract.awardedAmount) || 0), 0), signalTypes: [...cluster.signals].sort(), modelVersions: [...cluster.models].sort(), similarity: Math.max(...cluster.confidences), reviewStatus };
+  }).sort((left, right) => right.totalAmount - left.totalAmount || right.similarity - left.similarity).slice(0, query.limit);
+  res.json({ resultados, limitation: "Un cluster resume objetos comparables para organizar revisión documental. La suma y similitud son descriptivas; no determinan una misma necesidad, fraccionamiento, favorecimiento ni direccionamiento." });
+}));
+
 observatoryRouter.get("/signals/:id", asyncHandler(async (req, res) => {
   const signal = await pool.query(`SELECT cs.*,m.official_name AS municipality_name,s.legal_name AS supplier_name,c.object_original,sr.executed_at,sr.rule_version AS run_rule_version,sr.model_version AS run_model_version,sr.normative_version FROM contract_signals cs JOIN municipalities m ON m.municipality_id=cs.municipality_id LEFT JOIN supplier_profiles s ON s.supplier_id=cs.supplier_id LEFT JOIN minor_contracts c ON c.contracting_id=cs.contracting_id JOIN signal_runs sr ON sr.signal_run_id=cs.signal_run_id WHERE cs.signal_id=$1`, [req.params.id]);
   if (signal.rows.length === 0) { res.status(404).json({ error: "Señal no encontrada." }); return; }
   const evidence = await pool.query(`SELECT * FROM contract_evidence WHERE signal_id=$1 ORDER BY capture_timestamp DESC`, [req.params.id]);
   res.json({ signal: signal.rows[0], evidence: evidence.rows, limitation: "Esta señal identifica un patrón que merece revisión. No determina corrupción, favorecimiento, fraccionamiento ni incumplimiento." });
+}));
+
+observatoryRouter.get("/meta/freshness", asyncHandler(async (_req, res) => {
+  const { rows } = await pool.query(
+    `SELECT 'oece_ocds' AS source,MAX(fetched_at) AS fetched_at,COALESCE(SUM(record_count),0)::integer AS records,
+            'Páginas recientes; cobertura parcial según la corrida.' AS coverage
+       FROM raw_ocds_batches
+     UNION ALL
+     SELECT 'seace_contratos_menores' AS source,MAX(fetched_at) AS fetched_at,COALESCE(SUM(record_count),0)::integer AS records,
+            'Buscador público observado; contratos menores materializados para el alcance seleccionado.' AS coverage
+       FROM raw_minor_contract_batches
+     ORDER BY source`,
+  );
+  res.json({
+    sources: rows.map((row) => ({ source: row.source, fetchedAt: row.fetched_at, records: Number(row.records), coverage: row.coverage })),
+    limitation: "La fecha de extracción, el periodo de los datos y la cobertura no son equivalentes. Revise el contrato de datos antes de comparar fuentes.",
+  });
 }));
 
 observatoryRouter.get("/analytics/territorial", asyncHandler(async (req, res) => {

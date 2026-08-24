@@ -1,3 +1,5 @@
+import { encodePathSegment, fetchJson } from "../../../../../packages/http-client/src";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4001";
 
 export interface FuenteTrazable {
@@ -36,21 +38,7 @@ export interface ProcurementFilters {
 }
 
 async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(`La API respondió ${res.status} para ${path}`);
-  }
-  return (await res.json()) as T;
-}
-
-// Las rutas dinámicas de Next.js pueden entregar un identificador ya escapado
-// (por ejemplo, `seace%3Aentity%3A1215`). Esto evita volver a escapar `%`.
-function encodePathSegment(value: string): string {
-  try {
-    return encodeURIComponent(decodeURIComponent(value));
-  } catch {
-    return encodeURIComponent(value);
-  }
+  return fetchJson<T>(API_URL, path);
 }
 
 export function getProcurementList(filters: ProcurementFilters = {}): Promise<ProcurementListResponse> {
@@ -288,3 +276,12 @@ export interface SemanticReviewCandidate {
 export function getSemanticReviewQueue(): Promise<{ resultados: SemanticReviewCandidate[]; limitation: string }> {
   return getJson("/api/semantic-review-queue");
 }
+
+export interface SemanticReviewCluster {
+  clusterId: string; municipality: string; contractCount: number; totalAmount: number; signalTypes: string[]; modelVersions: string[]; similarity: number; reviewStatus: "PENDING" | "REVIEWED" | "DISMISSED";
+  contracts: Array<{ contractingId: string; object: string | null; awardedAmount: number | null; publicationDate: string | null; sourceUrl: string }>;
+}
+export function getSemanticReviewClusters(): Promise<{ resultados: SemanticReviewCluster[]; limitation: string }> { return getJson("/api/semantic-review-clusters"); }
+
+export interface SourceFreshness { source: string; fetchedAt: string | null; records: number; coverage: string }
+export function getSourceFreshness(): Promise<{ sources: SourceFreshness[]; limitation: string }> { return getJson("/api/meta/freshness"); }

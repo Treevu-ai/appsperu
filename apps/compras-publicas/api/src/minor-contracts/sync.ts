@@ -209,38 +209,6 @@ export async function syncMinorContracts(options: SyncMinorContractsOptions = {}
       }
     }
 
-    const bidders = await client.query<{ contracting_id: string; bidder_id: string; bidder_name: string; estado: string; monto_ofertado: string | null; source_batch_id: string; source_timestamp: string | null; ocid: string }>(
-      `SELECT c.contracting_id, b.bidder_id, b.bidder_name, b.estado, b.monto_ofertado,
-              c.source_batch_id, c.source_timestamp, c.ocid
-       FROM minor_contracts c
-       JOIN bidders b ON b.ocid = c.ocid
-       WHERE c.year = $1 AND c.municipality_id IN (SELECT municipality_id FROM municipalities WHERE department = $2)`,
-      [year, department]
-    );
-    for (const bidder of bidders.rows) {
-      const sourceUrl = oeceRecordUrl(bidder.ocid);
-      await client.query(
-        `INSERT INTO supplier_profiles (supplier_id, ruc, legal_name, source, source_timestamp)
-         VALUES ($1,$2,$3,'OECE OCDS',$4)
-         ON CONFLICT (supplier_id) DO UPDATE SET legal_name = EXCLUDED.legal_name, source_timestamp = EXCLUDED.source_timestamp`,
-        [bidder.bidder_id, rucFromSupplierId(bidder.bidder_id), bidder.bidder_name, bidder.source_timestamp]
-      );
-      await client.query(
-        `INSERT INTO contract_quotations
-           (quotation_id, contracting_id, supplier_id, amount, valid_status, evaluation_result, source, source_batch_id, source_timestamp)
-         VALUES ($1,$2,$3,$4,'UNKNOWN',$5,'OECE OCDS',$6,$7)
-         ON CONFLICT (quotation_id) DO UPDATE SET amount = EXCLUDED.amount, evaluation_result = EXCLUDED.evaluation_result,
-           source_batch_id = EXCLUDED.source_batch_id, source_timestamp = EXCLUDED.source_timestamp`,
-        [`${bidder.contracting_id}:${bidder.bidder_id}`, bidder.contracting_id, bidder.bidder_id, bidder.monto_ofertado, bidder.estado, bidder.source_batch_id, bidder.source_timestamp]
-      );
-      await insertEvidence(client, {
-        contractingId: bidder.contracting_id, evidenceType: "PARTICIPANT", sourceRecord: bidder.ocid, sourceUrl,
-        field: "bidder_id", observedValue: { bidderId: bidder.bidder_id, bidderName: bidder.bidder_name, status: bidder.estado },
-        sourceTimestamp: bidder.source_timestamp, sourceBatchId: bidder.source_batch_id,
-      });
-      quotationsUpserted += 1;
-      evidencesRecorded += 1;
-    }
     await client.query(
       `UPDATE minor_contracts c
        SET quotation_count = counts.total, valid_quotation_count = NULL, updated_at = now()

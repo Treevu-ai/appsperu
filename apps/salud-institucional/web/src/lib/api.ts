@@ -1,3 +1,5 @@
+import { fetchJson } from "../../../../../packages/http-client/src";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4007";
 
 export interface ComponentScore {
@@ -27,9 +29,5 @@ export interface ScoreResponse {
 
 export async function getScore(departamento?: string): Promise<ScoreResponse> {
   const qs = departamento ? `?departamento=${encodeURIComponent(departamento)}` : "";
-  const res = await fetch(`${API_URL}/api/score${qs}`, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(`La API respondió ${res.status} para /api/score`);
-  }
-  return (await res.json()) as ScoreResponse;
+  return fetchJson<ScoreResponse>(API_URL, `/api/score${qs}`);
 }

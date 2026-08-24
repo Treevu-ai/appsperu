@@ -1,6 +1,9 @@
 import { CrossrefTable } from "@/components/CrossrefTable";
 import { getCrossref } from "@/lib/api";
 
+// El cruce depende de APIs locales; no debe consultarlas durante el build de CI.
+export const dynamic = "force-dynamic";
+
 export default async function CrucePage() {
   const { resultados } = await getCrossref();
 

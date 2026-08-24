@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  verify:
+    name: ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - apps/actividad-agraria/api
+          - apps/ceplan-estrategico/api
+          - apps/ceplan-estrategico/web
+          - apps/compras-publicas/api
+          - apps/compras-publicas/web
+          - apps/identidad-fiscal/api
+          - apps/identidad-fiscal/web
+          - apps/infobras/api
+          - apps/infobras/web
+          - apps/proveedores-sancionados/api
+          - apps/proveedores-sancionados/web
+          - apps/radar-ejecucion/api
+          - apps/radar-ejecucion/web
+          - apps/radar-inversiones/api
+          - apps/radar-inversiones/web
+          - apps/salud-institucional/api
+          - apps/salud-institucional/web
+          - mcp-server
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ${{ matrix.package }}/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm test --if-present
+      - run: npm run build --if-present

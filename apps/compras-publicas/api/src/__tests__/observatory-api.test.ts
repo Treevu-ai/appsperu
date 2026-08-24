@@ -56,6 +56,33 @@ describe("GET /api/semantic-review-queue", () => {
   });
 });
 
+describe("GET /api/semantic-review-clusters", () => {
+  it("groups only comparable contracts from distinct source records", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+    const response = await request(createApp()).get("/api/semantic-review-clusters");
+    expect(response.status).toBe(200);
+    expect(response.body.resultados).toEqual([]);
+    expect(response.body.limitation).toMatch(/no determinan una misma necesidad/i);
+    expect(queryMock.mock.calls[0][0]).toMatch(/c\.source_contracting_id <> related\.source_contracting_id/);
+  });
+});
+
+describe("GET /api/meta/freshness", () => {
+  it("makes the extraction date and coverage contract visible", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [
+      { source: "oece_ocds", fetched_at: "2026-08-23T10:00:00.000Z", records: "12", coverage: "Parcial" },
+      { source: "seace_contratos_menores", fetched_at: "2026-08-23T11:00:00.000Z", records: "34", coverage: "Materializada" },
+    ] });
+    const response = await request(createApp()).get("/api/meta/freshness");
+    expect(response.status).toBe(200);
+    expect(response.body.sources).toEqual([
+      { source: "oece_ocds", fetchedAt: "2026-08-23T10:00:00.000Z", records: 12, coverage: "Parcial" },
+      { source: "seace_contratos_menores", fetchedAt: "2026-08-23T11:00:00.000Z", records: 34, coverage: "Materializada" },
+    ]);
+    expect(response.body.limitation).toMatch(/no son equivalentes/i);
+  });
+});
+
 describe("GET /api/municipalities/:id", () => {
   it("maps the canonical municipality row to the frontend contract", async () => {
     queryMock

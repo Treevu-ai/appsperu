@@ -26,6 +26,23 @@ describe("GET /health", () => {
   });
 });
 
+describe("GET /readyz", () => {
+  it("confirms the database dependency before declaring the service ready", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ "?column?": 1 }] });
+    const res = await request(createApp()).get("/readyz");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: "ready", database: "ok" });
+    expect(queryMock).toHaveBeenCalledWith("SELECT 1");
+  });
+
+  it("does not expose an internal error when the database is unavailable", async () => {
+    queryMock.mockRejectedValueOnce(new Error("connection refused"));
+    const res = await request(createApp()).get("/readyz");
+    expect(res.status).toBe(503);
+    expect(res.body).toEqual({ status: "not_ready", database: "unavailable" });
+  });
+});
+
 describe("GET /api/procurement", () => {
   it("returns the list with traceability and applies the departamento filter", async () => {
     queryMock.mockResolvedValueOnce({

@@ -1,3 +1,5 @@
+import { fetchJson } from "../../../../../packages/http-client/src";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4002";
 
 export interface FuenteTrazable {
@@ -40,11 +42,7 @@ export interface InvestmentFilters {
 }
 
 async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(`La API respondió ${res.status} para ${path}`);
-  }
-  return (await res.json()) as T;
+  return fetchJson<T>(API_URL, path);
 }
 
 export function getInvestmentList(filters: InvestmentFilters = {}): Promise<InvestmentListResponse> {
