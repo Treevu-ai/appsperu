@@ -1,4 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// Estas pruebas cubren helpers puros; no requieren una DATABASE_URL local.
+vi.mock("../db/pool.js", () => ({ pool: {} }));
+
 import { categoryFromSeace, isDistrictMunicipality, parseSeaceDate } from "../ingest/oece-minor-contracts-connector.js";
 
 describe("OECE SEACE public minor-contract connector helpers", () => {

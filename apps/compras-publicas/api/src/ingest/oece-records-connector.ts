@@ -2,7 +2,9 @@ import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
-import { normalizeAwards, type OcdsRecord } from "./normalize-awards.js";
+import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
+import { findBuyerDepartamento, normalizeAwards, type OcdsRecord } from "./normalize-awards.js";
+import { normalizeBidders, persistBidders } from "./normalize-bidders.js";
 
 const API_BASE_URL = "https://contratacionesabiertas.oece.gob.pe/api/v1";
 const DEFAULT_MAX_PAGES = 10;
@@ -19,7 +21,7 @@ interface RecordsPageResponse {
  */
 export async function fetchRecordsPage(page: number): Promise<RecordsPageResponse> {
   const qs = new URLSearchParams({ page: String(page), order: "desc" });
-  const res = await fetch(`${API_BASE_URL}/records?${qs.toString()}`);
+  const res = await fetchWithTimeout(`${API_BASE_URL}/records?${qs.toString()}`);
   if (!res.ok) {
     throw new Error(`OECE devolvió ${res.status} para la página ${page} de /records`);
   }
@@ -28,6 +30,12 @@ export async function fetchRecordsPage(page: number): Promise<RecordsPageRespons
 
 function checksumOf(records: unknown): string {
   return createHash("sha256").update(JSON.stringify(records)).digest("hex");
+}
+
+export function filterRecordsByDepartment(records: OcdsRecord[], departamento?: string): OcdsRecord[] {
+  const wanted = departamento?.toUpperCase().trim();
+  if (!wanted) return records;
+  return records.filter((record) => findBuyerDepartamento(record)?.toUpperCase().trim() === wanted);
 }
 
 async function saveRawBatch(client: PoolClient, pageFrom: number, pageTo: number, records: OcdsRecord[]): Promise<number> {
@@ -54,12 +62,16 @@ export interface IngestAwardsSummary {
   skippedOtherDepartamento: number;
   rejected: number;
   isPartial: boolean;
+  biddersInserted?: number;
+  biddersFailed?: number;
+  biddersRejected?: number;
+  biddersSkippedOtherDepartamento?: number;
 }
 
 /**
  * Recorre páginas de `/records` (acotado por `maxPages`), extrae awards +
- * proveedores, filtra por departamento del comprador, guarda el lote crudo
- * y hace upsert por (ocid, award_id, supplier_id).
+ * proveedores + postores, filtra por departamento del comprador, guarda el lote crudo
+ * y hace upsert por (ocid, award_id, supplier_id) en awards y (ocid, bidder_id) en bidders.
  */
 export async function ingestAwards(options: IngestAwardsOptions = {}): Promise<IngestAwardsSummary> {
   const { maxPages = DEFAULT_MAX_PAGES, departamento } = options;
@@ -88,6 +100,7 @@ export async function ingestAwards(options: IngestAwardsOptions = {}): Promise<I
     await client.query("BEGIN");
     const batchId = await saveRawBatch(client, 1, page, allRecords);
 
+    // Procesar awards
     const { rows: allRows, rejected } = normalizeAwards(allRecords);
     const rows = wantedDepartamento
       ? allRows.filter((r) => r.departamento?.toUpperCase().trim() === wantedDepartamento)
@@ -127,6 +140,19 @@ export async function ingestAwards(options: IngestAwardsOptions = {}): Promise<I
       );
     }
 
+    // Los postores deben tener exactamente el mismo alcance territorial que
+    // las adjudicaciones; no se mezcla el resto de las páginas nacionales.
+    const bidderRecords = filterRecordsByDepartment(allRecords, wantedDepartamento);
+    const { rows: biddersRows, rejected: biddersRejected } = normalizeBidders(bidderRecords);
+    const { inserted: biddersInserted, failed: biddersFailed } = await persistBidders(client, biddersRows, batchId);
+
+    for (const bad of biddersRejected) {
+      await client.query(
+        `INSERT INTO bidders_rejected (source_batch_id, raw_bidder_data, reason) VALUES ($1, $2, $3)`,
+        [batchId, JSON.stringify(bad.raw), bad.reason]
+      );
+    }
+
     await client.query("COMMIT");
 
     return {
@@ -138,6 +164,10 @@ export async function ingestAwards(options: IngestAwardsOptions = {}): Promise<I
       skippedOtherDepartamento,
       rejected: rejected.length,
       isPartial: true,
+      biddersInserted,
+      biddersFailed,
+      biddersRejected: biddersRejected.length,
+      biddersSkippedOtherDepartamento: allRecords.length - bidderRecords.length,
     };
   } catch (err) {
     await client.query("ROLLBACK");
@@ -153,7 +183,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 
   ingestAwards({ maxPages, departamento })
     .then((summary) => {
-      console.log("Ingesta de adjudicaciones completada:", summary);
+      console.log("Ingesta de adjudicaciones y bidders completada:", summary);
       console.warn(
         "AVISO: esta es una ingesta PARCIAL (páginas recientes acotadas por maxPages). " +
           "No cubre el universo nacional de adjudicaciones."

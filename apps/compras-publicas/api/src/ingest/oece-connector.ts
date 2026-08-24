@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
+import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
 import { normalizeOcdsReleases, type OcdsRelease } from "./normalize.js";
 
 const API_BASE_URL = "https://contratacionesabiertas.oece.gob.pe/api/v1";
@@ -32,7 +33,7 @@ export async function fetchReleasesPage(
   if (params.endDate) qs.set("endDate", params.endDate);
   if (params.mainProcurementCategory) qs.set("mainProcurementCategory", params.mainProcurementCategory);
 
-  const res = await fetch(`${API_BASE_URL}/releases?${qs.toString()}`);
+  const res = await fetchWithTimeout(`${API_BASE_URL}/releases?${qs.toString()}`);
   if (!res.ok) {
     throw new Error(`OECE devolvió ${res.status} para la página ${page}`);
   }

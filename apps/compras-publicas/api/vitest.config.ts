@@ -3,6 +3,9 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "node",
+    // `tsc` writes compiled tests under dist/. Vitest must only execute the
+    // source suite; otherwise each test runs twice after a production build.
+    exclude: ["node_modules/**", "dist/**"],
     coverage: {
       provider: "v8",
       thresholds: {

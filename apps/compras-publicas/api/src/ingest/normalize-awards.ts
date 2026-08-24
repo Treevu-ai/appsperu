@@ -12,11 +12,25 @@ export interface OcdsAward {
   suppliers?: OcdsAwardSupplier[];
 }
 
+export interface OcdsBidder {
+  id?: string;
+  name?: string;
+  address?: {
+    organizationID?: string;
+  };
+}
+
+export interface OcdsTender {
+  id?: string;
+  bidders?: OcdsBidder[];
+}
+
 export interface OcdsRecord {
   ocid?: string;
   compiledRelease?: {
     buyer?: { id?: string; name?: string };
     parties?: OcdsParty[];
+    tender?: OcdsTender;
     awards?: OcdsAward[];
   };
 }
@@ -44,7 +58,7 @@ export interface NormalizeAwardsResult {
   rejected: RejectedAward[];
 }
 
-function findBuyerDepartamento(record: OcdsRecord): string | null {
+export function findBuyerDepartamento(record: OcdsRecord): string | null {
   const buyerId = record.compiledRelease?.buyer?.id;
   const parties = record.compiledRelease?.parties;
   if (!buyerId || !parties) return null;

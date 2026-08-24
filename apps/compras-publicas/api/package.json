@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
     "migrate": "tsx src/db/migrate.ts",
     "ingest:oece": "tsx src/ingest/oece-connector.ts",
     "ingest:awards": "tsx src/ingest/oece-records-connector.ts",
