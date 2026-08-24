@@ -20,6 +20,13 @@
     "links:sector": "tsx src/cli/sector-link-review.ts",
     "movimiento:presupuesto": "tsx src/cli/budget-movement.ts",
     "servicios:cuidados": "tsx src/cli/care-services.ts",
+    "alimentacion:lotes": "tsx src/cli/food-traceability.ts --accion lotes",
+    "alimentacion:cobertura": "tsx src/cli/food-traceability.ts --accion cobertura",
+    "alimentacion:proveedor": "tsx src/cli/food-traceability.ts --accion proveedor",
+    "alimentacion:integridad": "tsx src/cli/food-traceability.ts --accion integridad",
+    "alimentacion:evidencia": "tsx src/cli/food-traceability.ts --accion evidencia-pendiente",
+    "alimentacion:revision": "tsx src/cli/food-evidence-review.ts",
+    "proveedores:observaciones": "tsx src/cli/provider-observations.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

@@ -168,6 +168,86 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
   {
+    name: "radar_ejecucion_food_lots",
+    app: "radar-ejecucion",
+    description:
+      "Lotes de alimentación escolar materializados desde evidencia oficial en La Libertad. " +
+      "Expone contrato, comité, proveedor literal y RUC únicamente si fue publicado de forma exacta; una referencia de entrega no equivale a acta de recepción escolar. " +
+      "Cobertura PARCIAL y manual-asistida: no representa el universo de lotes publicados. " + SIN_SCHEDULER,
+    pathTemplate: "/api/servicios-cuidados/alimentacion/lotes",
+    pathParams: [],
+    querySchema: {
+      periodo: z.string().regex(/^\d{4}$/).optional(),
+      estado: z.enum(["CONTRATO_PUBLICADO", "ENTREGA_REFERIDA_EN_DOCUMENTO", "OBSERVACION_CONTRACTUAL_DOCUMENTADA"]).optional(),
+    },
+  },
+  {
+    name: "radar_ejecucion_food_coverage",
+    app: "radar-ejecucion",
+    description:
+      "Cobertura escolar verificable de alimentación. Solo muestra colegio, provincia, distrito y entrega cuando existen código modular y acta/evidencia oficial; " +
+      "un total regional agregado no se reparte entre distritos. " + SIN_SCHEDULER,
+    pathTemplate: "/api/servicios-cuidados/alimentacion/cobertura",
+    pathParams: [],
+    querySchema: {
+      periodo: z.string().regex(/^\d{4}$/).optional(),
+      provincia: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+    },
+  },
+  {
+    name: "radar_ejecucion_food_supplier",
+    app: "radar-ejecucion",
+    description:
+      "Lotes alimentarios y evidencia de cumplimiento consultables por RUC exacto de 11 dígitos. " +
+      "No vincula por nombre de consorcio; 404 significa que no existe un vínculo RUC-lote materializado, no una conclusión sobre el proveedor. " + SIN_SCHEDULER,
+    pathTemplate: "/api/servicios-cuidados/alimentacion/proveedores/{ruc}",
+    pathParams: ["ruc"],
+    querySchema: { periodo: z.string().regex(/^\d{4}$/).optional() },
+  },
+  {
+    name: "radar_ejecucion_food_integrity",
+    app: "radar-ejecucion",
+    description:
+      "Control de integridad de la cadena lote-RUC-colegio-entrega. Devuelve BLOQUEADO_POR_EVIDENCIA cuando faltan claves o actas; " +
+      "no convierte esos vacíos en un indicador de incumplimiento. Con estricto=true usa HTTP 409 para impedir automatizaciones que requieran la cadena completa. " + SIN_SCHEDULER,
+    pathTemplate: "/api/servicios-cuidados/alimentacion/integridad",
+    pathParams: [],
+    querySchema: { periodo: z.string().regex(/^\d{4}$/).optional(), estricto: z.enum(["true", "false"]).optional() },
+  },
+  {
+    name: "radar_ejecucion_food_evidence_queue",
+    app: "radar-ejecucion",
+    description:
+      "Cola de evidencia faltante para trazabilidad alimentaria: RUC, padrón de colegios, actas o viabilidad de fuente. " +
+      "Es una prioridad de revisión humana, no una lista de observados. " + SIN_SCHEDULER,
+    pathTemplate: "/api/servicios-cuidados/alimentacion/evidencia-pendiente",
+    pathParams: [],
+    querySchema: { periodo: z.string().regex(/^\d{4}$/).optional(), estado: z.enum(["PENDING", "REVIEWED", "DISMISSED", "NEEDS_EVIDENCE"]).optional() },
+  },
+  {
+    name: "radar_ejecucion_supplier_observations",
+    app: "radar-ejecucion",
+    description:
+      "Observaciones documentadas sobre un proveedor, únicamente por RUC exacto: sanción formal, denuncia con expediente, proceso en curso o antigüedad del RUC frente a una fecha contractual. " +
+      "No genera score ni concluye responsabilidad; una denuncia o proceso no equivale a sanción. " + SIN_SCHEDULER,
+    pathTemplate: "/api/servicios-cuidados/alimentacion/observaciones-proveedor/{ruc}",
+    pathParams: ["ruc"],
+    querySchema: {
+      tipo: z.enum(["SANCION_FORMAL", "DENUNCIA_CON_EXPEDIENTE", "PROCESO_EN_CURSO", "ANTIGUEDAD_RUC", "REFERENCIA_EXTERNA"]).optional(),
+      estado: z.enum(["VIGENTE", "PRESENTADA", "EN_INVESTIGACION", "ARCHIVADA", "RESUELTA", "CONTEXTO"]).optional(),
+    },
+  },
+  {
+    name: "radar_ejecucion_supplier_observations_unlinked",
+    app: "radar-ejecucion",
+    description:
+      "Referencias externas sobre proveedores sin RUC exacto. Se preservan para revisión, pero el sistema prohíbe atribuirlas a un proveedor, lote, contrato o ranking. " + SIN_SCHEDULER,
+    pathTemplate: "/api/servicios-cuidados/alimentacion/observaciones-proveedor/pendientes",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
     name: "radar_ejecucion_sector_review_queue",
     app: "radar-ejecucion",
     description:

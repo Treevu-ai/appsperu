@@ -98,6 +98,66 @@ describe("GET /api/execution (validación de query)", () => {
   });
 });
 
+describe("GET /api/servicios-cuidados/alimentacion", () => {
+  it("expone lotes documentados sin inventar RUC ni recepción escolar", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{
+      period_id: "WASI-MIKUNA-LL-2025", year: 2025, territorial_unit: "LA LIBERTAD", modality: "PRODUCTOS", planned_students: "276812", planned_schools: "3692", published_lots: "35", awarded_lots: "27", materialized_lots: "3", school_denominator_status: "PUBLICADO_AGREGADO_SIN_PADRON", coverage_status: "PARCIAL_DECLARADA", limitation: "Cobertura parcial", source_url: "https://fuente.test", source_label: "Fuente", automation_status: "MANUAL_ASISTIDA", checksum_status: "NO_DESCARGADO_EN_PILOTO",
+    }] });
+    queryMock.mockResolvedValueOnce({ rows: [{
+      lot_id: "WASI-2025-LL5-GUADALUPE", committee_name: "LA LIBERTAD 5", item_literal: "GUADALUPE", contract_reference: "0002", modality: "PRODUCTOS", supplier_name_published: "CONSORCIO SUYANNA", supplier_ruc: null, supplier_ruc_status: "RUC_NO_PUBLICADO_EN_EVIDENCIA", documented_delivery_number: "1", lot_status: "ENTREGA_REFERIDA_EN_DOCUMENTO", observed_at: "2025-04-16", limitation: "Sin colegio", source_url: "https://fuente.test", source_label: "Fuente", automation_status: "MANUAL_ASISTIDA", evidencias: [],
+    }] });
+
+    const res = await request(createApp()).get("/api/servicios-cuidados/alimentacion/lotes?periodo=2025");
+    expect(res.status).toBe(200);
+    expect(res.body.periodo.lotesMaterializados).toBe(3);
+    expect(res.body.resultados[0]).toMatchObject({ ruc: null, estadoRuc: "RUC_NO_PUBLICADO_EN_EVIDENCIA", entregaReferidaNumero: 1 });
+    expect(res.body.cautela).toMatch(/no acredita por sí sola/i);
+  });
+
+  it("no reparte cobertura regional entre distritos sin padrón", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ period_id: "WASI-MIKUNA-LL-2025", year: 2025, territorial_unit: "LA LIBERTAD", planned_students: "276812", planned_schools: "3692", school_denominator_status: "PUBLICADO_AGREGADO_SIN_PADRON", coverage_status: "PARCIAL_DECLARADA", limitation: "Sin padrón" }] });
+    queryMock.mockResolvedValueOnce({ rows: [] });
+    queryMock.mockResolvedValueOnce({ rows: [{ colegios_documentados: "0", entregas_con_acta: "0" }] });
+    const res = await request(createApp()).get("/api/servicios-cuidados/alimentacion/cobertura?periodo=2025&distrito=Casa%20Grande");
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ periodo: { colegiosPublicados: 3692 }, colegiosDocumentados: 0, entregasConActaDocumentada: 0, resultados: [] });
+    expect(res.body.limitacion).toMatch(/No se atribuyen/i);
+  });
+
+  it("bloquea en modo estricto cuando la cadena no tiene claves suficientes", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{
+      period_id: "WASI-MIKUNA-LL-2025", year: 2025, published_lots: "35", awarded_lots: "27", materialized_lots: "3", planned_schools: "3692", school_denominator_status: "PUBLICADO_AGREGADO_SIN_PADRON", coverage_status: "PARCIAL_DECLARADA", limitation: "Parcial", lotes_en_tabla: "3", lotes_con_ruc: "0", colegios_documentados: "0", entregas_con_acta: "0", pendientes_revision: "5",
+    }] });
+    const res = await request(createApp()).get("/api/servicios-cuidados/alimentacion/integridad?periodo=2025&estricto=true");
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({ estado: "BLOQUEADO_POR_EVIDENCIA", controles: { lotesConRucExacto: 0, colegiosDocumentados: 0 } });
+  });
+
+  it("rechaza una búsqueda de proveedor por nombre o RUC incompleto sin consultar la base", async () => {
+    const res = await request(createApp()).get("/api/servicios-cuidados/alimentacion/proveedores/CONSORCIO-SUYANNA?periodo=2025");
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/11 dígitos/);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it("separa una denuncia documentada de una sanción o conclusión de responsabilidad", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{
+      observation_id: "7", observation_kind: "DENUNCIA_CON_EXPEDIENTE", observation_status: "EN_INVESTIGACION", authority_name: "Fiscalía", case_reference: "EXP-123", food_lot_id: null, contract_reference: null, ruc_start_date: null, contract_date: null, source_url: "https://fuente.test/exp", source_detail: "Documento público", observed_at: "2026-08-24", linkage_status: "RUC_EXACTO_DOCUMENTADO",
+    }] });
+    queryMock.mockResolvedValueOnce({ rows: [] });
+    const res = await request(createApp()).get("/api/servicios-cuidados/alimentacion/observaciones-proveedor/20100027021");
+    expect(res.status).toBe(200);
+    expect(res.body.observaciones[0]).toMatchObject({ tipo: "DENUNCIA_CON_EXPEDIENTE", estado: "EN_INVESTIGACION", expediente: "EXP-123" });
+    expect(res.body.cautela).toMatch(/no acredita responsabilidad/i);
+  });
+
+  it("rechaza atribuir observaciones a un proveedor sin RUC exacto", async () => {
+    const res = await request(createApp()).get("/api/servicios-cuidados/alimentacion/observaciones-proveedor/CONSORCIO-SUYANNA");
+    expect(res.status).toBe(400);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("GET /api/sectores/inventory", () => {
   it("keeps national destination and regional execution as different territorial rules", async () => {
     queryMock.mockResolvedValueOnce({ rows: [
