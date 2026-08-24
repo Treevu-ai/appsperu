@@ -6,9 +6,12 @@ const value = (flag: string) => { const index = args.indexOf(flag); return index
 const startDate = value("--start-date");
 const endDate = value("--end-date");
 const pageChunk = Number(value("--page-chunk") ?? 100);
-if (!startDate || !endDate || !Number.isInteger(pageChunk) || pageChunk < 1) throw new Error("Usa --start-date, --end-date y un --page-chunk entero >= 1.");
+const initialStartPage = Number(value("--start-page") ?? 1);
+if (!startDate || !endDate || !Number.isInteger(pageChunk) || pageChunk < 1 || !Number.isInteger(initialStartPage) || initialStartPage < 1) {
+  throw new Error("Usa --start-date, --end-date, --page-chunk entero >= 1 y --start-page entero >= 1.");
+}
 
-let startPage = 1;
+let startPage = initialStartPage;
 const chunks: unknown[] = [];
 try {
   for (;;) {
