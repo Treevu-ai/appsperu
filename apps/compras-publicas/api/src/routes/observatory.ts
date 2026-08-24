@@ -41,8 +41,8 @@ function territorialAggregationQuery(level: "province" | "district", where: stri
   const join = level === "province" ? "pc.province = t.province" : "pc.province = t.province AND pc.district = t.district";
   return `
     WITH filtered AS (
-      SELECT COALESCE(m.province, 'NO PUBLICADA') AS province,
-             COALESCE(m.district, 'NO PUBLICADO') AS district,
+      SELECT COALESCE(c.execution_province, 'NO PUBLICADA') AS province,
+             COALESCE(c.execution_district, 'NO PUBLICADO') AS district,
              c.winning_supplier_id, c.awarded_amount
       FROM minor_contracts c
       JOIN municipalities m ON m.municipality_id = c.municipality_id
@@ -278,7 +278,7 @@ observatoryRouter.get("/meta/freshness", asyncHandler(async (_req, res) => {
 observatoryRouter.get("/analytics/territorial", asyncHandler(async (req, res) => {
   const query = parseQuery(territorialQuerySchema, req.query, res); if (!query) return;
   const values: unknown[] = ["LA LIBERTAD"];
-  const conditions = ["m.department = $1"];
+  const conditions = ["m.department = $1", "c.execution_department = $1"];
   if (query.category) { values.push(query.category); conditions.push(`c.category = $${values.length}`); }
   values.push(query.year);
   conditions.push(query.dateBasis === "source_year"

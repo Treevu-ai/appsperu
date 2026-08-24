@@ -1,5 +1,4 @@
-import { createHash } from "node:crypto";
-import { pathToFileURL } from "node:url";
+import { createHash, randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
 import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
@@ -11,6 +10,9 @@ const PUBLIC_DETAIL_URL = "https://prod6.seace.gob.pe/buscador-publico/contratac
 const LA_LIBERTAD_DEPARTMENT_CODE = "13";
 const SOURCE_SYSTEM = "OECE SEACE buscador público (interfaz no documentada)";
 const DETAIL_REQUEST_CONCURRENCY = 5;
+const SEARCH_PAGE_SIZE = 5_000;
+
+export type ContractingEntityType = "MUNICIPALITY_DISTRICT" | "MUNICIPALITY_PROVINCE" | "REGIONAL_GOVERNMENT" | "OTHER_PUBLIC_ENTITY";
 
 export interface PublicMinorContractSearchRow {
   idContrato: number;
@@ -56,8 +58,12 @@ export interface SeaceMinorContractOptions {
 }
 
 export interface SeaceMinorContractSummary {
+  runId: string;
+  sourcePages: number;
   sourceRecords: number;
-  municipalCandidates: number;
+  entitiesDiscovered: number;
+  entitiesWithDetails: number;
+  entitiesWithDetailFailures: number;
   detailsFetched: number;
   detailsFailed: number;
   contractsUpserted: number;
@@ -82,8 +88,12 @@ export function categoryFromSeace(value: string | null | undefined): "goods" | "
   return null;
 }
 
-export function isDistrictMunicipality(name: string | null | undefined): boolean {
-  return /^MUNICIPALIDAD DISTRITAL\b/i.test(name?.trim() ?? "");
+export function classifyContractingEntity(name: string | null | undefined): ContractingEntityType {
+  const normalized = name?.trim() ?? "";
+  if (/^MUNICIPALIDAD DISTRITAL\b/i.test(normalized)) return "MUNICIPALITY_DISTRICT";
+  if (/^MUNICIPALIDAD PROVINCIAL\b/i.test(normalized)) return "MUNICIPALITY_PROVINCE";
+  if (/^(GOBIERNO REGIONAL\b|REGION\s+LA\s+LIBERTAD\b)/i.test(normalized)) return "REGIONAL_GOVERNMENT";
+  return "OTHER_PUBLIC_ENTITY";
 }
 
 function checksumOf(payload: unknown): string {
@@ -97,7 +107,11 @@ function sourceDetailUrl(contractId: number): string {
 function locationFrom(item: NonNullable<PublicMinorContractDetail["uitContratoItemProjectionList"]>[number]) {
   const raw = item.nomDistritoExt ?? item.nomDistrito ?? null;
   const parts = raw?.split("/").map((value) => value.trim()).filter(Boolean) ?? [];
-  return { province: parts.length >= 2 ? parts[1] : null, district: parts.length >= 3 ? parts[2] : null };
+  return {
+    department: parts.length >= 1 ? parts[0] : null,
+    province: parts.length >= 2 ? parts[1] : null,
+    district: parts.length >= 3 ? parts[2] : null,
+  };
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -106,13 +120,30 @@ async function fetchJson<T>(url: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-export async function fetchSeaceMinorContractSearch(year: number): Promise<{ body: PublicMinorContractSearchResponse; url: string }> {
+export async function fetchSeaceMinorContractSearchPage(
+  year: number,
+  page: number,
+  pageSize = SEARCH_PAGE_SIZE,
+): Promise<{ body: PublicMinorContractSearchResponse; url: string }> {
+  if (!Number.isInteger(page) || page < 1 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > SEARCH_PAGE_SIZE) {
+    throw new Error("Página o tamaño de página inválido para la búsqueda pública de SEACE.");
+  }
   const params = new URLSearchParams({
     anio: String(year), codigo_departamento: LA_LIBERTAD_DEPARTMENT_CODE,
-    palabra_clave: "", orden: "2", page: "1", page_size: "5000",
+    palabra_clave: "", orden: "2", page: String(page), page_size: String(pageSize),
   });
   const url = `${BASE_URL}/contrataciones/buscador?${params}`;
   return { body: await fetchJson<PublicMinorContractSearchResponse>(url), url };
+}
+
+export async function fetchAllSeaceMinorContractSearchPages(year: number): Promise<Array<{ body: PublicMinorContractSearchResponse; url: string }>> {
+  const first = await fetchSeaceMinorContractSearchPage(year, 1);
+  const pageSize = first.body.pageable.pageSize || SEARCH_PAGE_SIZE;
+  const total = first.body.pageable.totalElements;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const pages = [first];
+  for (let page = 2; page <= pageCount; page += 1) pages.push(await fetchSeaceMinorContractSearchPage(year, page, pageSize));
+  return pages;
 }
 
 export async function fetchSeaceMinorContractDetail(contractId: number): Promise<PublicMinorContractDetail> {
@@ -148,30 +179,44 @@ async function insertEvidence(
 }
 
 /**
- * Ingiere sólo adjudicaciones visibles de municipalidades distritales. El buscador
- * es una interfaz pública (no un API publicado por OECE), por ello cada respuesta
- * se versiona en `raw_minor_contract_batches`. Cotizaciones no adjudicadas,
- * validez y documentos no se deducen cuando el detalle público no los expone.
+ * Ingiere todas las adjudicaciones visibles que devuelve el buscador departamental
+ * para La Libertad. Incluye municipalidades distritales y provinciales, Gobierno
+ * Regional y otras entidades públicas: el tipo queda persistido para que las
+ * comparaciones territoriales no mezclen universos. El buscador es una interfaz
+ * pública observada, no un API documentado; una corrida completa significa
+ * "todas las páginas devueltas por la fuente", no el universo no publicado.
  */
 export async function ingestSeacePublicMinorContracts(options: SeaceMinorContractOptions = {}): Promise<SeaceMinorContractSummary> {
   const year = options.year ?? 2026;
   const maxContracts = options.maxContracts ?? 100;
   const limitAmount = options.limitAmount ?? MINOR_CONTRACT_LIMIT_2026;
-  const { body: search, url: searchUrl } = await fetchSeaceMinorContractSearch(year);
-  const municipalCandidates = search.data.filter((row) => isDistrictMunicipality(row.nomEntidad));
-  const selected = maxContracts > 0 ? municipalCandidates.slice(0, maxContracts) : municipalCandidates;
+  const runId = randomUUID();
+  const pages = await fetchAllSeaceMinorContractSearchPages(year);
+  const sourceRows = pages.flatMap(({ body }) => body.data);
+  const selected = maxContracts > 0 ? sourceRows.slice(0, maxContracts) : sourceRows;
+  const discoveredEntities = new Map<string, ContractingEntityType>();
+  for (const row of sourceRows) discoveredEntities.set(row.nomEntidad, classifyContractingEntity(row.nomEntidad));
 
   // La interfaz no publica una política de rate limit. Se procesan lotes cortos
   // para no convertir una corrida completa en una ráfaga contra el servicio.
-  const settled: PromiseSettledResult<{ row: PublicMinorContractSearchRow; detail: PublicMinorContractDetail }>[] = [];
+  type DetailFetchOutcome = { row: PublicMinorContractSearchRow; detail: PublicMinorContractDetail | null; error: string | null };
+  const outcomes: DetailFetchOutcome[] = [];
   for (let start = 0; start < selected.length; start += DETAIL_REQUEST_CONCURRENCY) {
-    const batch = await Promise.allSettled(
+    const batch = await Promise.all(
       selected.slice(start, start + DETAIL_REQUEST_CONCURRENCY)
-        .map(async (row) => ({ row, detail: await fetchSeaceMinorContractDetail(row.idContrato) }))
+        .map(async (row): Promise<DetailFetchOutcome> => {
+          try {
+            return { row, detail: await fetchSeaceMinorContractDetail(row.idContrato), error: null };
+          } catch (error) {
+            return { row, detail: null, error: error instanceof Error ? error.message : String(error) };
+          }
+        })
     );
-    settled.push(...batch);
+    outcomes.push(...batch);
   }
-  const details = settled.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
+  const details = outcomes.flatMap((result) => result.detail ? [{ row: result.row, detail: result.detail }] : []);
+  const detailEntityNames = new Set(details.map(({ row, detail }) => detail.uitContratoCompletoProjection?.nomEntidad ?? row.nomEntidad));
+  const failedEntityNames = new Set(outcomes.filter((result) => result.error !== null).map((result) => result.row.nomEntidad));
 
   const client = await pool.connect();
   const upsertedContractIds = new Set<string>();
@@ -181,14 +226,16 @@ export async function ingestSeacePublicMinorContracts(options: SeaceMinorContrac
   let excludedOverLimit = 0;
   try {
     await client.query("BEGIN");
-    await saveRawBatch(client, { url: searchUrl, year, pageFrom: 1, pageTo: 1, payload: search, recordCount: search.data.length });
+    for (const [index, page] of pages.entries()) {
+      await saveRawBatch(client, { url: page.url, year, pageFrom: index + 1, pageTo: index + 1, payload: page.body, recordCount: page.body.data.length });
+    }
 
     for (const { row, detail } of details) {
       const general = detail.uitContratoCompletoProjection;
       const entityName = general?.nomEntidad ?? row.nomEntidad;
       const entityId = general?.idEntidad;
       const category = categoryFromSeace(general?.nomObjetoContrato ?? row.nomObjetoContrato);
-      if (!general?.idContrato || !entityId || !isDistrictMunicipality(entityName) || !category) continue;
+      if (!general?.idContrato || !entityId || !category) continue;
 
       const contractId = general.idContrato;
       const detailUrl = sourceDetailUrl(contractId);
@@ -207,17 +254,18 @@ export async function ingestSeacePublicMinorContracts(options: SeaceMinorContrac
 
         const supplierId = `seace:ruc:${item.codRuc}`;
         const canonicalId = `seace:contract:${contractId}:item:${item.idContratoItem}`;
-        const { province, district } = locationFrom(item);
+        const location = locationFrom(item);
         const objectOriginal = item.descripcionItem ?? general.desObjetoContrato ?? null;
 
         await client.query(
           `INSERT INTO municipalities
-             (municipality_id, official_name, department, province, district, entity_code_oece, source, source_timestamp)
-           VALUES ($1,$2,'LA LIBERTAD',$3,$4,$5,$6,$7)
+             (municipality_id, official_name, department, province, district, entity_code_oece, entity_type, source, source_timestamp)
+           VALUES ($1,$2,'LA LIBERTAD',$3,$4,$5,$6,$7,$8)
            ON CONFLICT (municipality_id) DO UPDATE SET official_name=EXCLUDED.official_name,
              province=COALESCE(EXCLUDED.province, municipalities.province), district=COALESCE(EXCLUDED.district, municipalities.district),
-             entity_code_oece=EXCLUDED.entity_code_oece, source=EXCLUDED.source, source_timestamp=EXCLUDED.source_timestamp`,
-          [municipalityId, entityName, province, district, String(entityId), SOURCE_SYSTEM, sourceTimestamp]
+             entity_code_oece=EXCLUDED.entity_code_oece, entity_type=EXCLUDED.entity_type,
+             source=EXCLUDED.source, source_timestamp=EXCLUDED.source_timestamp`,
+          [municipalityId, entityName, location.province, location.district, String(entityId), classifyContractingEntity(entityName), SOURCE_SYSTEM, sourceTimestamp]
         );
         municipalities.add(municipalityId);
         await client.query(
@@ -233,18 +281,22 @@ export async function ingestSeacePublicMinorContracts(options: SeaceMinorContrac
           `INSERT INTO minor_contracts
              (contracting_id, source_contracting_id, ocid, award_id, municipality_id, year,
               object_original, object_normalized, category, contract_type, awarded_amount,
+              execution_department, execution_province, execution_district,
               publication_date, quotation_start_date, quotation_end_date, winning_supplier_id,
               status, source_url, source_timestamp, source_batch_id, minor_source_batch_id, data_version, normalizer_version)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$10,$11,$12,$13,$14,'AWARDED',$15,$16,NULL,$17,
-                   'oece-seace-public-ui-v1',$18)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$10,$11,$12,$13,$14,$15,$16,'AWARDED',$17,$18,NULL,$19,
+                   'oece-seace-public-ui-v1',$20)
            ON CONFLICT (contracting_id) DO UPDATE SET object_original=EXCLUDED.object_original,
              object_normalized=EXCLUDED.object_normalized, category=EXCLUDED.category, awarded_amount=EXCLUDED.awarded_amount,
+             execution_department=EXCLUDED.execution_department, execution_province=EXCLUDED.execution_province,
+             execution_district=EXCLUDED.execution_district,
              publication_date=EXCLUDED.publication_date, quotation_start_date=EXCLUDED.quotation_start_date,
              quotation_end_date=EXCLUDED.quotation_end_date, winning_supplier_id=EXCLUDED.winning_supplier_id,
              status=EXCLUDED.status, source_url=EXCLUDED.source_url, source_timestamp=EXCLUDED.source_timestamp,
              source_batch_id=NULL, minor_source_batch_id=EXCLUDED.minor_source_batch_id, updated_at=now()`,
           [canonicalId, String(contractId), `seace:contract:${contractId}`, String(item.idContratoItem), municipalityId, year,
-            objectOriginal, normalizeContractObject(objectOriginal), category, amount, publicationDate,
+            objectOriginal, normalizeContractObject(objectOriginal), category, amount,
+            location.department, location.province, location.district, publicationDate,
             parseSeaceDate(quotationStage?.fecIni), parseSeaceDate(quotationStage?.fecFin), supplierId,
             detailUrl, sourceTimestamp, detailBatchId, MINOR_CONTRACT_NORMALIZER_VERSION]
         );
@@ -278,19 +330,12 @@ export async function ingestSeacePublicMinorContracts(options: SeaceMinorContrac
     client.release();
   }
   return {
-    sourceRecords: search.data.length, municipalCandidates: municipalCandidates.length,
+    runId, sourcePages: pages.length, sourceRecords: sourceRows.length,
+    entitiesDiscovered: discoveredEntities.size, entitiesWithDetails: detailEntityNames.size,
+    entitiesWithDetailFailures: failedEntityNames.size,
     detailsFetched: details.length, detailsFailed: selected.length - details.length, contractsUpserted: upsertedContractIds.size,
     municipalitiesUpserted: municipalities.size, suppliersUpserted: suppliers.size,
     excludedWithoutAward, excludedOverLimit, source: "SEACE_PUBLIC_INTERFACE",
-    isPartial: maxContracts > 0 && selected.length < municipalCandidates.length,
+    isPartial: maxContracts > 0 && selected.length < sourceRows.length,
   };
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const maxContracts = process.env.MINOR_CONTRACT_MAX_CONTRACTS ? Number(process.env.MINOR_CONTRACT_MAX_CONTRACTS) : undefined;
-  const year = process.env.MINOR_CONTRACT_YEAR ? Number(process.env.MINOR_CONTRACT_YEAR) : undefined;
-  ingestSeacePublicMinorContracts({ year, maxContracts })
-    .then((summary) => console.log("Ingesta de contratos menores SEACE completada:", summary))
-    .finally(() => pool.end())
-    .catch((error) => { console.error("Ingesta SEACE falló:", error); process.exitCode = 1; });
 }

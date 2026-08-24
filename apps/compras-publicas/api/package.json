@@ -10,7 +10,10 @@
     "migrate": "tsx src/db/migrate.ts",
     "ingest:oece": "tsx src/ingest/oece-connector.ts",
     "ingest:awards": "tsx src/ingest/oece-records-connector.ts",
-    "ingest:minor-contracts": "tsx src/ingest/oece-minor-contracts-connector.ts",
+    "ingest:minor-contracts": "tsx src/ingest/run-minor-contracts.ts",
+    "ingest:minor-contracts:full": "tsx src/ingest/run-minor-contracts.ts --full",
+    "ingest:legacy-orders": "tsx src/ingest/run-legacy-seace-orders.ts",
+    "coverage:minor-contracts": "tsx src/minor-contracts/coverage-report.ts",
     "materialize:minor-contracts": "tsx src/minor-contracts/sync.ts",
     "signals:minor-contracts": "tsx src/minor-contracts/run-signals.ts",
     "embeddings:minor-contracts": "tsx src/minor-contracts/generate-embeddings.ts",
@@ -25,6 +28,8 @@
     "express-rate-limit": "^8.6.2",
     "helmet": "^8.3.0",
     "pg": "^8.12.0",
+    "xlsx": "^0.18.5",
+    "xlsx": "^0.18.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {
