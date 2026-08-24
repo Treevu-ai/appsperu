@@ -7,7 +7,7 @@ function asNumber(value: unknown): number {
 
 async function main(): Promise<void> {
   const json = process.argv.includes("--json");
-  const [identity, signals, territorial, coverage, projects] = await Promise.all([
+  const [identity, signals, territorial, coverage, projects, sectors] = await Promise.all([
     pool.query(`SELECT COUNT(*)::integer AS total,
                        COUNT(*) FILTER (WHERE strength IN ('EXACTA', 'VERIFICADA'))::integer AS verificados,
                        COUNT(*) FILTER (WHERE target_identifier_type = 'MEF_ENTITY_CODE')::integer AS mef_links
@@ -31,6 +31,12 @@ async function main(): Promise<void> {
                   LEFT JOIN project_budget_links l ON l.cui = p.cui
                       GROUP BY p.cui, p.actividad_literal, p.departamento
                       ORDER BY p.cui`),
+    radarPool.query(`SELECT sector_id,sector_nombre,nivel_gobierno,scope_rule,
+                            COUNT(*)::integer AS entidades,
+                            COUNT(*) FILTER (WHERE verification_status='VERIFICADO')::integer AS verificadas
+                       FROM sector_entity_registry
+                      GROUP BY sector_id,sector_nombre,nivel_gobierno,scope_rule
+                      ORDER BY sector_id,nivel_gobierno,scope_rule`),
   ]);
 
   const report = {
@@ -60,6 +66,10 @@ async function main(): Promise<void> {
       cui: row.cui, actividad: row.actividad_literal, departamento: row.departamento,
       vinculosOficialesPresupuesto: asNumber(row.vinculos_oficiales), candidatosNoUsados: asNumber(row.candidatos_no_usados),
     })),
+    sectores: sectors.rows.map((row) => ({
+      sectorId: row.sector_id, sector: row.sector_nombre, nivelGobierno: row.nivel_gobierno,
+      reglaTerritorial: row.scope_rule, entidades: asNumber(row.entidades), verificadas: asNumber(row.verificadas),
+    })),
     limitacion: "El informe prueba reglas y cortes de la evidencia materializada. No certifica cobertura total externa ni convierte similitud de texto, fecha o nombre en identidad o vínculo presupuestal.",
   };
 
@@ -69,6 +79,7 @@ async function main(): Promise<void> {
     console.table([report.identidadInstitucional, report.senales, report.territorioContratosMenores]);
     console.log("\nCobertura presupuestal activa:"); console.table(report.presupuesto);
     console.log("\nProyectos CUI y vínculos a presupuesto:"); console.table(report.proyectosCui);
+    console.log("\nCobertura sectorial registrada:"); console.table(report.sectores);
     console.log(report.limitacion);
   }
 }

@@ -45,3 +45,20 @@ vía MCP (transporte stdio). Requiere que las apps ya estén corriendo — ver
 - [`docs/data-contracts/`](docs/data-contracts/) — un archivo por fuente externa (MEF, OECE,
   Invierte.pe, INFOBRAS) con lo confirmado en vivo.
 - [`docs/adr/`](docs/adr/) — decisiones arquitectónicas con su razón.
+- [`docs/PRD_Seguimiento_Sectores_y_GORE_La_Libertad_v1.md`](docs/PRD_Seguimiento_Sectores_y_GORE_La_Libertad_v1.md)
+  — seguimiento terminal de ministerios, organismos y Gobierno Regional La Libertad con cortes y vínculos verificables.
+
+## Consultas sectoriales por terminal
+
+```bash
+cd apps/radar-ejecucion/api
+npm run sectors:inventory -- --anio 2026 --limite 50
+npm run ficha:sector -- --sector TRANSPORTE --anio 2026
+npm run ficha:entidad -- --entity-code 831 --anio 2026
+npm run comparativo:sectores -- --sectores SALUD,TRANSPORTE,VIVIENDA --anio 2026
+```
+
+Las entidades nacionales se consultan solo por gasto dirigido al departamento
+(`META_DEPARTAMENTO`); las regionales, por la unidad ejecutora con sede en La
+Libertad. CUI, obra y compra requieren una clave oficial exacta: ALSOL muestra
+el vacío de vínculo cuando no la tiene.

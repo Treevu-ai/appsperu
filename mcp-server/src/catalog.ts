@@ -95,6 +95,62 @@ export const TOOL_CATALOG: ToolSpec[] = [
       busqueda: z.string().min(2).max(160).optional().describe("Texto dentro de la actividad u programa presupuestal, ej. DRENAJE."),
     },
   },
+  {
+    name: "radar_ejecucion_sector_inventory",
+    app: "radar-ejecucion",
+    description:
+      "Inventario de entidades MEF presentes para La Libertad: Gobierno Nacional por destino declarado y Gobierno Regional por sede ejecutora. " +
+      "Indica si una entidad ya tiene clasificación sectorial verificada; no clasificada no significa ausente del sector. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/sectores/inventory",
+    pathParams: [],
+    querySchema: {
+      anio: z.string().regex(/^\d{4}$/).optional(),
+      departamento: z.string().min(1).optional(),
+      limit: z.string().regex(/^\d+$/).optional(),
+    },
+  },
+  {
+    name: "radar_ejecucion_sector_ficha",
+    app: "radar-ejecucion",
+    description:
+      "Ficha de entidades verificadas de un sector: PIA/PIM/devengado, regla territorial y cortes usados. " +
+      "CUI, obra y contratación solo aparecen con claves oficiales exactas; no se infieren por nombre o embeddings. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/sectores/{sectorId}/ficha",
+    pathParams: ["sectorId"],
+    querySchema: {
+      anio: z.string().regex(/^\d{4}$/).optional(),
+      departamento: z.string().min(1).optional(),
+    },
+  },
+  {
+    name: "radar_ejecucion_sector_comparativo",
+    app: "radar-ejecucion",
+    description:
+      "Comparativo descriptivo de entidades sectoriales verificadas. Mantiene separadas la responsabilidad nacional dirigida al departamento " +
+      "y la ejecución regional por sede; no genera score ni suma ambos universos como si fueran uno solo. " + SIN_SCHEDULER,
+    pathTemplate: "/api/sectores/comparativo",
+    pathParams: [],
+    querySchema: {
+      anio: z.string().regex(/^\d{4}$/).optional(),
+      departamento: z.string().min(1).optional(),
+      sectores: z.string().min(1).optional().describe("IDs separados por coma, por ejemplo SALUD,TRANSPORTE."),
+    },
+  },
+  {
+    name: "radar_ejecucion_sector_review_queue",
+    app: "radar-ejecucion",
+    description:
+      "Consulta la cola de candidatos CUI-actividad o entidad-compra pendientes de revisión humana. " +
+      "Los candidatos no son vínculos oficiales ni alimentan agregados sectoriales.",
+    pathTemplate: "/api/sectores/revision",
+    pathParams: [],
+    querySchema: {
+      estado: z.enum(["PENDING", "REVIEWED", "DISMISSED", "NEEDS_EVIDENCE"]).optional(),
+      limit: z.string().regex(/^\d+$/).optional(),
+    },
+  },
 
   // ---- compras-publicas (OECE/OCDS) ----
   {

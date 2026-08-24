@@ -12,6 +12,12 @@
     "ingest:mef:meta": "tsx src/cli/reingest-meta-departamento.ts",
     "tablero:lluvias": "tsx src/cli/lluvias-seguimiento.ts",
     "integrity:budget": "tsx src/cli/integrity-budget.ts",
+    "sectors:seed": "tsx src/cli/seed-sector-registry.ts",
+    "sectors:inventory": "tsx src/cli/sector-ficha.ts --modo inventario",
+    "ficha:sector": "tsx src/cli/sector-ficha.ts --modo sector",
+    "ficha:entidad": "tsx src/cli/sector-ficha.ts --modo entidad",
+    "comparativo:sectores": "tsx src/cli/sector-ficha.ts --modo comparativo",
+    "links:sector": "tsx src/cli/sector-link-review.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

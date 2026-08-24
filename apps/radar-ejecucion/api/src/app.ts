@@ -4,6 +4,7 @@ import { benchmarkRouter } from "./routes/benchmark.js";
 import { metaRouter } from "./routes/meta.js";
 import { proyectosRouter } from "./routes/proyectos.js";
 import { lluviasRouter } from "./routes/lluvias.js";
+import { sectorsRouter } from "./routes/sectors.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 import { pool } from "./db/pool.js";
 
@@ -27,6 +28,7 @@ export function createApp() {
   app.use("/api/meta", metaRouter);
   app.use("/api/proyectos", proyectosRouter);
   app.use("/api/lluvias", lluviasRouter);
+  app.use("/api/sectores", sectorsRouter);
 
   // Debe ir al final: sin esto, un rechazo dentro de un handler async
   // se vuelve un unhandled rejection que tumba el proceso entero en vez

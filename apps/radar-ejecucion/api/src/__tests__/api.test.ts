@@ -98,6 +98,22 @@ describe("GET /api/execution (validación de query)", () => {
   });
 });
 
+describe("GET /api/sectores/inventory", () => {
+  it("keeps national destination and regional execution as different territorial rules", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [
+      { entity_code: "1750", nombre: "AUTORIDAD NACIONAL DE INFRAESTRUCTURA - ANIN", nivel_gobierno: "GOBIERNO NACIONAL", regla_territorial: "META_DEPARTAMENTO", clasificado: true },
+      { entity_code: "831", nombre: "REGION LA LIBERTAD-SEDE CENTRAL", nivel_gobierno: "GOBIERNOS REGIONALES", regla_territorial: "SEDE_EJECUTORA", clasificado: true },
+    ] });
+    const response = await request(createApp()).get("/api/sectores/inventory?anio=2026&departamento=la%20libertad");
+    expect(response.status).toBe(200);
+    expect(response.body.resultados).toEqual(expect.arrayContaining([
+      expect.objectContaining({ entityCode: "1750", reglaTerritorial: "META_DEPARTAMENTO" }),
+      expect.objectContaining({ entityCode: "831", reglaTerritorial: "SEDE_EJECUTORA" }),
+    ]));
+    expect(queryMock.mock.calls[0][0]).toMatch(/b\.meta_departamento/);
+  });
+});
+
 describe("GET /api/lluvias/seguimiento", () => {
   it("returns the terminal-ready columns without presenting an entity seat as beneficiary district", async () => {
     queryMock.mockResolvedValueOnce({
