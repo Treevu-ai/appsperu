@@ -31,6 +31,17 @@ describe("postores OCDS", () => {
     ]);
   });
 
+  it("uses the tenderers field published by OECE", () => {
+    const record = {
+      ...laLibertadRecord,
+      compiledRelease: {
+        ...laLibertadRecord.compiledRelease,
+        tender: { tenderers: laLibertadRecord.compiledRelease.tender.bidders },
+      },
+    };
+    expect(normalizeBidders([record]).rows).toHaveLength(2);
+  });
+
   it("excludes records outside the selected department before persisting bidders", () => {
     const otherDepartment = structuredClone(laLibertadRecord);
     otherDepartment.compiledRelease.parties[0].address.department = "LIMA";

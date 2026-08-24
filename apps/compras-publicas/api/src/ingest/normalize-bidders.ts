@@ -20,7 +20,8 @@ export interface NormalizeBiddersResult {
 }
 
 /**
- * Extrae bidders de compiledRelease.tender.bidders
+ * Extrae participantes del campo que publica OECE (`tender.tenderers`), con
+ * compatibilidad para el alias histórico `tender.bidders`.
  * Determina únicamente si el postor figura también como adjudicatario. El
  * arreglo OCDS no publica necesariamente ranking, oferta ni descalificación.
  */
@@ -34,8 +35,8 @@ export function normalizeBidders(records: OcdsRecord[]): NormalizeBiddersResult 
       continue;
     }
 
-    // Extraer bidders del tender
-    const bidders = record.compiledRelease?.tender?.bidders;
+    // OECE publica `tenderers`; `bidders` se conserva como compatibilidad.
+    const bidders = record.compiledRelease?.tender?.tenderers ?? record.compiledRelease?.tender?.bidders;
     if (!bidders || bidders.length === 0) {
       // No es un rechazo: algunos records no tienen bidders
       continue;

@@ -16,6 +16,7 @@
     "ingest:awards:full": "tsx src/ingest/run-oece-records-full.ts",
     "ingest:processes:segmented": "tsx src/ingest/run-oece-segmented.ts --kind releases",
     "ingest:awards:segmented": "tsx src/ingest/run-oece-segmented.ts --kind records",
+    "materialize:bidders:raw": "tsx src/ingest/replay-oece-bidders.ts",
     "ingest:minor-contracts": "tsx src/ingest/run-minor-contracts.ts",
     "ingest:minor-contracts:full": "tsx src/ingest/run-minor-contracts.ts --full",
     "ingest:legacy-orders": "tsx src/ingest/run-legacy-seace-orders.ts",

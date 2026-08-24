@@ -22,6 +22,9 @@ export interface OcdsBidder {
 
 export interface OcdsTender {
   id?: string;
+  /** Nombre publicado por OECE en /records para participantes. */
+  tenderers?: OcdsBidder[];
+  /** Alias OCDS tolerado para compatibilidad con datos históricos. */
   bidders?: OcdsBidder[];
 }
 
