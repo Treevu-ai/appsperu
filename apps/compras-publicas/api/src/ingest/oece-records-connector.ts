@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
 import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
+import { OecePageNotFoundError } from "./oece-connector.js";
 import { findBuyerDepartamento, normalizeAwards, type OcdsRecord } from "./normalize-awards.js";
 import { normalizeBidders, persistBidders } from "./normalize-bidders.js";
 
@@ -17,6 +18,7 @@ interface RecordsPageResponse {
 export interface FetchRecordsParams {
   startDate?: string;
   endDate?: string;
+  dataSegmentationID?: string;
   mainProcurementCategory?: string;
 }
 
@@ -29,12 +31,16 @@ export function recordsPageUrl(page: number, params: FetchRecordsParams = {}): s
   const qs = new URLSearchParams({ page: String(page), order: "desc" });
   if (params.startDate) qs.set("startDate", params.startDate);
   if (params.endDate) qs.set("endDate", params.endDate);
+  if (params.dataSegmentationID) qs.set("dataSegmentationID", params.dataSegmentationID);
   if (params.mainProcurementCategory) qs.set("mainProcurementCategory", params.mainProcurementCategory);
   return `${API_BASE_URL}/records?${qs.toString()}`;
 }
 
 export async function fetchRecordsPage(page: number, params: FetchRecordsParams = {}): Promise<RecordsPageResponse> {
   const res = await fetchWithTimeout(recordsPageUrl(page, params));
+  if (res.status === 404) {
+    throw new OecePageNotFoundError(page, "/records");
+  }
   if (!res.ok) {
     throw new Error(`OECE devolvió ${res.status} para la página ${page} de /records`);
   }

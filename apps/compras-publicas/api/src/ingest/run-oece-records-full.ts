@@ -1,5 +1,6 @@
 import { pool } from "../db/pool.js";
-import { ingestAwards } from "./oece-records-connector.js";
+import { ingestAwards, type IngestAwardsSummary } from "./oece-records-connector.js";
+import { OecePageNotFoundError } from "./oece-connector.js";
 
 const args = process.argv.slice(2);
 const value = (flag: string) => { const index = args.indexOf(flag); return index >= 0 ? args[index + 1] : undefined; };
@@ -15,7 +16,16 @@ let startPage = initialStartPage;
 const chunks: unknown[] = [];
 try {
   for (;;) {
-    const summary = await ingestAwards({ maxPages: pageChunk, startPage, departamento: "LA LIBERTAD", params: { startDate, endDate } });
+    let summary: IngestAwardsSummary;
+    try {
+      summary = await ingestAwards({ maxPages: pageChunk, startPage, departamento: "LA LIBERTAD", params: { startDate, endDate } });
+    } catch (error) {
+      if (error instanceof OecePageNotFoundError && error.page === startPage && startPage > 1) {
+        console.warn(JSON.stringify({ terminalPage: startPage, reason: "OECE_404_AFTER_NEXT_LINK" }));
+        break;
+      }
+      throw error;
+    }
     chunks.push(summary);
     console.log(JSON.stringify({ checkpoint: { startPage, pageChunk }, ...summary }));
     if (!summary.isPartial) break;

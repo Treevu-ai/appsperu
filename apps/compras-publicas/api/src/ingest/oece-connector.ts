@@ -16,13 +16,22 @@ interface ReleasesPageResponse {
 export interface FetchReleasesParams {
   startDate?: string;
   endDate?: string;
+  dataSegmentationID?: string;
   mainProcurementCategory?: string;
+}
+
+export class OecePageNotFoundError extends Error {
+  constructor(public readonly page: number, public readonly endpoint: "/releases" | "/records") {
+    super(`OECE devolvió 404 para la página ${page} de ${endpoint}`);
+    this.name = "OecePageNotFoundError";
+  }
 }
 
 export function releasesPageUrl(page: number, params: FetchReleasesParams = {}): string {
   const qs = new URLSearchParams({ page: String(page), order: "desc" });
   if (params.startDate) qs.set("startDate", params.startDate);
   if (params.endDate) qs.set("endDate", params.endDate);
+  if (params.dataSegmentationID) qs.set("dataSegmentationID", params.dataSegmentationID);
   if (params.mainProcurementCategory) qs.set("mainProcurementCategory", params.mainProcurementCategory);
   return `${API_BASE_URL}/releases?${qs.toString()}`;
 }
@@ -37,6 +46,9 @@ export async function fetchReleasesPage(
   params: FetchReleasesParams = {}
 ): Promise<ReleasesPageResponse> {
   const res = await fetchWithTimeout(releasesPageUrl(page, params));
+  if (res.status === 404) {
+    throw new OecePageNotFoundError(page, "/releases");
+  }
   if (!res.ok) {
     throw new Error(`OECE devolvió ${res.status} para la página ${page}`);
   }

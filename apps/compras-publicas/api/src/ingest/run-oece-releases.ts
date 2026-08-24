@@ -9,9 +9,10 @@ const maxPages = full ? 0 : maxPagesValue ? Number(maxPagesValue) : undefined;
 const startPage = Number(value("--start-page") ?? 1);
 const startDate = value("--start-date");
 const endDate = value("--end-date");
+const dataSegmentationID = value("--segmentation-id");
 if (!startDate || !endDate) throw new Error("Usa --start-date YYYY-MM-DD y --end-date YYYY-MM-DD; una corrida general sin ventana no es aceptada.");
 
-ingestOecdReleases({ maxPages, startPage, departamento: "LA LIBERTAD", params: { startDate, endDate } })
-  .then((summary) => console.log(JSON.stringify({ scope: { department: "LA LIBERTAD", startDate, endDate }, ...summary }, null, 2)))
+ingestOecdReleases({ maxPages, startPage, departamento: "LA LIBERTAD", params: { startDate, endDate, dataSegmentationID } })
+  .then((summary) => console.log(JSON.stringify({ scope: { department: "LA LIBERTAD", startDate, endDate, dataSegmentationID }, ...summary }, null, 2)))
   .catch((error) => { console.error("Ingesta OECE de procesos falló:", error); process.exitCode = 1; })
   .finally(() => pool.end());
