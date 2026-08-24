@@ -37,8 +37,9 @@ export default async function ComprasPublicasPage({ searchParams }: PageProps) {
         ¿Qué está comprando el Estado en {departamento}, quién compra y cuánto vale?
         Muestra parcial vía la API de OECE (Contrataciones Abiertas, OCDS) — páginas
         recientes, no el universo completo de procesos.{" "}
-        <a href="/cruce">Ver cruce con presupuesto (MEF) →</a> ·{" "}
-        <a href="/proveedores">Ver proveedores y concentración →</a>
+         <a href="/cruce">Ver cruce con presupuesto (MEF) →</a> ·{" "}
+         <a href="/proveedores">Ver proveedores y concentración →</a> ·{" "}
+         <a href="/contrataciones">Ver observatorio de contratos menores →</a>
       </p>
 
       <div className="stat-row">
