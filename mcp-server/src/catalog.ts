@@ -139,6 +139,35 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
   {
+    name: "radar_ejecucion_budget_movement",
+    app: "radar-ejecucion",
+    description:
+      "Explicación determinística de cómo se distribuye PIA, PIM y devengado entre Gobierno Nacional dirigido a La Libertad " +
+      "y Gobierno Regional ejecutado por sus unidades. No describe pagos, avance físico, impacto ni calidad, y no suma ambos universos. " + SIN_SCHEDULER,
+    pathTemplate: "/api/sectores/movimiento-presupuestal",
+    pathParams: [],
+    querySchema: {
+      anio: z.string().regex(/^\d{4}$/).optional(),
+      departamento: z.string().min(1).optional(),
+      sectores: z.string().min(1).optional(),
+    },
+  },
+  {
+    name: "radar_ejecucion_care_services",
+    app: "radar-ejecucion",
+    description:
+      "Registro trazable de servicios que cuidan en La Libertad: infraestructura (CUI y obra INFOBRAS solo por clave exacta) " +
+      "y alimentación escolar (cobertura, comités, lotes, proveedores y entregas únicamente cuando una fuente oficial los vincula). " +
+      "La ausencia de RUC, lote o entrega se declara como vacío de evidencia; no se infiere por nombres. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/servicios-cuidados",
+    pathParams: [],
+    querySchema: {
+      tipo: z.enum(["INFRAESTRUCTURA", "ALIMENTACION"]).optional(),
+      departamento: z.string().min(1).optional(),
+    },
+  },
+  {
     name: "radar_ejecucion_sector_review_queue",
     app: "radar-ejecucion",
     description:

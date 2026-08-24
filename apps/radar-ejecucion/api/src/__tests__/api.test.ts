@@ -181,6 +181,62 @@ describe("GET /api/lluvias/seguimiento", () => {
   });
 });
 
+describe("GET /api/servicios-cuidados", () => {
+  const alimentacion = {
+    service_id: "ALIM-WASI-MIKUNA-LA-LIBERTAD-2025",
+    service_type: "ALIMENTACION",
+    service_name: "Servicio alimentario escolar de La Libertad",
+    responsible_entity: "WASI MIKUNA",
+    period_label: "Año escolar 2025",
+    department: "LA LIBERTAD",
+    cui: null,
+    cui_status: "CUI_NO_PUBLICADO_EN_FUENTE",
+    work_code: null,
+    work_status: "NO_APLICA",
+    beneficiary_students: "276812",
+    beneficiary_schools: "3692",
+    purchase_committees: "5",
+    published_lots: "35",
+    awarded_lots: "27",
+    delivery_evidence_status: "SIN_EVIDENCIA_DE_ENTREGA_INGRESADA",
+    verification_status: "EVIDENCIA_OFICIAL",
+    observed_at: "2025-02-04",
+    limitation: "No se infieren proveedores.",
+    sources: [{ label: "Fuente oficial", url: "https://example.test", detail: "Cobertura" }],
+    territories: [{ departamento: "LA LIBERTAD", provincia: null, distrito: null, estado: "COBERTURA_REGIONAL_PUBLICADA" }],
+    proveedores_oficiales: "0",
+    entregas_evidenciadas: "0",
+  };
+
+  it("declares missing food suppliers and deliveries instead of inferring them", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [alimentacion] });
+    const response = await request(createApp()).get("/api/servicios-cuidados?tipo=ALIMENTACION");
+
+    expect(response.status).toBe(200);
+    expect(response.body.resultados[0]).toMatchObject({
+      id: "ALIM-WASI-MIKUNA-LA-LIBERTAD-2025",
+      tipo: "ALIMENTACION",
+      infraestructura: { cui: null, estadoCui: "CUI_NO_PUBLICADO_EN_FUENTE", estadoObra: "NO_APLICA" },
+      atencion: { estudiantesPublicados: 276812, institucionesPublicadas: 3692, lotesPublicados: 35, lotesAdjudicadosPublicados: 27, entregasEvidenciadas: 0 },
+      proveedores: { proveedoresConRucVinculadoOficialmente: 0, estado: "SIN_RUC_OFICIALMENTE_VINCULADO" },
+    });
+    expect(response.body.limitation).toMatch(/fuente oficial/i);
+    expect(queryMock.mock.calls[0][1]).toEqual(["LA LIBERTAD", "ALIMENTACION"]);
+  });
+
+  it("returns detail without fabricating a provider or a school delivery", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [alimentacion] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+    const response = await request(createApp()).get("/api/servicios-cuidados/ALIM-WASI-MIKUNA-LA-LIBERTAD-2025");
+
+    expect(response.status).toBe(200);
+    expect(response.body.proveedores).toMatchObject({ estado: "SIN_RUC_OFICIALMENTE_VINCULADO", resultados: [] });
+    expect(response.body.entregas).toEqual([]);
+  });
+});
+
 describe("GET /api/execution/:entityCode", () => {
   it("returns 404 when the entity has no ingested data", async () => {
     queryMock.mockResolvedValueOnce({ rows: [] });

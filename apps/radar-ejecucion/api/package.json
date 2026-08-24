@@ -18,6 +18,8 @@
     "ficha:entidad": "tsx src/cli/sector-ficha.ts --modo entidad",
     "comparativo:sectores": "tsx src/cli/sector-ficha.ts --modo comparativo",
     "links:sector": "tsx src/cli/sector-link-review.ts",
+    "movimiento:presupuesto": "tsx src/cli/budget-movement.ts",
+    "servicios:cuidados": "tsx src/cli/care-services.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

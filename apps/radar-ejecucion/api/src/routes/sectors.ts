@@ -6,6 +6,7 @@ import { LATEST_BUDGET_CTE } from "../db/budget-coverage.js";
 import { asyncHandler } from "../lib/async-handler.js";
 import { parseQuery } from "../lib/validate-query.js";
 import { scopeLabel } from "../sector/registry.js";
+import { summarizeBudgetMovement } from "../sector/movement.js";
 
 export const sectorsRouter = Router();
 
@@ -154,6 +155,19 @@ sectorsRouter.get("/comparativo", asyncHandler(async (req, res) => {
   const all = await budgetByRegistry(query.anio, query.departamento.toUpperCase());
   const rows = sectorIds.length ? all.filter((row) => sectorIds.includes(row.sector_id)) : all;
   res.json({ anio: query.anio, departamento: query.departamento.toUpperCase(), resultados: rows.map(mapBudget), limitation: "El comparativo muestra responsabilidades distintas. No suma Gobierno Nacional dirigido al departamento y Gobierno Regional ejecutado por sede como un único presupuesto." });
+}));
+
+sectorsRouter.get("/movimiento-presupuestal", asyncHandler(async (req, res) => {
+  const query = parseQuery(CompareQuery, req.query, res); if (!query) return;
+  const sectorIds = query.sectores?.split(",").map((item) => item.trim().toUpperCase()).filter(Boolean) ?? [];
+  const all = await budgetByRegistry(query.anio, query.departamento.toUpperCase());
+  const rows = (sectorIds.length ? all.filter((row) => sectorIds.includes(row.sector_id)) : all).map(mapBudget);
+  const movement = summarizeBudgetMovement(rows.map((row) => ({
+    sectorId: row.sectorId, sector: row.sector, entidad: row.entidad, reglaTerritorial: row.reglaTerritorial,
+    pia: row.pia, pim: row.pim, devengado: row.devengado, cortesUsados: row.cortesUsados,
+  })));
+  const cortesUsados = [...new Set(rows.flatMap((row) => row.cortesUsados).map((fechaCorte) => `${fechaCorte}`))].sort();
+  res.json({ anio: query.anio, departamento: query.departamento.toUpperCase(), sectoresSolicitados: sectorIds, cortesUsados, ...movement });
 }));
 
 sectorsRouter.get("/revision", asyncHandler(async (req, res) => {

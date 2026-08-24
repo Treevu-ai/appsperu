@@ -29,11 +29,11 @@ construidas después.
 
 ## `mcp-server` (2026-08-21)
 
-Servidor MCP standalone (`mcp-server/`, transporte stdio) que expone las 8 APIs como 25 tools de
+Servidor MCP standalone (`mcp-server/`, transporte stdio) que expone las 8 APIs como 32 tools de
 solo lectura para un agente Claude — un tool por endpoint `GET /api/*` real, sin transformar el
 shape de la respuesta. Catálogo derivado de `docs/conectores.md` (cada `description` de tool
 incluye cobertura parcial/completa y el recordatorio de que ninguna ingesta tiene scheduler).
-Validado manualmente: registro de los 25 tools, llamada con query params reales contra una API
+Validado manualmente: registro del catálogo, llamada con query params reales contra una API
 fake, y manejo de error de conectividad cuando la API de destino no responde — sin test
 automatizado contra las 8 APIs reales corriendo. No incluye las ingestas (`npm run ingest:*`,
 fuera de alcance) ni autenticación (mismo estado que las 8 APIs que agrega — ver

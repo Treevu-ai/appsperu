@@ -56,9 +56,13 @@ npm run sectors:inventory -- --anio 2026 --limite 50
 npm run ficha:sector -- --sector TRANSPORTE --anio 2026
 npm run ficha:entidad -- --entity-code 831 --anio 2026
 npm run comparativo:sectores -- --sectores SALUD,TRANSPORTE,VIVIENDA --anio 2026
+npm run movimiento:presupuesto -- --anio 2026
+npm run servicios:cuidados -- --tipo ALIMENTACION
 ```
 
 Las entidades nacionales se consultan solo por gasto dirigido al departamento
 (`META_DEPARTAMENTO`); las regionales, por la unidad ejecutora con sede en La
 Libertad. CUI, obra y compra requieren una clave oficial exacta: ALSOL muestra
 el vacío de vínculo cuando no la tiene.
+
+`servicios:cuidados` es el registro terminal de infraestructura y alimentación: CUI→obra únicamente por igualdad exacta y proveedor→cumplimiento únicamente por RUC documentado. Cuando no existe lote, entrega o RUC oficial, ALSOL muestra el vacío en vez de inferirlo.

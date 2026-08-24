@@ -35,5 +35,8 @@ npm run sectors:inventory -- --anio 2026 --limite 50
 npm run ficha:sector -- --sector TRANSPORTE --anio 2026
 npm run ficha:entidad -- --entity-code 831 --anio 2026
 npm run comparativo:sectores -- --sectores SALUD,TRANSPORTE,VIVIENDA --anio 2026
+npm run movimiento:presupuesto -- --anio 2026
 npm run links:sector -- --accion list --estado PENDING
 ```
+
+`movimiento:presupuesto` redacta una lectura determinística de PIA→PIM→devengado por universo nacional dirigido y regional ejecutado. No describe pagos, avance físico, impacto ni calidad; tampoco suma ambos universos.

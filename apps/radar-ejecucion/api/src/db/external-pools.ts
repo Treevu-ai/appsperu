@@ -5,3 +5,5 @@ import { Pool } from "pg";
  * intenta sustituirla con nombre, distrito o similitud semántica. */
 export const infobrasPool = process.env.INFOBRAS_DATABASE_URL ? new Pool({ connectionString: process.env.INFOBRAS_DATABASE_URL }) : null;
 export const comprasPool = process.env.COMPRAS_DATABASE_URL ? new Pool({ connectionString: process.env.COMPRAS_DATABASE_URL }) : null;
+export const identidadFiscalPool = process.env.IDENTIDAD_FISCAL_DATABASE_URL ? new Pool({ connectionString: process.env.IDENTIDAD_FISCAL_DATABASE_URL }) : null;
+export const sancionesPool = process.env.SANCIONES_DATABASE_URL ? new Pool({ connectionString: process.env.SANCIONES_DATABASE_URL }) : null;
