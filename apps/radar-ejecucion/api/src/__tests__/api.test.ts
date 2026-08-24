@@ -158,6 +158,36 @@ describe("GET /api/servicios-cuidados/alimentacion", () => {
   });
 });
 
+describe("GET /api/infraestructura", () => {
+  it("separa identidad de obra y evidencia de funcionamiento", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{
+      asset_id: "ACTIVO-DRENAJE-2539202", asset_family: "DRENAJE", asset_name_published: "Drenaje Trujillo", department: "LA LIBERTAD", province: "TRUJILLO", district: null, cui: "2539202", infobras_code: null, sector_asset_code: null, identity_status: "CUI_PUBLICADO", observed_at: "2026-08-24", limitation: "Sin operación", source_url: "https://fuente.test", source_label: "Fuente", extracted_at: "2026-08-24", automation_status: "MANUAL_ASISTIDA", checksum_status: "NO_DESCARGADO_EN_PILOTO", handover_count: "0", operator_count: "0", maintenance_count: "0", indicator_count: "0", availability_status: null,
+    }] });
+    const res = await request(createApp()).get("/api/infraestructura/activos?sector=DRENAJE");
+    expect(res.status).toBe(200);
+    expect(res.body.resultados[0]).toMatchObject({
+      identidad: { cui: "2539202", estado: "CUI_PUBLICADO" },
+      etapas: { cierre: "SIN_EVIDENCIA_DE_CIERRE", operador: "SIN_EVIDENCIA_DE_OPERADOR", disponibilidad: "SIN_EVIDENCIA_DE_OPERACION" },
+      obraInfoBras: { estado: "INFOBRAS_NO_CONFIGURADO" },
+    });
+    expect(res.body.cautela).toMatch(/no prueban recepción/i);
+  });
+
+  it("bloquea el uso estricto sin cierre, operador y disponibilidad", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ activos: "2", con_cierre: "0", con_operador: "0", con_mantenimiento: "0", con_disponibilidad: "0", con_indicador: "0", familias_materializadas: "2", pendientes_revision: "8" }] });
+    const res = await request(createApp()).get("/api/infraestructura/integridad?estricto=true");
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({ estado: "BLOQUEADO_POR_EVIDENCIA", controles: { activos: 2, conCierre: 0, conDisponibilidad: 0, pendientesRevision: 8 } });
+    expect(queryMock.mock.calls[0][0]).toMatch(/COUNT\(DISTINCT a\.asset_id\)/);
+  });
+
+  it("valida filtros antes de consultar la base", async () => {
+    const res = await request(createApp()).get("/api/infraestructura/activos?sector=DRENAJE&sector=RIEGO");
+    expect(res.status).toBe(400);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("GET /api/sectores/inventory", () => {
   it("keeps national destination and regional execution as different territorial rules", async () => {
     queryMock.mockResolvedValueOnce({ rows: [
