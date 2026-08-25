@@ -7,6 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "migrate": "tsx src/db/migrate.ts",
     "ingest:infobras": "tsx src/ingest/infobras-connector.ts",
+    "coverage:infobras": "tsx src/ingest/materialize-infobras-coverage.ts",
     "crossref:build": "tsx src/crossref/build-crosswalk.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"

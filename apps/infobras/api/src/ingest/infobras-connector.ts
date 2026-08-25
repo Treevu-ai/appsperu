@@ -8,6 +8,7 @@ import { pathToFileURL } from "node:url";
 import unzipper from "unzipper";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
+import { ejecucionPool } from "../db/ejecucion-pool.js";
 import { TITLE_ROWS, HEADER_ROWS } from "./columns.js";
 import { normalizeInfobrasRows } from "./normalize.js";
 
@@ -171,12 +172,58 @@ export interface IngestSummary {
 }
 
 export interface IngestOptions {
+  /** @deprecated Usa `departamentos` cuando el corte incluye más de una región. */
   departamento?: string;
+  departamentos?: readonly string[];
   filePath?: string; // para tests / reingesta sin volver a descargar
 }
 
+export const PERU_DEPARTAMENTOS = ["AMAZONAS", "ANCASH", "APURIMAC", "AREQUIPA", "AYACUCHO", "CAJAMARCA", "CALLAO", "CUSCO", "HUANCAVELICA", "HUANUCO", "ICA", "JUNIN", "LA LIBERTAD", "LAMBAYEQUE", "LIMA", "LORETO", "MADRE DE DIOS", "MOQUEGUA", "PASCO", "PIURA", "PUNO", "SAN MARTIN", "TACNA", "TUMBES", "UCAYALI"] as const;
+export const DEFAULT_TERRITORIAL_SCOPE = PERU_DEPARTAMENTOS;
+
+export function normalizeDepartamentoScope(
+  departamento?: string,
+  departamentos?: readonly string[]
+): string[] {
+  const values = departamentos ?? (departamento ? [departamento] : []);
+  const normalized = [...new Set(values.map((value) => value.trim().toUpperCase()).filter(Boolean))];
+  const unsupported = normalized.filter((value) => !PERU_DEPARTAMENTOS.includes(value as typeof PERU_DEPARTAMENTOS[number]));
+  if (unsupported.length) throw new Error(`Departamento(s) fuera del catálogo territorial peruano: ${unsupported.join(", ")}`);
+  return normalized;
+}
+
+export function parseDepartamentoScope(raw?: string): string[] {
+  return raw
+    ? normalizeDepartamentoScope(undefined, raw.split(","))
+    : [...DEFAULT_TERRITORIAL_SCOPE];
+}
+
+async function recordTerritorialCoverage(input: {
+  departamentos: readonly string[];
+  allRows: string[][];
+  normalized: Array<{ departamento: string }>;
+  rejected: Array<{ raw: unknown }>;
+  batchId: number;
+}): Promise<void> {
+  for (const departamento of input.departamentos) {
+    const sourceRecords = input.allRows.filter((row) => (row[29] ?? "").toUpperCase().trim() === departamento).length;
+    const normalizedRecords = input.normalized.filter((row) => row.departamento.toUpperCase() === departamento).length;
+    const rejectedRecords = input.rejected.filter((row) => Array.isArray(row.raw) && String(row.raw[29] ?? "").toUpperCase().trim() === departamento).length;
+    await ejecucionPool.query(
+      `INSERT INTO territorial_coverage
+        (app_name,source_name,jurisdiction_code,requested,source_records,normalized_records,persisted_records,rejected_records,completeness,source_batch_ref,cutoff_at,restriction,dependencies)
+       SELECT 'infobras','INFOBRAS_OBRAS_PUBLICAS',code,true,$2,$3,$3,$4,
+              CASE WHEN $2=0 THEN 'SIN_DATOS_EN_FUENTE' ELSE 'COMPLETA_VERIFICADA' END,
+              $5,now(),$6,'[]'::jsonb
+       FROM territorial_jurisdictions WHERE name=$1`,
+      [departamento, sourceRecords, normalizedRecords, rejectedRecords, `infobras:${input.batchId}`,
+        'El corte describe el XLSX público recorrido; no certifica el universo externo fuera de la fuente expuesta.']
+    );
+  }
+}
+
 export async function ingestInfobrasPublicWorks(options: IngestOptions = {}): Promise<IngestSummary> {
-  const { departamento } = options;
+  const { departamento, departamentos } = options;
 
   let tempDir: string | undefined;
   let filePath = options.filePath;
@@ -189,9 +236,9 @@ export async function ingestInfobrasPublicWorks(options: IngestOptions = {}): Pr
   try {
     const [checksum, allRows] = await Promise.all([checksumOf(filePath), readInfobrasRows(filePath)]);
 
-    const wantedDepartamento = departamento?.toUpperCase().trim();
-    const filteredRows = wantedDepartamento
-      ? allRows.filter((r) => (r[29] ?? "").toUpperCase().trim() === wantedDepartamento)
+    const wantedDepartamentos = new Set(normalizeDepartamentoScope(departamento, departamentos));
+    const filteredRows = wantedDepartamentos.size > 0
+      ? allRows.filter((r) => wantedDepartamentos.has((r[29] ?? "").toUpperCase().trim()))
       : allRows;
     const skippedOtherDepartamento = allRows.length - filteredRows.length;
 
@@ -285,6 +332,12 @@ export async function ingestInfobrasPublicWorks(options: IngestOptions = {}): Pr
 
       await client.query("COMMIT");
 
+      if (wantedDepartamentos.size > 0) {
+        await recordTerritorialCoverage({
+          departamentos: [...wantedDepartamentos], allRows, normalized: rows, rejected, batchId,
+        });
+      }
+
       return {
         batchId,
         totalFetched: allRows.length,
@@ -305,12 +358,16 @@ export async function ingestInfobrasPublicWorks(options: IngestOptions = {}): Pr
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const departamento = process.env.INFOBRAS_DEPARTAMENTO;
+  const departamentos = process.env.INFOBRAS_DEPARTAMENTOS
+    ? parseDepartamentoScope(process.env.INFOBRAS_DEPARTAMENTOS)
+    : process.env.INFOBRAS_DEPARTAMENTO
+      ? normalizeDepartamentoScope(process.env.INFOBRAS_DEPARTAMENTO)
+      : parseDepartamentoScope();
 
-  ingestInfobrasPublicWorks({ departamento })
+  ingestInfobrasPublicWorks({ departamentos })
     .then((summary) => {
       console.log("Ingesta de INFOBRAS completada:", summary);
-      return pool.end();
+      return Promise.all([pool.end(), ejecucionPool.end()]);
     })
     .catch((err) => {
       console.error("Ingesta falló:", err);
