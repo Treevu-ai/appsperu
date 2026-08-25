@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Pool } from "pg";
 
 const connectionString = process.env.EJECUCION_DATABASE_URL;
@@ -11,7 +12,7 @@ if (!connectionString) {
 
 /**
  * Segundo pool, hacia la base de `radar-ejecucion` (presupuesto MEF). No hay
- * FK real entre las dos bases — este servicio solo LEE de ahí para construir
- * el cruce por nombre de entidad, nunca escribe.
+ * FK real entre las dos bases: lee para el cruce por nombre de entidad y solo
+ * escribe el registro central de cobertura territorial, nunca obras ni gasto.
  */
 export const ejecucionPool = new Pool({ connectionString });

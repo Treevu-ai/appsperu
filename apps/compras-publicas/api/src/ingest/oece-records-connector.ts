@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
 import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
-import { OecePageNotFoundError } from "./oece-connector.js";
+import { OecePageNotFoundError, normalizeDepartamentoScope } from "./oece-connector.js";
 import { findBuyerDepartamento, normalizeAwards, type OcdsRecord } from "./normalize-awards.js";
 import { normalizeBidders, persistBidders } from "./normalize-bidders.js";
 
@@ -51,10 +51,10 @@ function checksumOf(records: unknown): string {
   return createHash("sha256").update(JSON.stringify(records)).digest("hex");
 }
 
-export function filterRecordsByDepartment(records: OcdsRecord[], departamento?: string): OcdsRecord[] {
-  const wanted = departamento?.toUpperCase().trim();
-  if (!wanted) return records;
-  return records.filter((record) => findBuyerDepartamento(record)?.toUpperCase().trim() === wanted);
+export function filterRecordsByDepartment(records: OcdsRecord[], departamento?: string, departamentos?: readonly string[]): OcdsRecord[] {
+  const wanted = new Set(normalizeDepartamentoScope(departamento, departamentos));
+  if (wanted.size === 0) return records;
+  return records.filter((record) => wanted.has(findBuyerDepartamento(record)?.toUpperCase().trim() ?? ""));
 }
 
 async function saveRawBatch(client: PoolClient, pageFrom: number, pageTo: number, records: OcdsRecord[], params: FetchRecordsParams): Promise<number> {
@@ -71,7 +71,9 @@ async function saveRawBatch(client: PoolClient, pageFrom: number, pageTo: number
 export interface IngestAwardsOptions {
   maxPages?: number;
   startPage?: number;
+  /** @deprecated Usa `departamentos` cuando el corte incluye más de una región. */
   departamento?: string;
+  departamentos?: readonly string[];
   params?: FetchRecordsParams;
 }
 
@@ -90,16 +92,61 @@ export interface IngestAwardsSummary {
   biddersSkippedOtherDepartamento?: number;
 }
 
+async function recordTerritorialCoverage(input: {
+  departamentos: readonly string[];
+  records: OcdsRecord[];
+  awards: Array<{ departamento: string | null }>;
+  rejectedAwards: Array<{ raw: unknown }>;
+  bidderRecords: OcdsRecord[];
+  bidders: Array<{ ocid: string }>;
+  batchId: number;
+  isCompleteSnapshot: boolean;
+  restriction: string;
+}): Promise<void> {
+  const { radarPool } = await import("../db/radar-pool.js");
+  for (const departamento of input.departamentos) {
+    const sourceRecords = input.records.filter((record) => findBuyerDepartamento(record)?.trim().toUpperCase() === departamento).length;
+    const normalizedAwards = input.awards.filter((row) => row.departamento?.trim().toUpperCase() === departamento).length;
+    const rejectedAwards = input.rejectedAwards.filter((row) => findBuyerDepartamento(row.raw as OcdsRecord)?.trim().toUpperCase() === departamento).length;
+    const bidderSourceRecords = input.bidderRecords.filter((record) => findBuyerDepartamento(record)?.trim().toUpperCase() === departamento).length;
+    const bidderDepartmentByOcid = new Map(
+      input.bidderRecords
+        .filter((record) => record.ocid && findBuyerDepartamento(record))
+        .map((record) => [record.ocid!.trim(), findBuyerDepartamento(record)!.trim().toUpperCase()])
+    );
+    const normalizedBidders = input.bidders.filter((row) => bidderDepartmentByOcid.get(row.ocid) === departamento).length;
+    const state = input.isCompleteSnapshot
+      ? (sourceRecords === 0 ? "SIN_DATOS_EN_FUENTE" : "COMPLETA_VERIFICADA")
+      : "PARCIAL";
+    const shared = [departamento, sourceRecords, normalizedAwards, rejectedAwards, state,
+      `oece-records:${input.batchId}`, input.restriction];
+    await radarPool.query(
+      `INSERT INTO territorial_coverage
+        (app_name,source_name,jurisdiction_code,requested,source_records,normalized_records,persisted_records,rejected_records,completeness,source_batch_ref,cutoff_at,restriction,dependencies)
+       SELECT 'compras-publicas','OECE_OCDS_AWARDS',code,true,$2,$3,$3,$4,$5,$6,now(),$7,'[]'::jsonb
+       FROM territorial_jurisdictions WHERE name=$1`,
+      shared
+    );
+    await radarPool.query(
+      `INSERT INTO territorial_coverage
+        (app_name,source_name,jurisdiction_code,requested,source_records,normalized_records,persisted_records,rejected_records,completeness,source_batch_ref,cutoff_at,restriction,dependencies)
+       SELECT 'compras-publicas','OECE_OCDS_BIDDERS',code,true,$2,$3,$3,0,$4,$5,now(),$6,'[]'::jsonb
+       FROM territorial_jurisdictions WHERE name=$1`,
+      [departamento, bidderSourceRecords, normalizedBidders, state, `oece-records:${input.batchId}`, input.restriction]
+    );
+  }
+}
+
 /**
  * Recorre páginas de `/records` (acotado por `maxPages`), extrae awards +
  * proveedores + postores, filtra por departamento del comprador, guarda el lote crudo
  * y hace upsert por (ocid, award_id, supplier_id) en awards y (ocid, bidder_id) en bidders.
  */
 export async function ingestAwards(options: IngestAwardsOptions = {}): Promise<IngestAwardsSummary> {
-  const { maxPages = DEFAULT_MAX_PAGES, startPage = 1, departamento, params = {} } = options;
+  const { maxPages = DEFAULT_MAX_PAGES, startPage = 1, departamento, departamentos, params = {} } = options;
   if (!Number.isInteger(maxPages) || maxPages < 0) throw new Error("maxPages debe ser entero >= 0; 0 recorre toda la ventana solicitada.");
   if (!Number.isInteger(startPage) || startPage < 1) throw new Error("startPage debe ser un entero >= 1.");
-  const wantedDepartamento = departamento?.toUpperCase().trim();
+  const wantedDepartamentos = new Set(normalizeDepartamentoScope(departamento, departamentos));
 
   const allRecords: OcdsRecord[] = [];
   let page = startPage;
@@ -128,8 +175,8 @@ export async function ingestAwards(options: IngestAwardsOptions = {}): Promise<I
 
     // Procesar awards
     const { rows: allRows, rejected } = normalizeAwards(allRecords);
-    const rows = wantedDepartamento
-      ? allRows.filter((r) => r.departamento?.toUpperCase().trim() === wantedDepartamento)
+    const rows = wantedDepartamentos.size > 0
+      ? allRows.filter((r) => wantedDepartamentos.has(r.departamento?.toUpperCase().trim() ?? ""))
       : allRows;
     const skippedOtherDepartamento = allRows.length - rows.length;
 
@@ -168,7 +215,7 @@ export async function ingestAwards(options: IngestAwardsOptions = {}): Promise<I
 
     // Los postores deben tener exactamente el mismo alcance territorial que
     // las adjudicaciones; no se mezcla el resto de las páginas nacionales.
-    const bidderRecords = filterRecordsByDepartment(allRecords, wantedDepartamento);
+    const bidderRecords = filterRecordsByDepartment(allRecords, departamento, departamentos);
     const { rows: biddersRows, rejected: biddersRejected } = normalizeBidders(bidderRecords);
     const { inserted: biddersInserted, failed: biddersFailed } = await persistBidders(client, biddersRows, batchId);
 
@@ -180,6 +227,17 @@ export async function ingestAwards(options: IngestAwardsOptions = {}): Promise<I
     }
 
     await client.query("COMMIT");
+
+    if (wantedDepartamentos.size > 0) {
+      const isCompleteSnapshot = !hasNext && startPage === 1 && Object.keys(params).length === 0;
+      await recordTerritorialCoverage({
+        departamentos: [...wantedDepartamentos], records: allRecords, awards: allRows, rejectedAwards: rejected,
+        bidderRecords, bidders: biddersRows, batchId, isCompleteSnapshot,
+        restriction: isCompleteSnapshot
+          ? "Recorrido hasta la página terminal del endpoint público /records sin filtros."
+          : "Cobertura parcial: página inicial, paginación o parámetros de consulta acotan el recorrido de /records.",
+      });
+    }
 
     return {
       batchId,
@@ -205,9 +263,13 @@ export async function ingestAwards(options: IngestAwardsOptions = {}): Promise<I
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const maxPages = process.env.OECE_MAX_PAGES ? Number(process.env.OECE_MAX_PAGES) : undefined;
-  const departamento = process.env.OECE_DEPARTAMENTO;
+  const departamentos = process.env.OECE_DEPARTAMENTOS
+    ? normalizeDepartamentoScope(undefined, process.env.OECE_DEPARTAMENTOS.split(","))
+    : process.env.OECE_DEPARTAMENTO
+      ? normalizeDepartamentoScope(process.env.OECE_DEPARTAMENTO)
+      : undefined;
 
-  ingestAwards({ maxPages, departamento })
+  ingestAwards({ maxPages, departamentos })
     .then((summary) => {
       console.log("Ingesta de adjudicaciones y bidders completada:", summary);
       console.warn(

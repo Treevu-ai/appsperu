@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Pool } from "pg";
 
 const connectionString = process.env.RADAR_DATABASE_URL;
@@ -11,7 +12,7 @@ if (!connectionString) {
 
 /**
  * Segundo pool, hacia la base de `radar-ejecucion` (presupuesto MEF). No hay
- * FK real entre las dos bases — este servicio solo LEE de ahí para construir
- * el cruce, nunca escribe.
+ * FK real entre las dos bases: lee para el cruce y solo escribe el registro
+ * central de cobertura territorial, nunca procesos ni presupuesto.
  */
 export const radarPool = new Pool({ connectionString });
