@@ -11,16 +11,31 @@ import { pool } from "../db/pool.js";
 import { TITLE_ROWS, HEADER_ROWS } from "./columns.js";
 import { normalizeInfobrasRows } from "./normalize.js";
 
-const DOWNLOAD_URL =
-  "https://infobras.contraloria.gob.pe/InfobrasWeb/Archivo/DownloadFile" +
-  "?filename=DataSet-Obras-Publicas&name=DataSet-Obras-Publicas" +
-  "&contentType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet&extension=.xlsx";
+const DATASETS_URL = "https://infobras.contraloria.gob.pe/InfobrasWeb/DataSets";
+const DOWNLOAD_HREF_RE = /href=["']([^"']*\/Archivo\/DownloadFile\?[^"']*filename=DataSet-Obras-Publicas(?:%20|\s)[^"']*)["']/i;
 
 const MAX_ATTEMPTS = 4;
 const BASE_BACKOFF_MS = 2000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * INFOBRAS cambia diariamente el nombre de su export (por ejemplo,
+ * `DataSet-Obras-Publicas 24-08-2026`). El endpoint sin fecha devuelve 200
+ * con JSON { error: "No existe el archivo" }, que antes terminaba siendo un
+ * `FILE_ENDED` poco explicativo al intentar abrirlo como XLSX.
+ */
+async function currentDownloadUrl(): Promise<string> {
+  const page = await fetch(DATASETS_URL);
+  if (!page.ok) throw new Error(`INFOBRAS devolvió ${page.status} al consultar Datos Abiertos`);
+
+  const html = await page.text();
+  const match = DOWNLOAD_HREF_RE.exec(html);
+  if (!match) throw new Error("INFOBRAS no publicó un enlace vigente para el dataset de Obras Públicas");
+
+  return new URL(match[1].replaceAll("&amp;", "&"), DATASETS_URL).toString();
 }
 
 /**
@@ -34,9 +49,14 @@ export async function downloadInfobrasXlsx(destPath: string): Promise<void> {
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     try {
-      const res = await fetch(DOWNLOAD_URL);
+      const res = await fetch(await currentDownloadUrl());
       if (!res.ok || !res.body) {
         throw new Error(`INFOBRAS devolvió ${res.status} al descargar el dataset`);
+      }
+      const contentType = res.headers.get("content-type")?.toLowerCase() ?? "";
+      if (contentType.includes("application/json") || contentType.includes("text/html")) {
+        const detail = (await res.text()).slice(0, 240);
+        throw new Error(`INFOBRAS no entregó un XLSX (${contentType}): ${detail}`);
       }
       const fileStream = createWriteStream(destPath);
       await new Promise<void>((resolve, reject) => {

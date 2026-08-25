@@ -1,6 +1,6 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-08-20.
+Última actualización: 2026-08-24.
 
 Ocho apps standalone construidas, probadas y verificadas contra datos reales. Cada una sigue
 el mismo patrón: Postgres propio (Docker Compose), API Express propia, y frontend Next.js
@@ -9,6 +9,19 @@ no por paquete). Desde el 2026-08-20 rige una política nueva: **no se construye
 frontends web para apps futuras**, solo API (ver "Riesgo de dependencias aceptado" abajo).
 `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las
 otras 5 bases.
+
+## Última sesión operativa — 2026-08-24
+
+- INFOBRAS e Invierte.pe fueron refrescados para La Libertad; se recorrieron los cinco rangos
+  del CSV de Invierte publicados por el MEF y se corrigió INFOBRAS para descubrir el enlace
+  diario del XLSX en vez de depender de una URL fija.
+- El cruce INFOBRAS ↔ radar-ejecución se reconstruyó (75 coincidencias confirmadas y 17
+  candidatas) y las nueve APIs disponibles respondieron correctamente en sus puertos.
+- Se detectó y corrigió una colisión temporal: 4002 servía una segunda instancia de
+  `compras-publicas`; ahora vuelve a servir `radar-inversiones`.
+
+Registro técnico reproducible, resultados de recarga y límites:
+[`docs/SESION_ACTUALIZACION_DATOS_Y_RUNTIME_2026-08-24.md`](SESION_ACTUALIZACION_DATOS_Y_RUNTIME_2026-08-24.md).
 
 ## Apps
 

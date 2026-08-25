@@ -22,7 +22,7 @@ presupuesto, el archivo es manejable.
 |---|---|---|
 | `CODIGO_UNICO` | Numérico | CUI — clave primaria natural |
 | `NOMBRE_INVERSION` | Carácter | Nombre del proyecto |
-| `SEC_EJEC` | Carácter | **Coincide con la clave usada en `radar-ejecucion.entities`** — cruce por ID posible, no implementado en el MVP |
+| `SEC_EJEC` | Carácter | **Coincide con la clave usada en `radar-ejecucion.entities`** — cruce exacto implementado en `GET /api/crossref` |
 | `NOMBRE_UEP` | Carácter | Unidad Ejecutora Presupuestal |
 | `ESTADO` / `SITUACION` | Carácter | Estado y situación de la inversión |
 | `MONTO_VIABLE` | Numérico | Monto viable original |
@@ -48,3 +48,19 @@ MONTO_VIABLE=1853953.5, DEPARTAMENTO=CUSCO, PROVINCIA=URUBAMBA, DISTRITO=OLLANTA
 - No confirmado: si un mismo CUI puede aparecer más de una vez en el archivo completo
   (ej. actualizaciones históricas). El conector trata duplicados dentro de un mismo lote
   como rechazo explícito, no como sobrescritura silenciosa.
+
+## Refresco controlado de La Libertad — 2026-08-24
+
+Se consultó `HEAD` al archivo y se confirmó `Content-Length: 246,344,022`,
+`Accept-Ranges: bytes`, `Content-Type: text/csv` y `Last-Modified: Sun, 23 Aug 2026
+18:31:51 GMT`.
+
+La actualización local recorrió cinco rangos contiguos (`0–246,344,021`), cada uno
+normalizado y filtrado por `DEPARTAMENTO = LA LIBERTAD`. Los cinco rangos nuevos
+aceptaron 7,971 filas sin rechazos; la tabla materializada terminó con **7,978 CUI
+únicos** de La Libertad (incluye el lote local preexistente).
+
+El campo `isPartial` se conserva por lote, porque cada lote es una solicitud Range.
+La corrida conjunta cubrió todos los bytes anunciados por el servidor, pero esto no
+autoriza afirmar una certificación independiente del universo administrativo externo:
+describe la cobertura del archivo que el MEF expuso en esa fecha.
