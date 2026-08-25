@@ -148,5 +148,24 @@ SEC_EJEC de App02, sin fuzzy matching. Implementado en `GET /api/crossref` de `i
 Resultado real: de 8,574 CUIs con obras en La Libertad, 567 (6.6%) tienen match en
 `radar-inversiones` — tasa baja pero esperada, porque esa app solo ingirió una muestra parcial
 de Invierte.pe (1,612 inversiones), no el universo completo; un CUI sin match no implica que
-la inversión no exista. El cruce por nombre con `radar-ejecucion` (MEF) queda pendiente, sin
-iniciar.
+la inversión no exista. El cruce por nombre con `radar-ejecucion` (MEF) se implementó
+posteriormente con estados `confirmada`/`candidata`; su actualización de 2026-08-24 se
+registra en la sección siguiente.
+
+## Refresco y corrección de enlace diario — 2026-08-24
+
+INFOBRAS publica el export de Obras Públicas con la fecha en el nombre, por ejemplo
+`DataSet-Obras-Publicas 24-08-2026`. La URL fija sin fecha respondió HTTP 200 con
+`{"error":"No existe el archivo"}`; al intentar leer ese JSON como XLSX el fallo posterior
+era `FILE_ENDED`, por lo que el mensaje no identificaba la causa.
+
+El conector ahora consulta `https://infobras.contraloria.gob.pe/InfobrasWeb/DataSets`,
+extrae el enlace vigente del dataset, decodifica `&amp;` y rechaza explícitamente respuestas
+JSON/HTML antes del parser XLSX. Se mantuvo la descarga por streaming y los reintentos.
+
+Validación: 41/41 pruebas aprobadas y `tsc` correcto. Se materializaron cargas completas de
+191,180 filas nacionales; el lote local más reciente es de 2026-08-24 22:51:31 UTC y deja
+**10,134 obras de La Libertad, todas con CUI**. El cruce de entidades INFOBRAS ↔
+radar-ejecución se reconstruyó: 75 coincidencias confirmadas, 17 candidatas y 72 entidades
+INFOBRAS sin match. Las coincidencias candidatas no deben ser tratadas como identificadores
+exactos.
