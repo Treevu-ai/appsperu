@@ -11,6 +11,7 @@
     "ingest:discovery": "tsx src/ingest/run-discovery.ts",
     "ingest:territories": "tsx src/ingest/run-territories.ts",
     "ingest:infrastructure": "tsx src/ingest/run-infrastructure.ts",
+    "crossref:build": "tsx src/crossref/build-crosswalk.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

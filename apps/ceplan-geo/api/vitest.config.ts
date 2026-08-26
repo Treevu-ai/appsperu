@@ -19,7 +19,7 @@ export default defineConfig({
         "src/db/pool.ts",
         "src/ingest/run-discovery.ts",
         "src/ingest/run-territories.ts",
-        "src/ingest/run-infrastructure.ts",
+        "src/crossref/build-crosswalk.ts",
         "vitest.config.ts",
       ],
     },

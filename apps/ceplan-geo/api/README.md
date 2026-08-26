@@ -37,4 +37,22 @@ npm test
 - Connector WFS con paginación y lotes trazables
 - Ingesta de distritos (`cb_limdistx`), departamentos/provincias e infraestructura (aeropuertos, puertos)
 
-Los endpoints de lectura y cruces llegan en Sprint 4. Ver `docs/PRD_CEPLAN_Geo_v1.md`.
+## Alcance Sprint 4
+
+```bash
+npm run crossref:build   # materializa territory_name_crosswalk desde infobras
+npm run dev
+```
+
+Endpoints:
+
+- `GET /api/layers`, `/api/layers/:id`, `/api/layers/:id/features`
+- `GET /api/territories?ubigeo=`, `?departamento=&provincia=&distrito=`, `/api/territories/bbox`
+- `GET /api/infrastructure?type=`, `/api/infrastructure/near?ubigeo=&radius_km=`
+- `GET /api/crossref/inversiones?departamento=`
+- `GET /api/crossref/obras?departamento=`
+- `GET /api/crossref/ejecucion?ubigeo=`
+
+Requiere `radar-inversiones`, `infobras` y/o `radar-ejecucion` corriendo para los cruces HTTP.
+
+Ver `docs/PRD_CEPLAN_Geo_v1.md`.

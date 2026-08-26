@@ -1,6 +1,10 @@
 import express, { type ErrorRequestHandler } from "express";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 import { pool } from "./db/pool.js";
+import { layersRouter } from "./routes/layers.js";
+import { territoriesRouter } from "./routes/territories.js";
+import { infrastructureRouter } from "./routes/infrastructure.js";
+import { crossrefRouter } from "./routes/crossref.js";
 
 const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   console.error("Error no manejado en un request:", err);
@@ -24,6 +28,10 @@ export function createApp() {
   });
 
   app.use("/api", apiRateLimit);
+  app.use("/api/layers", layersRouter);
+  app.use("/api/territories", territoriesRouter);
+  app.use("/api/infrastructure", infrastructureRouter);
+  app.use("/api/crossref", crossrefRouter);
 
   app.use(errorHandler);
   return app;
