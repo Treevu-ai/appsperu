@@ -8,11 +8,11 @@
 
 | Departamento | UBIGEO | Distritos (ceplan-geo) | Estado global |
 |---|---:|---:|---|
-| LA LIBERTAD | 13 | 83 | ✅ Referencia — validación 2026-08-26 |
-| LAMBAYEQUE | 14 | 38 | ✅ MEF + Invierte verificados 2026-08-26 |
-| PIURA | 20 | 65 | ✅ MEF + Invierte verificados 2026-08-26 |
-| CAJAMARCA | 06 | 127 | 🟡 Invierte OK; MEF parcial (re-ingesta) |
-| CUSCO | 08 | 112 | 🟡 Invierte OK; MEF en corrida |
+| LA LIBERTAD | 13 | 83 | ✅ MEF re-corrida 2026-08-26 (16/16 + meta GN) |
+| LAMBAYEQUE | 14 | 38 | ✅ MEF re-corrida 2026-08-26 (16/16 + meta GN) |
+| PIURA | 20 | 65 | ✅ MEF re-corrida 2026-08-26 (16/16 + meta GN) |
+| CAJAMARCA | 06 | 127 | 🟡 Invierte OK; MEF parcial (re-ingesta local) |
+| CUSCO | 08 | 112 | 🟡 Invierte OK; MEF parcial (re-ingesta local) |
 
 **ceplan-geo** tiene cobertura **nacional** de distritos (1,874); los cinco departamentos piloto suman **425 distritos** verificables vía SQL.
 
@@ -59,7 +59,7 @@ npm run cobertura:territorial -- --jurisdiccion LAMBAYEQUE
 |---|---|
 | Matriz publicada | ✅ este documento |
 | Spike geo cerrado | ✅ `docs/spike-ceplan-geo-capas-hidrica-proyectos-2026-08.md` |
-| ≥ 2 deptos nuevos con MEF+INFOBRAS | ⏸ requiere entorno local con Docker + acceso fuentes |
+| ≥ 2 deptos nuevos con MEF+INFOBRAS | 🟡 MEF OK (LAM/PIU); INFOBRAS bloqueado egress cloud |
 | La Libertad sin regresión | ✅ baseline 2026-08-26 |
 
-**Nota:** Las corridas de ingesta pesada (MEF, INFOBRAS XLSX) deben ejecutarse en entorno local con Docker; este documento fija el plan y comandos; las celdas ⏸ se actualizan al cerrar cada corrida.
+**Nota:** MEF re-corrida 2026-08-26 22:29 UTC confirma 0 `seccionesSinDatos` para La Libertad, Lambayeque y Piura. INFOBRAS requiere corrida local: el cloud agent no alcanza `infobras.contraloria.gob.pe` de forma estable.
