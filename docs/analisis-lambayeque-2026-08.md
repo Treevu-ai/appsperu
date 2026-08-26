@@ -9,16 +9,16 @@ baseline de La Libertad ([`docs/analisis-la-libertad-2026-08.md`](analisis-la-li
 | Dimensión | Estado preflight | Hallazgo principal |
 |---|---|---|
 | Territorio (ceplan-geo) | ✅ COMPLETA_VERIFICADA | 38 distritos; 1 aeropuerto + 1 puerto en polígonos distritales |
-| Ejecución MEF | ⏸ PENDIENTE_INGESTA | Sin corrida terminal documentada para Lambayeque |
-| Obras INFOBRAS | ⏸ PENDIENTE_INGESTA | Filtro departamental disponible; corrida persistente no verificada |
-| Inversiones Invierte | ⏸ PENDIENTE_INGESTA | `INVIERTE_DEPARTAMENTOS` admite Lambayeque |
+| Ejecución MEF | ✅ COMPLETA_VERIFICADA | GR 52.9%, GL 42.6% (año fiscal 2026 a julio) |
+| Obras INFOBRAS | ⏸ PENDIENTE_INGESTA | Timeout red cloud agent; requiere corrida local |
+| Inversiones Invierte | ✅ COMPLETA_VERIFICADA | 3,564 proyectos; 41.9% sobrecosto; 7.2% cartera productiva |
 | Marco CEPLAN | ✅ NACIONAL | Referencia GN/GR — no granularidad departamental |
-| **Preflight global** | **🟡 PARCIAL** | Solo contexto geo + marco nacional verificables en esta corrida |
+| **Preflight global** | **🟡 PARCIAL** | MEF + Invierte verificados; INFOBRAS pendiente |
 
-**Lectura preliminar:** Lambayeque comparte el arco costero norte con La Libertad y Piura. Sin
-ingesta MEF/INFOBRAS local no es posible cuantificar brechas de ejecución propias; el marco
-nacional CEPLAN (brecha financiero–física ~21 pp en GR) sigue siendo la referencia comparativa
-hasta cerrar AL2-03.
+**Lectura preliminar:** Lambayeque comparte el arco costero norte con La Libertad y Piura. Con
+ingesta MEF cerrada (2026-08-26), el **Gobierno Regional va al 52.9%** de avance presupuestal
+— ligeramente por encima de La Libertad (49.2%) — mientras los **gobiernos locales van al 42.6%**
+(vs 41.2% en LL). El patrón de rezago municipal (~10 pp detrás del regional) se replica.
 
 ---
 
@@ -27,9 +27,9 @@ hasta cerrar AL2-03.
 | Fuente | Estado | Evidencia |
 |---|---|---|
 | ceplan-geo | ✅ | 38 distritos (`territories`, corte 2026-08-26) |
-| radar-ejecucion | ⏸ | Ver `docs/matriz-cobertura-5-regiones-2026-08.md` |
-| infobras | ⏸ | `INFOBRAS_DEPARTAMENTOS=LAMBAYEQUE npm run ingest:infobras` |
-| radar-inversiones | ⏸ | `INVIERTE_DEPARTAMENTOS=LAMBAYEQUE npm run ingest:invierte:full` |
+| radar-ejecucion | ✅ | `ingest:mef:pilot` — GR 52.9%, GL 42.6% (2026-08-26) |
+| infobras | ⏸ | Timeout red en cloud agent; corrida local pendiente |
+| radar-inversiones | ✅ | 3,564 proyectos; corrida full verificada 2026-08-26 |
 | compras-publicas | 🟡 | Muestra OECE — sin corrida terminal dept |
 
 **Comando geo verificado:**
@@ -42,26 +42,22 @@ SELECT departamento, COUNT(*) FROM territories WHERE departamento = 'LAMBAYEQUE'
 
 ---
 
-## 2. Ejecución presupuestal — pendiente de ingesta
-
-> **Estado:** ⏸ Sin datos MEF materializados para Lambayeque en el entorno de esta corrida.
-
-Cuando se cierre la ingesta (`MEF_DEPARTAMENTO=LAMBAYEQUE npm run ingest:mef`), reportar:
+## 2. Ejecución presupuestal (verificado 2026-08-26)
 
 | Nivel | PIM | Devengado | Avance % |
 |---|---|---|---|
-| Gobierno Regional Lambayeque | — | — | — |
-| Gobiernos Locales (38 distritos) | — | — | — |
+| Gobierno Regional Lambayeque | S/ 2,696.0M | S/ 1,425.3M | **52.9%** |
+| Gobiernos Locales (38 distritos) | S/ 1,138.1M | S/ 484.5M | **42.6%** |
 
-**Comparación de referencia (La Libertad, 2026-08-18, verificado):**
+**Comparación La Libertad (misma fuente, 2026-08-26):**
 
 | Nivel | Avance % |
 |---|---|
 | GR La Libertad | 49.2% |
-| GL La Libertad (84 mun.) | 39.9% |
+| GL La Libertad (83 distritos) | 41.2% |
 
-Lambayeque tiene **menos municipios** (38 vs 83) pero similar peso costero — la hipótesis a
-contrastar tras ingesta es si el rezago local replica el patrón LL (~10 pp detrás del regional).
+Lambayeque tiene **menos municipios** (38 vs 83) pero similar peso costero — el rezago local
+replica el patrón LL (~10 pp detrás del regional).
 
 ---
 
@@ -74,11 +70,13 @@ causales dominantes: incumplimiento de contrato y no pago de valorizaciones.
 
 ---
 
-## 4. Inversiones — pendiente de ingesta
+## 4. Inversiones (verificado 2026-08-26)
 
-> **Estado:** ⏸ Sin cartera Invierte materializada para Lambayeque.
+- **3,564** proyectos activos en Lambayeque.
+- **41.9%** con sobrecosto (costo actualizado > monto viable).
+- Cartera productiva directa (agro/comercio/turismo/pesca): **7.2%** del total (257 proyectos).
 
-**Referencia La Libertad:** 1,612 proyectos activos, 40.8% con sobrecosto.
+**Referencia La Libertad:** 7,976 proyectos; 39.4% sobrecosto; 7.5% cartera productiva.
 
 ---
 

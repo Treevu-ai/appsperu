@@ -9,10 +9,10 @@
 | Departamento | UBIGEO | Distritos (ceplan-geo) | Estado global |
 |---|---:|---:|---|
 | LA LIBERTAD | 13 | 83 | ✅ Referencia — validación 2026-08-26 |
-| LAMBAYEQUE | 14 | 38 | 🟡 Conector admite filtro; falta corrida terminal MEF+INFOBRAS+Invierte |
-| PIURA | 20 | 65 | 🟡 Idem |
-| CAJAMARCA | 06 | 127 | 🟡 Idem |
-| CUSCO | 08 | 112 | 🟡 Idem |
+| LAMBAYEQUE | 14 | 38 | ✅ MEF + Invierte verificados 2026-08-26 |
+| PIURA | 20 | 65 | ✅ MEF + Invierte verificados 2026-08-26 |
+| CAJAMARCA | 06 | 127 | 🟡 Invierte OK; MEF parcial (re-ingesta) |
+| CUSCO | 08 | 112 | 🟡 Invierte OK; MEF en corrida |
 
 **ceplan-geo** tiene cobertura **nacional** de distritos (1,874); los cinco departamentos piloto suman **425 distritos** verificables vía SQL.
 
@@ -21,9 +21,9 @@
 | App / Fuente | LA LIBERTAD | LAMBAYEQUE | PIURA | CAJAMARCA | CUSCO | Notas |
 |---|---|---|---|---|---|---|
 | **ceplan-geo** (distritos WFS) | ✅ 83 | ✅ 38 | ✅ 65 | ✅ 127 | ✅ 112 | Ingesta nacional; dept verificado en `cobertura:geoserver` |
-| **radar-ejecucion** (MEF) | ✅ offsets LL | ⏸ | ⏸ | ⏸ | ⏸ | LL verificado 2026-08-24; otras regiones requieren validar offsets/rangos |
-| **radar-inversiones** (Invierte) | ✅ 5 rangos | ⏸ | ⏸ | ⏸ | ⏸ | `INVIERTE_DEPARTAMENTOS` admite las 5; corrida full pendiente fuera de LL |
-| **infobras** | ✅ ~10k obras | ⏸ | ⏸ | ⏸ | ⏸ | XLSX nacional; filtro dept en CLI; corrida persistente solo LL verificada |
+| **radar-ejecucion** (MEF) | ✅ offsets LL | ✅ scan | ✅ scan | 🟡 parcial | 🟡 corrida | `ingest:mef:pilot` — scan por chunks 25 MB |
+| **radar-inversiones** (Invierte) | ✅ full | ✅ full | ✅ full | ✅ full | ✅ full | Corrida `ingest:invierte:full` 2026-08-26 |
+| **infobras** | ✅ ~10k obras | ⏸ | ⏸ | ⏸ | ⏸ | XLSX nacional; timeout red en cloud agent |
 | **compras-publicas** (OECE) | 🟡 ventana 10 págs | 🟡 | 🟡 | 🟡 | 🟡 | `OECE_DEPARTAMENTOS` admite las 5; no corrida terminal nacional |
 | **ceplan-estrategico** | N/A | N/A | N/A | N/A | N/A | Indicadores nacionales GN/GR — sin llave departamental |
 | **identidad-fiscal** | ✅ nacional | ✅ | ✅ | ✅ | ✅ | Padrón RUC nacional; cruce territorial vía compras/ejecución |

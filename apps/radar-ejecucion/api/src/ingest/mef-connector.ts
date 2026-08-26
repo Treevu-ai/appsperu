@@ -6,6 +6,7 @@ import { pool } from "../db/pool.js";
 import { refreshBudgetCoverageSnapshots } from "../db/budget-coverage.js";
 import { CONFIRMED_MEF_FIELD_MAPPING, type MefFieldMapping } from "./field-mapping.js";
 import { normalizeMefRows, normalizeMefProyectos } from "./normalize.js";
+import { PILOT_DEPARTMENT_UBIGEO, type PilotDepartmentName } from "../lib/pilot-departments.js";
 import { SECTION_NIVEL_MES_BOUNDS, departamentoSectionWindow } from "./mef-section-bounds.js";
 
 const FILES_BASE_URL = "https://fs.datosabiertos.mef.gob.pe/datastorefiles";
@@ -94,17 +95,27 @@ async function fetchDepartamentoRowsInSection(
   bounds: SectionBounds,
   mesEje: string,
   departamento: string,
+  nivelGobierno: string,
   mapping: MefFieldMapping
 ): Promise<Record<string, unknown>[]> {
   const url = `${FILES_BASE_URL}/${filename}`;
   const dept = departamento.toUpperCase().trim();
   const headerLine = await fetchMefHeaderLine(filename);
-  const needle = `"${dept}"`;
+  const lineNeedles = ejecutoraLineNeedles(dept, nivelGobierno);
   const matchedLines: string[] = [];
 
   for (let start = bounds.start; start < bounds.end; start += SECTION_SCAN_CHUNK_BYTES) {
     const end = Math.min(bounds.end - 1, start + SECTION_SCAN_CHUNK_BYTES - 1);
-    let text = await fetchRange(url, start, end);
+    let text = "";
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        text = await fetchRange(url, start, end);
+        break;
+      } catch (err) {
+        if (attempt === 3) throw err;
+        await new Promise((r) => setTimeout(r, 1500 * attempt));
+      }
+    }
     if (start > bounds.start) {
       const firstNl = text.indexOf("\n");
       if (firstNl >= 0) text = text.slice(firstNl + 1);
@@ -113,7 +124,7 @@ async function fetchDepartamentoRowsInSection(
     if (lastNl > 0) text = text.slice(0, lastNl);
 
     for (const line of text.split("\n")) {
-      if (line.includes(needle)) matchedLines.push(line);
+      if (lineNeedles.every((n) => line.includes(n))) matchedLines.push(line);
     }
   }
 
@@ -132,6 +143,18 @@ async function fetchDepartamentoRowsInSection(
       String(r.MES_EJE ?? "").trim() === mesEje &&
       String(r[mapping.departamentoNombre] ?? "").toUpperCase().trim() === dept
   );
+}
+
+function ejecutoraLineNeedles(departamento: string, nivelGobierno: string): string[] {
+  const dept = departamento.toUpperCase().trim();
+  if (nivelGobierno === "GOBIERNOS REGIONALES") {
+    return [`"${nivelGobierno}"`, `"${dept}"`];
+  }
+  const ubigeo = PILOT_DEPARTMENT_UBIGEO[dept as PilotDepartmentName];
+  if (nivelGobierno === "GOBIERNOS LOCALES" && ubigeo) {
+    return [`"${nivelGobierno}"`, `","${ubigeo}","${dept}","`];
+  }
+  return [`"${nivelGobierno}"`, `"${dept}"`];
 }
 
 export async function fetchMefCsv(
@@ -472,7 +495,7 @@ export async function ingestMefFullYearForDepartamento(
 
   for (const [nivelGobierno, mesBounds] of Object.entries(boundsByNivel)) {
     for (const [mesEje, bounds] of Object.entries(mesBounds)) {
-      const resourceId = `${filename}#nivel=${nivelGobierno}#mes=${mesEje}#ejecutora=${wantedDepartamento}#scan-v2`;
+      const resourceId = `${filename}#nivel=${nivelGobierno}#mes=${mesEje}#ejecutora=${wantedDepartamento}#scan-v6`;
 
       const cached = await loadCachedRows(resourceId);
       if (cached) {
@@ -504,6 +527,7 @@ export async function ingestMefFullYearForDepartamento(
           bounds,
           mesEje,
           wantedDepartamento,
+          nivelGobierno,
           mapping
         );
         console.log(`  [scan] ${nivelGobierno}/mes=${mesEje}: ${records.length} filas`);
