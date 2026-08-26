@@ -15,6 +15,11 @@ export function isPilotDepartment(value: string): value is PilotDepartmentName {
   return PILOT_DEPARTMENTS.some((row) => row.name === value.toUpperCase().trim());
 }
 
+export function getPilotDepartment(value: string) {
+  const normalized = value.toUpperCase().trim();
+  return PILOT_DEPARTMENTS.find((row) => row.name === normalized) ?? null;
+}
+
 export async function countPilotDistricts(): Promise<Record<string, number>> {
   const names = PILOT_DEPARTMENTS.map((row) => row.name);
   const { rows } = await pool.query<{ departamento: string; distritos: string }>(

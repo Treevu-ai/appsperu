@@ -477,6 +477,17 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: [],
     querySchema: {},
   },
+  {
+    name: "ceplan_estrategico_crossref_territorial",
+    app: "ceplan-estrategico",
+    description:
+      "Cruce ceplan-estrategico <-> ceplan-geo por departamento piloto ALSOL (5 regiones). Adjunta CUMP02/CUMP03 " +
+      "nacionales (GN/GR) con contexto territorial (distritos, infraestructura). Matcher: departamento_prefijo_ubigeo. " +
+      "Cobertura PARCIAL — no implica desempeño estratégico regional.",
+    pathTemplate: "/api/crossref/territorial",
+    pathParams: [],
+    querySchema: { departamento: z.string().min(1) },
+  },
 
   // ---- ceplan-geo (GeoServer CEPLAN, territorio e infraestructura) ----
   {
@@ -523,6 +534,16 @@ export const TOOL_CATALOG: ToolSpec[] = [
       provincia: z.string().min(1).optional(),
       distrito: z.string().min(1).optional(),
     },
+  },
+  {
+    name: "ceplan_geo_territories_summary",
+    app: "ceplan-geo",
+    description:
+      "Agregados territoriales por departamento piloto ALSOL (5 regiones): conteo de distritos e infraestructura " +
+      "dentro del polígono departamental. Solo LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO.",
+    pathTemplate: "/api/territories/summary",
+    pathParams: [],
+    querySchema: { departamento: z.string().min(1) },
   },
   {
     name: "ceplan_geo_territories_bbox",

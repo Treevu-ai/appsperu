@@ -317,7 +317,7 @@ Ver contrato: `docs/data-contracts/ceplan-crossref-territorial-v1.md`
 | **ceplan-geo** | **infobras** | **espacial (point-in-polygon)** | 🆕 Nuevo |
 | **ceplan-geo** | **radar-inversiones** | **espacial (proximity)** | 🆕 Nuevo |
 | **ceplan-geo** | **radar-ejecucion** | **ubigeo (exacto)** | 🆕 Nuevo |
-| **ceplan-estrategico** | **ceplan-geo** | **entity_code → ubigeo** | 🆕 Nuevo |
+| **ceplan-estrategico** | **ceplan-geo** | **departamento_prefijo_ubigeo** | ✅ Implementado (Sprint 7) |
 
 ---
 
@@ -365,7 +365,7 @@ Nuevos cruces CEPLAN:
 - ceplan-geo → infobras (espacial)
 - ceplan-geo → radar-inversiones (espacial)
 - ceplan-geo → radar-ejecucion (ubigeo)
-- ceplan-estrategico → ceplan-geo (entity_code → ubigeo)
+- ceplan-estrategico → ceplan-geo (departamento_prefijo_ubigeo)
 ```
 
 ---
@@ -396,8 +396,9 @@ Nuevos cruces CEPLAN:
    - Menos urgente que los anteriores
 
 ### Fase 3: Cruce integrador
-6. **ceplan-estrategico ↔ ceplan-geo** (prioridad baja)
-   - Conecta objetivos estratégicos con contexto territorial
+6. **ceplan-estrategico ↔ ceplan-geo** (prioridad baja → **implementado Sprint 7**)
+   - Conecta marco estratégico nacional con contexto territorial departamental (5 regiones piloto)
+   - Endpoint: `GET /api/crossref/territorial?departamento=`
    - Útil para análisis geográfico de prioridades estratégicas
 
 ---

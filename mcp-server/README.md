@@ -54,7 +54,7 @@ Nombres de env var por app: `RADAR_EJECUCION_API_URL`, `COMPRAS_PUBLICAS_API_URL
 
 ## Catálogo de tools
 
-55 tools, uno por endpoint `GET /api/*` real de las 9 apps (`src/catalog.ts` es la fuente de
+57 tools, uno por endpoint `GET /api/*` real de las 9 apps (`src/catalog.ts` es la fuente de
 verdad — cada entrada mapea 1:1 a un `routes/*.ts` existente, sin inventar parámetros). Nombrados
 `<app>_<recurso>`, ej. `radar_ejecucion_execution`, `compras_publicas_suppliers`,
 `salud_institucional_score`.

@@ -1,6 +1,7 @@
 import express, { type ErrorRequestHandler } from "express";
 import { indicatorsRouter } from "./routes/indicators.js";
 import { crossrefRouter } from "./routes/crossref.js";
+import { crossrefTerritorialRouter } from "./routes/crossref-territorial.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 import { pool } from "./db/pool.js";
 
@@ -21,6 +22,7 @@ export function createApp() {
   app.use("/api", apiRateLimit);
   app.use("/api/indicators", indicatorsRouter);
   app.use("/api/crossref", crossrefRouter);
+  app.use("/api/crossref/territorial", crossrefTerritorialRouter);
 
   // Debe ir al final: sin esto, un rechazo dentro de un handler async se
   // vuelve un unhandled rejection que tumba el proceso entero en vez de
