@@ -12,6 +12,7 @@ Nueve apps standalone con API propia; ocho de ellas también tienen frontend Nex
 - **Sprint 6 cerrado:** spike CG-25 (`npm run spike:layers`); matriz cobertura 5 regiones; contratos API territorial y PBA; tests piloto 5 deptos.
 - **Sprint 7 cerrado:** `GET /api/crossref/territorial` (ceplan-estrategico) + `GET /api/territories/summary` (ceplan-geo); 2 tools MCP nuevos; validación documentada en `docs/validacion-crossref-territorial-5-regiones-2026-08.md`.
 - **Sprint 8 cerrado:** `GET /api/indicators/seg`, `/execution-efficiency`, `/plan-budget-alignment`; proxy departamental MEF+INFOBRAS; CLI `indicators:regional`; 3 tools MCP nuevos (60 total).
+- **Sprint 9 cerrado:** plantilla memo ALSOL + 6 memos Lambayeque/Piura; preflight PARCIAL documentado; geo verificado (38 y 65 distritos).
 
 Sesión anterior (2026-08-24):
 
