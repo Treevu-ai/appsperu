@@ -8,6 +8,7 @@ Nueve apps standalone con API propia; ocho de ellas también tienen frontend Nex
 
 - Se implementó `ceplan-geo` (API 4005, PostGIS 5437): ingesta WFS de distritos/aeropuertos/puertos, endpoints de lectura, cruces con `radar-inversiones`/`infobras`/`radar-ejecucion`, CLI `cobertura:geoserver` y 10 tools MCP nuevos.
 - Sin frontend web — puerto 3005 sigue reservado.
+- **Planificación Fase 2** (5 regiones ALSOL: La Libertad, Lambayeque, Piura, Cajamarca, Cusco): PRD y backlog en `docs/PRD_CEPLAN_ALSOL_Fase2_5Regiones_v1.md` y `docs/BACKLOG_CEPLAN_ALSOL_Fase2_5Regiones_v1.md` — puente ceplan-estrategico↔geo, indicadores SEG/PBA, spike capas geo, memos regionales.
 
 Sesión anterior (2026-08-24):
 
@@ -184,11 +185,14 @@ completo, incluida la limitación de PIM=0 en la muestra de `radar-ejecucion` pa
 - Matriz de cruces: `docs/adr/0005-matriz-de-cruces-ceplan-con-ecosistema-existente.md`
 - Roadmap: `docs/roadmap-ceplan.md`
 
-### Indicadores derivados propuestos (pendientes, no implementados como tal)
-- **Strategic Execution Gap (SEG)**: discrepancias entre gasto y resultado físico
-- **Execution Efficiency**: distinción entre entidades que ejecutan bien vs las que solo gastan
-- **Plan–Budget Alignment**: conexión entre discurso estratégico y asignación real de recursos
-- **Enriquecimiento territorial**: contexto geoespacial para obras e inversiones
+### Indicadores derivados — Fase 2 planificada (Sprints 8–10)
+
+Ver [`docs/PRD_CEPLAN_ALSOL_Fase2_5Regiones_v1.md`](PRD_CEPLAN_ALSOL_Fase2_5Regiones_v1.md):
+
+- **Strategic Execution Gap (SEG)**: nacional CEPLAN (CUMP03−CUMP02) + proxy departamental MEF/INFOBRAS
+- **Execution Efficiency**: ratio avance físico / ejecución presupuestal
+- **Plan–Budget Alignment**: mapeo heurístico dimensión CEPLAN → función MEF por departamento
+- **Enriquecimiento territorial**: cruce `ceplan-estrategico` ↔ `ceplan-geo` por departamento (no per-entidad)
 
 `salud-institucional` (2026-08-20) cubre parcialmente el espíritu de SEG/Execution Efficiency
 con datos reales de 5 fuentes, aunque no usa CEPLAN como insumo — es un índice paralelo, no
