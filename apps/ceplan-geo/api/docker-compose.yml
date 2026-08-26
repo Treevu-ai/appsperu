@@ -1,0 +1,21 @@
+name: ceplan-geo
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    environment:
+      POSTGRES_USER: ceplan_geo
+      POSTGRES_PASSWORD: ceplan_geo
+      POSTGRES_DB: ceplan_geo
+    ports:
+      - "127.0.0.1:5437:5432"
+    volumes:
+      - ceplan_geo_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ceplan_geo -d ceplan_geo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  ceplan_geo_pgdata:
