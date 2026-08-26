@@ -8,8 +8,8 @@ Primer memo ALSOL Fase 2 para **Piura** (UBIGEO `20`), plantilla
 | Dimensión | Estado preflight | Hallazgo principal |
 |---|---|---|
 | Territorio (ceplan-geo) | ✅ COMPLETA_VERIFICADA | 65 distritos; 3 aeropuertos; **0 puertos** en polígonos distritales |
-| Ejecución MEF | ✅ COMPLETA_VERIFICADA | GR 55.7%, GL 44.5% (año fiscal 2026 a julio) |
-| Obras INFOBRAS | ⏸ PENDIENTE_INGESTA | Timeout red cloud agent |
+| Ejecución MEF | ✅ COMPLETA_VERIFICADA | GR 55.7%, GL 44.5% — re-corrida 2026-08-26 (16/16 secciones + meta GN) |
+| Obras INFOBRAS | ⏸ BLOQUEADO_EGRESS | 3 reintentos cloud (26-08 22:00 UTC): sin conectividad a `infobras.contraloria.gob.pe` |
 | Inversiones Invierte | ✅ COMPLETA_VERIFICADA | 7,402 proyectos; 49.5% sobrecosto; 9.1% cartera productiva |
 | Marco CEPLAN | ✅ NACIONAL | GN/GR agregado |
 | **Preflight global** | **🟡 PARCIAL** | MEF + Invierte verificados; INFOBRAS pendiente |

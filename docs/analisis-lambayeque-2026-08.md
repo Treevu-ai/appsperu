@@ -9,8 +9,8 @@ baseline de La Libertad ([`docs/analisis-la-libertad-2026-08.md`](analisis-la-li
 | Dimensión | Estado preflight | Hallazgo principal |
 |---|---|---|
 | Territorio (ceplan-geo) | ✅ COMPLETA_VERIFICADA | 38 distritos; 1 aeropuerto + 1 puerto en polígonos distritales |
-| Ejecución MEF | ✅ COMPLETA_VERIFICADA | GR 52.9%, GL 42.6% (año fiscal 2026 a julio) |
-| Obras INFOBRAS | ⏸ PENDIENTE_INGESTA | Timeout red cloud agent; requiere corrida local |
+| Ejecución MEF | ✅ COMPLETA_VERIFICADA | GR 52.9%, GL 42.6% — re-corrida 2026-08-26 (16/16 secciones + meta GN) |
+| Obras INFOBRAS | ⏸ BLOQUEADO_EGRESS | 3 reintentos cloud (26-08 22:00 UTC): `fetch failed` / curl code 000 hacia Contraloría |
 | Inversiones Invierte | ✅ COMPLETA_VERIFICADA | 3,564 proyectos; 41.9% sobrecosto; 7.2% cartera productiva |
 | Marco CEPLAN | ✅ NACIONAL | Referencia GN/GR — no granularidad departamental |
 | **Preflight global** | **🟡 PARCIAL** | MEF + Invierte verificados; INFOBRAS pendiente |
