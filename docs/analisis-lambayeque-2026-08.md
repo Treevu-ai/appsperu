@@ -10,7 +10,7 @@ baseline de La Libertad ([`docs/analisis-la-libertad-2026-08.md`](analisis-la-li
 |---|---|---|
 | Territorio (ceplan-geo) | ✅ COMPLETA_VERIFICADA | 38 distritos; 1 aeropuerto + 1 puerto en polígonos distritales |
 | Ejecución MEF | ✅ COMPLETA_VERIFICADA | GR 52.9%, GL 42.6% — re-corrida 2026-08-26 (16/16 secciones + meta GN) |
-| Obras INFOBRAS | ⏸ BLOQUEADO_EGRESS | 3 reintentos cloud (26-08 22:00 UTC): `fetch failed` / curl code 000 hacia Contraloría |
+| Obras INFOBRAS | ⏸ BLOQUEADO_EGRESS | Reintento 26-08 22:38 UTC: curl code 28 (timeout) tras 6 intentos hacia Contraloría |
 | Inversiones Invierte | ✅ COMPLETA_VERIFICADA | 3,564 proyectos; 41.9% sobrecosto; 7.2% cartera productiva |
 | Marco CEPLAN | ✅ NACIONAL | Referencia GN/GR — no granularidad departamental |
 | **Preflight global** | **🟡 PARCIAL** | MEF + Invierte verificados; INFOBRAS pendiente |
@@ -28,7 +28,7 @@ ingesta MEF cerrada (2026-08-26), el **Gobierno Regional va al 52.9%** de avance
 |---|---|---|
 | ceplan-geo | ✅ | 38 distritos (`territories`, corte 2026-08-26) |
 | radar-ejecucion | ✅ | `ingest:mef:pilot` — GR 52.9%, GL 42.6% (2026-08-26) |
-| infobras | ⏸ | Timeout red en cloud agent; corrida local pendiente |
+| infobras | ⏸ | curl 28 (timeout) en cloud agent 26-08 22:38 UTC; corrida local pendiente |
 | radar-inversiones | ✅ | 3,564 proyectos; corrida full verificada 2026-08-26 |
 | compras-publicas | 🟡 | Muestra OECE — sin corrida terminal dept |
 

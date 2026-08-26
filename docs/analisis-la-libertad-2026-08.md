@@ -22,6 +22,8 @@ puebla `MONTO_PIA`/`MONTO_PIM` en las filas de movimiento mensual del CSV, solo 
 separadas `MES_EJE=0` (presupuesto de apertura/modificado). Ver
 `docs/data-contracts/mef-presupuesto-ejecucion.md` para el detalle completo y
 `ingestMefFullYearForDepartamento` en `mef-connector.ts` para la ingesta que lo corrige.
+**Re-corrida 2026-08-26 22:34 UTC** (`ingest:mef:pilot`, 2ª corrida): 16/16 secciones GR/GL + meta GN,
+0 `seccionesSinDatos` — cifras reproducidas (GR 49.2%, GL 41.2%).
 Gasto nacional dirigido a la región (programas con sede en Lima que ejecutan metas ahí) queda
 fuera de esta tabla — es un concepto aparte (`meta_departamento`), no ejecución propia.
 

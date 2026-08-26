@@ -51,9 +51,17 @@ GROUP BY 1, 2;
 
 ---
 
-## 3. Obras e inversiones — pendiente
+## 3. Obras e inversiones
 
-Referencia La Libertad: 2.5% paralización; 40.8% sobrecosto en cartera activa.
+**INFOBRAS:** ⏸ pendiente (timeout red cloud agent).
+
+**Invierte (verificado 2026-08-26):**
+
+- **10,567** proyectos activos — el mayor del piloto.
+- **55.4%** con sobrecosto — el más alto del piloto.
+- Cartera productiva directa: **10.9%** (1,152 proyectos).
+
+Referencia La Libertad: 2.5% paralización INFOBRAS; 39.4% sobrecosto Invierte.
 
 ---
 

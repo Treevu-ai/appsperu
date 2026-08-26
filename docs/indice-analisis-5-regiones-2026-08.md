@@ -26,7 +26,7 @@
 | **Puertos (geo)** | 1 | 1 | 0 | 0 | 1 | idem |
 | **Ejecución GR %** | **49.2** | **52.9** | **55.7** | 🟡 | 🟡 | MEF re-corrida 2026-08-26 (0 seccionesSinDatos) |
 | **Ejecución GL %** | **41.2** | **42.6** | **44.5** | 🟡 | 🟡 | idem |
-| **Obras paralizadas %** | **2.5** | — | — | — | — | INFOBRAS: bloqueado egress cloud; corrida local pendiente |
+| **Obras paralizadas %** | **2.5** | — | — | — | — | INFOBRAS: curl 28 timeout cloud (26-08 22:38 UTC); corrida local pendiente |
 | **Proyectos sobrecosto %** | **39.4** | **41.9** | **49.5** | **44.9** | **55.4** | Invierte full 2026-08-26 |
 | **SEG nacional GR (pp)** | 21.4 | 21.4 | 21.4 | 21.4 | 21.4 | CEPLAN GN/GR — mismo para todos |
 | **SEG proxy dept (pp)** | — | null | null | null | null | Requiere MEF+INFOBRAS dept |

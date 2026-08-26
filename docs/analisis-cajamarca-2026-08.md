@@ -53,9 +53,13 @@ Referencia La Libertad: 2.5% paralizadas (10,134 obras).
 
 ---
 
-## 4. Inversiones — pendiente
+## 4. Inversiones (verificado 2026-08-26)
 
-Referencia La Libertad: 40.8% proyectos con sobrecosto.
+- **8,710** proyectos activos en Cajamarca.
+- **44.9%** con sobrecosto.
+- Cartera productiva directa: **4.9%** (429 proyectos).
+
+Referencia La Libertad: 39.4% sobrecosto; 7.5% cartera productiva.
 
 ---
 

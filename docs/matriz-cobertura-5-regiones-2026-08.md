@@ -21,9 +21,9 @@
 | App / Fuente | LA LIBERTAD | LAMBAYEQUE | PIURA | CAJAMARCA | CUSCO | Notas |
 |---|---|---|---|---|---|---|
 | **ceplan-geo** (distritos WFS) | ✅ 83 | ✅ 38 | ✅ 65 | ✅ 127 | ✅ 112 | Ingesta nacional; dept verificado en `cobertura:geoserver` |
-| **radar-ejecucion** (MEF) | ✅ offsets LL | ✅ scan | ✅ scan | 🟡 parcial | 🟡 corrida | `ingest:mef:pilot` — scan por chunks 25 MB |
+| **radar-ejecucion** (MEF) | ✅ re-corrida | ✅ re-corrida | ✅ re-corrida | 🟡 parcial | 🟡 parcial | `ingest:mef:pilot` — 0 seccionesSinDatos LL/LAM/PIU (26-08 22:34 UTC, 2ª corrida) |
 | **radar-inversiones** (Invierte) | ✅ full | ✅ full | ✅ full | ✅ full | ✅ full | Corrida `ingest:invierte:full` 2026-08-26 |
-| **infobras** | ✅ ~10k obras | ⏸ | ⏸ | ⏸ | ⏸ | XLSX nacional; timeout red en cloud agent |
+| **infobras** | ⏸ egress | ⏸ egress | ⏸ egress | ⏸ egress | ⏸ egress | Cloud agent: timeout a `infobras.contraloria.gob.pe` (curl 28 tras 6 intentos, 26-08 22:38 UTC) |
 | **compras-publicas** (OECE) | 🟡 ventana 10 págs | 🟡 | 🟡 | 🟡 | 🟡 | `OECE_DEPARTAMENTOS` admite las 5; no corrida terminal nacional |
 | **ceplan-estrategico** | N/A | N/A | N/A | N/A | N/A | Indicadores nacionales GN/GR — sin llave departamental |
 | **identidad-fiscal** | ✅ nacional | ✅ | ✅ | ✅ | ✅ | Padrón RUC nacional; cruce territorial vía compras/ejecución |
@@ -62,4 +62,4 @@ npm run cobertura:territorial -- --jurisdiccion LAMBAYEQUE
 | ≥ 2 deptos nuevos con MEF+INFOBRAS | 🟡 MEF OK (LAM/PIU); INFOBRAS bloqueado egress cloud |
 | La Libertad sin regresión | ✅ baseline 2026-08-26 |
 
-**Nota:** MEF re-corrida 2026-08-26 22:29 UTC confirma 0 `seccionesSinDatos` para La Libertad, Lambayeque y Piura. INFOBRAS requiere corrida local: el cloud agent no alcanza `infobras.contraloria.gob.pe` de forma estable.
+**Nota:** MEF re-corrida 2026-08-26 22:34 UTC (2ª corrida) confirma 0 `seccionesSinDatos` para La Libertad, Lambayeque y Piura. INFOBRAS requiere corrida local: el cloud agent no alcanza `infobras.contraloria.gob.pe` (curl 28 tras 6 intentos, ~5 min).
