@@ -8,9 +8,9 @@ Memo ALSOL Fase 2 para **Cusco** (UBIGEO `08`), plantilla
 | Dimensión | Estado preflight | Hallazgo principal |
 |---|---|---|
 | Territorio (ceplan-geo) | ✅ COMPLETA_VERIFICADA | 112 distritos; **27 aeropuertos** (máximo del piloto); 1 puerto |
-| Ejecución MEF | ⏸ PENDIENTE_INGESTA | — |
-| Obras INFOBRAS | ⏸ PENDIENTE_INGESTA | — |
-| Inversiones Invierte | ⏸ PENDIENTE_INGESTA | — |
+| Ejecución MEF | 🟡 PARCIAL_INGESTA | Scan cloud incompleto; usar `ingest:mef:pilot:ejecutora` en local |
+| Obras INFOBRAS | ⏸ PENDIENTE_INGESTA | Timeout red cloud agent |
+| Inversiones Invierte | ✅ COMPLETA_VERIFICADA | 10,567 proyectos; 55.4% sobrecosto; 10.9% cartera productiva |
 | Marco CEPLAN | ✅ NACIONAL | GN/GR agregado |
 | **Preflight global** | **🟡 PARCIAL** | Geo + marco nacional |
 
@@ -27,7 +27,7 @@ La infraestructura logística registrada supera a todos los demás departamentos
 | ceplan-geo | ✅ | 112 distritos; 27 aeropuertos; 1 puerto |
 | radar-ejecucion | ⏸ | `MEF_DEPARTAMENTO=CUSCO npm run ingest:mef` |
 | infobras | ⏸ | `INFOBRAS_DEPARTAMENTOS=CUSCO npm run ingest:infobras` |
-| radar-inversiones | ⏸ | `INVIERTE_DEPARTAMENTOS=CUSCO npm run ingest:invierte:full` |
+| radar-inversiones | ✅ | 10,567 proyectos; corrida full 2026-08-26 |
 
 ```sql
 SELECT t.departamento, i.infra_type, COUNT(*)

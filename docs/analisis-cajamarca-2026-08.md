@@ -8,9 +8,9 @@ Memo ALSOL Fase 2 para **Cajamarca** (UBIGEO `06`), plantilla
 | Dimensión | Estado preflight | Hallazgo principal |
 |---|---|---|
 | Territorio (ceplan-geo) | ✅ COMPLETA_VERIFICADA | **127 distritos** (el mayor del piloto); 3 aeropuertos; 0 puertos |
-| Ejecución MEF | ⏸ PENDIENTE_INGESTA | — |
-| Obras INFOBRAS | ⏸ PENDIENTE_INGESTA | — |
-| Inversiones Invierte | ⏸ PENDIENTE_INGESTA | — |
+| Ejecución MEF | 🟡 PARCIAL_INGESTA | Scan cloud incompleto; usar `ingest:mef:pilot:ejecutora` en local |
+| Obras INFOBRAS | ⏸ PENDIENTE_INGESTA | Timeout red cloud agent |
+| Inversiones Invierte | ✅ COMPLETA_VERIFICADA | 8,710 proyectos; 44.9% sobrecosto; 4.9% cartera productiva |
 | Marco CEPLAN | ✅ NACIONAL | GN/GR agregado |
 | **Preflight global** | **🟡 PARCIAL** | Geo + marco nacional |
 
@@ -27,7 +27,7 @@ correlacionar con mayor heterogeneidad de ejecución — hipótesis a validar tr
 | ceplan-geo | ✅ | 127 distritos (2026-08-26) |
 | radar-ejecucion | ⏸ | `MEF_DEPARTAMENTO=CAJAMARCA npm run ingest:mef` |
 | infobras | ⏸ | `INFOBRAS_DEPARTAMENTOS=CAJAMARCA npm run ingest:infobras` |
-| radar-inversiones | ⏸ | `INVIERTE_DEPARTAMENTOS=CAJAMARCA npm run ingest:invierte:full` |
+| radar-inversiones | ✅ | 8,710 proyectos; corrida full 2026-08-26 |
 
 ```sql
 SELECT departamento, COUNT(*) FROM territories WHERE departamento = 'CAJAMARCA';
