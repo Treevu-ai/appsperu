@@ -24,7 +24,7 @@ cd mcp-server && npm test
 
 | App | Tests | Build |
 |---|---|---|
-| ceplan-estrategico | 39 | ✅ tsc |
+| ceplan-estrategico | 48 | ✅ tsc |
 | ceplan-geo | 29 | — |
 | mcp-server | 12 | — |
 
