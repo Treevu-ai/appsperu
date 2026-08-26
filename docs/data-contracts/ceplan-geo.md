@@ -154,6 +154,13 @@ GET https://geo.ceplan.gob.pe/geoserver/geoceplan/wfs?
 
 ## Cruces con otras apps
 
+### Con `ceplan-estrategico` (Fase 2 ALSOL, 2026-08-26)
+- **Cruce por**: `departamento` → prefijo UBIGEO + estadísticas territoriales — **no** `entity_code`
+- **API en ceplan-estrategico**: `GET /api/crossref/territorial?departamento=`
+- **API en ceplan-geo**: `GET /api/territories/summary?departamento=`
+- **Contrato**: [`docs/data-contracts/ceplan-crossref-territorial-v1.md`](ceplan-crossref-territorial-v1.md)
+- **Matcher**: `departamento_prefijo_ubigeo`
+
 ### Con `infobras`
 - **Cruce por**: ubicación geográfica (point-in-polygon, buffer, etc.)
 - **Propósito**: enriquecer obras con contexto territorial e infraestructura

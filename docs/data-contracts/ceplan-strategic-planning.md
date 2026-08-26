@@ -242,6 +242,22 @@ ObservaPerú.
   y los indicadores derivados (SEG, Execution Efficiency) devuelven `null` hoy: no es un bug
   del cruce, es que la fuente aguas arriba no trae PIM utilizable en esta muestra.
 
+### Con `ceplan-geo` (Fase 2 ALSOL, 2026-08-26)
+- **Cruce por**: departamento piloto → agregados territoriales (distritos, infraestructura)
+- **API**: `GET /api/crossref/territorial?departamento=` (lee ceplan-geo vía HTTP)
+- **Contrato**: [`docs/data-contracts/ceplan-crossref-territorial-v1.md`](ceplan-crossref-territorial-v1.md)
+- **Caveat**: indicadores CEPLAN siguen siendo nacionales GN/GR; el bloque territorial no implica desempeño estratégico regional.
+
+### Indicadores derivados productizados (Fase 2)
+
+| Endpoint | Variante nacional | Variante departamental |
+|---|---|---|
+| `GET /api/indicators/seg` | CUMP03 − CUMP02 (GN/GR) | `PROXY_DEPARTAMENTAL` (MEF − INFOBRAS) |
+| `GET /api/indicators/execution-efficiency` | CUMP02 / CUMP03 | avance físico / ejecución presupuestal |
+| `GET /api/indicators/plan-budget-alignment` | N/A | PBA heurístico v1 |
+
+CLI: `npm run indicators:regional -- --departamento=`. Contrato PBA: [`ceplan-plan-budget-alignment-v1.md`](ceplan-plan-budget-alignment-v1.md).
+
 ### Con `radar-inversiones`
 - Pendiente — no evaluado en Sprint 1, mismo criterio de granularidad aplicaría.
 
