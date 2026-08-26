@@ -1,16 +1,15 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-08-24.
+Última actualización: 2026-08-26.
 
-Ocho apps standalone construidas, probadas y verificadas contra datos reales. Cada una sigue
-el mismo patrón: Postgres propio (Docker Compose), API Express propia, y frontend Next.js
-propio **para las apps con web** — mismo lenguaje visual (`globals.css` compartido por copia,
-no por paquete). Desde el 2026-08-20 rige una política nueva: **no se construyen más
-frontends web para apps futuras**, solo API (ver "Riesgo de dependencias aceptado" abajo).
-`salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las
-otras 5 bases.
+Nueve apps standalone con API propia; ocho de ellas también tienen frontend Next.js verificado. `ceplan-geo` es la novena app y sigue la política API-only (sin web). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras 5 bases.
 
-## Última sesión operativa — 2026-08-24
+## Última sesión operativa — 2026-08-26
+
+- Se implementó `ceplan-geo` (API 4005, PostGIS 5437): ingesta WFS de distritos/aeropuertos/puertos, endpoints de lectura, cruces con `radar-inversiones`/`infobras`/`radar-ejecucion`, CLI `cobertura:geoserver` y 10 tools MCP nuevos.
+- Sin frontend web — puerto 3005 sigue reservado.
+
+Sesión anterior (2026-08-24):
 
 - INFOBRAS e Invierte.pe fueron refrescados para La Libertad; se recorrieron los cinco rangos
   del CSV de Invierte publicados por el MEF y se corrigió INFOBRAS para descubrir el enlace
@@ -35,21 +34,21 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `identidad-fiscal` | Padrón RUC (SUNAT) + cruce con proveedores/entidades | 4006 | 3006 | 5438 | Construida, probada, verificada |
 | `salud-institucional` | Score compuesto por entidad (agrega las otras 5, sin base propia) | 4007 | 3007 | — | Construida, probada, verificada |
 | `proveedores-sancionados` | Inhabilitaciones/multas del Tribunal de Contrataciones (RNP/OECE) | 4008 | 3008 | 5439 | Construida, probada, verificada |
-| `ceplan-geo` | GeoServer (capas territoriales/infraestructura) | 4005 | 3005 | 5437 | 📋 Planificado, no iniciado |
+| `ceplan-geo` | GeoServer (capas territoriales/infraestructura) | 4005 | — (reservado 3005) | 5437 (PostGIS) | Construida (API), sin web |
 
 Puerto 4005/3005/5437 quedó reservado para `ceplan-geo` y no se reutilizó en las apps
 construidas después.
 
-## `mcp-server` (2026-08-21)
+## `mcp-server` (2026-08-26)
 
-Servidor MCP standalone (`mcp-server/`, transporte stdio) que expone las 8 APIs como 45 tools de
+Servidor MCP standalone (`mcp-server/`, transporte stdio) que expone las 9 APIs como 55 tools de
 solo lectura para un agente Claude — un tool por endpoint `GET /api/*` real, sin transformar el
 shape de la respuesta. Catálogo derivado de `docs/conectores.md` (cada `description` de tool
 incluye cobertura parcial/completa y el recordatorio de que ninguna ingesta tiene scheduler).
 Validado manualmente: registro del catálogo, llamada con query params reales contra una API
-fake, y manejo de error de conectividad cuando la API de destino no responde — sin test
-automatizado contra las 8 APIs reales corriendo. No incluye las ingestas (`npm run ingest:*`,
-fuera de alcance) ni autenticación (mismo estado que las 8 APIs que agrega — ver
+fake, y manejo de error de conectividad cuando la API de destino no responde — más test
+automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incluye las ingestas
+(`npm run ingest:*`, fuera de alcance) ni autenticación (mismo estado que las 9 APIs que agrega — ver
 `mcp-server/README.md`, sección "Alcance actual y lo que falta", antes de exponerlo fuera de
 `localhost`).
 
@@ -246,7 +245,7 @@ avance (S/2,242.1M devengado / S/4,558.8M PIM), Gobiernos Locales 39.9%
    CEPLAN V.01 vuelve a estar disponible — hoy solo hay datos agregados por nivel de
    gobierno (ver Sprint 1 arriba). `strategic_objectives`/`strategic_actions`/
    `poi_activities`/`physical_targets` siguen sin poblar.
-2. Implementación de `ceplan-geo` (Sprint 3-4 del roadmap CEPLAN) — sigue sin iniciar.
+2. ~~Implementación de `ceplan-geo`~~ — **hecho (API-only, 2026-08-26)**. Spike de capas grandes (`cb_redhidrica`, `cb_proyectos`) pospuesto.
 3. El resto del PRD de INFOBRAS (sprints 1-6: MCP tools, resolución de identidad avanzada,
    dashboard consolidado) — quedó fuera de alcance de la rebanada construida.
 4. Todas las ingestas de `radar-ejecucion`/`radar-inversiones`/`infobras`/`compras-publicas`

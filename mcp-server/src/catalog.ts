@@ -478,6 +478,121 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: {},
   },
 
+  // ---- ceplan-geo (GeoServer CEPLAN, territorio e infraestructura) ----
+  {
+    name: "ceplan_geo_layers",
+    app: "ceplan-geo",
+    description:
+      "Catálogo de capas WFS ingeridas desde el GeoServer de CEPLAN (PostGIS). Cobertura nacional en capas MVP " +
+      "(distritos, aeropuertos, puertos). " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/layers",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
+    name: "ceplan_geo_layer_by_id",
+    app: "ceplan-geo",
+    description: "Metadatos de una capa geoespacial por UUID interno.",
+    pathTemplate: "/api/layers/{id}",
+    pathParams: ["id"],
+    querySchema: {},
+  },
+  {
+    name: "ceplan_geo_layer_features",
+    app: "ceplan-geo",
+    description: "Features vectoriales de una capa, con bbox y limit opcionales.",
+    pathTemplate: "/api/layers/{id}/features",
+    pathParams: ["id"],
+    querySchema: {
+      bbox: z.string().min(1).optional().describe("minx,miny,maxx,maxy en EPSG:4326."),
+      limit: z.string().regex(/^\d+$/).optional(),
+    },
+  },
+  {
+    name: "ceplan_geo_territories",
+    app: "ceplan-geo",
+    description:
+      "Distrito/territorio oficial por UBIGEO o por tríada departamento/provincia/distrito. Sin coordenadas inventadas. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/territories",
+    pathParams: [],
+    querySchema: {
+      ubigeo: z.string().regex(/^\d{6}$/).optional(),
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+    },
+  },
+  {
+    name: "ceplan_geo_territories_bbox",
+    app: "ceplan-geo",
+    description: "Territorios (distritos) que intersectan un bounding box.",
+    pathTemplate: "/api/territories/bbox",
+    pathParams: [],
+    querySchema: {
+      minx: z.string().regex(/^-?\d+(\.\d+)?$/),
+      miny: z.string().regex(/^-?\d+(\.\d+)?$/),
+      maxx: z.string().regex(/^-?\d+(\.\d+)?$/),
+      maxy: z.string().regex(/^-?\d+(\.\d+)?$/),
+    },
+  },
+  {
+    name: "ceplan_geo_infrastructure",
+    app: "ceplan-geo",
+    description: "Infraestructura logística publicada por CEPLAN (aeropuertos, puertos). " + SIN_SCHEDULER,
+    pathTemplate: "/api/infrastructure",
+    pathParams: [],
+    querySchema: { type: z.enum(["aeropuerto", "puerto"]).optional() },
+  },
+  {
+    name: "ceplan_geo_infrastructure_near",
+    app: "ceplan-geo",
+    description:
+      "Infraestructura dentro de un radio (km) del centroide del distrito (UBIGEO). Proximidad descriptiva, no causal. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/infrastructure/near",
+    pathParams: [],
+    querySchema: {
+      ubigeo: z.string().regex(/^\d{6}$/),
+      radius_km: z.string().regex(/^\d+(\.\d+)?$/).optional(),
+      type: z.enum(["aeropuerto", "puerto"]).optional(),
+    },
+  },
+  {
+    name: "ceplan_geo_crossref_inversiones",
+    app: "ceplan-geo",
+    description:
+      "Cruce ceplan-geo <-> radar-inversiones: enriquece inversiones con territorio CEPLAN e infra cercana. " +
+      "Matcher territorial por nombre (la API de inversiones no expone UBIGEO). Requiere radar-inversiones corriendo. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/crossref/inversiones",
+    pathParams: [],
+    querySchema: { departamento: z.string().min(1).optional() },
+  },
+  {
+    name: "ceplan_geo_crossref_obras",
+    app: "ceplan-geo",
+    description:
+      "Cruce ceplan-geo <-> infobras: enriquece obras con territorio CEPLAN sin usar coordenadas (INFOBRAS no las publica). " +
+      "Requiere infobras corriendo. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/crossref/obras",
+    pathParams: [],
+    querySchema: { departamento: z.string().min(1).optional() },
+  },
+  {
+    name: "ceplan_geo_crossref_ejecucion",
+    app: "ceplan-geo",
+    description:
+      "Cruce ceplan-geo <-> radar-ejecucion por UBIGEO exacto, con infraestructura cercana al distrito. " +
+      "Requiere radar-ejecucion corriendo. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/crossref/ejecucion",
+    pathParams: [],
+    querySchema: { ubigeo: z.string().regex(/^\d{6}$/) },
+  },
+
   // ---- identidad-fiscal (SUNAT Padrón RUC) ----
   {
     name: "identidad_fiscal_contribuyentes",
