@@ -1,5 +1,8 @@
 import express, { type ErrorRequestHandler } from "express";
 import { indicatorsRouter } from "./routes/indicators.js";
+import { indicatorsSegRouter } from "./routes/indicators-seg.js";
+import { indicatorsExecutionEfficiencyRouter } from "./routes/indicators-execution-efficiency.js";
+import { indicatorsPlanBudgetAlignmentRouter } from "./routes/indicators-plan-budget-alignment.js";
 import { crossrefRouter } from "./routes/crossref.js";
 import { crossrefTerritorialRouter } from "./routes/crossref-territorial.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
@@ -21,6 +24,9 @@ export function createApp() {
 
   app.use("/api", apiRateLimit);
   app.use("/api/indicators", indicatorsRouter);
+  app.use("/api/indicators/seg", indicatorsSegRouter);
+  app.use("/api/indicators/execution-efficiency", indicatorsExecutionEfficiencyRouter);
+  app.use("/api/indicators/plan-budget-alignment", indicatorsPlanBudgetAlignmentRouter);
   app.use("/api/crossref", crossrefRouter);
   app.use("/api/crossref/territorial", crossrefTerritorialRouter);
 

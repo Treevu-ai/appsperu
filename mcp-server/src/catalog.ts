@@ -467,6 +467,48 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
   {
+    name: "ceplan_estrategico_indicators_seg",
+    app: "ceplan-estrategico",
+    description:
+      "SEG (Strategic Execution Gap): nacional CEPLAN (CUMP03−CUMP02, GN/GR) o proxy departamental " +
+      "PROXY_DEPARTAMENTAL (MEF devengado/PIM − avance físico INFOBRAS). Solo 5 regiones piloto ALSOL " +
+      "con ?departamento=. Cobertura parcial.",
+    pathTemplate: "/api/indicators/seg",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      anio: z.string().regex(/^\d{4}$/).optional(),
+    },
+  },
+  {
+    name: "ceplan_estrategico_indicators_execution_efficiency",
+    app: "ceplan-estrategico",
+    description:
+      "Execution Efficiency: nacional CEPLAN (CUMP02/CUMP03, GN/GR) o proxy departamental " +
+      "PROXY_DEPARTAMENTAL (avance físico INFOBRAS / ejecución presupuestal MEF). Solo 5 regiones " +
+      "piloto con ?departamento=. Cobertura parcial.",
+    pathTemplate: "/api/indicators/execution-efficiency",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      anio: z.string().regex(/^\d{4}$/).optional(),
+    },
+  },
+  {
+    name: "ceplan_estrategico_indicators_plan_budget_alignment",
+    app: "ceplan-estrategico",
+    description:
+      "Plan–Budget Alignment departamental (mapeo heurístico CEPLAN dimensión → función MEF v1). " +
+      "Participación % del devengado por dimensión en un departamento piloto. No prueba alineación PEI. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/indicators/plan-budget-alignment",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1),
+      anio: z.string().regex(/^\d{4}$/).optional(),
+    },
+  },
+  {
     name: "ceplan_estrategico_crossref",
     app: "ceplan-estrategico",
     description:
