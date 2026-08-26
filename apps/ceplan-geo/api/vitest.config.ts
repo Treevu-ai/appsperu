@@ -20,6 +20,7 @@ export default defineConfig({
         "src/ingest/run-discovery.ts",
         "src/ingest/run-territories.ts",
         "src/crossref/build-crosswalk.ts",
+        "src/cli/cobertura-geoserver.ts",
         "vitest.config.ts",
       ],
     },

@@ -4,7 +4,9 @@
 - Owner del conector: equipo App 06 (CEPLAN Geo)
 - Confirmado en vivo el 2026-08-17 (investigación de servicios públicos programáticos).
 
-## Estado: CONFIRMADO
+## Estado: IMPLEMENTADO (API-only, sin web)
+
+Confirmado en vivo el 2026-08-17 y re-verificado el 2026-08-26. La app `apps/ceplan-geo/api` ingiere capas MVP vía WFS, persiste en PostGIS y expone cruces territoriales sin inventar coordenadas.
 
 CEPLAN mantiene un **GeoServer público accesible sin autenticación** que expone estándares OGC (Open Geospatial Consortium). A diferencia de la capa estratégica, aquí sí hay una interfaz programática estándar y documentada.
 
@@ -40,12 +42,12 @@ https://geo.ceplan.gob.pe/geoserver/geoceplan
 
 ## Capas publicadas confirmadas
 
-Según la investigación, el GeoServer de CEPLAN tiene **83 capas publicadas** en el workspace `geoceplan`. Capas relevantes para Follow the Sol:
+Según la investigación, el GeoServer de CEPLAN tiene **84 capas publicadas** en el workspace `geoceplan` (re-verificado 2026-08-26). Capas relevantes para Follow the Sol:
 
 ### Territoriales
 - `geoceplan:cb_limdptog` — Límites departamentales
-- `geoceplan:cb_limprov` — Límites provinciales
-- `geoceplan:cb_limdist` — Límites distritales
+- `geoceplan:cb_limprovg` — Límites provinciales
+- `geoceplan:cb_limdistx` — Límites distritales (incluye `ubigeo`)
 
 ### Infraestructura
 - `geoceplan:cn_aeropuertosx` — Aeropuertos
@@ -267,3 +269,14 @@ Para el MVP, recomiendo enfocarse en:
 3. **Cruce con `infobras`** — enriquecer obras con contexto territorial
 
 Las capas adicionales (red hídrica, comunidades, proyectos) pueden agregarse en fases posteriores una vez validado el MVP.
+
+---
+
+## Spike 2026-08-26 — capas diferidas
+
+| Capa | Decisión | Motivo |
+|---|---|---|
+| `geoceplan:cb_redhidrica` | `POSPONER` | Capa nacional muy grande; requiere paginación agresiva y prueba de volumen en PostGIS antes de automatizar. |
+| `geoceplan:cb_proyectos` | `POSPONER` | Solapamiento potencial con `infobras`; validar valor incremental antes de ingerir. |
+
+El MVP implementado cubre distritos + aeropuertos + puertos. Consultar cobertura con `npm run cobertura:geoserver` en `apps/ceplan-geo/api`.

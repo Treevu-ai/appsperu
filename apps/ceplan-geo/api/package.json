@@ -12,6 +12,7 @@
     "ingest:territories": "tsx src/ingest/run-territories.ts",
     "ingest:infrastructure": "tsx src/ingest/run-infrastructure.ts",
     "crossref:build": "tsx src/crossref/build-crosswalk.ts",
+    "cobertura:geoserver": "tsx src/cli/cobertura-geoserver.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

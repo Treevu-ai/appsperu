@@ -55,4 +55,15 @@ Endpoints:
 
 Requiere `radar-inversiones`, `infobras` y/o `radar-ejecucion` corriendo para los cruces HTTP.
 
-Ver `docs/PRD_CEPLAN_Geo_v1.md`.
+## Sprint 5 — operación
+
+```bash
+npm run cobertura:geoserver   # reporte JSON de capas, distritos e infra ingeridos
+```
+
+Índices de performance en migración `008_performance_indexes.sql`. Consultas espaciales usan GIST
+en `territories`, `infrastructure` y `geo_features`.
+
+10 tools MCP registrados en `mcp-server` (`ceplan_geo_*`).
+
+Ver `docs/PRD_CEPLAN_Geo_v1.md` y `docs/conectores.md#ceplan-geo`.
