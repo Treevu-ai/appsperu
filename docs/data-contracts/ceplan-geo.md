@@ -52,15 +52,17 @@ Según la investigación, el GeoServer de CEPLAN tiene **84 capas publicadas** e
 ### Infraestructura
 - `geoceplan:cn_aeropuertosx` — Aeropuertos
 - `geoceplan:cn_puertosx` — Puertos
-- `geoceplan:cb_redhidrica` — Red hídrica
+- `geoceplan:cb_redhidricaprinx` — Red hídrica principal (**1,744** features — AUTOMATIZABLE, spike 2026-08-26)
+- `geoceplan:cb_redhidricax` — Red hídrica detallada (**345,634** features — POSPONER)
 
 ### Social/territorial
 - `geoceplan:cb_comunidades` — Comunidades campesinas
 - `geoceplan:cb_capitales_prov` — Capitales provinciales
 
 ### Proyectos/obras
-- `geoceplan:cb_proyectos` — Proyectos
-- `geoceplan:cb_lotes` — Lotes
+- Familia `geoceplan:ip_pry*` — Proyectos de inversión por sector (ej. `ip_pryedux`, `ip_pryturx`, `ip_prysecagr`; universo pequeño, con CUI/SNIP en algunas capas)
+- `geoceplan:ap_proyecminerox` — Proyectos mineros (275 features)
+- ~~`geoceplan:cb_proyectos`~~ — **no existe** en GetCapabilities (2026-08-26)
 
 ### Otras capas territoriales
 - (Listado completo disponible vía `GetCapabilities` del WMS/WFS)
@@ -151,6 +153,13 @@ GET https://geo.ceplan.gob.pe/geoserver/geoceplan/wfs?
 ---
 
 ## Cruces con otras apps
+
+### Con `ceplan-estrategico` (Fase 2 ALSOL, 2026-08-26)
+- **Cruce por**: `departamento` → prefijo UBIGEO + estadísticas territoriales — **no** `entity_code`
+- **API en ceplan-estrategico**: `GET /api/crossref/territorial?departamento=`
+- **API en ceplan-geo**: `GET /api/territories/summary?departamento=`
+- **Contrato**: [`docs/data-contracts/ceplan-crossref-territorial-v1.md`](ceplan-crossref-territorial-v1.md)
+- **Matcher**: `departamento_prefijo_ubigeo`
 
 ### Con `infobras`
 - **Cruce por**: ubicación geográfica (point-in-polygon, buffer, etc.)
@@ -276,7 +285,11 @@ Las capas adicionales (red hídrica, comunidades, proyectos) pueden agregarse en
 
 | Capa | Decisión | Motivo |
 |---|---|---|
-| `geoceplan:cb_redhidrica` | `POSPONER` | Capa nacional muy grande; requiere paginación agresiva y prueba de volumen en PostGIS antes de automatizar. |
-| `geoceplan:cb_proyectos` | `POSPONER` | Solapamiento potencial con `infobras`; validar valor incremental antes de ingerir. |
+| Capa documentada | Decisión spike 2026-08-26 | Notas |
+|---|---|---|
+| `geoceplan:cb_redhidricax` | `POSPONER` | 345k features; ~692 páginas WFS |
+| `geoceplan:cb_redhidricaprinx` | `AUTOMATIZABLE` | 1,744 features; candidata ingesta Fase 2 |
+| `geoceplan:ip_pry*` (sectorial) | `MVP_ACOTADO` | No reemplaza `radar-inversiones`; ver spike |
+| ~~`geoceplan:cb_proyectos`~~ | N/A | Nombre no existe en GeoServer |
 
 El MVP implementado cubre distritos + aeropuertos + puertos. Consultar cobertura con `npm run cobertura:geoserver` en `apps/ceplan-geo/api`.

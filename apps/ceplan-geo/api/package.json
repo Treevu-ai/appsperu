@@ -13,6 +13,7 @@
     "ingest:infrastructure": "tsx src/ingest/run-infrastructure.ts",
     "crossref:build": "tsx src/crossref/build-crosswalk.ts",
     "cobertura:geoserver": "tsx src/cli/cobertura-geoserver.ts",
+    "spike:layers": "tsx src/cli/spike-layers.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

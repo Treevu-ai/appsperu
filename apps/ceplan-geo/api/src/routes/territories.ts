@@ -5,6 +5,8 @@ import { asyncHandler } from "../lib/async-handler.js";
 import { parseQuery } from "../lib/validate-query.js";
 import { territoryFromRow } from "../lib/format.js";
 import { getTerritoryByUbigeo, lookupTerritoryByNames } from "../crossref/territory-lookup.js";
+import { getDepartmentTerritorySummary } from "../lib/territory-summary.js";
+import { isPilotDepartment } from "../lib/pilot-departments.js";
 
 export const territoriesRouter = Router();
 
@@ -61,6 +63,35 @@ territoriesRouter.get(
       ...territoryFromRow({ ...territory, geometry_geojson: territory.geometryGeojson }),
       matchStatus,
     });
+  })
+);
+
+const SummaryQuerySchema = z.object({
+  departamento: z.string().min(1),
+});
+
+territoriesRouter.get(
+  "/summary",
+  asyncHandler(async (req, res) => {
+    const parsed = parseQuery(SummaryQuerySchema, req.query, res);
+    if (!parsed) return;
+
+    const departamento = parsed.departamento.toUpperCase().trim();
+    if (!isPilotDepartment(departamento)) {
+      res.status(400).json({
+        error: "Departamento fuera del piloto ALSOL Fase 2.",
+        departamentosPermitidos: ["LA LIBERTAD", "LAMBAYEQUE", "PIURA", "CAJAMARCA", "CUSCO"],
+      });
+      return;
+    }
+
+    const summary = await getDepartmentTerritorySummary(departamento);
+    if (!summary) {
+      res.status(404).json({ error: "Resumen territorial no encontrado." });
+      return;
+    }
+
+    res.json(summary);
   })
 );
 

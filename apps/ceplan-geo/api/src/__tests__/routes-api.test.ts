@@ -65,4 +65,37 @@ describe("read routes", () => {
     expect(res.status).toBe(200);
     expect(res.body.resultados[0].name).toBe("SALAVERRY");
   });
+
+  it("returns department territory summary for pilot departments", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ distritos: "83" }] })
+      .mockResolvedValueOnce({
+        rows: [
+          { infra_type: "aeropuerto", total: "7" },
+          { infra_type: "puerto", total: "1" },
+        ],
+      });
+
+    const res = await request(createApp())
+      .get("/api/territories/summary")
+      .query({ departamento: "LA LIBERTAD" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      departamento: "LA LIBERTAD",
+      ubigeoPrefijo: "13",
+      distritos: 83,
+      infraestructura: { aeropuerto: 7, puerto: 1 },
+      fuente: "ceplan-geo",
+    });
+  });
+
+  it("rejects summary for non-pilot departments", async () => {
+    const res = await request(createApp())
+      .get("/api/territories/summary")
+      .query({ departamento: "LIMA" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.departamentosPermitidos).toContain("CUSCO");
+  });
 });

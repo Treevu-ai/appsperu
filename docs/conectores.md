@@ -111,6 +111,18 @@ estándar OCDS (Open Contracting Data Standard).
 | **Fuente de datos** | `observaperu.ceplan.gob.pe/assets/data/seguimiento-estrategico/indicadores_priorizados_gestion_estrategica_estado.json`. |
 | **Detalle completo** | [`docs/data-contracts/ceplan-strategic-planning.md`](data-contracts/ceplan-strategic-planning.md) |
 
+**Fase 2 ALSOL (2026-08-26)** — endpoints adicionales sin nuevo conector HTTP:
+
+| Endpoint | Descripción |
+|---|---|
+| `GET /api/crossref/territorial?departamento=` | Marca CEPLAN nacional + contexto geo (5 regiones piloto) |
+| `GET /api/indicators/seg` | SEG nacional o proxy dept `PROXY_DEPARTAMENTAL` |
+| `GET /api/indicators/execution-efficiency` | Efficiency nacional o proxy dept |
+| `GET /api/indicators/plan-budget-alignment` | PBA heurístico v1 por departamento |
+| `npm run indicators:regional` | CLI consolidado SEG+Efficiency+PBA |
+
+Contratos: [`ceplan-crossref-territorial-v1.md`](data-contracts/ceplan-crossref-territorial-v1.md), [`ceplan-plan-budget-alignment-v1.md`](data-contracts/ceplan-plan-budget-alignment-v1.md). Requiere `CEPLAN_GEO_API_URL` y opcionalmente `INFOBRAS_DATABASE_URL` para proxies departamentales.
+
 ---
 
 <a id="ceplan-geo"></a>
@@ -125,6 +137,14 @@ estándar OCDS (Open Contracting Data Standard).
 | **Fuente de datos** | `geo.ceplan.gob.pe/geoserver/geoceplan/wfs` (OGC, sin autenticación). |
 | **Cobertura real ingerida (MVP)** | Nacional en distritos (`geoceplan:cb_limdistx`), aeropuertos y puertos; departamental/provincial como features sin tabla `territories` separada. |
 | **Detalle completo** | [`docs/data-contracts/ceplan-geo.md`](data-contracts/ceplan-geo.md) |
+
+**Fase 2 ALSOL (2026-08-26):**
+
+| Endpoint | Descripción |
+|---|---|
+| `GET /api/territories/summary?departamento=` | Agregados dept: distritos + infra (5 regiones piloto) |
+
+Piloto ALSOL: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distritos verificables.
 
 ---
 

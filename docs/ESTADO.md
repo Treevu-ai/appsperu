@@ -6,8 +6,14 @@ Nueve apps standalone con API propia; ocho de ellas también tienen frontend Nex
 
 ## Última sesión operativa — 2026-08-26
 
-- Se implementó `ceplan-geo` (API 4005, PostGIS 5437): ingesta WFS de distritos/aeropuertos/puertos, endpoints de lectura, cruces con `radar-inversiones`/`infobras`/`radar-ejecucion`, CLI `cobertura:geoserver` y 10 tools MCP nuevos.
+- Se implementó `ceplan-geo` (API 4005, PostGIS 5437): ingesta WFS de distritos/aeropuertos/puertos, endpoints de lectura, cruces con `radar-inversiones`/`infobras`/`radar-ejecucion`, CLI `cobertura:geoserver` y 11 tools MCP.
 - Sin frontend web — puerto 3005 sigue reservado.
+- **Planificación Fase 2** (5 regiones ALSOL: La Libertad, Lambayeque, Piura, Cajamarca, Cusco): PRD y backlog en `docs/PRD_CEPLAN_ALSOL_Fase2_5Regiones_v1.md` y `docs/BACKLOG_CEPLAN_ALSOL_Fase2_5Regiones_v1.md` — puente ceplan-estrategico↔geo, indicadores SEG/PBA, spike capas geo, memos regionales.
+- **Sprint 6 cerrado:** spike CG-25 (`npm run spike:layers`); matriz cobertura 5 regiones; contratos API territorial y PBA; tests piloto 5 deptos.
+- **Sprint 7 cerrado:** `GET /api/crossref/territorial` (ceplan-estrategico) + `GET /api/territories/summary` (ceplan-geo); 2 tools MCP nuevos; validación documentada en `docs/validacion-crossref-territorial-5-regiones-2026-08.md`.
+- **Sprint 8 cerrado:** `GET /api/indicators/seg`, `/execution-efficiency`, `/plan-budget-alignment`; proxy departamental MEF+INFOBRAS; CLI `indicators:regional`; 3 tools MCP nuevos (60 total).
+- **Sprint 9 cerrado:** plantilla memo ALSOL + 6 memos Lambayeque/Piura; preflight PARCIAL documentado; geo verificado (38 y 65 distritos).
+- **Sprint 10 cerrado — Fase 2 ALSOL lista para review:** memos Cajamarca y Cusco; índice comparativo 5 regiones; release checklist; 60 tools MCP; 10 memos regionales + plantilla.
 
 Sesión anterior (2026-08-24):
 
@@ -184,11 +190,14 @@ completo, incluida la limitación de PIM=0 en la muestra de `radar-ejecucion` pa
 - Matriz de cruces: `docs/adr/0005-matriz-de-cruces-ceplan-con-ecosistema-existente.md`
 - Roadmap: `docs/roadmap-ceplan.md`
 
-### Indicadores derivados propuestos (pendientes, no implementados como tal)
-- **Strategic Execution Gap (SEG)**: discrepancias entre gasto y resultado físico
-- **Execution Efficiency**: distinción entre entidades que ejecutan bien vs las que solo gastan
-- **Plan–Budget Alignment**: conexión entre discurso estratégico y asignación real de recursos
-- **Enriquecimiento territorial**: contexto geoespacial para obras e inversiones
+### Indicadores derivados — Fase 2 planificada (Sprints 8–10)
+
+Ver [`docs/PRD_CEPLAN_ALSOL_Fase2_5Regiones_v1.md`](PRD_CEPLAN_ALSOL_Fase2_5Regiones_v1.md):
+
+- **Strategic Execution Gap (SEG)**: nacional CEPLAN (CUMP03−CUMP02) + proxy departamental MEF/INFOBRAS
+- **Execution Efficiency**: ratio avance físico / ejecución presupuestal
+- **Plan–Budget Alignment**: mapeo heurístico dimensión CEPLAN → función MEF por departamento
+- **Enriquecimiento territorial**: cruce `ceplan-estrategico` ↔ `ceplan-geo` por departamento (no per-entidad)
 
 `salud-institucional` (2026-08-20) cubre parcialmente el espíritu de SEG/Execution Efficiency
 con datos reales de 5 fuentes, aunque no usa CEPLAN como insumo — es un índice paralelo, no
@@ -245,7 +254,7 @@ avance (S/2,242.1M devengado / S/4,558.8M PIM), Gobiernos Locales 39.9%
    CEPLAN V.01 vuelve a estar disponible — hoy solo hay datos agregados por nivel de
    gobierno (ver Sprint 1 arriba). `strategic_objectives`/`strategic_actions`/
    `poi_activities`/`physical_targets` siguen sin poblar.
-2. ~~Implementación de `ceplan-geo`~~ — **hecho (API-only, 2026-08-26)**. Spike de capas grandes (`cb_redhidrica`, `cb_proyectos`) pospuesto.
+2. ~~Implementación de `ceplan-geo`~~ — **hecho (API-only, 2026-08-26)**. Spike Fase 2: `cb_redhidricax` POSPONER (345k); `cb_redhidricaprinx` AUTOMATIZABLE; `cb_proyectos` no existe — usar `ip_pry*`.
 3. El resto del PRD de INFOBRAS (sprints 1-6: MCP tools, resolución de identidad avanzada,
    dashboard consolidado) — quedó fuera de alcance de la rebanada construida.
 4. Todas las ingestas de `radar-ejecucion`/`radar-inversiones`/`infobras`/`compras-publicas`

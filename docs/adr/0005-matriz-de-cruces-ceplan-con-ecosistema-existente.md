@@ -266,46 +266,41 @@ Follow the Sol actualmente tiene 4 apps standalone con cruces implementados entr
 
 ### Cruce ceplan-estrategico ↔ ceplan-geo
 
-**Método**: **espacial + entidad** (combinado)
+**Método (revisado 2026-08-26, Fase 2):** `departamento` → prefijo UBIGEO + estadísticas territoriales — **no** `entity_code → ubigeo`
 
-**Propósito**: Conectar objetivos estratégicos con contexto territorial
+**Motivo de la corrección:** ObservaPerú no publica indicadores por entidad ni por departamento; solo buckets GN/GR/MP/MD nacionales. No existe llave para unir un pliego con un polígono distrital.
 
-**Implementación**:
-- **Endpoint**: `GET /api/crossref?entity_code={code}&geo_context=true` en ceplan-estrategico
-- **Llamada a**: `ceplan-geo` API (territorio de la entidad)
-- **Matcher**: entity_code → ubigeo → territorio
+**Propósito:** Adjuntar marco estratégico nacional (CUMP02/CUMP03) al contexto territorial de un departamento piloto (distritos, infraestructura).
 
-**Datos enriquecidos**:
+**Implementación (Sprint 7):**
+- **Endpoint**: `GET /api/crossref/territorial?departamento=` en `ceplan-estrategico`
+- **Llamada a**: `ceplan-geo` API (agregados por departamento)
+- **Matcher**: `departamento_prefijo_ubigeo`
+
+Ver contrato: `docs/data-contracts/ceplan-crossref-territorial-v1.md`
+
+**Datos enriquecidos (ejemplo corregido):**
 ```json
 {
-  "entity": {
-    "entity_code": "123456",
-    "nombre": "Gobierno Regional de La Libertad"
+  "matcher": "departamento_prefijo_ubigeo",
+  "cobertura": "PARCIAL",
+  "departamento": "LA LIBERTAD",
+  "ubigeoPrefijo": "13",
+  "marcoEstrategicoNacional": {
+    "GN": { "CUMP02": 73.7, "CUMP03": 95.1, "segPp": 21.4 }
   },
-  "strategic_objectives": [...],
-  "territory": {
-    "departamento": "La Libertad",
-    "provincia": null,
-    "distrito": null,
-    "ubigeo": "13"
-  },
-  "infrastructure": [
-    {
-      "type": "aeropuerto",
-      "name": "Aeropuerto Cap. FAP Carlos Martínez de Pinillos"
-    },
-    {
-      "type": "puerto",
-      "name": "Puerto de Salaverry"
-    }
-  ]
+  "contextoTerritorial": {
+    "distritos": 83,
+    "infraestructura": { "aeropuerto": 7, "puerto": 1 }
+  }
 }
 ```
 
-**Indicadores derivados**:
-- Objetivos estratégicos por territorio
-- Infraestructura estratégica por territorio
-- Cobertura territorial de objetivos
+~~**Método**: espacial + entidad (combinado)~~ — **obsoleto**; retirado en Fase 2.
+
+**Indicadores derivados (contexto territorial):**
+- Distritos e infraestructura por departamento piloto
+- No implica cobertura de objetivos estratégicos por territorio
 
 ---
 
@@ -322,7 +317,7 @@ Follow the Sol actualmente tiene 4 apps standalone con cruces implementados entr
 | **ceplan-geo** | **infobras** | **espacial (point-in-polygon)** | 🆕 Nuevo |
 | **ceplan-geo** | **radar-inversiones** | **espacial (proximity)** | 🆕 Nuevo |
 | **ceplan-geo** | **radar-ejecucion** | **ubigeo (exacto)** | 🆕 Nuevo |
-| **ceplan-estrategico** | **ceplan-geo** | **entity_code → ubigeo** | 🆕 Nuevo |
+| **ceplan-estrategico** | **ceplan-geo** | **departamento_prefijo_ubigeo** | ✅ Implementado (Sprint 7) |
 
 ---
 
@@ -370,7 +365,7 @@ Nuevos cruces CEPLAN:
 - ceplan-geo → infobras (espacial)
 - ceplan-geo → radar-inversiones (espacial)
 - ceplan-geo → radar-ejecucion (ubigeo)
-- ceplan-estrategico → ceplan-geo (entity_code → ubigeo)
+- ceplan-estrategico → ceplan-geo (departamento_prefijo_ubigeo)
 ```
 
 ---
@@ -401,8 +396,9 @@ Nuevos cruces CEPLAN:
    - Menos urgente que los anteriores
 
 ### Fase 3: Cruce integrador
-6. **ceplan-estrategico ↔ ceplan-geo** (prioridad baja)
-   - Conecta objetivos estratégicos con contexto territorial
+6. **ceplan-estrategico ↔ ceplan-geo** (prioridad baja → **implementado Sprint 7**)
+   - Conecta marco estratégico nacional con contexto territorial departamental (5 regiones piloto)
+   - Endpoint: `GET /api/crossref/territorial?departamento=`
    - Útil para análisis geográfico de prioridades estratégicas
 
 ---

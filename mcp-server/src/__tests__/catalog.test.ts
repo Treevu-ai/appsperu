@@ -5,7 +5,7 @@ import { APP_KEYS } from "../apps.js";
 describe("MCP catalog", () => {
   it("registers ceplan-geo tools for every public GET /api route", () => {
     const ceplanGeoTools = TOOL_CATALOG.filter((tool) => tool.app === "ceplan-geo");
-    expect(ceplanGeoTools).toHaveLength(10);
+    expect(ceplanGeoTools).toHaveLength(11);
     expect(ceplanGeoTools.map((tool) => tool.name).sort()).toEqual(
       [
         "ceplan_geo_crossref_ejecucion",
@@ -18,6 +18,7 @@ describe("MCP catalog", () => {
         "ceplan_geo_layers",
         "ceplan_geo_territories",
         "ceplan_geo_territories_bbox",
+        "ceplan_geo_territories_summary",
       ].sort()
     );
   });

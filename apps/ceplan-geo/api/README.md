@@ -66,4 +66,15 @@ en `territories`, `infrastructure` y `geo_features`.
 
 10 tools MCP registrados en `mcp-server` (`ceplan_geo_*`).
 
+## Sprint 6 — Fase 2 (5 regiones ALSOL)
+
+```bash
+npm run spike:layers          # spike CG-25: capas hidráulica y proyectos (nombres verificados)
+npm run cobertura:geoserver   # verificar conteos por departamento piloto
+```
+
+Departamentos piloto: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO (`src/lib/pilot-departments.ts`).
+
+Documentación Fase 2: `docs/PRD_CEPLAN_ALSOL_Fase2_5Regiones_v1.md`, spike en `docs/spike-ceplan-geo-capas-hidrica-proyectos-2026-08.md`.
+
 Ver `docs/PRD_CEPLAN_Geo_v1.md` y `docs/conectores.md#ceplan-geo`.

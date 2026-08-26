@@ -467,6 +467,48 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
   {
+    name: "ceplan_estrategico_indicators_seg",
+    app: "ceplan-estrategico",
+    description:
+      "SEG (Strategic Execution Gap): nacional CEPLAN (CUMP03−CUMP02, GN/GR) o proxy departamental " +
+      "PROXY_DEPARTAMENTAL (MEF devengado/PIM − avance físico INFOBRAS). Solo 5 regiones piloto ALSOL " +
+      "con ?departamento=. Cobertura parcial.",
+    pathTemplate: "/api/indicators/seg",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      anio: z.string().regex(/^\d{4}$/).optional(),
+    },
+  },
+  {
+    name: "ceplan_estrategico_indicators_execution_efficiency",
+    app: "ceplan-estrategico",
+    description:
+      "Execution Efficiency: nacional CEPLAN (CUMP02/CUMP03, GN/GR) o proxy departamental " +
+      "PROXY_DEPARTAMENTAL (avance físico INFOBRAS / ejecución presupuestal MEF). Solo 5 regiones " +
+      "piloto con ?departamento=. Cobertura parcial.",
+    pathTemplate: "/api/indicators/execution-efficiency",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      anio: z.string().regex(/^\d{4}$/).optional(),
+    },
+  },
+  {
+    name: "ceplan_estrategico_indicators_plan_budget_alignment",
+    app: "ceplan-estrategico",
+    description:
+      "Plan–Budget Alignment departamental (mapeo heurístico CEPLAN dimensión → función MEF v1). " +
+      "Participación % del devengado por dimensión en un departamento piloto. No prueba alineación PEI. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/indicators/plan-budget-alignment",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1),
+      anio: z.string().regex(/^\d{4}$/).optional(),
+    },
+  },
+  {
     name: "ceplan_estrategico_crossref",
     app: "ceplan-estrategico",
     description:
@@ -476,6 +518,17 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathTemplate: "/api/crossref",
     pathParams: [],
     querySchema: {},
+  },
+  {
+    name: "ceplan_estrategico_crossref_territorial",
+    app: "ceplan-estrategico",
+    description:
+      "Cruce ceplan-estrategico <-> ceplan-geo por departamento piloto ALSOL (5 regiones). Adjunta CUMP02/CUMP03 " +
+      "nacionales (GN/GR) con contexto territorial (distritos, infraestructura). Matcher: departamento_prefijo_ubigeo. " +
+      "Cobertura PARCIAL — no implica desempeño estratégico regional.",
+    pathTemplate: "/api/crossref/territorial",
+    pathParams: [],
+    querySchema: { departamento: z.string().min(1) },
   },
 
   // ---- ceplan-geo (GeoServer CEPLAN, territorio e infraestructura) ----
@@ -523,6 +576,16 @@ export const TOOL_CATALOG: ToolSpec[] = [
       provincia: z.string().min(1).optional(),
       distrito: z.string().min(1).optional(),
     },
+  },
+  {
+    name: "ceplan_geo_territories_summary",
+    app: "ceplan-geo",
+    description:
+      "Agregados territoriales por departamento piloto ALSOL (5 regiones): conteo de distritos e infraestructura " +
+      "dentro del polígono departamental. Solo LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO.",
+    pathTemplate: "/api/territories/summary",
+    pathParams: [],
+    querySchema: { departamento: z.string().min(1) },
   },
   {
     name: "ceplan_geo_territories_bbox",
