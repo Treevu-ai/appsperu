@@ -260,6 +260,7 @@ curl "http://localhost:4002/api/investments?departamento=LA%20LIBERTAD"
 
 ## Referencias
 
+- [Resumen ciudadano (1 página)](resumen-ciudadano-sobrecosto-la-libertad-2026-08.md)
 - [Análisis general La Libertad (2026-08)](analisis-la-libertad-2026-08.md)
 - [Desarrollo económico La Libertad (2026-08)](analisis-la-libertad-desarrollo-economico-2026-08.md)
 - [Contrato de datos Invierte.pe](data-contracts/invierte-detalle-inversiones.md)
