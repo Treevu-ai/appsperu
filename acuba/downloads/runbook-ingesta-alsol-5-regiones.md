@@ -388,6 +388,17 @@ Plantilla de evidencia en memo:
 | radar-ejecucion | COMPLETA_VERIFICADA | JSON `seccionesSinDatos: []`; log mef-pilot |
 ```
 
+### 8.2 Plantilla de memos — decisión de producto
+
+Los cinco memos (`docs/analisis-{depto}-2026-08.md`) pueden seguir dos rutas. Producto debe elegir una antes de cerrar Sprint 6:
+
+| Opción | Base | Cuándo usar |
+|---|---|---|
+| **A — Plantilla v1** | `docs/plantilla-memo-regional-alsol-v1.md` | Memos ya redactados (Lambayeque, Piura, Cajamarca, Cusco) siguen esta estructura narrativa + tablas preflight |
+| **B — Evidencia runbook v2** | §8.1 + §11 de este documento | Priorizar trazabilidad: cada afirmación con log/SQL/fecha; menos narrativa hasta cerrar INFOBRAS local |
+
+**Recomendación datos:** Opción A para contenido público (LinkedIn); añadir bloque de evidencia §11 al final de cada memo sin reescribir el cuerpo.
+
 ---
 
 ## 9. Definición de terminado
