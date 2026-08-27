@@ -8,11 +8,11 @@ Primer memo ALSOL Fase 2 para **Piura** (UBIGEO `20`), plantilla
 | Dimensión | Estado preflight | Hallazgo principal |
 |---|---|---|
 | Territorio (ceplan-geo) | ✅ COMPLETA_VERIFICADA | 65 distritos; 3 aeropuertos; **0 puertos** en polígonos distritales |
-| Ejecución MEF | ⏸ PENDIENTE_INGESTA | Sin corrida terminal |
-| Obras INFOBRAS | ⏸ PENDIENTE_INGESTA | — |
-| Inversiones Invierte | ⏸ PENDIENTE_INGESTA | — |
+| Ejecución MEF | ✅ COMPLETA_VERIFICADA | GR 55.7%, GL 44.5% — re-corrida 2026-08-26 (16/16 secciones + meta GN) |
+| Obras INFOBRAS | ⏸ BLOQUEADO_EGRESS | Reintento 26-08 22:38 UTC: curl code 28 (timeout) tras 6 intentos hacia Contraloría |
+| Inversiones Invierte | ✅ COMPLETA_VERIFICADA | 7,402 proyectos; 49.5% sobrecosto; 9.1% cartera productiva |
 | Marco CEPLAN | ✅ NACIONAL | GN/GR agregado |
-| **Preflight global** | **🟡 PARCIAL** | Geo + marco nacional únicamente |
+| **Preflight global** | **🟡 PARCIAL** | MEF + Invierte verificados; INFOBRAS pendiente |
 
 **Lectura preliminar:** Piura es el departamento más extenso del piloto costero (65 distritos) y
 muestra **mayor conectividad aérea relativa** (3 aeropuertos) pero **sin puerto registrado** en
@@ -26,9 +26,9 @@ puerto mayor o límite de capa (Paita/San Andrés pueden quedar fuera del políg
 | Fuente | Estado | Evidencia |
 |---|---|---|
 | ceplan-geo | ✅ | 65 distritos (2026-08-26) |
-| radar-ejecucion | ⏸ | `MEF_DEPARTAMENTO=PIURA npm run ingest:mef` |
-| infobras | ⏸ | `INFOBRAS_DEPARTAMENTOS=PIURA npm run ingest:infobras` |
-| radar-inversiones | ⏸ | `INVIERTE_DEPARTAMENTOS=PIURA npm run ingest:invierte:full` |
+| radar-ejecucion | ✅ | GR 55.7%, GL 44.5% (2026-08-26) |
+| infobras | ⏸ | curl 28 (timeout) en cloud agent 26-08 22:38 UTC |
+| radar-inversiones | ✅ | 7,402 proyectos; corrida full 2026-08-26 |
 
 ```sql
 SELECT departamento, COUNT(*) FROM territories WHERE departamento = 'PIURA';
@@ -37,19 +37,17 @@ SELECT departamento, COUNT(*) FROM territories WHERE departamento = 'PIURA';
 
 ---
 
-## 2. Ejecución presupuestal — pendiente
-
-Tabla a completar tras ingesta MEF (año fiscal 2026):
+## 2. Ejecución presupuestal (verificado 2026-08-26)
 
 | Nivel | PIM | Devengado | Avance % |
 |---|---|---|---|
-| Gobierno Regional Piura | — | — | — |
-| Gobiernos Locales | — | — | — |
+| Gobierno Regional Piura | S/ 4,694.0M | S/ 2,613.0M | **55.7%** |
+| Gobiernos Locales (65 distritos) | S/ 2,771.2M | S/ 1,232.5M | **44.5%** |
 
-**Comparación referencia La Libertad (2026-08-18):** GR 49.2%, GL 39.9%.
+**Comparación La Libertad (misma fuente):** GR 49.2%, GL 41.2%.
 
-Piura enfrenta históricamente **fenómenos El Niño** que afectan ritmo de obra — al cerrar ingesta,
-segmentar causales de paralización en INFOBRAS será crítico para no mezclar gestión y clima.
+Piura muestra el **mayor avance regional del piloto** (55.7% GR) con rezago municipal similar
+(~11 pp). Al cerrar INFOBRAS, segmentar causales de paralización será crítico por fenómenos El Niño.
 
 ---
 
@@ -59,9 +57,13 @@ Referencia La Libertad: 2.5% paralizadas; clima + contrato entre causales top.
 
 ---
 
-## 4. Inversiones — pendiente
+## 4. Inversiones (verificado 2026-08-26)
 
-Referencia La Libertad: 40.8% proyectos con sobrecosto.
+- **7,402** proyectos activos en Piura.
+- **49.5%** con sobrecosto (costo actualizado > monto viable) — el más alto del piloto costero.
+- Cartera productiva directa (agro/comercio/turismo/pesca): **9.1%** del total (673 proyectos).
+
+Referencia La Libertad: 39.4% sobrecosto; 7.5% cartera productiva.
 
 ---
 

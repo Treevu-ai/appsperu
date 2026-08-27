@@ -1,0 +1,16 @@
+name: seguridad-ciudadana
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: seguridad
+      POSTGRES_PASSWORD: seguridad
+      POSTGRES_DB: seguridad_ciudadana
+    ports:
+      - "127.0.0.1:5441:5432"
+    volumes:
+      - seguridad_pgdata:/var/lib/postgresql/data
+
+volumes:
+  seguridad_pgdata:

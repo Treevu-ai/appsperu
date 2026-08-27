@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "migrate": "tsx src/db/migrate.ts",
     "ingest:jornal": "tsx src/ingest/jornal-agricola-connector.ts",
+    "coverage:actividad-agraria": "tsx src/ingest/materialize-coverage.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { spawn } from "node:child_process";
 import { createReadStream, createWriteStream } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -15,11 +16,27 @@ import { normalizeInfobrasRows } from "./normalize.js";
 const DATASETS_URL = "https://infobras.contraloria.gob.pe/InfobrasWeb/DataSets";
 const DOWNLOAD_HREF_RE = /href=["']([^"']*\/Archivo\/DownloadFile\?[^"']*filename=DataSet-Obras-Publicas(?:%20|\s)[^"']*)["']/i;
 
-const MAX_ATTEMPTS = 4;
-const BASE_BACKOFF_MS = 2000;
+const MAX_ATTEMPTS = 6;
+const BASE_BACKOFF_MS = 3000;
+const FETCH_TIMEOUT_MS = 120_000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function downloadWithCurl(url: string, destPath: string): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const proc = spawn(
+      "curl",
+      ["-sL", "--connect-timeout", "60", "--max-time", "600", "-o", destPath, url],
+      { stdio: "ignore" }
+    );
+    proc.on("error", reject);
+    proc.on("close", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`curl devolvió código ${code ?? "desconocido"}`));
+    });
+  });
 }
 
 /**
@@ -28,14 +45,37 @@ function sleep(ms: number): Promise<void> {
  * con JSON { error: "No existe el archivo" }, que antes terminaba siendo un
  * `FILE_ENDED` poco explicativo al intentar abrirlo como XLSX.
  */
-async function currentDownloadUrl(): Promise<string> {
-  const page = await fetch(DATASETS_URL);
-  if (!page.ok) throw new Error(`INFOBRAS devolvió ${page.status} al consultar Datos Abiertos`);
+async function fetchDatasetsHtml(): Promise<string> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    try {
+      if (attempt <= 3) {
+        const page = await fetch(DATASETS_URL, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+        if (!page.ok) throw new Error(`INFOBRAS devolvió ${page.status} al consultar Datos Abiertos`);
+        return await page.text();
+      }
+      const tmpPage = `${tmpdir()}/infobras-datasets-${Date.now()}.html`;
+      await downloadWithCurl(DATASETS_URL, tmpPage);
+      const { readFile } = await import("node:fs/promises");
+      const html = await readFile(tmpPage, "utf8");
+      await rm(tmpPage, { force: true });
+      return html;
+    } catch (err) {
+      lastError = err;
+      if (attempt < MAX_ATTEMPTS) await sleep(BASE_BACKOFF_MS * 2 ** (attempt - 1));
+    }
+  }
+  throw new Error(
+    `No se pudo leer página de INFOBRAS tras ${MAX_ATTEMPTS} intentos: ${
+      lastError instanceof Error ? lastError.message : lastError
+    }`
+  );
+}
 
-  const html = await page.text();
+async function currentDownloadUrl(): Promise<string> {
+  const html = await fetchDatasetsHtml();
   const match = DOWNLOAD_HREF_RE.exec(html);
   if (!match) throw new Error("INFOBRAS no publicó un enlace vigente para el dataset de Obras Públicas");
-
   return new URL(match[1].replaceAll("&amp;", "&"), DATASETS_URL).toString();
 }
 
@@ -47,26 +87,31 @@ async function currentDownloadUrl(): Promise<string> {
  */
 export async function downloadInfobrasXlsx(destPath: string): Promise<void> {
   let lastError: unknown;
+  const url = await currentDownloadUrl();
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     try {
-      const res = await fetch(await currentDownloadUrl());
-      if (!res.ok || !res.body) {
-        throw new Error(`INFOBRAS devolvió ${res.status} al descargar el dataset`);
+      if (attempt <= 3) {
+        const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+        if (!res.ok || !res.body) {
+          throw new Error(`INFOBRAS devolvió ${res.status} al descargar el dataset`);
+        }
+        const contentType = res.headers.get("content-type")?.toLowerCase() ?? "";
+        if (contentType.includes("application/json") || contentType.includes("text/html")) {
+          const detail = (await res.text()).slice(0, 240);
+          throw new Error(`INFOBRAS no entregó un XLSX (${contentType}): ${detail}`);
+        }
+        const fileStream = createWriteStream(destPath);
+        await new Promise<void>((resolve, reject) => {
+          const nodeStream = Readable.fromWeb(res.body as import("node:stream/web").ReadableStream);
+          nodeStream.pipe(fileStream);
+          nodeStream.on("error", reject);
+          fileStream.on("finish", resolve);
+          fileStream.on("error", reject);
+        });
+      } else {
+        await downloadWithCurl(url, destPath);
       }
-      const contentType = res.headers.get("content-type")?.toLowerCase() ?? "";
-      if (contentType.includes("application/json") || contentType.includes("text/html")) {
-        const detail = (await res.text()).slice(0, 240);
-        throw new Error(`INFOBRAS no entregó un XLSX (${contentType}): ${detail}`);
-      }
-      const fileStream = createWriteStream(destPath);
-      await new Promise<void>((resolve, reject) => {
-        const nodeStream = Readable.fromWeb(res.body as import("node:stream/web").ReadableStream);
-        nodeStream.pipe(fileStream);
-        nodeStream.on("error", reject);
-        fileStream.on("finish", resolve);
-        fileStream.on("error", reject);
-      });
       return;
     } catch (err) {
       lastError = err;
@@ -364,7 +409,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       ? normalizeDepartamentoScope(process.env.INFOBRAS_DEPARTAMENTO)
       : parseDepartamentoScope();
 
-  ingestInfobrasPublicWorks({ departamentos })
+  const filePath = process.env.INFOBRAS_XLSX_PATH?.trim() || undefined;
+  if (filePath) {
+    console.log(`Usando XLSX local: ${filePath}`);
+  }
+
+  ingestInfobrasPublicWorks({ departamentos, filePath })
     .then((summary) => {
       console.log("Ingesta de INFOBRAS completada:", summary);
       return Promise.all([pool.end(), ejecucionPool.end()]);

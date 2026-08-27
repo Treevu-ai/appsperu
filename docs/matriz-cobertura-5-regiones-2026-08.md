@@ -1,56 +1,54 @@
-# Matriz de cobertura territorial — 5 regiones ALSOL (AL2-02)
+# Matriz de cobertura territorial — La Libertad ALSOL (AL2-02)
 
 **Fecha:** 2026-08-26  
-**Alcance:** LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO  
+**Alcance:** LA LIBERTAD (único departamento en scope del proyecto)  
 **Leyenda:** ✅ verificado en corrida documentada · 🟡 parcial / CLI listo sin corrida terminal · ⏸ pendiente corrida · N/A no aplica territorialmente
+
+> **Nota de alcance (2026-08-26):** el sprint se redujo a La Libertad. Lambayeque, Piura, Cajamarca y Cusco quedan fuera de scope; sus memos de análisis se conservan como histórico en `docs/analisis-{depto}-2026-08.md` pero no se actualizan.
 
 ## Resumen ejecutivo
 
 | Departamento | UBIGEO | Distritos (ceplan-geo) | Estado global |
 |---|---:|---:|---|
-| LA LIBERTAD | 13 | 83 | ✅ Referencia — validación 2026-08-26 |
-| LAMBAYEQUE | 14 | 38 | 🟡 Conector admite filtro; falta corrida terminal MEF+INFOBRAS+Invierte |
-| PIURA | 20 | 65 | 🟡 Idem |
-| CAJAMARCA | 06 | 127 | 🟡 Idem |
-| CUSCO | 08 | 112 | 🟡 Idem |
-
-**ceplan-geo** tiene cobertura **nacional** de distritos (1,874); los cinco departamentos piloto suman **425 distritos** verificables vía SQL.
+| LA LIBERTAD | 13 | 83 | ✅ MEF re-corrida 2026-08-26 (16/16 + meta GN) |
 
 ## Matriz app × departamento
 
-| App / Fuente | LA LIBERTAD | LAMBAYEQUE | PIURA | CAJAMARCA | CUSCO | Notas |
-|---|---|---|---|---|---|---|
-| **ceplan-geo** (distritos WFS) | ✅ 83 | ✅ 38 | ✅ 65 | ✅ 127 | ✅ 112 | Ingesta nacional; dept verificado en `cobertura:geoserver` |
-| **radar-ejecucion** (MEF) | ✅ offsets LL | ⏸ | ⏸ | ⏸ | ⏸ | LL verificado 2026-08-24; otras regiones requieren validar offsets/rangos |
-| **radar-inversiones** (Invierte) | ✅ 5 rangos | ⏸ | ⏸ | ⏸ | ⏸ | `INVIERTE_DEPARTAMENTOS` admite las 5; corrida full pendiente fuera de LL |
-| **infobras** | ✅ ~10k obras | ⏸ | ⏸ | ⏸ | ⏸ | XLSX nacional; filtro dept en CLI; corrida persistente solo LL verificada |
-| **compras-publicas** (OECE) | 🟡 ventana 10 págs | 🟡 | 🟡 | 🟡 | 🟡 | `OECE_DEPARTAMENTOS` admite las 5; no corrida terminal nacional |
-| **ceplan-estrategico** | N/A | N/A | N/A | N/A | N/A | Indicadores nacionales GN/GR — sin llave departamental |
-| **identidad-fiscal** | ✅ nacional | ✅ | ✅ | ✅ | ✅ | Padrón RUC nacional; cruce territorial vía compras/ejecución |
-| **proveedores-sancionados** | ✅ nacional | ✅ | ✅ | ✅ | ✅ | Fuente nacional |
-| **salud-institucional** | ✅ score LL | ⏸ | ⏸ | ⏸ | ⏸ | Default histórico LL; requiere capas mínimas por dept |
+| App / Fuente | LA LIBERTAD | Notas |
+|---|---|---|
+| **ceplan-geo** (distritos WFS) | ✅ 83 | Ingesta nacional; dept verificado en `cobertura:geoserver` |
+| **radar-ejecucion** (MEF) | ✅ re-corrida | `ingest:mef:pilot` — 0 seccionesSinDatos LL (26-08 22:34 UTC, 2ª corrida) |
+| **radar-inversiones** (Invierte) | ✅ full | Corrida `ingest:invierte:full` 2026-08-26 |
+| **infobras** | ✅ 10,134 obras | Ingesta local completa confirmada 2026-08-26 (178,638 obras totales en BD, 10,134 en La Libertad) |
+| **compras-publicas** (OECE) | ✅ 1,332+9,920+795+2,829 | Awards+Bidders+Releases+SEACE menores, todos `COMPLETA_VERIFICADA` |
+| **ceplan-estrategico** | N/A | Indicadores nacionales GN/GR — sin llave departamental, `NO_APLICA` por diseño |
+| **identidad-fiscal** | ✅ 106,918 contribuyentes | Padrón RUC nacional (SUNAT); certificado 2026-08-27 vía `coverage:identidad-fiscal` |
+| **proveedores-sancionados** | ✅ certificado | RNP nacional (RUC, sin UBIGEO propio); cruce por RUC contra identidad-fiscal, certificado 2026-08-27 vía `coverage:proveedores-sancionados` |
+| **actividad-agraria** | ✅ 108 registros | Serie MIDAGRI jornal agrícola mensual; certificado 2026-08-27 vía `coverage:actividad-agraria` |
+| **salud-institucional** | ✅ 5/5 componentes | Score derivado (sin base propia); certificado 2026-08-27 — las 5 fuentes de las que depende están verificadas, vía `coverage:salud-institucional` |
+| **seguridad-ciudadana** (nueva, 2026-08-27) | ✅ 21,902 filas | SIDPOL (MININTER), denuncias policiales por distrito/mes/modalidad, 2018-2026. 381,718 denuncias acumuladas en La Libertad. Certificado vía `coverage:seguridad-ciudadana` |
 
 ## Comandos de preflight (AL2-03)
 
 ```bash
-# 1. Geo — nacional (incluye los 5 deptos en reporte)
+# 1. Geo — nacional (incluye La Libertad en reporte)
 cd apps/ceplan-geo/api && npm run cobertura:geoserver
 
-# 2. MEF — por departamento (validar offsets antes de cada región nueva)
+# 2. MEF
 cd apps/radar-ejecucion/api
-MEF_DEPARTAMENTO=LAMBAYEQUE npm run ingest:mef
+MEF_DEPARTAMENTO="LA LIBERTAD" npm run ingest:mef
 
-# 3. INFOBRAS — multirregional
+# 3. INFOBRAS
 cd apps/infobras/api
-INFOBRAS_DEPARTAMENTOS=LAMBAYEQUE,PIURA,CAJAMARCA,CUSCO npm run ingest:infobras
+npm run ingest:infobras
 
-# 4. Invierte — corrida completa por departamento
+# 4. Invierte — corrida completa
 cd apps/radar-inversiones/api
-INVIERTE_DEPARTAMENTOS=LAMBAYEQUE npm run ingest:invierte:full
+INVIERTE_DEPARTAMENTOS="LA LIBERTAD" npm run ingest:invierte:full
 
-# 5. Cobertura terminal (radar-ejecucion)
+# 5. Cobertura terminal (radar-ejecucion) — verifica TODAS las apps registradas
 cd apps/radar-ejecucion/api
-npm run cobertura:territorial -- --jurisdiccion LAMBAYEQUE
+npm run cobertura:territorial -- --jurisdiccion "LA LIBERTAD" --require-complete
 ```
 
 ## Puerta Sprint 6
@@ -59,7 +57,8 @@ npm run cobertura:territorial -- --jurisdiccion LAMBAYEQUE
 |---|---|
 | Matriz publicada | ✅ este documento |
 | Spike geo cerrado | ✅ `docs/spike-ceplan-geo-capas-hidrica-proyectos-2026-08.md` |
-| ≥ 2 deptos nuevos con MEF+INFOBRAS | ⏸ requiere entorno local con Docker + acceso fuentes |
+| La Libertad — MEF+INFOBRAS+Invierte | ✅ los tres verificados 2026-08-26 |
+| La Libertad — las 8 apps aplicables | ✅ `cobertura:territorial --require-complete` sale exit 0 (2026-08-27) |
 | La Libertad sin regresión | ✅ baseline 2026-08-26 |
 
-**Nota:** Las corridas de ingesta pesada (MEF, INFOBRAS XLSX) deben ejecutarse en entorno local con Docker; este documento fija el plan y comandos; las celdas ⏸ se actualizan al cerrar cada corrida.
+**Nota:** MEF re-corrida 2026-08-26 22:34 UTC (2ª corrida) confirma 0 `seccionesSinDatos` para La Libertad. INFOBRAS ingestado localmente y verificado por SQL: 10,134 obras para La Libertad. **2026-08-27:** se construyeron y corrieron los scripts de materialización de cobertura faltantes para `identidad-fiscal`, `proveedores-sancionados`, `actividad-agraria` y `salud-institucional` (antes `BLOQUEADA` por falta de certificación, no por falta de datos) — las 8 apps aplicables a La Libertad quedan `COMPLETA_VERIFICADA`; solo `ceplan-estrategico` permanece `NO_APLICA` por diseño (sin llave geográfica departamental).

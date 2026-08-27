@@ -3,7 +3,7 @@ import { TERRITORIAL_APP_CATALOG, summarizeAppCoverage } from '../coverage/app-c
 
 describe('territorial app catalog', () => {
   it('declares all ALSOL applications and never treats an unrun app as covered', () => {
-    expect(TERRITORIAL_APP_CATALOG).toHaveLength(9);
+    expect(TERRITORIAL_APP_CATALOG).toHaveLength(10);
     expect(summarizeAppCoverage({ app: 'infobras', rows: [] })).toEqual({
       app: 'infobras', state: 'BLOQUEADA', coverage_claimable: false,
     });

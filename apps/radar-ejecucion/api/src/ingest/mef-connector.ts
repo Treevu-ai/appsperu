@@ -6,6 +6,8 @@ import { pool } from "../db/pool.js";
 import { refreshBudgetCoverageSnapshots } from "../db/budget-coverage.js";
 import { CONFIRMED_MEF_FIELD_MAPPING, type MefFieldMapping } from "./field-mapping.js";
 import { normalizeMefRows, normalizeMefProyectos } from "./normalize.js";
+import { PILOT_DEPARTMENT_UBIGEO, type PilotDepartmentName } from "../lib/pilot-departments.js";
+import { SECTION_NIVEL_MES_BOUNDS, departamentoSectionWindow, type SectionBounds } from "./mef-section-bounds.js";
 
 const FILES_BASE_URL = "https://fs.datosabiertos.mef.gob.pe/datastorefiles";
 
@@ -48,57 +50,113 @@ const DEFAULT_MAX_BYTES = 25 * 1024 * 1024; // 25 MB — suficiente para una mue
  * Gobierno Nacional no se mapeó (no hay entidades con sede en La Libertad en
  * ese nivel — ver execution.ts, "gasto nacional dirigido a X" es un
  * concepto aparte, filtrado por DEPARTAMENTO_META, no por sede).
+ * Offsets LA LIBERTAD y ventanas por departamento: ver `mef-section-bounds.ts`.
  */
-const SECTION_OFFSETS_LA_LIBERTAD: Record<string, Record<string, number>> = {
-  "GOBIERNOS REGIONALES": {
-    "7": 120_000_000,
-    "6": 320_000_000,
-    "5": 500_000_000,
-    "4": 680_000_000,
-    "3": 840_000_000,
-    "2": 984_000_000,
-    "1": 1_112_000_000,
-    "0": 1_368_000_000,
-  },
-  "GOBIERNOS LOCALES": {
-    "7": 1_760_000_000,
-    "6": 2_150_000_000,
-    "5": 2_525_000_000,
-    "4": 2_900_000_000,
-    "3": 3_275_000_000,
-    "2": 3_605_000_000,
-    "1": 3_875_000_000,
-    "0": 4_415_000_000,
-  },
-};
-// Cada offset es un punto DENTRO del bloque del departamento, no
-// necesariamente su inicio — se retrocede 20 MB para no perder el arranque
-// del bloque, y se piden 60 MB en total (el bloque observado de La Libertad
-// dentro de un mes ronda 30-40 MB).
-const SECTION_LOOKBACK_BYTES = 20 * 1024 * 1024;
-const SECTION_WINDOW_BYTES = 60 * 1024 * 1024;
 
 function checksumOf(text: string): string {
   return createHash("sha256").update(text).digest("hex");
 }
 
-async function fetchRange(url: string, start: number, end: number): Promise<string> {
-  const res = await fetch(url, { headers: { Range: `bytes=${start}-${end}` } });
-  if (!res.ok && res.status !== 206) {
-    throw new Error(`MEF devolvió ${res.status} al pedir bytes=${start}-${end}`);
+async function fetchRange(url: string, start: number, end: number, attempts = 4): Promise<string> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const res = await fetch(url, { headers: { Range: `bytes=${start}-${end}` } });
+      if (!res.ok && res.status !== 206) {
+        throw new Error(`MEF devolvió ${res.status} al pedir bytes=${start}-${end}`);
+      }
+      return res.text();
+    } catch (err) {
+      lastError = err;
+      if (attempt < attempts) await new Promise((r) => setTimeout(r, 2000 * 2 ** (attempt - 1)));
+    }
   }
-  return res.text();
+  throw lastError;
+}
+
+const SECTION_SCAN_CHUNK_BYTES = 25 * 1024 * 1024;
+
+let cachedHeaderLine: string | null = null;
+
+async function fetchMefHeaderLine(filename: string): Promise<string> {
+  if (cachedHeaderLine) return cachedHeaderLine;
+  const headerChunk = await fetchRange(`${FILES_BASE_URL}/${filename}`, 0, 4095);
+  cachedHeaderLine = headerChunk.slice(0, headerChunk.indexOf("\n"));
+  return cachedHeaderLine;
 }
 
 /**
- * Descarga un prefijo acotado (`maxBytes`) del CSV vía HTTP Range y lo
- * parsea. Cuando `startByte` es 0 (default), el rango arranca en el header
- * real del archivo. Cuando `startByte` > 0 (para saltar a una sección del
- * archivo que no empieza en el byte 0, ej. un departamento específico), el
- * header se pide aparte y se antepone — sin él, csv-parse no sabría a qué
- * columna corresponde cada valor. La primera y última línea del rango de
- * datos pueden quedar cortadas a la mitad — se descartan antes de parsear.
+ * Recorre una sección GR/GL en chunks de 25 MB, filtra líneas por nombre de
+ * departamento ejecutor y parsea solo el subconjunto — evita OOM y no depende
+ * de offsets dept-específicos (salvo LA LIBERTAD, que puede usar ventana angosta).
  */
+async function fetchDepartamentoRowsInSection(
+  filename: string,
+  bounds: SectionBounds,
+  mesEje: string,
+  departamento: string,
+  nivelGobierno: string,
+  mapping: MefFieldMapping
+): Promise<Record<string, unknown>[]> {
+  const url = `${FILES_BASE_URL}/${filename}`;
+  const dept = departamento.toUpperCase().trim();
+  const headerLine = await fetchMefHeaderLine(filename);
+  const lineNeedles = ejecutoraLineNeedles(dept, nivelGobierno);
+  const matchedLines: string[] = [];
+
+  for (let start = bounds.start; start < bounds.end; start += SECTION_SCAN_CHUNK_BYTES) {
+    const end = Math.min(bounds.end - 1, start + SECTION_SCAN_CHUNK_BYTES - 1);
+    let text = "";
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        text = await fetchRange(url, start, end);
+        break;
+      } catch (err) {
+        if (attempt === 3) throw err;
+        await new Promise((r) => setTimeout(r, 1500 * attempt));
+      }
+    }
+    if (start > bounds.start) {
+      const firstNl = text.indexOf("\n");
+      if (firstNl >= 0) text = text.slice(firstNl + 1);
+    }
+    const lastNl = text.lastIndexOf("\n");
+    if (lastNl > 0) text = text.slice(0, lastNl);
+
+    for (const line of text.split("\n")) {
+      if (lineNeedles.every((n) => line.includes(n))) matchedLines.push(line);
+    }
+  }
+
+  if (matchedLines.length === 0) return [];
+
+  const csvText = `${headerLine}\n${matchedLines.join("\n")}`;
+  const rows = parse(csvText, {
+    columns: true,
+    skip_empty_lines: true,
+    trim: true,
+    relax_column_count: true,
+  }) as Record<string, unknown>[];
+
+  return rows.filter(
+    (r) =>
+      String(r.MES_EJE ?? "").trim() === mesEje &&
+      String(r[mapping.departamentoNombre] ?? "").toUpperCase().trim() === dept
+  );
+}
+
+function ejecutoraLineNeedles(departamento: string, nivelGobierno: string): string[] {
+  const dept = departamento.toUpperCase().trim();
+  if (nivelGobierno === "GOBIERNOS REGIONALES") {
+    return [`"${nivelGobierno}"`, `"${dept}"`];
+  }
+  const ubigeo = PILOT_DEPARTMENT_UBIGEO[dept as PilotDepartmentName];
+  if (nivelGobierno === "GOBIERNOS LOCALES" && ubigeo) {
+    return [`"${nivelGobierno}"`, `","${ubigeo}","${dept}","`];
+  }
+  return [`"${nivelGobierno}"`, `"${dept}"`];
+}
+
 export async function fetchMefCsv(
   filename: string,
   maxBytes: number = DEFAULT_MAX_BYTES,
@@ -408,8 +466,11 @@ export interface FullYearIngestSummary {
 }
 
 /**
- * Ingesta comprensiva para un departamento (hoy solo tiene offsets
- * conocidos para LA LIBERTAD, ver `SECTION_OFFSETS_LA_LIBERTAD`): descarga
+ * Ingesta comprensiva para un departamento ejecutor (GR/GL): descarga cada
+ * sección (nivel × mes) completa vía `SECTION_NIVEL_MES_BOUNDS`, filtra por
+ * `DEPARTAMENTO_EJECUTORA_NOMBRE` y agrega PIA/PIM/devengado. Funciona para
+ * cualquier departamento del archivo, no solo LA LIBERTAD (offsets dept-específicos
+ * en `SECTION_OFFSETS_LA_LIBERTAD` quedan como referencia histórica).
  * las 16 secciones (8 meses × 2 niveles de gobierno), junta TODAS las filas
  * crudas de ese departamento en un solo array, y recién ahí llama a
  * `normalizeMefRows` UNA vez — así el devengado de los 8 meses se SUMA
@@ -426,22 +487,51 @@ export async function ingestMefFullYearForDepartamento(
   mapping: MefFieldMapping = CONFIRMED_MEF_FIELD_MAPPING
 ): Promise<FullYearIngestSummary> {
   const wantedDepartamento = ejecutoraDepartamento.toUpperCase().trim();
-  const offsetsByNivel = SECTION_OFFSETS_LA_LIBERTAD;
+  const boundsByNivel = SECTION_NIVEL_MES_BOUNDS;
 
   const batchIds: number[] = [];
   const seccionesSinDatos: string[] = [];
   const allRecords: Record<string, unknown>[] = [];
 
-  for (const [nivelGobierno, mesOffsets] of Object.entries(offsetsByNivel)) {
-    for (const [mesEje, approxByte] of Object.entries(mesOffsets)) {
-      const startByte = Math.max(0, approxByte - SECTION_LOOKBACK_BYTES);
-      const { rows: fetchedRecords, rawText } = await fetchMefCsv(filename, SECTION_WINDOW_BYTES, startByte);
+  for (const [nivelGobierno, mesBounds] of Object.entries(boundsByNivel)) {
+    for (const [mesEje, bounds] of Object.entries(mesBounds)) {
+      const resourceId = `${filename}#nivel=${nivelGobierno}#mes=${mesEje}#ejecutora=${wantedDepartamento}#scan-v6`;
 
-      const records = fetchedRecords.filter(
-        (r) =>
-          String(r.MES_EJE ?? "").trim() === mesEje &&
-          String(r[mapping.departamentoNombre] ?? "").toUpperCase().trim() === wantedDepartamento
-      );
+      const cached = await loadCachedRows(resourceId);
+      if (cached) {
+        console.log(`  [cache] ${nivelGobierno}/mes=${mesEje}: ${cached.rows.length} filas de ${wantedDepartamento}`);
+        batchIds.push(cached.id);
+        allRecords.push(...cached.rows);
+        continue;
+      }
+
+      let records: Record<string, unknown>[] = [];
+      if (wantedDepartamento === "LA LIBERTAD") {
+        const { startByte, maxBytes } = departamentoSectionWindow(
+          nivelGobierno,
+          mesEje,
+          bounds,
+          wantedDepartamento
+        );
+        const { rows: fetchedRecords } = await fetchMefCsv(filename, maxBytes, startByte);
+        records = fetchedRecords.filter(
+          (r) =>
+            String(r.MES_EJE ?? "").trim() === mesEje &&
+            String(r[mapping.departamentoNombre] ?? "").toUpperCase().trim() === wantedDepartamento
+        );
+      }
+      if (records.length === 0) {
+        console.log(`  [scan] ${nivelGobierno}/mes=${mesEje}: buscando ${wantedDepartamento} en sección...`);
+        records = await fetchDepartamentoRowsInSection(
+          filename,
+          bounds,
+          mesEje,
+          wantedDepartamento,
+          nivelGobierno,
+          mapping
+        );
+        console.log(`  [scan] ${nivelGobierno}/mes=${mesEje}: ${records.length} filas`);
+      }
 
       if (records.length === 0) {
         seccionesSinDatos.push(`${nivelGobierno}/mes=${mesEje}`);
@@ -450,12 +540,7 @@ export async function ingestMefFullYearForDepartamento(
 
       const client = await pool.connect();
       try {
-        const batchId = await saveRawBatch(
-          client,
-          `${filename}#nivel=${nivelGobierno}#mes=${mesEje}`,
-          rawText,
-          records.length
-        );
+        const batchId = await saveFilteredBatch(client, resourceId, records);
         batchIds.push(batchId);
       } finally {
         client.release();
@@ -467,9 +552,8 @@ export async function ingestMefFullYearForDepartamento(
 
   if (allRecords.length === 0) {
     throw new Error(
-      `No se encontró ninguna fila de "${ejecutoraDepartamento}" en ninguna de las 16 secciones configuradas. ` +
-        `Los offsets de SECTION_OFFSETS_LA_LIBERTAD pueden haber quedado desactualizados — ` +
-        `hay que volver a escanear el archivo.`
+      `No se encontró ninguna fila de "${ejecutoraDepartamento}" en ninguna de las 16 secciones GR/GL. ` +
+        `Verificar nombre del departamento o si SECTION_NIVEL_MES_BOUNDS quedó desactualizado.`
     );
   }
 
@@ -481,6 +565,16 @@ export async function ingestMefFullYearForDepartamento(
   try {
     await client.query("BEGIN");
     for (const row of rows) {
+      if (row.ubigeo) {
+        await upsertTerritoryFromMef(
+          client,
+          row.ubigeo,
+          row.departamentoNombre,
+          row.provinciaNombre,
+          row.distritoNombre
+        );
+      }
+      await upsertEntity(client, row.entityCode, row.entityName, row.nivelGobierno, row.ubigeo);
       await client.query(
         `INSERT INTO budget_execution
            (entity_code, funcion, anio_fiscal, pia, pim, devengado, fecha_corte, source_batch_id, meta_departamento, generica, generica_nombre)
@@ -581,37 +675,26 @@ const NACIONAL_FILE_END_BYTE = 6_240_885_549;
  * terminadas externamente entre los 10 y 15 minutos, mucho antes de
  * completar las 8 secciones).
  */
-async function loadCachedSection(
-  resourceId: string,
-  mesEje: string,
-  mapping: MefFieldMapping,
-  wantedMetaDepartamento: string
-): Promise<{ id: number; rows: Record<string, unknown>[] } | null> {
+async function loadCachedRows(resourceId: string): Promise<{ id: number; rows: Record<string, unknown>[] } | null> {
   const { rows } = await pool.query<{ id: number; payload: { rows?: Record<string, unknown>[]; csv?: string } }>(
     `SELECT id, payload FROM raw_mef_batches WHERE resource_id = $1 ORDER BY fetched_at DESC LIMIT 1`,
     [resourceId]
   );
   if (rows.length === 0) return null;
 
-  // Compatibilidad con lotes guardados antes de `saveFilteredBatch`
-  // (formato viejo: CSV crudo sin filtrar completo — ver el comentario de
-  // esa función sobre por qué se cambió el formato para mes=0).
   if (rows[0].payload.rows) {
     return { id: rows[0].id, rows: rows[0].payload.rows };
   }
 
-  const parsedRows = parse(rows[0].payload.csv ?? "", {
+  // Compatibilidad con lotes guardados antes de `saveFilteredBatch`.
+  if (!rows[0].payload.csv) return null;
+  const parsedRows = parse(rows[0].payload.csv, {
     columns: true,
     skip_empty_lines: true,
     trim: true,
     relax_column_count: true,
   }) as Record<string, unknown>[];
-  const filtered = parsedRows.filter(
-    (r) =>
-      String(r.MES_EJE ?? "").trim() === mesEje &&
-      String(r[mapping.metaDepartamentoNombre] ?? "").toUpperCase().trim() === wantedMetaDepartamento
-  );
-  return { id: rows[0].id, rows: filtered };
+  return { id: rows[0].id, rows: parsedRows };
 }
 
 /**
@@ -660,7 +743,7 @@ export async function ingestMefFullYearForMetaDepartamento(
     const mesEje = meses[i];
     const resourceId = `${filename}#nivel=GOBIERNO NACIONAL#mes=${mesEje}#meta=${wantedMetaDepartamento}`;
 
-    const cached = await loadCachedSection(resourceId, mesEje, mapping, wantedMetaDepartamento);
+    const cached = await loadCachedRows(resourceId);
     if (cached) {
       // El payload cacheado YA está filtrado (ver `saveFilteredBatch`) — no
       // hace falta re-filtrar.

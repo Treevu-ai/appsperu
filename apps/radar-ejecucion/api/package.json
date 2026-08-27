@@ -10,6 +10,8 @@
     "migrate": "tsx src/db/migrate.ts",
     "ingest:mef": "tsx src/ingest/mef-connector.ts",
     "ingest:mef:meta": "tsx src/cli/reingest-meta-departamento.ts",
+    "ingest:mef:pilot": "tsx src/cli/ingest-pilot-mef.ts",
+    "ingest:mef:pilot:ejecutora": "tsx src/cli/ingest-pilot-ejecutora.ts",
     "cobertura:territorial": "tsx src/cli/territorial-coverage.ts",
     "tablero:lluvias": "tsx src/cli/lluvias-seguimiento.ts",
     "integrity:budget": "tsx src/cli/integrity-budget.ts",
