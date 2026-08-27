@@ -7,7 +7,7 @@ import { refreshBudgetCoverageSnapshots } from "../db/budget-coverage.js";
 import { CONFIRMED_MEF_FIELD_MAPPING, type MefFieldMapping } from "./field-mapping.js";
 import { normalizeMefRows, normalizeMefProyectos } from "./normalize.js";
 import { PILOT_DEPARTMENT_UBIGEO, type PilotDepartmentName } from "../lib/pilot-departments.js";
-import { SECTION_NIVEL_MES_BOUNDS, departamentoSectionWindow } from "./mef-section-bounds.js";
+import { SECTION_NIVEL_MES_BOUNDS, departamentoSectionWindow, type SectionBounds } from "./mef-section-bounds.js";
 
 const FILES_BASE_URL = "https://fs.datosabiertos.mef.gob.pe/datastorefiles";
 
