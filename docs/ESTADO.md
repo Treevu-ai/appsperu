@@ -73,9 +73,9 @@ automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incl
 `mcp-server/README.md`, sección "Alcance actual y lo que falta", antes de exponerlo fuera de
 `localhost`).
 
-**Pendiente (2026-08-27):** `actividad-agraria` y `seguridad-ciudadana` todavía no están
-registradas en el catálogo de `mcp-server` — se construyeron sin ese paso, queda para una
-sesión futura.
+64 tools (11 apps). `actividad-agraria` y `seguridad-ciudadana` se registraron el 2026-08-27
+(4 tools nuevos: `actividad_agraria_wage`, `actividad_agraria_crossref`,
+`seguridad_ciudadana_denuncias`, `seguridad_ciudadana_crossref`).
 
 ## Cruces entre apps (todos verificados con datos reales)
 

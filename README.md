@@ -33,7 +33,7 @@ npm run dev
 
 ## Agente MCP
 
-[`mcp-server/`](mcp-server/) expone las 8 APIs como tools de solo lectura para un agente Claude
+[`mcp-server/`](mcp-server/) expone las 11 APIs como tools de solo lectura para un agente Claude
 vía MCP (transporte stdio). Requiere que las apps ya estén corriendo — ver
 [`mcp-server/README.md`](mcp-server/README.md).
 

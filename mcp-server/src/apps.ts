@@ -1,7 +1,7 @@
 /**
  * Puertos por defecto de cada API — copiados de `README.md` (tabla "Apps") y
  * `docs/ESTADO.md`. Cada uno es sobreescribible vía env var para no asumir
- * que las 8 apps siempre corren en localhost con estos puertos exactos.
+ * que las apps siempre corren en localhost con estos puertos exactos.
  */
 export const APP_KEYS = [
   "radar-ejecucion",
@@ -13,6 +13,8 @@ export const APP_KEYS = [
   "identidad-fiscal",
   "salud-institucional",
   "proveedores-sancionados",
+  "actividad-agraria",
+  "seguridad-ciudadana",
 ] as const;
 
 export type AppKey = (typeof APP_KEYS)[number];
@@ -27,6 +29,8 @@ const DEFAULT_PORTS: Record<AppKey, number> = {
   "identidad-fiscal": 4006,
   "salud-institucional": 4007,
   "proveedores-sancionados": 4008,
+  "actividad-agraria": 4009,
+  "seguridad-ciudadana": 4010,
 };
 
 function envVarFor(app: AppKey): string {

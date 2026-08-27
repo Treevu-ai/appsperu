@@ -751,4 +751,70 @@ export const TOOL_CATALOG: ToolSpec[] = [
       anio: z.string().regex(/^\d{4}$/).optional(),
     },
   },
+
+  // ---- actividad-agraria (MIDAGRI, jornal agrícola) ----
+  {
+    name: "actividad_agraria_wage",
+    app: "actividad-agraria",
+    description:
+      "Valor de jornal agrícola (S/.) por departamento/año/mes, fuente MIDAGRI. Serie mensual normalizada; " +
+      "un valor null puede significar 'mes reportado sin dato' ('-' en el origen) o 'mes futuro aún no reportado' — " +
+      "ambos casos son indistinguibles en este endpoint. Cobertura nacional completa. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/wage",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      anio: z.string().regex(/^\d{4}$/).optional().describe("Año de 4 dígitos."),
+    },
+  },
+  {
+    name: "actividad_agraria_crossref",
+    app: "actividad-agraria",
+    description:
+      "Cruce actividad-agraria <-> radar-ejecucion por departamento exacto (sin fuzzy) — jornal agrícola promedio " +
+      "del año junto a la ejecución presupuestal de la función AGROPECUARIA, separando ejecución con sede regional/" +
+      "local de gasto de Gobierno Nacional dirigido al departamento (meta_departamento).",
+    pathTemplate: "/api/crossref",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).describe("Requerido."),
+      anio: z.string().regex(/^\d{4}$/).describe("Año fiscal de 4 dígitos. Requerido."),
+    },
+  },
+
+  // ---- seguridad-ciudadana (SIDPOL, MININTER) ----
+  {
+    name: "seguridad_ciudadana_denuncias",
+    app: "seguridad-ciudadana",
+    description:
+      "Denuncias policiales agregadas (SIDPOL, MININTER) por departamento/provincia/distrito/año/mes/modalidad " +
+      "(Robo, Hurto, Extorsión, Estafa, Violencia contra la mujer e integrantes, Secuestro, Otros). Son conteos ya " +
+      "agregados por el origen, no eventos individuales. Cobertura nacional completa 2018-2026, sin filtros trae " +
+      "el universo entero — usar al menos departamento en producción. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/denuncias",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      anio: z.string().regex(/^\d{4}$/).optional().describe("Año de 4 dígitos."),
+      modalidad: z.string().min(1).optional(),
+    },
+  },
+  {
+    name: "seguridad_ciudadana_crossref",
+    app: "seguridad-ciudadana",
+    description:
+      "Cruce seguridad-ciudadana <-> radar-ejecucion por departamento exacto (sin fuzzy) — total de denuncias del " +
+      "año por modalidad junto a la ejecución presupuestal de la función ORDEN PUBLICO Y SEGURIDAD, separando " +
+      "ejecución con sede regional/local de gasto de Gobierno Nacional dirigido al departamento. No implica " +
+      "causalidad ni correlación entre ambas series.",
+    pathTemplate: "/api/crossref",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).describe("Requerido."),
+      anio: z.string().regex(/^\d{4}$/).describe("Año fiscal de 4 dígitos. Requerido."),
+    },
+  },
 ];
