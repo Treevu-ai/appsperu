@@ -1,0 +1,16 @@
+name: bcrp-comercio-exterior
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: bcrp
+      POSTGRES_PASSWORD: bcrp
+      POSTGRES_DB: bcrp_comercio_exterior
+    ports:
+      - "127.0.0.1:5442:5432"
+    volumes:
+      - bcrp_pgdata:/var/lib/postgresql/data
+
+volumes:
+  bcrp_pgdata:

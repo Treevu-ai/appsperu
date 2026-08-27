@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "migrate": "tsx src/db/migrate.ts",
     "ingest:observa": "tsx src/ingest/observa-connector.ts",
+    "probe:aplicativo": "tsx src/ingest/probe-aplicativo.ts",
     "indicators:regional": "tsx src/cli/indicators-regional.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"

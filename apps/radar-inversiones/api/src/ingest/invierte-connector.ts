@@ -121,7 +121,7 @@ async function persistRejectedRows(client: PoolClient, rejected: readonly Reject
 }
 
 export const PERU_DEPARTAMENTOS = ["AMAZONAS", "ANCASH", "APURIMAC", "AREQUIPA", "AYACUCHO", "CAJAMARCA", "CALLAO", "CUSCO", "HUANCAVELICA", "HUANUCO", "ICA", "JUNIN", "LA LIBERTAD", "LAMBAYEQUE", "LIMA", "LORETO", "MADRE DE DIOS", "MOQUEGUA", "PASCO", "PIURA", "PUNO", "SAN MARTIN", "TACNA", "TUMBES", "UCAYALI"] as const;
-export const DEFAULT_TERRITORIAL_SCOPE = PERU_DEPARTAMENTOS;
+export const DEFAULT_TERRITORIAL_SCOPE = ["LA LIBERTAD"] as const;
 
 export function normalizeDepartamentoScope(
   departamento?: string,

@@ -16,6 +16,7 @@
     "ingest:awards:full": "tsx src/ingest/run-oece-records-full.ts",
     "ingest:processes:segmented": "tsx src/ingest/run-oece-segmented.ts --kind releases",
     "ingest:awards:segmented": "tsx src/ingest/run-oece-segmented.ts --kind records",
+    "ingest:libertad": "tsx src/ingest/run-oece-segmented.ts --kind releases --start-segment 2024-01 --end-segment 2026-08 && tsx src/ingest/run-oece-segmented.ts --kind records --start-segment 2024-01 --end-segment 2026-08",
     "materialize:bidders:raw": "tsx src/ingest/replay-oece-bidders.ts",
     "reconcile:oece:ocids": "tsx src/reconciliation/run-oece-ocid-reconciliation.ts",
     "ingest:minor-contracts": "tsx src/ingest/run-minor-contracts.ts",

@@ -2,7 +2,7 @@
 
 Última actualización: 2026-08-27.
 
-Once apps standalone con API propia; todas son API-only (sin frontend web). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+Doce apps standalone con API propia; todas son API-only (sin frontend web). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
 
 ## Última sesión operativa — 2026-08-27
 
@@ -53,6 +53,7 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `proveedores-sancionados` | Inhabilitaciones/multas del Tribunal de Contrataciones (RNP/OECE) | 4008 | 5439 | Construida, probada, verificada |
 | `actividad-agraria` | Serie MIDAGRI de jornal agrícola por departamento/año/mes | 4009 | 5440 | Construida (API) |
 | `seguridad-ciudadana` | Denuncias policiales SIDPOL (MININTER) por distrito/mes/modalidad | 4010 | 5441 | Construida (API) |
+| `bcrp-comercio-exterior` | Comercio exterior agregado nacional (BCRP PN38714–PN38723) | 4011 | 5442 | Construida (API) |
 | `ceplan-geo` | GeoServer (capas territoriales/infraestructura) | 4005 | 5437 (PostGIS) | Construida (API) |
 
 ## `mcp-server` (2026-08-26)
@@ -68,9 +69,7 @@ automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incl
 `mcp-server/README.md`, sección "Alcance actual y lo que falta", antes de exponerlo fuera de
 `localhost`).
 
-64 tools (11 apps). `actividad-agraria` y `seguridad-ciudadana` se registraron el 2026-08-27
-(4 tools nuevos: `actividad_agraria_wage`, `actividad_agraria_crossref`,
-`seguridad_ciudadana_denuncias`, `seguridad_ciudadana_crossref`).
+67 tools (12 apps). `bcrp-comercio-exterior` y `ceplan_estrategico_meta_aplicativo` se registraron el 2026-08-27.
 
 ## Cruces entre apps (todos verificados con datos reales)
 
@@ -248,28 +247,9 @@ avance (S/2,242.1M devengado / S/4,558.8M PIM), Gobiernos Locales 39.9%
 
 ## Pendientes conocidos (no bloqueantes, para cuando se retome)
 
-1. `ceplan-estrategico`: modelo per-entidad (PEI/POI/metas por pliego) si el Aplicativo
-   CEPLAN V.01 vuelve a estar disponible — hoy solo hay datos agregados por nivel de
-   gobierno (ver Sprint 1 arriba). `strategic_objectives`/`strategic_actions`/
-   `poi_activities`/`physical_targets` siguen sin poblar.
+1. ~~`ceplan-estrategico`: modelo per-entidad~~ — **bloqueado por fuente**: ObservaPerú solo trae agregados por nivel de gobierno; `GET /api/meta/aplicativo` y `npm run probe:aplicativo` verifican en vivo si Aplicativo CEPLAN V.01 vuelve a exponer PEI/POI per-pliego. Tablas `strategic_objectives`/`strategic_actions`/`poi_activities`/`physical_targets` siguen vacías por diseño.
 2. ~~Implementación de `ceplan-geo`~~ — **hecho (API-only, 2026-08-26)**. Spike Fase 2: `cb_redhidricax` POSPONER (345k); `cb_redhidricaprinx` AUTOMATIZABLE; `cb_proyectos` no existe — usar `ip_pry*`.
-3. El resto del PRD de INFOBRAS (sprints 1-6: MCP tools, resolución de identidad avanzada,
-   dashboard consolidado) — quedó fuera de alcance de la rebanada construida.
-4. Todas las ingestas de `radar-ejecucion`/`radar-inversiones`/`infobras`/`compras-publicas`
-   son parciales por diseño (`isPartial`, muestras acotadas por `maxPages`/`maxBytes`/
-   departamento) — ampliar cobertura (más departamentos, más páginas) es un siguiente paso
-   natural si se necesita ver más allá de La Libertad. `identidad-fiscal`,
-   `proveedores-sancionados` y `seguridad-ciudadana` sí ingieren el universo nacional completo
-   (sin acotar por departamento en el origen) — para las tres, "cobertura por departamento" es
-   un filtro post-ingesta, no una limitación de la fuente.
-5. ~~Migración a Next 16 + React 19~~ — **N/A**: frontends web eliminados (2026-08-27); el proyecto es API-only.
-6. **Candidato evaluado, no implementado — comercio exterior (BCRP)**: se exploró la API
-   pública de BCRPData (`estadisticas.bcrp.gob.pe/estadisticas/series/api`) como posible
-   novena fuente para sector producción/comercio exterior. Es el único conector candidato
-   con API REST real documentada, sin sesión ni scraping. El desagregado por departamento
-   (`RD38085BM`-`RD38111BM`) está congelado en Dic-2022/Dic-2023 (re-verificado en vivo, sin
-   dato posterior). El agregado nacional (`PN38714BM`-`PN38723BM`, exportaciones/
-   importaciones/balanza comercial) sí está al día a jun-2026 (validado en vivo) — es la vía
-   recomendada si se construye, pero es un solo número por mes, sin desagregar por producto
-   ni empresa, sin cruce `entity_code`. Detalle completo en
-   `docs/data-contracts/bcrp-comercio-exterior.md`.
+3. El resto del PRD de INFOBRAS (sprints 1-6: MCP tools, resolución de identidad avanzada, dashboard consolidado) — quedó fuera de alcance de la rebanada construida.
+4. ~~Ingestas parciales acotadas a La Libertad~~ — **mitigado (2026-08-27)**: defaults de `.env.example` y `DEFAULT_TERRITORIAL_SCOPE` apuntan solo a `LA LIBERTAD`; scripts `ingest:libertad` por app y orquestador `scripts/ingest-la-libertad-completo.sh` para cobertura verificada.
+5. ~~Migración a Next 16 + React 19~~ — **N/A**: frontends web eliminados; el proyecto es API-only.
+6. ~~BCRP comercio exterior~~ — **hecho (2026-08-27)**: app `bcrp-comercio-exterior` (API 4011) ingiere series nacionales `PN38714BM`–`PN38723BM`; sin desagregado departamental (`RD38*` sigue congelado en origen).

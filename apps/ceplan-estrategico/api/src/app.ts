@@ -5,6 +5,7 @@ import { indicatorsExecutionEfficiencyRouter } from "./routes/indicators-executi
 import { indicatorsPlanBudgetAlignmentRouter } from "./routes/indicators-plan-budget-alignment.js";
 import { crossrefRouter } from "./routes/crossref.js";
 import { crossrefTerritorialRouter } from "./routes/crossref-territorial.js";
+import { metaRouter } from "./routes/meta.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 import { pool } from "./db/pool.js";
 
@@ -29,6 +30,7 @@ export function createApp() {
   app.use("/api/indicators/plan-budget-alignment", indicatorsPlanBudgetAlignmentRouter);
   app.use("/api/crossref", crossrefRouter);
   app.use("/api/crossref/territorial", crossrefTerritorialRouter);
+  app.use("/api/meta", metaRouter);
 
   // Debe ir al final: sin esto, un rechazo dentro de un handler async se
   // vuelve un unhandled rejection que tumba el proceso entero en vez de
