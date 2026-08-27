@@ -1,10 +1,22 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-08-26.
+Última actualización: 2026-08-27.
 
-Nueve apps standalone con API propia; ocho de ellas también tienen frontend Next.js verificado. `ceplan-geo` es la novena app y sigue la política API-only (sin web). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras 5 bases.
+Once apps standalone con API propia; ocho de ellas también tienen frontend Next.js verificado. `ceplan-geo`, `actividad-agraria` y `seguridad-ciudadana` son API-only (sin web, por la política acordada de no construir más frontends nuevos — ver "Cómo levantar todo de nuevo" más abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
 
-## Última sesión operativa — 2026-08-26
+## Última sesión operativa — 2026-08-27
+
+Alcance del proyecto reducido a **La Libertad únicamente** (decisión de producto) — Lambayeque, Piura, Cajamarca y Cusco quedan fuera de scope; sus memos de análisis se conservan como histórico sin actualizar.
+
+- **INFOBRAS destrabado localmente**: el cloud agent no alcanza `infobras.contraloria.gob.pe` (timeout de red); ingesta corrida en máquina local sin ese bloqueo. Verificado: 178,638 obras totales en BD, 10,134 en La Libertad.
+- **4 apps certificadas en el ledger de cobertura territorial** (`territorial_coverage`) que estaban `BLOQUEADA` solo por falta del script de materialización, no por falta de datos: `identidad-fiscal` (106,918 contribuyentes), `proveedores-sancionados` (certifica por cruce RUC↔identidad-fiscal, sin UBIGEO propio), `actividad-agraria` (108 registros MIDAGRI), `salud-institucional` (score derivado — certifica verificando que sus 5 dependencias estén completas).
+- **Nueva app — `seguridad-ciudadana`** (ver sección dedicada más abajo): denuncias policiales SIDPOL (MININTER).
+- Checkpoint final: `cobertura:territorial -- --jurisdiccion "LA LIBERTAD" --require-complete` sale exit 0 — las 9 apps aplicables a La Libertad quedan `COMPLETA_VERIFICADA`; solo `ceplan-estrategico` permanece `NO_APLICA` por diseño (sin llave geográfica departamental).
+- **Bug de infraestructura encontrado y corregido**: `.gitignore` de `radar-ejecucion/api` tenía una entrada bare `coverage` (pensada para el output de test-coverage) que también atrapaba `src/coverage/` — el módulo real detrás de `cobertura:territorial`. Nunca había llegado a git; CI fallaba en el PR hasta corregirlo (`coverage` → `/coverage`).
+- `scripts/seguimiento-semanal-territorial.ps1` + tarea de Windows Task Scheduler (miércoles 7pm hora Perú): re-ingesta MEF/INFOBRAS/Invierte y guarda snapshot de cobertura territorial por corrida.
+- PR #27 (`cursor/alsol-ingest-5-regiones-f938` → `master`) mergeado, CI 19/19 jobs verdes.
+
+## Sesión anterior — 2026-08-26
 
 - Se implementó `ceplan-geo` (API 4005, PostGIS 5437): ingesta WFS de distritos/aeropuertos/puertos, endpoints de lectura, cruces con `radar-inversiones`/`infobras`/`radar-ejecucion`, CLI `cobertura:geoserver` y 11 tools MCP.
 - Sin frontend web — puerto 3005 sigue reservado.
@@ -40,23 +52,30 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `identidad-fiscal` | Padrón RUC (SUNAT) + cruce con proveedores/entidades | 4006 | 3006 | 5438 | Construida, probada, verificada |
 | `salud-institucional` | Score compuesto por entidad (agrega las otras 5, sin base propia) | 4007 | 3007 | — | Construida, probada, verificada |
 | `proveedores-sancionados` | Inhabilitaciones/multas del Tribunal de Contrataciones (RNP/OECE) | 4008 | 3008 | 5439 | Construida, probada, verificada |
+| `actividad-agraria` | Serie MIDAGRI de jornal agrícola por departamento/año/mes | 4009 | — (API-only) | 5440 | Construida (API), sin web |
+| `seguridad-ciudadana` | Denuncias policiales SIDPOL (MININTER) por distrito/mes/modalidad | 4010 | — (API-only) | 5441 | Construida (API), sin web |
 | `ceplan-geo` | GeoServer (capas territoriales/infraestructura) | 4005 | — (reservado 3005) | 5437 (PostGIS) | Construida (API), sin web |
 
 Puerto 4005/3005/5437 quedó reservado para `ceplan-geo` y no se reutilizó en las apps
-construidas después.
+construidas después. `actividad-agraria` y `seguridad-ciudadana` son API-only por la misma
+política (ver "Cómo levantar todo de nuevo").
 
 ## `mcp-server` (2026-08-26)
 
-Servidor MCP standalone (`mcp-server/`, transporte stdio) que expone las 9 APIs como 55 tools de
+Servidor MCP standalone (`mcp-server/`, transporte stdio) que expone las APIs como tools de
 solo lectura para un agente Claude — un tool por endpoint `GET /api/*` real, sin transformar el
 shape de la respuesta. Catálogo derivado de `docs/conectores.md` (cada `description` de tool
 incluye cobertura parcial/completa y el recordatorio de que ninguna ingesta tiene scheduler).
 Validado manualmente: registro del catálogo, llamada con query params reales contra una API
 fake, y manejo de error de conectividad cuando la API de destino no responde — más test
 automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incluye las ingestas
-(`npm run ingest:*`, fuera de alcance) ni autenticación (mismo estado que las 9 APIs que agrega — ver
+(`npm run ingest:*`, fuera de alcance) ni autenticación (mismo estado que las APIs que agrega — ver
 `mcp-server/README.md`, sección "Alcance actual y lo que falta", antes de exponerlo fuera de
 `localhost`).
+
+**Pendiente (2026-08-27):** `actividad-agraria` y `seguridad-ciudadana` todavía no están
+registradas en el catálogo de `mcp-server` — se construyeron sin ese paso, queda para una
+sesión futura.
 
 ## Cruces entre apps (todos verificados con datos reales)
 
@@ -88,6 +107,14 @@ automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incl
   identidad-fiscal) — `GET /api/crossref` en `proveedores-sancionados/api`. Señal más fuerte
   que el estatus tributario: una inhabilitación `VIGENTE` es una prohibición legal de
   contratar con el Estado, no solo una irregularidad administrativa.
+- **actividad-agraria ↔ radar-ejecucion**, por `departamento` exacto (sin fuzzy) — `GET
+  /api/crossref` en `actividad-agraria/api`. Cruza el jornal agrícola (MIDAGRI) contra la
+  ejecución de la función AGROPECUARIA, distinguiendo ejecución con sede regional/local de
+  gasto de Gobierno Nacional dirigido al departamento.
+- **seguridad-ciudadana ↔ radar-ejecucion**, por `departamento` exacto (sin fuzzy, mismo patrón
+  que actividad-agraria) — `GET /api/crossref` en `seguridad-ciudadana/api`. Cruza denuncias
+  SIDPOL contra la ejecución de la función ORDEN PUBLICO Y SEGURIDAD — dos series independientes
+  para lectura conjunta, no implica causalidad.
 - **salud-institucional** no es un cruce par-a-par, es un agregador: combina ejecución
   (radar-ejecucion, propia), obras no paralizadas (infobras, vía su crosswalk), inversiones
   sin sobrecosto (radar-inversiones, SEC_EJEC exacto), compras no concentradas
@@ -107,10 +134,10 @@ npm run dev                   # API
 ```
 
 `salud-institucional/api` no tiene `docker-compose.yml` ni `migrate` — solo `.env` con las
-connection strings de las otras 5 bases y `npm run dev`.
+connection strings de las otras bases y `npm run dev`.
 
-Y en `apps/<nombre>/web` (todas menos `salud-institucional`... no, esa sí tiene web — todas
-las 8 apps tienen web excepto `ceplan-geo`, que no está construida):
+Y en `apps/<nombre>/web` — todas las apps tienen web excepto `ceplan-geo`, `actividad-agraria`
+y `seguridad-ciudadana` (API-only por política, ver arriba):
 
 ```bash
 cp .env.example .env
@@ -235,6 +262,20 @@ real: 17,919 filas (11,208 inhabilitaciones + 6,681 multas tras dedup), 1 sola r
 "vigente hoy" no equivale a "vigente al momento de la adjudicación", en
 `docs/data-contracts/proveedores-sancionados.md`.
 
+## `seguridad-ciudadana` (2026-08-27)
+
+Ingiere SIDPOL (MININTER, vía `datosabiertos.gob.pe`) — denuncias policiales ya agregadas por
+distrito/mes/modalidad (Robo, Hurto, Extorsión, Estafa, Violencia contra la mujer e
+integrantes, Otros, Secuestro), CSV nacional único enero 2018–julio 2026 (27.4 MB, no requiere
+streaming por rangos como MEF). Portal detrás de un WAF que bloquea requests sin User-Agent de
+navegador (mismo patrón que `actividad-agraria`). `GET /api/denuncias` (consulta con filtros
+departamento/provincia/año/modalidad) y `GET /api/crossref` (cruce con gasto MEF en la función
+ORDEN PUBLICO Y SEGURIDAD). Ingesta real verificada: 369,100 filas nacionales, 0 rechazadas;
+21,902 filas para La Libertad (381,718 denuncias acumuladas 2018-2026). `UBIGEO_HECHO` pierde
+el cero inicial en el origen para departamentos 01-09 (ej. `10202` en vez de `010202`) — se
+reconstruye a 6 dígitos en la normalización; La Libertad (departamento 13) nunca tiene este
+problema. Certificada `COMPLETA_VERIFICADA` en `territorial_coverage`.
+
 ## Fix de datos — PIM=0 en `radar-ejecucion` (2026-08-18)
 
 `budget_execution.pim` estaba en 0 en el 100% de las filas ingeridas: el MEF no puebla
@@ -260,9 +301,10 @@ avance (S/2,242.1M devengado / S/4,558.8M PIM), Gobiernos Locales 39.9%
 4. Todas las ingestas de `radar-ejecucion`/`radar-inversiones`/`infobras`/`compras-publicas`
    son parciales por diseño (`isPartial`, muestras acotadas por `maxPages`/`maxBytes`/
    departamento) — ampliar cobertura (más departamentos, más páginas) es un siguiente paso
-   natural si se necesita ver más allá de La Libertad. `identidad-fiscal` y
-   `proveedores-sancionados` sí ingieren el universo nacional completo (sin acotar por
-   departamento en el origen).
+   natural si se necesita ver más allá de La Libertad. `identidad-fiscal`,
+   `proveedores-sancionados` y `seguridad-ciudadana` sí ingieren el universo nacional completo
+   (sin acotar por departamento en el origen) — para las tres, "cobertura por departamento" es
+   un filtro post-ingesta, no una limitación de la fuente.
 5. Migración a Next 16 + React 19 (resuelve el residual de `npm audit`) — diferida a
    propósito, ver "Riesgo de dependencias aceptado" arriba. Revisar antes de cualquier
    despliegue público.
