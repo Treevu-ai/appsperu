@@ -30,6 +30,7 @@ jobs:
           - apps/radar-inversiones/web
           - apps/salud-institucional/api
           - apps/salud-institucional/web
+          - apps/seguridad-ciudadana/api
           - mcp-server
     defaults:
       run:
