@@ -48,13 +48,13 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `radar-inversiones` | Inversiones (Invierte.pe) | 4002 | 5434 | Construida, probada, verificada |
 | `infobras` | Obras públicas (Contraloría) | 4003 | 5435 | Construida, probada, verificada |
 | `ceplan-estrategico` | Gestión estratégica del Estado (ObservaPerú, agregado por nivel de gobierno) | 4004 | 5436 | Construida, probada, verificada |
+| `ceplan-geo` | GeoServer (capas territoriales/infraestructura) | 4005 | 5437 (PostGIS) | Construida (API) |
 | `identidad-fiscal` | Padrón RUC (SUNAT) + cruce con proveedores/entidades | 4006 | 5438 | Construida, probada, verificada |
 | `salud-institucional` | Score compuesto por entidad (agrega las otras 5, sin base propia) | 4007 | — | Construida, probada, verificada |
 | `proveedores-sancionados` | Inhabilitaciones/multas del Tribunal de Contrataciones (RNP/OECE) | 4008 | 5439 | Construida, probada, verificada |
 | `actividad-agraria` | Serie MIDAGRI de jornal agrícola por departamento/año/mes | 4009 | 5440 | Construida (API) |
 | `seguridad-ciudadana` | Denuncias policiales SIDPOL (MININTER) por distrito/mes/modalidad | 4010 | 5441 | Construida (API) |
 | `bcrp-comercio-exterior` | Comercio exterior agregado nacional (BCRP PN38714–PN38723) | 4011 | 5442 | Construida (API) |
-| `ceplan-geo` | GeoServer (capas territoriales/infraestructura) | 4005 | 5437 (PostGIS) | Construida (API) |
 
 ## `mcp-server` (2026-08-26)
 
