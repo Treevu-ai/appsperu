@@ -409,7 +409,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       ? normalizeDepartamentoScope(process.env.INFOBRAS_DEPARTAMENTO)
       : parseDepartamentoScope();
 
-  ingestInfobrasPublicWorks({ departamentos })
+  const filePath = process.env.INFOBRAS_XLSX_PATH?.trim() || undefined;
+  if (filePath) {
+    console.log(`Usando XLSX local: ${filePath}`);
+  }
+
+  ingestInfobrasPublicWorks({ departamentos, filePath })
     .then((summary) => {
       console.log("Ingesta de INFOBRAS completada:", summary);
       return Promise.all([pool.end(), ejecucionPool.end()]);
