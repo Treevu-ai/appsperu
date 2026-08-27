@@ -26,6 +26,7 @@
 | **proveedores-sancionados** | ✅ certificado | RNP nacional (RUC, sin UBIGEO propio); cruce por RUC contra identidad-fiscal, certificado 2026-08-27 vía `coverage:proveedores-sancionados` |
 | **actividad-agraria** | ✅ 108 registros | Serie MIDAGRI jornal agrícola mensual; certificado 2026-08-27 vía `coverage:actividad-agraria` |
 | **salud-institucional** | ✅ 5/5 componentes | Score derivado (sin base propia); certificado 2026-08-27 — las 5 fuentes de las que depende están verificadas, vía `coverage:salud-institucional` |
+| **seguridad-ciudadana** (nueva, 2026-08-27) | ✅ 21,902 filas | SIDPOL (MININTER), denuncias policiales por distrito/mes/modalidad, 2018-2026. 381,718 denuncias acumuladas en La Libertad. Certificado vía `coverage:seguridad-ciudadana` |
 
 ## Comandos de preflight (AL2-03)
 
