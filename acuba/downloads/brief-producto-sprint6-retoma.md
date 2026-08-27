@@ -3,7 +3,7 @@
 **De:** equipo datos  
 **Para:** equipo producto  
 **Fecha:** 2026-08-27  
-**Rama:** `cursor/alsol-ingest-5-regiones-f938` @ `d699cf0`  
+**Rama:** `cursor/alsol-ingest-5-regiones-f938` @ `101c278` (incluye diff @ `9fd25ec`)  
 **PR:** [#27](https://github.com/Treevu-ai/appsperu/pull/27)
 
 ---
