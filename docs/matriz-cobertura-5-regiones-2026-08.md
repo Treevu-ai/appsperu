@@ -22,7 +22,7 @@
 | **infobras** | ✅ 10,134 obras | Ingesta local completa confirmada 2026-08-26 (178,638 obras totales en BD, 10,134 en La Libertad) |
 | **compras-publicas** (OECE) | 🟡 ventana 10 págs | `OECE_DEPARTAMENTOS` admite LA LIBERTAD; no corrida terminal nacional |
 | **ceplan-estrategico** | N/A | Indicadores nacionales GN/GR — sin llave departamental |
-| **identidad-fiscal** | ✅ nacional | Padrón RUC nacional; cruce territorial vía compras/ejecución |
+| **identidad-fiscal** | ✅ 106,918 contribuyentes | Padrón RUC nacional (SUNAT); certificado en `territorial_coverage` 2026-08-27 vía `coverage:identidad-fiscal` |
 | **proveedores-sancionados** | ✅ nacional | Fuente nacional |
 | **salud-institucional** | ✅ score LL | Default histórico LL; requiere capas mínimas por dept |
 

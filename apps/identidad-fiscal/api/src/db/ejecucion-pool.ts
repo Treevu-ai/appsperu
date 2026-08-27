@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Pool } from "pg";
 
 const connectionString = process.env.EJECUCION_DATABASE_URL;
@@ -10,8 +11,9 @@ if (!connectionString) {
 }
 
 /**
- * Tercer pool, hacia la base de `radar-ejecucion` (presupuesto MEF). Solo
- * LEE de ahí para resolver el RUC del lado entidad (gobiernos/
- * municipalidades) contra el padrón, nunca escribe.
+ * Tercer pool, hacia la base de `radar-ejecucion` (presupuesto MEF). Lee de
+ * ahí para resolver el RUC del lado entidad (gobiernos/municipalidades)
+ * contra el padrón, y escribe el registro central de cobertura territorial
+ * (`territorial_coverage`) — nunca obras ni gasto.
  */
 export const ejecucionPool = new Pool({ connectionString });

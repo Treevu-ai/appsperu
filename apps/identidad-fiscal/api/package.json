@@ -7,6 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "migrate": "tsx src/db/migrate.ts",
     "ingest:padron": "tsx src/ingest/padron-connector.ts",
+    "coverage:identidad-fiscal": "tsx src/ingest/materialize-coverage.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
