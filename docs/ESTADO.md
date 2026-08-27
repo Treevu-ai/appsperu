@@ -2,7 +2,7 @@
 
 Última actualización: 2026-08-27.
 
-Once apps standalone con API propia; ocho de ellas también tienen frontend Next.js verificado. `ceplan-geo`, `actividad-agraria` y `seguridad-ciudadana` son API-only (sin web, por la política acordada de no construir más frontends nuevos — ver "Cómo levantar todo de nuevo" más abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+Once apps standalone con API propia; todas son API-only (sin frontend web). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
 
 ## Última sesión operativa — 2026-08-27
 
@@ -19,7 +19,6 @@ Alcance del proyecto reducido a **La Libertad únicamente** (decisión de produc
 ## Sesión anterior — 2026-08-26
 
 - Se implementó `ceplan-geo` (API 4005, PostGIS 5437): ingesta WFS de distritos/aeropuertos/puertos, endpoints de lectura, cruces con `radar-inversiones`/`infobras`/`radar-ejecucion`, CLI `cobertura:geoserver` y 11 tools MCP.
-- Sin frontend web — puerto 3005 sigue reservado.
 - **Planificación Fase 2** (5 regiones ALSOL: La Libertad, Lambayeque, Piura, Cajamarca, Cusco): PRD y backlog en `docs/PRD_CEPLAN_ALSOL_Fase2_5Regiones_v1.md` y `docs/BACKLOG_CEPLAN_ALSOL_Fase2_5Regiones_v1.md` — puente ceplan-estrategico↔geo, indicadores SEG/PBA, spike capas geo, memos regionales.
 - **Sprint 6 cerrado:** spike CG-25 (`npm run spike:layers`); matriz cobertura 5 regiones; contratos API territorial y PBA; tests piloto 5 deptos.
 - **Sprint 7 cerrado:** `GET /api/crossref/territorial` (ceplan-estrategico) + `GET /api/territories/summary` (ceplan-geo); 2 tools MCP nuevos; validación documentada en `docs/validacion-crossref-territorial-5-regiones-2026-08.md`.
@@ -42,23 +41,19 @@ Registro técnico reproducible, resultados de recarga y límites:
 
 ## Apps
 
-| App | Dominio | API | Web | Postgres | Estado |
-|---|---|---|---|---|---|
-| `radar-ejecucion` | Presupuesto/ejecución (MEF) + benchmark territorial | 4000 | 3000 | 5432 | Construida, probada, verificada |
-| `compras-publicas` | Contrataciones (OECE/OCDS) + proveedores/concentración | 4001 | 3001 | 5433 | Construida, probada, verificada |
-| `radar-inversiones` | Inversiones (Invierte.pe) | 4002 | 3002 | 5434 | Construida, probada, verificada |
-| `infobras` | Obras públicas (Contraloría) | 4003 | 3003 | 5435 | Construida, probada, verificada |
-| `ceplan-estrategico` | Gestión estratégica del Estado (ObservaPerú, agregado por nivel de gobierno) | 4004 | 3004 | 5436 | Construida, probada, verificada |
-| `identidad-fiscal` | Padrón RUC (SUNAT) + cruce con proveedores/entidades | 4006 | 3006 | 5438 | Construida, probada, verificada |
-| `salud-institucional` | Score compuesto por entidad (agrega las otras 5, sin base propia) | 4007 | 3007 | — | Construida, probada, verificada |
-| `proveedores-sancionados` | Inhabilitaciones/multas del Tribunal de Contrataciones (RNP/OECE) | 4008 | 3008 | 5439 | Construida, probada, verificada |
-| `actividad-agraria` | Serie MIDAGRI de jornal agrícola por departamento/año/mes | 4009 | — (API-only) | 5440 | Construida (API), sin web |
-| `seguridad-ciudadana` | Denuncias policiales SIDPOL (MININTER) por distrito/mes/modalidad | 4010 | — (API-only) | 5441 | Construida (API), sin web |
-| `ceplan-geo` | GeoServer (capas territoriales/infraestructura) | 4005 | — (reservado 3005) | 5437 (PostGIS) | Construida (API), sin web |
-
-Puerto 4005/3005/5437 quedó reservado para `ceplan-geo` y no se reutilizó en las apps
-construidas después. `actividad-agraria` y `seguridad-ciudadana` son API-only por la misma
-política (ver "Cómo levantar todo de nuevo").
+| App | Dominio | API | Postgres | Estado |
+|---|---|---|---|---|
+| `radar-ejecucion` | Presupuesto/ejecución (MEF) + benchmark territorial | 4000 | 5432 | Construida, probada, verificada |
+| `compras-publicas` | Contrataciones (OECE/OCDS) + proveedores/concentración | 4001 | 5433 | Construida, probada, verificada |
+| `radar-inversiones` | Inversiones (Invierte.pe) | 4002 | 5434 | Construida, probada, verificada |
+| `infobras` | Obras públicas (Contraloría) | 4003 | 5435 | Construida, probada, verificada |
+| `ceplan-estrategico` | Gestión estratégica del Estado (ObservaPerú, agregado por nivel de gobierno) | 4004 | 5436 | Construida, probada, verificada |
+| `identidad-fiscal` | Padrón RUC (SUNAT) + cruce con proveedores/entidades | 4006 | 5438 | Construida, probada, verificada |
+| `salud-institucional` | Score compuesto por entidad (agrega las otras 5, sin base propia) | 4007 | — | Construida, probada, verificada |
+| `proveedores-sancionados` | Inhabilitaciones/multas del Tribunal de Contrataciones (RNP/OECE) | 4008 | 5439 | Construida, probada, verificada |
+| `actividad-agraria` | Serie MIDAGRI de jornal agrícola por departamento/año/mes | 4009 | 5440 | Construida (API) |
+| `seguridad-ciudadana` | Denuncias policiales SIDPOL (MININTER) por distrito/mes/modalidad | 4010 | 5441 | Construida (API) |
+| `ceplan-geo` | GeoServer (capas territoriales/infraestructura) | 4005 | 5437 (PostGIS) | Construida (API) |
 
 ## `mcp-server` (2026-08-26)
 
@@ -136,14 +131,6 @@ npm run dev                   # API
 `salud-institucional/api` no tiene `docker-compose.yml` ni `migrate` — solo `.env` con las
 connection strings de las otras bases y `npm run dev`.
 
-Y en `apps/<nombre>/web` — todas las apps tienen web excepto `ceplan-geo`, `actividad-agraria`
-y `seguridad-ciudadana` (API-only por política, ver arriba):
-
-```bash
-cp .env.example .env
-npm run dev                   # frontend
-```
-
 Los contenedores de Postgres quedan corriendo entre sesiones (no se detienen al cerrar);
 los procesos `npm run dev` sí se detienen al final de cada sesión.
 
@@ -151,37 +138,7 @@ Los puertos de Postgres se publican en `127.0.0.1` (no `0.0.0.0`) y Adminer ya n
 levanta por defecto — solo en `radar-ejecucion` y `ceplan-estrategico`, vía
 `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d adminer`.
 
-Cada API aplica `helmet`, CORS restringido al origin del frontend (`WEB_ORIGIN` en `.env`,
-default `http://localhost:<puerto-web>`) y rate limiting (100 req/min) en `/api/*`.
-
-Toolchain actualizado (2026-08-17): `vitest`/`vite`/`@vitejs/plugin-react` a sus últimas
-majors (0 vulnerabilidades), y `next` 14 → 15.5.23 en las webs (React se queda en 18.3, Next
-15 lo soporta). Las páginas con rutas dinámicas (`[id]`, `[ocid]`, etc.) y `searchParams`
-ahora usan el patrón async de Next 15 (`params`/`searchParams` son `Promise`). Las páginas
-que hacen fetch en vivo (todas las de `/cruce` y las agregadoras) llevan
-`export const dynamic = "force-dynamic"` explícito — sin esto, `next build` intenta
-pre-renderizarlas en build time y se puede colgar (confirmado en vivo con
-`salud-institucional/web`: la página `/cruce` recalcula el score de 121 entidades contra
-~2.3M contribuyentes, y el build se quedaba esperando esa respuesta indefinidamente).
-
-**Riesgo de dependencias aceptado, con fecha de revisión (2026-08-20)**: `npm audit` marca 3
-vulnerabilidades high en cada web (`postcss` — XSS al stringify CSS y lectura arbitraria de
-`.map` vía `sourceMappingURL`; `sharp` — CVEs heredadas de libvips). El único fix disponible es
-`npm audit fix --force`, que salta a Next 16 (breaking, requiere React 19) — un upgrade real en
-las 8 webs existentes al día de hoy (`radar-ejecucion`, `compras-publicas`,
-`radar-inversiones`, `infobras`, `ceplan-estrategico`, `identidad-fiscal`,
-`salud-institucional`, `proveedores-sancionados`), no un parche menor.
-
-Decisión: **no migrar por ahora**. Ninguna de estas apps procesa CSS de usuario ni sube
-imágenes, así que ninguna de las dos superficies de ataque reales de estos CVEs aplica en un
-entorno de desarrollo local. Dos condiciones que invalidan esta decisión y obligan a revisarla:
-1. **Antes de desplegar cualquiera de estas webs públicamente** — ahí "sin superficie de
-   ataque" deja de ser cierto.
-2. **Si se agrega una función que procese CSS/imágenes de usuario** en cualquier app futura.
-
-Política acordada el mismo día: **no se construyen más frontends web nuevos** para apps
-futuras de este proyecto — solo API. Esto detiene el crecimiento del residual de `npm audit`
-sin necesitar la migración; las 8 webs ya construidas se quedan como están, sin tocar.
+Cada API aplica `helmet`, CORS restringido vía `WEB_ORIGIN` en `.env` (opcional) y rate limiting (100 req/min) en `/api/*`.
 
 ## Documentación
 
@@ -305,9 +262,7 @@ avance (S/2,242.1M devengado / S/4,558.8M PIM), Gobiernos Locales 39.9%
    `proveedores-sancionados` y `seguridad-ciudadana` sí ingieren el universo nacional completo
    (sin acotar por departamento en el origen) — para las tres, "cobertura por departamento" es
    un filtro post-ingesta, no una limitación de la fuente.
-5. Migración a Next 16 + React 19 (resuelve el residual de `npm audit`) — diferida a
-   propósito, ver "Riesgo de dependencias aceptado" arriba. Revisar antes de cualquier
-   despliegue público.
+5. ~~Migración a Next 16 + React 19~~ — **N/A**: frontends web eliminados (2026-08-27); el proyecto es API-only.
 6. **Candidato evaluado, no implementado — comercio exterior (BCRP)**: se exploró la API
    pública de BCRPData (`estadisticas.bcrp.gob.pe/estadisticas/series/api`) como posible
    novena fuente para sector producción/comercio exterior. Es el único conector candidato

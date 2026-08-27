@@ -15,21 +15,13 @@ jobs:
         package:
           - apps/actividad-agraria/api
           - apps/ceplan-estrategico/api
-          - apps/ceplan-estrategico/web
           - apps/compras-publicas/api
-          - apps/compras-publicas/web
           - apps/identidad-fiscal/api
-          - apps/identidad-fiscal/web
           - apps/infobras/api
-          - apps/infobras/web
           - apps/proveedores-sancionados/api
-          - apps/proveedores-sancionados/web
           - apps/radar-ejecucion/api
-          - apps/radar-ejecucion/web
           - apps/radar-inversiones/api
-          - apps/radar-inversiones/web
           - apps/salud-institucional/api
-          - apps/salud-institucional/web
           - apps/seguridad-ciudadana/api
           - mcp-server
     defaults:

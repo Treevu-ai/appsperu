@@ -4,18 +4,24 @@ Repo: https://github.com/Treevu-ai/appsperu
 
 Apps standalone de datos abiertos del Estado peruano (presupuesto, contrataciones,
 inversiones, obras públicas) que se cruzan entre sí por claves compartidas o matching
-difuso de nombres de entidad. Cada app tiene su propio Postgres, API Express y frontend
-Next.js.
+difuso de nombres de entidad. Cada app tiene su propio Postgres y API Express (API-only,
+sin frontends web).
 
 ## Apps
 
-| App | Dominio | API | Web |
-|---|---|---|---|
-| `radar-ejecucion` | Presupuesto/ejecución (MEF) + benchmark territorial | 4000 | 3000 |
-| `compras-publicas` | Contrataciones (OECE/OCDS) + proveedores/concentración | 4001 | 3001 |
-| `radar-inversiones` | Inversiones (Invierte.pe) | 4002 | 3002 |
-| `infobras` | Obras públicas (Contraloría) | 4003 | 3003 |
-| `ceplan-estrategico` | Planificación estratégica (PEI/POI/Metas) — en construcción | 4004 | 3004 |
+| App | Dominio | API |
+|---|---|---|
+| `radar-ejecucion` | Presupuesto/ejecución (MEF) + benchmark territorial | 4000 |
+| `compras-publicas` | Contrataciones (OECE/OCDS) + proveedores/concentración | 4001 |
+| `radar-inversiones` | Inversiones (Invierte.pe) | 4002 |
+| `infobras` | Obras públicas (Contraloría) | 4003 |
+| `ceplan-estrategico` | Planificación estratégica (ObservaPerú) | 4004 |
+| `ceplan-geo` | GeoServer (capas territoriales/infraestructura) | 4005 |
+| `identidad-fiscal` | Padrón RUC (SUNAT) + cruces | 4006 |
+| `salud-institucional` | Score compuesto (agrega otras fuentes, sin BD propia) | 4007 |
+| `proveedores-sancionados` | Inhabilitaciones/multas RNP/OECE | 4008 |
+| `actividad-agraria` | Serie MIDAGRI jornal agrícola | 4009 |
+| `seguridad-ciudadana` | Denuncias policiales SIDPOL (MININTER) | 4010 |
 
 ## Levantar una app
 
@@ -25,11 +31,10 @@ docker compose up -d
 cp .env.example .env
 npm run migrate
 npm run dev
-
-cd apps/<nombre>/web
-cp .env.example .env
-npm run dev
 ```
+
+`salud-institucional/api` no tiene Postgres propio — solo `.env` con las connection strings
+de las otras bases y `npm run dev`.
 
 ## Agente MCP
 
