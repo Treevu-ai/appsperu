@@ -12,7 +12,8 @@ if (!connectionString) {
 
 /**
  * Segundo pool, hacia la base de `radar-ejecucion` (presupuesto MEF). No hay
- * FK real entre las dos bases — este servicio solo LEE de ahí para construir
- * el cruce agregado por departamento, nunca escribe.
+ * FK real entre las dos bases — este servicio lee de ahí para construir el
+ * cruce agregado por departamento, y escribe el registro central de
+ * cobertura territorial (`territorial_coverage`), nunca presupuesto ni gasto.
  */
 export const ejecucionPool = new Pool({ connectionString });

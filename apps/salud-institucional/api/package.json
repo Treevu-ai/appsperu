@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "coverage:salud-institucional": "tsx src/ingest/materialize-coverage.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
