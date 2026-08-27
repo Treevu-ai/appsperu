@@ -530,6 +530,17 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: [],
     querySchema: { departamento: z.string().min(1) },
   },
+  {
+    name: "ceplan_estrategico_meta_aplicativo",
+    app: "ceplan-estrategico",
+    description:
+      "Estado del Aplicativo CEPLAN V.01 y fuentes alternativas para datos per-entidad (PEI/POI por pliego). " +
+      "Hoy perEntityAvailable=false: ObservaPerú solo trae agregados por nivel de gobierno. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/meta/aplicativo",
+    pathParams: [],
+    querySchema: {},
+  },
 
   // ---- ceplan-geo (GeoServer CEPLAN, territorio e infraestructura) ----
   {
@@ -816,5 +827,32 @@ export const TOOL_CATALOG: ToolSpec[] = [
       departamento: z.string().min(1).describe("Requerido."),
       anio: z.string().regex(/^\d{4}$/).describe("Año fiscal de 4 dígitos. Requerido."),
     },
+  },
+
+  // ---- bcrp-comercio-exterior (BCRP, balanza comercial nacional) ----
+  {
+    name: "bcrp_trade",
+    app: "bcrp-comercio-exterior",
+    description:
+      "Comercio exterior agregado nacional (millones US$ FOB) — exportaciones, importaciones y balanza comercial " +
+      "mensual, series PN38714BM–PN38723BM. Sin desagregación territorial ni por empresa; indicador macro de contexto. " +
+      "Cobertura nacional completa desde 2012. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/trade",
+    pathParams: [],
+    querySchema: {
+      series: z.string().min(1).optional().describe("Clave corta: exportaciones, importaciones, balanza_comercial, etc."),
+      anio: z.string().regex(/^\d{4}$/).optional(),
+      desde: z.string().regex(/^\d{4}-\d{2}$/).optional().describe("Filtro inclusive YYYY-MM."),
+      hasta: z.string().regex(/^\d{4}-\d{2}$/).optional().describe("Filtro inclusive YYYY-MM."),
+    },
+  },
+  {
+    name: "bcrp_meta_sources",
+    app: "bcrp-comercio-exterior",
+    description: "Metadata de los últimos 10 lotes de ingesta BCRP (series, rango, checksum).",
+    pathTemplate: "/api/meta/sources",
+    pathParams: [],
+    querySchema: {},
   },
 ];

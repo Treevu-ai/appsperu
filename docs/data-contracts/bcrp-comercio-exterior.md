@@ -4,11 +4,10 @@
 - URL base API: https://estadisticas.bcrp.gob.pe/estadisticas/series/api
 - Portal de exploración: https://estadisticas.bcrp.gob.pe/estadisticas/series/mensuales/exportaciones-e-importaciones
 - Documentación oficial: https://estadisticas.bcrp.gob.pe/estadisticas/series/ayuda/api
-- Owner del conector: sin asignar — candidato evaluado, no implementado
-- Confirmado en vivo el 2026-08-22 (exploración de fuente candidata, dos llamadas reales a
-  la API).
+- Owner del conector: `bcrp-comercio-exterior` (app 12)
+- Confirmado en vivo el 2026-08-22; **implementado el 2026-08-27** (`apps/bcrp-comercio-exterior/api`).
 
-## Estado: CONFIRMADO ACCESO Y FRESCURA (nacional) — NO IMPLEMENTADO
+## Estado: IMPLEMENTADO (agregado nacional) — desagregado departamental no ingerido
 
 **Actualización 2026-08-22 (segunda pasada, re-verificación de frescura):** el bloqueante
 original (series `RD38*` estancadas en 2022-2023) se confirmó real, pero **no aplica a toda

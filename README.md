@@ -22,6 +22,7 @@ sin frontends web).
 | `proveedores-sancionados` | Inhabilitaciones/multas RNP/OECE | 4008 |
 | `actividad-agraria` | Serie MIDAGRI jornal agrícola | 4009 |
 | `seguridad-ciudadana` | Denuncias policiales SIDPOL (MININTER) | 4010 |
+| `bcrp-comercio-exterior` | Comercio exterior agregado nacional (BCRP) | 4011 |
 
 ## Levantar una app
 
@@ -38,7 +39,7 @@ de las otras bases y `npm run dev`.
 
 ## Agente MCP
 
-[`mcp-server/`](mcp-server/) expone las 11 APIs como tools de solo lectura para un agente Claude
+[`mcp-server/`](mcp-server/) expone las 12 APIs como tools de solo lectura para un agente Claude
 vía MCP (transporte stdio). Requiere que las apps ya estén corriendo — ver
 [`mcp-server/README.md`](mcp-server/README.md).
 
@@ -71,3 +72,11 @@ Libertad. CUI, obra y compra requieren una clave oficial exacta: ALSOL muestra
 el vacío de vínculo cuando no la tiene.
 
 `servicios:cuidados` es el registro terminal de infraestructura y alimentación: CUI→obra únicamente por igualdad exacta y proveedor→cumplimiento únicamente por RUC documentado. Cuando no existe lote, entrega o RUC oficial, ALSOL muestra el vacío en vez de inferirlo.
+
+## Ingesta completa La Libertad
+
+```bash
+bash scripts/ingest-la-libertad-completo.sh
+```
+
+Orquesta MEF (meta departamental), Invierte (CSV nacional), INFOBRAS, OECE segmentado, ObservaPerú y BCRP. Requiere Postgres de cada app levantado y `.env` configurados.
