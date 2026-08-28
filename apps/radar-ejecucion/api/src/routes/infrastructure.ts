@@ -46,6 +46,38 @@ async function worksByExactCui(cuis: string[]) {
   return result;
 }
 
+async function obraProgressForAsset(assetId: string) {
+  const { rows } = await pool.query(
+    `SELECT etapa, avance_pct, literal_fuente, source_url, observed_at
+     FROM asset_obra_progress WHERE asset_id = $1 ORDER BY observed_at DESC`,
+    [assetId]
+  );
+  return rows.map((row) => ({
+    etapa: row.etapa,
+    avancePct: row.avance_pct === null ? null : Number(row.avance_pct),
+    literalFuente: row.literal_fuente,
+    fuenteUrl: row.source_url,
+    fechaObservada: row.observed_at,
+  }));
+}
+
+function cadenaObra(
+  obraInfoBras: { estado: string; resultados: unknown[] },
+  obraProgress: Awaited<ReturnType<typeof obraProgressForAsset>>,
+  stagesState: ReturnType<typeof stages>
+) {
+  return {
+    obra: obraInfoBras,
+    etapaProyecto: obraProgress,
+    recepcion: stagesState.cierre,
+    operador: stagesState.operador,
+    mantenimiento: stagesState.mantenimiento,
+    disponibilidad: stagesState.disponibilidad,
+    cautela:
+      "Etapa de proyecto (diseño/ejecución) no equivale a recepción formal ni a operador del servicio.",
+  };
+}
+
 function stages(row: Record<string, unknown>) {
   const handovers = Number(row.handover_count ?? 0);
   const operators = Number(row.operator_count ?? 0);
@@ -115,11 +147,16 @@ infrastructureRouter.get("/activos/:assetId", asyncHandler(async (req, res) => {
     pool.query("SELECT queue_id,candidate_kind,reason,evidence_urls,status,created_at FROM asset_evidence_review_queue WHERE asset_id=$1 ORDER BY queue_id", [asset.asset_id]),
   ]);
   const works = asset.cui ? await worksByExactCui([asset.cui]) : new Map<string, { estado: string; resultados: unknown[] }>();
+  const obraInfoBras = asset.cui ? works.get(asset.cui) ?? { estado: "SIN_OBRA_INFOBRAS_PARA_CUI", resultados: [] } : { estado: "SIN_CUI_PUBLICADO", resultados: [] };
+  const obraProgress = await obraProgressForAsset(asset.asset_id);
+  const etapas = stages(asset);
   res.json({
     id: asset.asset_id, familia: asset.asset_family, activo: asset.asset_name_published,
     territorio: { departamento: asset.department, provincia: asset.province, distrito: asset.district },
     identidad: { cui: asset.cui, codigoInfobras: asset.infobras_code, codigoSectorial: asset.sector_asset_code, estado: asset.identity_status },
-    etapas: stages(asset), obraInfoBras: asset.cui ? works.get(asset.cui) ?? { estado: "SIN_OBRA_INFOBRAS_PARA_CUI", resultados: [] } : { estado: "SIN_CUI_PUBLICADO", resultados: [] },
+    etapas,
+    cadenaObra: cadenaObra(obraInfoBras, obraProgress, etapas),
+    obraInfoBras,
     cierre: handovers.rows, operadores: operators.rows, mantenimiento: maintenance.rows, disponibilidad: availability.rows, indicadoresServicio: indicators.rows,
     evidenciaPendiente: reviews.rows.map((row) => ({ id: numberOrNull(row.queue_id), tipo: row.candidate_kind, motivo: row.reason, urls: row.evidence_urls, estado: row.status, creadoEn: row.created_at })),
     fuente: source(asset), fechaObservada: asset.observed_at, limitacion: asset.limitation,
