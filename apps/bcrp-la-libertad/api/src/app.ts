@@ -1,8 +1,5 @@
 import express, { type ErrorRequestHandler } from "express";
-import { projectsRouter } from "./routes/projects.js";
-import { oxiRouter } from "./routes/oxi.js";
-import { crossrefRouter } from "./routes/crossref.js";
-import { gisRouter } from "./routes/gis.js";
+import { indicadoresRouter } from "./routes/indicadores.js";
 import { metaRouter } from "./routes/meta.js";
 import { pool } from "./db/pool.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
@@ -29,10 +26,7 @@ export function createApp() {
   });
 
   app.use("/api", apiRateLimit);
-  app.use("/api/projects", projectsRouter);
-  app.use("/api/oxi", oxiRouter);
-  app.use("/api/crossref", crossrefRouter);
-  app.use("/api/gis", gisRouter);
+  app.use("/api/indicadores", indicadoresRouter);
   app.use("/api/meta", metaRouter);
 
   app.use(errorHandler);

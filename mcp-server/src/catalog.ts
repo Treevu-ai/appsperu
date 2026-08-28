@@ -997,7 +997,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "inversion_privada_meta_sources",
     app: "inversion-privada",
-    description: "Metadata de los últimos lotes de ingesta VERTIX/OxI y desglose territorial.",
+    description: "Metadata de los últimos lotes de ingesta VERTIX (APP/PA) y OxI, con desglose APP/PA y por fase OxI.",
     pathTemplate: "/api/meta/sources",
     pathParams: [],
     querySchema: {},
@@ -1006,46 +1006,74 @@ export const TOOL_CATALOG: ToolSpec[] = [
     name: "inversion_privada_oxi_projects",
     app: "inversion-privada",
     description:
-      "Cartera OxI en promoción (XLSX investmentpromotionExport.php) con código SNIP/Invierte, " +
-      "territorio y monto referencial. Cobertura nacional del export público. " +
+      "Cartera OxI (Obras por Impuestos) en promoción por PROINVERSIÓN — universo distinto a APP/PA, misma " +
+      "plataforma VERTIX. `codigoReferencia` viene de una columna fuente que mezcla tres sistemas de código " +
+      "(SNIP / Invierte.pe / IDEA) — no asumir que siempre es un codigo_snip exacto. Cobertura completa del " +
+      "export consultado (761 nacional, 55 en La Libertad, verificado 2026-08-28). " +
       SIN_SCHEDULER,
-    pathTemplate: "/api/oxi/projects",
+    pathTemplate: "/api/oxi",
     pathParams: [],
     querySchema: {
       departamento: z.string().min(1).optional(),
-      provincia: z.string().min(1).optional(),
+      funcion: z.string().min(1).optional(),
+      fase: z.string().min(1).optional(),
       entidad: z.string().min(1).optional(),
-      codigoSnip: z.string().min(1).optional(),
     },
   },
   {
-    name: "inversion_privada_oxi_project_by_id",
-    app: "inversion-privada",
-    description: "Detalle de un proyecto OxI por su N° interno del export.",
-    pathTemplate: "/api/oxi/projects/{oxiId}",
-    pathParams: ["oxiId"],
-    querySchema: {},
-  },
-  {
-    name: "inversion_privada_gis_status",
+    name: "inversion_privada_oxi_crossref_invierte",
     app: "inversion-privada",
     description:
-      "Estado del GIS VERTIX: iframe autenticado, ausencia de geometría pública y conteo de url_geo.",
-    pathTemplate: "/api/gis/status",
-    pathParams: [],
-    querySchema: {},
-  },
-  {
-    name: "inversion_privada_crossref",
-    app: "inversion-privada",
-    description:
-      "Cruce contextual por departamento: cartera APP/PA + OxI vs inversiones públicas. " +
-      "Match confirmado solo por código SNIP en OxI (APP/PA sin CUI). " +
-      SIN_SCHEDULER,
-    pathTemplate: "/api/crossref",
+      "Cruce OxI <-> radar-inversiones (Invierte.pe) por codigo_snip exacto (sin fuzzy). Solo confirma lo que " +
+      "efectivamente matchea — una fila sin match no implica que el proyecto no exista en Invierte.pe, solo " +
+      "que su código en OxI no coincidió. Incluye resumen con tasa de match real. Default LA LIBERTAD.",
+    pathTemplate: "/api/crossref/oxi",
     pathParams: [],
     querySchema: {
-      departamento: z.string().min(1),
+      departamento: z.string().min(1).optional(),
+    },
+  },
+  {
+    name: "inversion_privada_gis_geojson",
+    app: "inversion-privada",
+    description:
+      "GeoJSON FeatureCollection real y descargable de la cartera VERTIX (endpoint público de " +
+      "vertix.proinversion.gob.pe, sin login — a diferencia del visor GIS oficial que sí lo requiere). " +
+      "Cruce IDPROYECTO=vertix_id verificado (151/156 exacto). Cobertura completa del feed consultado " +
+      "(473 features, verificado 2026-08-28). " + SIN_SCHEDULER,
+    pathTemplate: "/api/gis/geojson",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+    },
+  },
+  {
+    name: "inversion_privada_gis_project_geometry",
+    app: "inversion-privada",
+    description: "Geometría(s) GIS de un proyecto APP/PA específico por su vertix_id (mismo Id de vertixService.php).",
+    pathTemplate: "/api/gis/projects/{vertixId}",
+    pathParams: ["vertixId"],
+    querySchema: {},
+  },
+
+  // ---- bcrp-la-libertad (Síntesis de Actividad Económica, BCRP Sucursal Trujillo) ----
+  {
+    name: "bcrp_la_libertad_indicadores",
+    app: "bcrp-la-libertad",
+    description:
+      "Indicadores mensuales de actividad económica de La Libertad (BCRP Sucursal Trujillo): agropecuario, pesca, " +
+      "minería, crédito, depósitos, ejecución presupuestal (anexo=10). A diferencia del resto del catálogo, la " +
+      "ingesta de esta fuente es MANUAL — el PDF mensual está detrás de un WAF que bloquea descarga automatizada; " +
+      "alguien debe bajarlo con un navegador real y correr `npm run ingest:pdf` (ver ADR-0014). Cobertura parcial " +
+      "de anexos: 1,2,3,5,6,8,10 se ingieren correctamente; 4,7,9 usan un layout de tabla ambiguo (separador de " +
+      "miles indistinguible de separador de columna) y no se ingieren para evitar datos corruptos silenciosos.",
+    pathTemplate: "/api/indicadores",
+    pathParams: [],
+    querySchema: {
+      anexo: z.coerce.number().int().min(1).optional(),
+      indicador: z.string().min(1).optional(),
+      anio: z.coerce.number().int().optional(),
+      mes: z.coerce.number().int().min(1).max(12).optional(),
     },
   },
 ];

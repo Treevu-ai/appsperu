@@ -1,21 +1,8 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-08-28.
+Última actualización: 2026-08-27.
 
-Trece apps standalone con API propia; todas son API-only (sin frontend web). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
-
-## Última sesión — 2026-08-28
-
-- **Nueva app — `inversion-privada`** (PROINVERSIÓN / VERTIX en investinperu.pe): cartera APP/PA +
-  OxI en promoción, API `:4012`, Postgres `:5443`. PRs [#34](https://github.com/Treevu-ai/appsperu/pull/34)
-  y [#35](https://github.com/Treevu-ai/appsperu/pull/35) mergeados.
-- **Fuentes:** `vertixService.php` (340 APP/PA) + `investmentpromotionExport.php` (761 OxI, todos con
-  código SNIP). Sin CUI en APP/PA; sin geometría GIS pública.
-- **Cruce:** `GET /api/crossref` — match confirmado OxI ↔ `radar-inversiones` por SNIP; contexto
-  territorial APP/PA + OxI por departamento.
-- **Operación:** ingestas en `corrida-operativa-la-libertad.ps1` e `ingest-la-libertad-completo.sh`.
-- **Documentación:** [`docs/SESION_INVERSION_PRIVADA_PROINVERSION_2026-08-28.md`](SESION_INVERSION_PRIVADA_PROINVERSION_2026-08-28.md),
-  [`docs/MENSAJE_PRODUCTO_INVERSION_PRIVADA_PROINVERSION_2026-08-28.md`](MENSAJE_PRODUCTO_INVERSION_PRIVADA_PROINVERSION_2026-08-28.md).
+Doce apps standalone con API propia; todas son API-only (sin frontend web). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
 
 ## Última sesión operativa — 2026-08-27
 
@@ -68,7 +55,30 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `actividad-agraria` | Series MIDAGRI regionales: jornal, alquiler tractor y yunta por departamento | 4009 | 5440 | Construida (API) |
 | `seguridad-ciudadana` | Denuncias policiales SIDPOL (MININTER) por distrito/mes/modalidad | 4010 | 5441 | Construida (API) |
 | `bcrp-comercio-exterior` | Comercio exterior agregado nacional (BCRP PN38714–PN38723) | 4011 | 5442 | Construida (API) |
-| `inversion-privada` | Inversión privada PROINVERSIÓN: VERTIX APP/PA + OxI (investinperu.pe) | 4012 | 5443 | Construida (API) |
+| `inversion-privada` | Cartera APP/PA + OxI + GIS PROINVERSIÓN (VERTIX / investinperu.pe) | 4012 | 5443 | Construida, probada, verificada |
+| `bcrp-la-libertad` | Síntesis de Actividad Económica regional (BCRP Sucursal Trujillo) — ingesta manual | 4013 | 5444 | Construida, probada, verificada (parcial: 7/10 anexos) |
+
+## `bcrp-la-libertad` — ingesta manual, distinto a todo el resto del proyecto (2026-08-28)
+
+A diferencia de los demás conectores (todos automatizados vía HTTP), este necesita que un
+humano descargue el PDF mensual con su navegador: `bcrp.gob.pe` está detrás de un WAF
+(Incapsula, challenge JS) que bloquea `curl` y `WebFetch` — confirmado en vivo, incluso
+reintentando con cookie-jar. No es el mismo tipo de bloqueo que tuvo INFOBRAS (ahí era de
+red/IP y se resolvió corriendo la ingesta en otra máquina); acá ninguna máquina sin navegador
+real con JS puede resolver el challenge.
+
+El PDF sí es parseable: `pdf-parse` v2 (`getText()`) extrae texto tabulado (`\t`) limpio para
+7 de los 10 ANEXOS del reporte (agropecuario, pesca, minería, manufactura-índice, crédito,
+depósitos, **ejecución presupuestal** — el más útil para cruzar con `radar-ejecucion`). Los
+otros 3 (manufactura-%var, morosidad, importaciones Salaverry) usan un layout donde los
+valores van separados por espacio en vez de tab, y algunos valores >999 usan espacio como
+separador de miles — ambiguo de partir sin arriesgar corromper datos, así que se dejan sin
+ingerir (0 filas, no un error silencioso). Ver
+`docs/adr/0014-bcrp-la-libertad-sintesis-economica-ingesta-manual.md`.
+
+Verificado con el PDF real de enero 2026 (`docs/sintesis-la-libertad-01-2026.pdf`, descargado
+por el usuario): 650 filas ingeridas, gasto no financiero total enero 2026 = S/ 757M (coincide
+con el texto narrativo del reporte).
 
 ## `mcp-server` (2026-08-26)
 
@@ -83,12 +93,11 @@ automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incl
 `mcp-server/README.md`, sección "Alcance actual y lo que falta", antes de exponerlo fuera de
 `localhost`).
 
-82 tools (13 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA + OxI + crossref SNIP (`inversion-privada`); resultado agro SIEA, turismo MINCETUR, cadena infra obra, denominadores INEI, meta vs sede en crossref.
+77 tools (14 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA + OxI + GIS (`inversion-privada`);
+nueva app `bcrp-la-libertad` (ingesta manual, ver sección dedicada arriba).
 
 ## Cruces entre apps (todos verificados con datos reales)
 
-- **inversion-privada ↔ radar-inversiones**, por departamento + código SNIP en OxI (match
-  exacto solo para proyectos OxI; APP/PA sin CUI) — `GET /api/crossref` en `inversion-privada/api`.
 - **radar-inversiones ↔ radar-ejecucion**, por `SEC_EJEC` (match exacto, sin fuzzy) —
   `GET /api/crossref` en `radar-inversiones/api`.
 - **compras-publicas ↔ radar-ejecucion**, por nombre de entidad (matcher difuso,
@@ -125,6 +134,19 @@ automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incl
   que actividad-agraria) — `GET /api/crossref` en `seguridad-ciudadana/api`. Cruza denuncias
   SIDPOL contra la ejecución de la función ORDEN PUBLICO Y SEGURIDAD — dos series independientes
   para lectura conjunta, no implica causalidad.
+- **inversion-privada (OxI) ↔ radar-inversiones**, por `codigo_referencia` vs. `codigo_snip`
+  (match exacto, sin fuzzy — mismo patrón que el cruce CUI de `infobras`) —
+  `GET /api/crossref/oxi` en `inversion-privada/api`. Solo cubre OxI (761 nacional, 55 en La
+  Libertad); la cartera APP/PA sigue sin CUI/SNIP y por tanto sin cruce exacto posible (ver
+  `docs/adr/0012-inversion-privada-oxi-y-cruce-snip-con-radar-inversiones.md`). Verificado:
+  45/55 proyectos OxI de La Libertad confirmados en Invierte.pe.
+- **inversion-privada (GIS) ↔ private_investment_projects (APP/PA)**, por `IDPROYECTO` =
+  `vertix_id` (match exacto, sin fuzzy) — `GET /api/gis/projects/:vertixId` en
+  `inversion-privada/api`. Verificado: 151/156 `IDPROYECTO` únicos del feed GIS matchean un
+  `vertix_id` ya ingerido (ver
+  `docs/adr/0013-inversion-privada-gis-vertix-geometria-sin-postgis.md`). `GET
+  /api/gis/geojson?departamento=` sirve un `FeatureCollection` real y descargable, sin login —
+  cierra el límite "sin mapa" que quedaba documentado en ADR-0011.
 - **salud-institucional** no es un cruce par-a-par, es un agregador: combina ejecución
   (radar-ejecucion, propia), obras no paralizadas (infobras, vía su crosswalk), inversiones
   sin sobrecosto (radar-inversiones, SEC_EJEC exacto), compras no concentradas
@@ -248,19 +270,6 @@ el cero inicial en el origen para departamentos 01-09 (ej. `10202` en vez de `01
 reconstruye a 6 dígitos en la normalización; La Libertad (departamento 13) nunca tiene este
 problema. Certificada `COMPLETA_VERIFICADA` en `territorial_coverage`.
 
-## `inversion-privada` (2026-08-28)
-
-Ingiere la cartera PROINVERSIÓN / VERTIX vía investinperu.pe — sin login, endpoints PHP no
-documentados oficialmente. Dos conectores: `vertixService.php` (APP/PA, JSON) y
-`investmentpromotionExport.php` (OxI, XLSX base64). `GET /api/projects` y `GET /api/oxi/projects`
-(con filtro `departamento`); `GET /api/crossref` cruza OxI con `radar-inversiones` por código SNIP
-(match confirmado). APP/PA no publican CUI — no hay cruce exacto con Invierte ni INFOBRAS. GIS
-público sin geometría descargable (`GET /api/gis/status`). Corte verificado: 340 APP/PA y 761 OxI
-nacionales; ~22 y ~55 en La Libertad. Ingesta manual (`ingest:vertix`, `ingest:oxi`); incluida en
-scripts de corrida La Libertad. Detalle en
-`docs/data-contracts/proinversion-vertix-cartera-app-pa-oxi.md` y
-`docs/SESION_INVERSION_PRIVADA_PROINVERSION_2026-08-28.md`.
-
 ## Fix de datos — PIM=0 en `radar-ejecucion` (2026-08-18)
 
 `budget_execution.pim` estaba en 0 en el 100% de las filas ingeridas: el MEF no puebla
@@ -282,4 +291,3 @@ avance (S/2,242.1M devengado / S/4,558.8M PIM), Gobiernos Locales 39.9%
 4. ~~Ingestas parciales acotadas a La Libertad~~ — **mitigado (2026-08-27)**: defaults de `.env.example` y `DEFAULT_TERRITORIAL_SCOPE` apuntan solo a `LA LIBERTAD`; scripts `ingest:libertad` por app y orquestador `scripts/ingest-la-libertad-completo.sh` para cobertura verificada.
 5. ~~Migración a Next 16 + React 19~~ — **N/A**: frontends web eliminados; el proyecto es API-only.
 6. ~~BCRP comercio exterior~~ — **hecho (2026-08-27)**: app `bcrp-comercio-exterior` (API 4011) ingiere series nacionales `PN38714BM`–`PN38723BM`; sin desagregado departamental (`RD38*` sigue congelado en origen).
-7. `inversion-privada`: certificar en `territorial_coverage` para La Libertad; memo analítico APP/PA + OxI con cruce SNIP.

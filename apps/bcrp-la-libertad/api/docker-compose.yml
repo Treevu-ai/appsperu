@@ -1,0 +1,16 @@
+name: bcrp-la-libertad
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: bcrp_ll
+      POSTGRES_PASSWORD: bcrp_ll
+      POSTGRES_DB: bcrp_la_libertad
+    ports:
+      - "127.0.0.1:5444:5432"
+    volumes:
+      - bcrp_la_libertad_pgdata:/var/lib/postgresql/data
+
+volumes:
+  bcrp_la_libertad_pgdata:

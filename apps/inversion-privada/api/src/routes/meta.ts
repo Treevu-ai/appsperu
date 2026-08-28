@@ -29,18 +29,17 @@ metaRouter.get(
     );
 
     const { rows: oxiBreakdown } = await pool.query(
-      `SELECT departamento, COUNT(*)::int AS total
-       FROM oxi_promotion_projects
-       GROUP BY departamento
-       ORDER BY total DESC
-       LIMIT 10`
+      `SELECT fase, COUNT(*)::int AS total
+       FROM oxi_investment_promotions
+       GROUP BY fase
+       ORDER BY fase`
     );
 
     res.json({
-      lotesVertix: batches,
+      lotes: batches,
       desgloseTipo: breakdown,
-      lotesOxi: oxiBatches,
-      oxiTopDepartamentos: oxiBreakdown,
+      oxiLotes: oxiBatches,
+      oxiDesgloseFase: oxiBreakdown,
     });
   })
 );

@@ -1,120 +1,86 @@
 import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db/pool.js";
+import { inversionesPool } from "../db/inversiones-pool.js";
 import { asyncHandler } from "../lib/async-handler.js";
 import { parseQuery } from "../lib/validate-query.js";
-import { fetchInversionesPublicas, type DependencyStatus, type InversionPublica } from "../lib/api-clients.js";
 
 export const crossrefRouter = Router();
 
-const CrossrefQuerySchema = z.object({
-  departamento: z.string().min(1),
+const CrossrefOxiQuerySchema = z.object({
+  departamento: z.string().min(1).optional(),
 });
 
-function buildInversionIndex(inversiones: InversionPublica[]): Map<string, InversionPublica> {
-  const index = new Map<string, InversionPublica>();
-  for (const inversion of inversiones) {
-    index.set(inversion.cui, inversion);
-    if (inversion.codigoSnip) index.set(inversion.codigoSnip, inversion);
-  }
-  return index;
-}
-
+/**
+ * Cruce OxI (`inversion-privada`) <-> radar-inversiones (Invierte.pe), por
+ * `codigo_referencia` (columna "CODIGO SNIP / INVIERTE.PE / CÓDIGO IDEA" del
+ * export OxI) contra `codigo_snip` de `investments`. A diferencia del cruce
+ * CUI de `infobras` (donde la columna es inequívocamente un CUI), acá el
+ * nombre de columna de la fuente mezcla tres sistemas de código distintos —
+ * el match es exacto (sin fuzzy) pero solo confirma lo que efectivamente
+ * matchea; una fila sin match no implica que el proyecto no exista en
+ * Invierte.pe, solo que su código en OxI no es (o no coincide con) un
+ * `codigo_snip` de esa fuente. Mismo patrón de agregación en capa de
+ * aplicación que `infobras/src/routes/crossref.ts`.
+ */
 crossrefRouter.get(
-  "/",
+  "/oxi",
   asyncHandler(async (req, res) => {
-    const parsed = parseQuery(CrossrefQuerySchema, req.query, res);
+    const parsed = parseQuery(CrossrefOxiQuerySchema, req.query, res);
     if (!parsed) return;
+    const wantedDepartamento = parsed.departamento?.toUpperCase().trim() ?? "LA LIBERTAD";
 
-    const departamento = parsed.departamento.trim().toUpperCase();
-
-    const [appPaResult, oxiResult, inversionesResult] = await Promise.all([
-      pool.query<{ tipo_proyecto: string; total: number; monto: string | null }>(
-        `SELECT tipo_proyecto, COUNT(*)::int AS total, SUM(monto_inversion_sigv) AS monto
-         FROM private_investment_projects
-         WHERE $1 = ANY(departamentos)
-         GROUP BY tipo_proyecto
-         ORDER BY tipo_proyecto`,
-        [departamento]
-      ),
-      pool.query<{ total: number; monto: string | null }>(
-        `SELECT COUNT(*)::int AS total, SUM(monto_referencial_soles) AS monto
-         FROM oxi_promotion_projects
-         WHERE departamento = $1`,
-        [departamento]
-      ),
-      fetchInversionesPublicas(departamento).catch((error) => ({
-        inversiones: [] as InversionPublica[],
-        dependency: (error as { dependency?: DependencyStatus }).dependency ?? {
-          app: "radar-inversiones",
-          url: `${process.env.RADAR_INVERSIONES_API_URL ?? "http://localhost:4002"}/api/investments`,
-          ok: false,
-          error: error instanceof Error ? error.message : "Error desconocido",
-        },
-      })),
-    ]);
-
-    const inversionIndex = buildInversionIndex(inversionesResult.inversiones);
-
-    const { rows: oxiRows } = await pool.query<{
-      oxi_id: number;
-      codigo_snip: string | null;
-      nombre: string;
-      entidad: string | null;
-      monto_referencial_soles: string | null;
-    }>(
-      `SELECT oxi_id, codigo_snip, nombre, entidad, monto_referencial_soles
-       FROM oxi_promotion_projects
-       WHERE departamento = $1 AND codigo_snip IS NOT NULL AND btrim(codigo_snip) <> ''`,
-      [departamento]
+    const { rows: oxiRows } = await pool.query(
+      `SELECT oxi_id, nombre_proyecto, codigo_referencia, monto_inversion_referencial, funcion
+       FROM oxi_investment_promotions
+       WHERE departamento = $1
+       ORDER BY oxi_id`,
+      [wantedDepartamento]
     );
 
-    const coincidenciasSnip = [];
-    for (const oxi of oxiRows) {
-      const codigo = oxi.codigo_snip?.trim();
-      if (!codigo) continue;
-      const inversion = inversionIndex.get(codigo);
-      if (!inversion) continue;
-      coincidenciasSnip.push({
-        matcher: "codigo_snip",
-        confidence: "confirmada" as const,
-        oxi: {
-          oxiId: oxi.oxi_id,
-          codigoSnip: codigo,
-          nombre: oxi.nombre,
-          entidad: oxi.entidad,
-          montoReferencialSoles:
-            oxi.monto_referencial_soles === null ? null : Number(oxi.monto_referencial_soles),
-        },
-        inversionPublica: inversion,
-      });
+    const conCodigo = oxiRows.filter((r) => r.codigo_referencia && /^\d+$/.test(r.codigo_referencia.trim()));
+
+    let inversionByCodigo = new Map<
+      string,
+      { nombre: string; estado: string; monto_viable: string | null; costo_actualizado: string | null }
+    >();
+    if (conCodigo.length > 0) {
+      const codigos = conCodigo.map((r) => r.codigo_referencia.trim());
+      const { rows: inversionRows } = await inversionesPool.query(
+        `SELECT codigo_snip, nombre, estado, monto_viable, costo_actualizado
+         FROM investments
+         WHERE codigo_snip = ANY($1)`,
+        [codigos]
+      );
+      inversionByCodigo = new Map(inversionRows.map((r) => [r.codigo_snip, r]));
     }
 
+    const resultados = oxiRows.map((r) => {
+      const codigo = r.codigo_referencia?.trim() ?? null;
+      const inversion = codigo ? inversionByCodigo.get(codigo) : undefined;
+      return {
+        oxiId: r.oxi_id,
+        nombreProyecto: r.nombre_proyecto,
+        funcion: r.funcion,
+        codigoReferencia: codigo,
+        montoInversionReferencialSoles: r.monto_inversion_referencial === null ? null : Number(r.monto_inversion_referencial),
+        enInvierte: Boolean(inversion),
+        nombreInvierte: inversion?.nombre ?? null,
+        estadoInvierte: inversion?.estado ?? null,
+        montoViableInvierte:
+          inversion && inversion.monto_viable !== null ? Number(inversion.monto_viable) : null,
+        costoActualizadoInvierte:
+          inversion && inversion.costo_actualizado !== null ? Number(inversion.costo_actualizado) : null,
+      };
+    });
+
     res.json({
-      matcher: "departamento + codigo_snip",
-      cobertura: coincidenciasSnip.length > 0 ? "PARCIAL" : "SIN_COINCIDENCIAS_SNIP",
-      restriccion:
-        "La cartera APP/PA de VERTIX no publica CUI; no hay cruce exacto con radar-inversiones. " +
-        "Solo los proyectos OxI con código SNIP/Invierte permiten match confirmado por clave.",
-      dependencias: [inversionesResult.dependency],
-      corte: { departamento },
-      contextoTerritorial: {
-        carteraAppPa: appPaResult.rows.map((row) => ({
-          tipo: row.tipo_proyecto,
-          total: row.total,
-          montoInversionSigv: row.monto === null ? null : Number(row.monto),
-        })),
-        oxi: {
-          total: oxiResult.rows[0]?.total ?? 0,
-          montoReferencialSoles:
-            oxiResult.rows[0]?.monto === null ? null : Number(oxiResult.rows[0].monto),
-        },
-        inversionesPublicas: {
-          total: inversionesResult.inversiones.length,
-          extraidoEl: inversionesResult.inversiones[0]?.fuente?.extraidoEl ?? null,
-        },
+      resultados,
+      resumen: {
+        totalOxi: oxiRows.length,
+        conCodigoReferencia: conCodigo.length,
+        confirmadosEnInvierte: resultados.filter((r) => r.enInvierte).length,
       },
-      coincidenciasSnip,
     });
   })
 );

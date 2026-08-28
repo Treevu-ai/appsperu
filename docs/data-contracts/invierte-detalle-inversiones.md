@@ -49,6 +49,20 @@ MONTO_VIABLE=1853953.5, DEPARTAMENTO=CUSCO, PROVINCIA=URUBAMBA, DISTRITO=OLLANTA
   (ej. actualizaciones históricas). El conector trata duplicados dentro de un mismo lote
   como rechazo explícito, no como sobrescritura silenciosa.
 
+## Paginación en `GET /api/investments` — 2026-08-28
+
+El endpoint tenía un `LIMIT 1000` fijo, sin `offset` ni total, aunque la tabla `investments`
+ya tuviera muchas más filas ingeridas para el departamento consultado (verificado: 7,998 CUI
+de La Libertad en DB, de los cuales el endpoint solo devolvía los primeros 1000 por
+`costo_actualizado DESC`, sin avisar que había más). Esto no es la misma limitación que la de
+la sección de abajo (esa es sobre cuánto del CSV del MEF se llegó a leer); esta es sobre
+cuánto de lo ya leído e ingerido el endpoint de lectura dejaba ver.
+
+Corregido: `limit` (1–5000, default 1000) y `offset` (≥0, default 0) como query params; la
+respuesta ahora incluye `total` (conteo real con el mismo filtro), `limit`, `offset` y
+`hasMore`. Un consumidor que necesite el universo completo de un departamento con más de 5000
+filas debe paginar con `offset` creciente hasta que `hasMore` sea `false`.
+
 ## Refresco controlado de La Libertad — 2026-08-24
 
 Se consultó `HEAD` al archivo y se confirmó `Content-Length: 246,344,022`,

@@ -6,17 +6,22 @@ import { parseQuery } from "../lib/validate-query.js";
 
 export const investmentsRouter = Router();
 
+const MAX_LIMIT = 5000;
+const DEFAULT_LIMIT = 1000;
+
 const InvestmentsQuerySchema = z.object({
   departamento: z.string().min(1).optional(),
   estado: z.string().min(1).optional(),
   situacion: z.string().min(1).optional(),
   funcion: z.string().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 investmentsRouter.get("/", asyncHandler(async (req, res) => {
   const parsed = parseQuery(InvestmentsQuerySchema, req.query, res);
   if (!parsed) return;
-  const { departamento, estado, situacion, funcion } = parsed;
+  const { departamento, estado, situacion, funcion, limit, offset } = parsed;
 
   const conditions: string[] = [];
   const params: unknown[] = [];
@@ -40,6 +45,12 @@ investmentsRouter.get("/", asyncHandler(async (req, res) => {
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
+  const { rows: countRows } = await pool.query<{ total: string }>(
+    `SELECT COUNT(*) AS total FROM investments i ${where}`,
+    params
+  );
+  const total = Number(countRows[0].total);
+
   const { rows } = await pool.query(
     `SELECT i.cui, i.codigo_snip, i.nombre, i.sec_ejec, i.nombre_uep, i.entidad, i.sector,
             i.nivel, i.estado, i.situacion, i.departamento, i.provincia, i.distrito,
@@ -49,11 +60,15 @@ investmentsRouter.get("/", asyncHandler(async (req, res) => {
      JOIN raw_investment_batches rb ON rb.id = i.source_batch_id
      ${where}
      ORDER BY i.costo_actualizado DESC NULLS LAST
-     LIMIT 1000`,
-    params
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, limit, offset]
   );
 
   res.json({
+    total,
+    limit,
+    offset,
+    hasMore: offset + rows.length < total,
     resultados: rows.map((r) => ({
       cui: r.cui,
       codigoSnip: r.codigo_snip,
