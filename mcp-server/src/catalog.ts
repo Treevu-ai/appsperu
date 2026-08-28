@@ -614,23 +614,38 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "ceplan_geo_infrastructure",
     app: "ceplan-geo",
-    description: "Infraestructura logística publicada por CEPLAN (aeropuertos, puertos). " + SIN_SCHEDULER,
+    description:
+      "Infraestructura publicada por CEPLAN: aeropuertos, puertos, red hídrica principal (cb_redhidricaprinx) y " +
+      "proyectos sectoriales agro (ip_prysecagr). Filtro opcional por código INEI de departamento (2 dígitos). " +
+      SIN_SCHEDULER,
     pathTemplate: "/api/infrastructure",
     pathParams: [],
-    querySchema: { type: z.enum(["aeropuerto", "puerto"]).optional() },
+    querySchema: {
+      type: z
+        .enum(["aeropuerto", "puerto", "red_hidrica_principal", "proyecto_sectorial_agro"])
+        .optional(),
+      departamento: z
+        .string()
+        .regex(/^\d{2}$/)
+        .optional()
+        .describe("Código INEI de departamento, ej. 13 para La Libertad."),
+    },
   },
   {
     name: "ceplan_geo_infrastructure_near",
     app: "ceplan-geo",
     description:
-      "Infraestructura dentro de un radio (km) del centroide del distrito (UBIGEO). Proximidad descriptiva, no causal. " +
+      "Infraestructura (aeropuertos, puertos, red hídrica principal, proyectos sectoriales agro) dentro de un radio " +
+      "(km) del centroide del distrito (UBIGEO). Proximidad descriptiva, no causal. " +
       SIN_SCHEDULER,
     pathTemplate: "/api/infrastructure/near",
     pathParams: [],
     querySchema: {
       ubigeo: z.string().regex(/^\d{6}$/),
       radius_km: z.string().regex(/^\d+(\.\d+)?$/).optional(),
-      type: z.enum(["aeropuerto", "puerto"]).optional(),
+      type: z
+        .enum(["aeropuerto", "puerto", "red_hidrica_principal", "proyecto_sectorial_agro"])
+        .optional(),
     },
   },
   {
@@ -791,6 +806,34 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: {
       departamento: z.string().min(1).describe("Requerido."),
       anio: z.string().regex(/^\d{4}$/).describe("Año fiscal de 4 dígitos. Requerido."),
+    },
+  },
+  {
+    name: "actividad_agraria_tractor_rental",
+    app: "actividad-agraria",
+    description:
+      "Precio de alquiler de tractor agrícola (S/.) por departamento/año/mes, fuente MIDAGRI-03.04. Misma semántica " +
+      "que jornal: null = mes sin dato o futuro no reportado. Cobertura nacional. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/tractor-rental",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      anio: z.string().regex(/^\d{4}$/).optional().describe("Año de 4 dígitos."),
+    },
+  },
+  {
+    name: "actividad_agraria_yunta_rental",
+    app: "actividad-agraria",
+    description:
+      "Precio de alquiler de yunta (S/.) por departamento/año/mes, fuente MIDAGRI-03.05. Misma semántica " +
+      "que jornal: null = mes sin dato o futuro no reportado. Cobertura nacional. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/yunta-rental",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      anio: z.string().regex(/^\d{4}$/).optional().describe("Año de 4 dígitos."),
     },
   },
 

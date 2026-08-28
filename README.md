@@ -20,7 +20,7 @@ sin frontends web).
 | `identidad-fiscal` | Padrón RUC (SUNAT) + cruces | 4006 |
 | `salud-institucional` | Score compuesto (agrega otras fuentes, sin BD propia) | 4007 |
 | `proveedores-sancionados` | Inhabilitaciones/multas RNP/OECE | 4008 |
-| `actividad-agraria` | Serie MIDAGRI jornal agrícola | 4009 |
+| `actividad-agraria` | Series MIDAGRI regionales (jornal, tractor, yunta) | 4009 |
 | `seguridad-ciudadana` | Denuncias policiales SIDPOL (MININTER) | 4010 |
 | `bcrp-comercio-exterior` | Comercio exterior agregado nacional (BCRP) | 4011 |
 

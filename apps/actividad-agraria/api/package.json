@@ -9,6 +9,9 @@
     "start": "node dist/index.js",
     "migrate": "tsx src/db/migrate.ts",
     "ingest:jornal": "tsx src/ingest/jornal-agricola-connector.ts",
+    "ingest:tractor": "tsx src/ingest/tractor-rental-connector.ts",
+    "ingest:yunta": "tsx src/ingest/yunta-rental-connector.ts",
+    "ingest:midagri-regional": "npm run ingest:jornal && npm run ingest:tractor && npm run ingest:yunta",
     "coverage:actividad-agraria": "tsx src/ingest/materialize-coverage.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"

@@ -54,7 +54,12 @@ este spike, pero mismo dataset padre y misma estructura esperada):
 - `MIDAGRI-03.01`: Importación de Insumos Agropecuarios 2015-2026 (nacional, no por región)
 - `MIDAGRI-03.02`: Producción de Guano de la Isla 2015-2026 (nacional, no por región)
 - `MIDAGRI-03.04`: Precio de Alquiler de Tractor Agrícola por Región 2018-2026 (S/.)
+  — URL confirmada 2026-08-27:
+  `https://www.datosabiertos.gob.pe/sites/default/files/Precio%20de%20Alquiler%20de%20Tractor.csv`
+  (misma estructura `Región;Año;Ene..Dic` que 03.03).
 - `MIDAGRI-03.05`: Precio de Alquiler de Yunta por Región 2018-2026 (S/.)
+  — URL confirmada 2026-08-27:
+  `https://www.datosabiertos.gob.pe/sites/default/files/precioxyunta.csv`
 
 ### Corrección sobre `MIDAGRI-02` (VBP) — no es regional
 

@@ -1,7 +1,11 @@
 import { pool } from "../db/pool.js";
 import { GeoserverClient, sha256Hex } from "./geoserver-client.js";
-import { INFRASTRUCTURE_LAYERS } from "./layers.js";
-import { parseInfrastructureName } from "./normalize.js";
+import type { InfraType } from "./layers.js";
+import {
+  parseAgroProjectName,
+  parseHydroPrincipalName,
+  parseInfrastructureName,
+} from "./normalize.js";
 import {
   ensureLayer,
   geometryJsonFromFeature,
@@ -13,21 +17,35 @@ import {
 
 export type InfrastructureIngestSummary = {
   layerName: string;
-  infraType: string;
+  infraType: InfraType;
   accepted: number;
   rejected: number;
 };
 
-const LAYER_TO_TYPE: Record<string, "aeropuerto" | "puerto"> = {
-  [INFRASTRUCTURE_LAYERS.AIRPORTS]: "aeropuerto",
-  [INFRASTRUCTURE_LAYERS.PORTS]: "puerto",
+export type InfrastructureLayerConfig = {
+  layerName: string;
+  infraType: InfraType;
+  parseName: (properties: Record<string, unknown> | null) => string | null;
 };
 
-async function ingestInfrastructureLayer(
+const CLASSIC_LAYERS: InfrastructureLayerConfig[] = [
+  {
+    layerName: "geoceplan:cn_aeropuertosx",
+    infraType: "aeropuerto",
+    parseName: (properties) => parseInfrastructureName(properties, "aeropuerto"),
+  },
+  {
+    layerName: "geoceplan:cn_puertosx",
+    infraType: "puerto",
+    parseName: (properties) => parseInfrastructureName(properties, "puerto"),
+  },
+];
+
+export async function ingestInfrastructureLayer(
   geoserver: GeoserverClient,
-  layerName: string,
-  infraType: "aeropuerto" | "puerto"
+  config: InfrastructureLayerConfig
 ): Promise<InfrastructureIngestSummary> {
+  const { layerName, infraType, parseName } = config;
   const client = await pool.connect();
   let accepted = 0;
   let rejected = 0;
@@ -52,7 +70,7 @@ async function ingestInfrastructureLayer(
           continue;
         }
 
-        const name = parseInfrastructureName(feature.properties, infraType);
+        const name = parseName(feature.properties ?? null);
         if (!name) {
           rejected += 1;
           continue;
@@ -83,12 +101,14 @@ async function ingestInfrastructureLayer(
   }
 }
 
-export async function runInfrastructureIngest(): Promise<InfrastructureIngestSummary[]> {
+export async function runInfrastructureIngest(
+  configs: InfrastructureLayerConfig[] = CLASSIC_LAYERS
+): Promise<InfrastructureIngestSummary[]> {
   const geoserver = new GeoserverClient();
   const summaries: InfrastructureIngestSummary[] = [];
 
-  for (const layerName of Object.values(INFRASTRUCTURE_LAYERS)) {
-    summaries.push(await ingestInfrastructureLayer(geoserver, layerName, LAYER_TO_TYPE[layerName]));
+  for (const config of configs) {
+    summaries.push(await ingestInfrastructureLayer(geoserver, config));
   }
 
   return summaries;

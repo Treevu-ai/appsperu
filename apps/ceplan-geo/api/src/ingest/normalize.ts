@@ -50,6 +50,20 @@ export function parseInfrastructureName(
   return name || null;
 }
 
+export function parseHydroPrincipalName(properties: Record<string, unknown> | null): string | null {
+  if (!properties) return null;
+  const name = String(properties.nombre_ca ?? properties.categoria ?? properties.codigo_rh ?? "").trim();
+  return name || null;
+}
+
+export function parseAgroProjectName(properties: Record<string, unknown> | null): string | null {
+  if (!properties) return null;
+  const name = String(
+    properties.nombre ?? properties.nombrepry ?? properties.codigounic ?? properties.codsnip ?? ""
+  ).trim();
+  return name || null;
+}
+
 export function featureIdFromGeoJson(feature: { id?: string | number }, fallbackIndex: number): string {
   if (feature.id != null && String(feature.id).trim()) return String(feature.id);
   return `feature-${fallbackIndex}`;

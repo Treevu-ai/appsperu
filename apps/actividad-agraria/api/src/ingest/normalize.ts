@@ -13,36 +13,42 @@ const MONTH_COLUMNS = [
   "Dic",
 ] as const;
 
-export interface RawWageRow {
+export interface RawRegionalMonthlyRow {
   Región: string;
   Año: string;
   [month: string]: string;
 }
 
-export interface NormalizedWageRow {
+export interface NormalizedRegionalMonthlyRow {
   departamento: string;
   anio: number;
   mes: number;
   valorSoles: number | null;
 }
 
-export function isRejected(raw: RawWageRow): boolean {
+/** @deprecated usar RawRegionalMonthlyRow */
+export type RawWageRow = RawRegionalMonthlyRow;
+/** @deprecated usar NormalizedRegionalMonthlyRow */
+export type NormalizedWageRow = NormalizedRegionalMonthlyRow;
+
+export function isRejectedRegionalRow(raw: RawRegionalMonthlyRow): boolean {
   return !raw["Región"]?.trim() || !Number.isInteger(Number(raw["Año"]));
 }
 
+/** @deprecated usar isRejectedRegionalRow */
+export const isRejected = isRejectedRegionalRow;
+
 /**
  * Aplana una fila (Región, Año, Ene..Dic) en hasta 12 filas (departamento,
- * año, mes, valor). Dos marcadores de "sin valor" en el origen — `-` (mes
- * reportado sin dato, ej. La Libertad abr-jul 2020) y campo vacío (mes
- * futuro aún no reportado, ej. el resto de 2026 tras febrero) — se
- * normalizan igual, ambos a NULL (ver ADR-0008 y el data contract de MIDAGRI).
+ * año, mes, valor). Dos marcadores de "sin valor" en el origen — `-` y campo
+ * vacío — se normalizan igual a NULL.
  */
-export function normalizeRow(raw: RawWageRow): NormalizedWageRow[] {
+export function normalizeRegionalMonthlyRow(raw: RawRegionalMonthlyRow): NormalizedRegionalMonthlyRow[] {
   const departamento = raw["Región"].trim().toUpperCase();
   const anio = Number(raw["Año"]);
 
   return MONTH_COLUMNS.map((mesNombre, index) => {
-    const rawValue = raw[mesNombre]?.trim() ?? "";
+    const rawValue = raw[mesNombre]?.trim().replace(",", ".") ?? "";
     const valorSoles = rawValue === "" || rawValue === "-" ? null : Number(rawValue);
     return {
       departamento,
@@ -52,3 +58,6 @@ export function normalizeRow(raw: RawWageRow): NormalizedWageRow[] {
     };
   });
 }
+
+/** @deprecated usar normalizeRegionalMonthlyRow */
+export const normalizeRow = normalizeRegionalMonthlyRow;

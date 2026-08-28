@@ -27,4 +27,10 @@ echo "==> ceplan-estrategico: ObservaPerú (agregado por nivel de gobierno)"
 echo "==> bcrp-comercio-exterior: balanza comercial nacional (contexto macro)"
 (cd "$ROOT/apps/bcrp-comercio-exterior/api" && npm run ingest:trade)
 
+echo "==> actividad-agraria: series MIDAGRI regionales (jornal, tractor, yunta)"
+(cd "$ROOT/apps/actividad-agraria/api" && npm run ingest:midagri-regional)
+
+echo "==> ceplan-geo: red hídrica principal + proyectos agro sectoriales"
+(cd "$ROOT/apps/ceplan-geo/api" && npm run ingest:extended-infrastructure)
+
 echo "Ingesta La Libertad completa finalizada."
