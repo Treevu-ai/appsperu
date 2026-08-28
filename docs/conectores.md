@@ -180,7 +180,9 @@ Piloto ALSOL: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distritos
 ---
 
 <a id="inversion-privada"></a>
-## inversion-privada — Cartera APP/PA (PROINVERSIÓN / VERTIX)
+## inversion-privada — Cartera APP/PA + OxI + GIS (PROINVERSIÓN / VERTIX)
+
+Tres conectores independientes, misma app y misma plataforma origen (VERTIX):
 
 | | |
 |---|---|
@@ -189,9 +191,47 @@ Piloto ALSOL: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distritos
 | **Cómo lo hace** | POST `multipart/form-data` al proxy PHP de `investinperu.pe` (`PageLimit=500`). Sin sesión. Departamento por proyecto inferido del buscador — el JSON por fila no trae columna territorial. |
 | **Frecuencia** | Manual (`npm run ingest:vertix`). Snapshot completo de la cartera en cada corrida. |
 | **Fuente de datos** | `https://www.investinperu.pe/wp-content/themes/hello-elementor-child/__api/service/app/vertixService.php` |
-| **Cobertura real ingerida** | Cartera VERTIX APP+PA — ~340 proyectos verificados 2026-08-28 (`RecordsTotal` = filas upsertadas). OxI y GIS fuera de alcance del conector actual. |
+| **Cobertura real ingerida** | Cartera VERTIX APP+PA — ~340 proyectos verificados 2026-08-28 (`RecordsTotal` = filas upsertadas). Sin CUI/SNIP — sin cruce exacto posible con el resto del ecosistema. |
 | **Detalle completo** | [`docs/data-contracts/proinversion-vertix-cartera-app-pa-oxi.md`](data-contracts/proinversion-vertix-cartera-app-pa-oxi.md) |
 | **ADR** | [`docs/adr/0011-inversion-privada-app-standalone-y-connector-vertix.md`](adr/0011-inversion-privada-app-standalone-y-connector-vertix.md) |
+
+| | |
+|---|---|
+| **Descripción** | Trae la cartera de proyectos OxI (Obras por Impuestos) en promoción — universo distinto a APP/PA aunque comparta plataforma VERTIX. Único de los dos conectores VERTIX que trae un código de referencia cruzable con `radar-inversiones`. |
+| **Qué hace** | Descarga el XLSX (vía JSON+base64) de `investmentpromotionExport.php`, parsea columnas B→Q y normaliza hacia `oxi_investment_promotions`. Expone `GET /api/crossref/oxi` contra `radar-inversiones` por `codigo_snip`. |
+| **Cómo lo hace** | POST `multipart/form-data` (`Lan=es`) al mismo proxy PHP de `investinperu.pe`. Sin sesión. XLSX pequeño (~760 filas, con shared strings), parseado completo en memoria — sin streaming. |
+| **Frecuencia** | Manual (`npm run ingest:oxi`). Snapshot completo en cada corrida. |
+| **Fuente de datos** | `https://www.investinperu.pe/wp-content/themes/hello-elementor-child/__api/service/oxi/investmentpromotionExport.php` |
+| **Cobertura real ingerida** | 761 proyectos OxI nacional, 55 en La Libertad, verificados 2026-08-28. Cruce con `radar-inversiones`: 45/55 confirmados en La Libertad. |
+| **Detalle completo** | [`docs/data-contracts/proinversion-vertix-cartera-app-pa-oxi.md`](data-contracts/proinversion-vertix-cartera-app-pa-oxi.md) |
+| **ADR** | [`docs/adr/0012-inversion-privada-oxi-y-cruce-snip-con-radar-inversiones.md`](adr/0012-inversion-privada-oxi-y-cruce-snip-con-radar-inversiones.md) |
+
+| | |
+|---|---|
+| **Descripción** | Trae la geometría GIS de proyectos VERTIX (puntos/líneas/polígonos) desde el dashboard público de `vertix.proinversion.gob.pe` — sin login, a diferencia del resto del backend de ese dominio. Cierra el límite "sin mapa descargable" que quedaba documentado en el ADR anterior. |
+| **Qué hace** | Descarga el GeoJSON `FeatureCollection` de `ListaRegistrosCapas`, parsea la geometría (viene como string JSON) y normaliza hacia `vertix_project_geometries`. Expone `GET /api/gis/geojson` (descargable) y `GET /api/gis/projects/:vertixId` (cruce exacto `IDPROYECTO = vertix_id`). |
+| **Cómo lo hace** | `GET` simple sin auth (a diferencia de los otros dos conectores VERTIX, que son POST multipart) a `vertix.proinversion.gob.pe/GIS/Dashboard/ListaRegistrosCapas`. Geometría guardada en JSONB, no PostGIS — ver ADR. |
+| **Frecuencia** | Manual (`npm run ingest:gis`). Snapshot completo en cada corrida. |
+| **Fuente de datos** | `https://vertix.proinversion.gob.pe/GIS/Dashboard/ListaRegistrosCapas` |
+| **Cobertura real ingerida** | 473 features nacional verificadas 2026-08-28. Cruce con `private_investment_projects`: 151/156 `IDPROYECTO` únicos confirmados. La Libertad: 13 features. |
+| **Detalle completo** | [`docs/data-contracts/proinversion-vertix-cartera-app-pa-oxi.md`](data-contracts/proinversion-vertix-cartera-app-pa-oxi.md) |
+| **ADR** | [`docs/adr/0013-inversion-privada-gis-vertix-geometria-sin-postgis.md`](adr/0013-inversion-privada-gis-vertix-geometria-sin-postgis.md) |
+
+---
+
+<a id="bcrp-la-libertad"></a>
+## bcrp-la-libertad — Síntesis de Actividad Económica (BCRP Sucursal Trujillo)
+
+| | |
+|---|---|
+| **Descripción** | Indicadores mensuales de actividad económica de La Libertad (agropecuario, pesca, minería, manufactura, crédito, depósitos, ejecución presupuestal) publicados por la Sucursal Trujillo del BCRP — no confundir con `bcrp-comercio-exterior`, que es agregado nacional. |
+| **Qué hace** | Parsea el PDF mensual "LA LIBERTAD: Síntesis de Actividad Económica" (10 ANEXOS, formato tabulado por indicador × 13 meses) y normaliza hacia `bcrp_ll_indicators`, una tabla genérica de series de tiempo (no una tabla por anexo). |
+| **Cómo lo hace** | **Ingesta manual, único caso en el proyecto**: `bcrp.gob.pe` está detrás de un WAF (Incapsula, challenge JS) que bloquea descarga automatizada — confirmado con `curl` y `WebFetch`. Alguien descarga el PDF con su navegador y corre `npm run ingest:pdf -- <ruta>`, que usa `pdf-parse` (`getText()`) para extraer texto tabulado y un parser genérico basado en detectar encabezados `ANEXO N`. |
+| **Frecuencia** | Manual, sin descarga automatizable — ni siquiera con scheduler, a diferencia del resto del catálogo (que es manual solo por decisión de diseño, no por bloqueo técnico). |
+| **Fuente de datos** | `https://www.bcrp.gob.pe/docs/Sucursales/Trujillo/{AÑO}/sintesis-la-libertad-{MM}-{AÑO}.pdf` |
+| **Cobertura real ingerida** | 7/10 ANEXOS (1,2,3,5,6,8,10 — incluye ejecución presupuestal, el más relevante para cruzar con `radar-ejecucion`). Anexos 4, 7 y 9 usan un layout de tabla con valores separados por espacio en vez de tab, ambiguo de partir sin arriesgar corromper datos (separador de miles indistinguible de separador de columna) — se dejan sin ingerir. Verificado con el PDF de enero 2026: 650 filas, cifras coincidentes con el texto narrativo del reporte. |
+| **Detalle completo** | [`docs/data-contracts/bcrp-sintesis-la-libertad.md`](data-contracts/bcrp-sintesis-la-libertad.md) |
+| **ADR** | [`docs/adr/0014-bcrp-la-libertad-sintesis-economica-ingesta-manual.md`](adr/0014-bcrp-la-libertad-sintesis-economica-ingesta-manual.md) |
 
 ---
 
@@ -223,6 +263,9 @@ Piloto ALSOL: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distritos
 | `padron-connector.ts` | identidad-fiscal | SUNAT Padrón RUC | Descarga ZIP completo | Manual | Completa (nacional, ~2.3M filas) |
 | `sanciones-connector.ts` | proveedores-sancionados | RNP/OECE Tribunal de Contrataciones | Sesión ASP + export HTML | Manual | Completa (nacional, ~17.9K filas) |
 | `vertix-connector.ts` | inversion-privada | PROINVERSIÓN VERTIX (investinperu.pe) | POST multipart JSON | Manual | Completa (cartera APP/PA) |
+| `oxi-connector.ts` | inversion-privada | PROINVERSIÓN VERTIX OxI (investinperu.pe) | POST multipart, XLSX en JSON base64 | Manual | Completa (761 nacional, 55 La Libertad) |
+| `gis-connector.ts` | inversion-privada | PROINVERSIÓN VERTIX GIS (vertix.proinversion.gob.pe) | GET GeoJSON, sin auth | Manual | Completa (473 features nacional) |
+| `pdf-connector.ts` | bcrp-la-libertad | BCRP Sucursal Trujillo (PDF, descarga manual por WAF) | Parseo de texto tabulado con `pdf-parse` | Manual (archivo local) | Parcial (7/10 anexos) |
 | — (agregador) | salud-institucional | Las otras 5 apps | Query en vivo, sin ingesta | Bajo demanda (por request) | N/A |
 
 ## Candidatos evaluados, no implementados

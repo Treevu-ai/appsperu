@@ -55,7 +55,30 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `actividad-agraria` | Series MIDAGRI regionales: jornal, alquiler tractor y yunta por departamento | 4009 | 5440 | Construida (API) |
 | `seguridad-ciudadana` | Denuncias policiales SIDPOL (MININTER) por distrito/mes/modalidad | 4010 | 5441 | Construida (API) |
 | `bcrp-comercio-exterior` | Comercio exterior agregado nacional (BCRP PN38714–PN38723) | 4011 | 5442 | Construida (API) |
-| `inversion-privada` | Cartera APP/PA PROINVERSIÓN (VERTIX / investinperu.pe) | 4012 | 5443 | Construida (API) |
+| `inversion-privada` | Cartera APP/PA + OxI + GIS PROINVERSIÓN (VERTIX / investinperu.pe) | 4012 | 5443 | Construida, probada, verificada |
+| `bcrp-la-libertad` | Síntesis de Actividad Económica regional (BCRP Sucursal Trujillo) — ingesta manual | 4013 | 5444 | Construida, probada, verificada (parcial: 7/10 anexos) |
+
+## `bcrp-la-libertad` — ingesta manual, distinto a todo el resto del proyecto (2026-08-28)
+
+A diferencia de los demás conectores (todos automatizados vía HTTP), este necesita que un
+humano descargue el PDF mensual con su navegador: `bcrp.gob.pe` está detrás de un WAF
+(Incapsula, challenge JS) que bloquea `curl` y `WebFetch` — confirmado en vivo, incluso
+reintentando con cookie-jar. No es el mismo tipo de bloqueo que tuvo INFOBRAS (ahí era de
+red/IP y se resolvió corriendo la ingesta en otra máquina); acá ninguna máquina sin navegador
+real con JS puede resolver el challenge.
+
+El PDF sí es parseable: `pdf-parse` v2 (`getText()`) extrae texto tabulado (`\t`) limpio para
+7 de los 10 ANEXOS del reporte (agropecuario, pesca, minería, manufactura-índice, crédito,
+depósitos, **ejecución presupuestal** — el más útil para cruzar con `radar-ejecucion`). Los
+otros 3 (manufactura-%var, morosidad, importaciones Salaverry) usan un layout donde los
+valores van separados por espacio en vez de tab, y algunos valores >999 usan espacio como
+separador de miles — ambiguo de partir sin arriesgar corromper datos, así que se dejan sin
+ingerir (0 filas, no un error silencioso). Ver
+`docs/adr/0014-bcrp-la-libertad-sintesis-economica-ingesta-manual.md`.
+
+Verificado con el PDF real de enero 2026 (`docs/sintesis-la-libertad-01-2026.pdf`, descargado
+por el usuario): 650 filas ingeridas, gasto no financiero total enero 2026 = S/ 757M (coincide
+con el texto narrativo del reporte).
 
 ## `mcp-server` (2026-08-26)
 
@@ -70,7 +93,8 @@ automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incl
 `mcp-server/README.md`, sección "Alcance actual y lo que falta", antes de exponerlo fuera de
 `localhost`).
 
-72 tools (13 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA (`inversion-privada`).
+77 tools (14 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA + OxI + GIS (`inversion-privada`);
+nueva app `bcrp-la-libertad` (ingesta manual, ver sección dedicada arriba).
 
 ## Cruces entre apps (todos verificados con datos reales)
 
@@ -110,6 +134,19 @@ automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incl
   que actividad-agraria) — `GET /api/crossref` en `seguridad-ciudadana/api`. Cruza denuncias
   SIDPOL contra la ejecución de la función ORDEN PUBLICO Y SEGURIDAD — dos series independientes
   para lectura conjunta, no implica causalidad.
+- **inversion-privada (OxI) ↔ radar-inversiones**, por `codigo_referencia` vs. `codigo_snip`
+  (match exacto, sin fuzzy — mismo patrón que el cruce CUI de `infobras`) —
+  `GET /api/crossref/oxi` en `inversion-privada/api`. Solo cubre OxI (761 nacional, 55 en La
+  Libertad); la cartera APP/PA sigue sin CUI/SNIP y por tanto sin cruce exacto posible (ver
+  `docs/adr/0012-inversion-privada-oxi-y-cruce-snip-con-radar-inversiones.md`). Verificado:
+  45/55 proyectos OxI de La Libertad confirmados en Invierte.pe.
+- **inversion-privada (GIS) ↔ private_investment_projects (APP/PA)**, por `IDPROYECTO` =
+  `vertix_id` (match exacto, sin fuzzy) — `GET /api/gis/projects/:vertixId` en
+  `inversion-privada/api`. Verificado: 151/156 `IDPROYECTO` únicos del feed GIS matchean un
+  `vertix_id` ya ingerido (ver
+  `docs/adr/0013-inversion-privada-gis-vertix-geometria-sin-postgis.md`). `GET
+  /api/gis/geojson?departamento=` sirve un `FeatureCollection` real y descargable, sin login —
+  cierra el límite "sin mapa" que quedaba documentado en ADR-0011.
 - **salud-institucional** no es un cruce par-a-par, es un agregador: combina ejecución
   (radar-ejecucion, propia), obras no paralizadas (infobras, vía su crosswalk), inversiones
   sin sobrecosto (radar-inversiones, SEC_EJEC exacto), compras no concentradas
