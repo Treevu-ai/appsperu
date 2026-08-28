@@ -65,6 +65,40 @@ function Wait-PostgresPort([int]$port, [string]$label, [int]$timeoutSec = 90) {
   throw "Timeout esperando Postgres $label en puerto $port. ¿Docker Desktop está corriendo?"
 }
 
+function Repair-DockerNetworks {
+  Log 'Reparando redes Docker (pools agotados)...'
+  $repair = Join-Path $repoRoot 'scripts\repair-docker-networks.ps1'
+  if (Test-Path -LiteralPath $repair) {
+    & $repair
+  } else {
+    docker network prune -f | Tee-Object -FilePath $logPath -Append
+    docker network inspect appsperu_shared 2>$null | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+      docker network create appsperu_shared | Tee-Object -FilePath $logPath -Append
+    }
+  }
+}
+
+function Invoke-DockerComposeUp([string]$relativeApiPath) {
+  Push-Location (Join-Path $repoRoot $relativeApiPath)
+  try {
+    docker compose up -d 2>&1 | Tee-Object -FilePath $logPath -Append
+    if ($LASTEXITCODE -ne 0) {
+      $logTail = Get-Content -LiteralPath $logPath -Tail 30 -ErrorAction SilentlyContinue | Out-String
+      if ($logTail -match 'fully subnetted|address pools') {
+        Log 'Detectado agotamiento de subredes Docker — reparando y reintentando...'
+        Repair-DockerNetworks
+        docker compose up -d 2>&1 | Tee-Object -FilePath $logPath -Append
+      }
+      if ($LASTEXITCODE -ne 0) {
+        throw "docker compose up -d falló en $relativeApiPath (código $LASTEXITCODE). Ejecuta: .\scripts\repair-docker-networks.ps1 -Aggressive"
+      }
+    }
+  } finally {
+    Pop-Location
+  }
+}
+
 function Invoke-AppStep([string]$description, [string]$relativeApiPath, [scriptblock]$action) {
   $apiDir = Join-Path $repoRoot $relativeApiPath
   if (-not (Test-Path -LiteralPath $apiDir)) {
@@ -104,6 +138,8 @@ function Wait-HttpOk([string]$url, [int]$timeoutSec = 60) {
 Log "Corrida operativa La Libertad — repo: $repoRoot"
 Log "Log: $logPath"
 
+Repair-DockerNetworks
+
 # Volumen externo de radar-ejecucion (primera vez)
 docker volume inspect api_radar_pgdata 2>$null | Out-Null
 if ($LASTEXITCODE -ne 0) {
@@ -121,7 +157,8 @@ $dbApps = @(
 foreach ($app in $dbApps) {
   $apiDir = Join-Path $repoRoot $app.Path
   Ensure-EnvFile $apiDir
-  Invoke-AppStep "docker compose up -d ($($app.Name))" $app.Path { docker compose up -d }
+  Log "== docker compose up -d ($($app.Name)) =="
+  Invoke-DockerComposeUp $app.Path
   Wait-PostgresPort -port $app.Port -label $app.Name
 }
 

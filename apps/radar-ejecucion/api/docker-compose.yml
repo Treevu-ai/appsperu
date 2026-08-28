@@ -16,3 +16,8 @@ volumes:
   radar_pgdata:
     name: api_radar_pgdata
     external: true
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true
