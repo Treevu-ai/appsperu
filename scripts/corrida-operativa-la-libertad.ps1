@@ -113,6 +113,8 @@ if ($LASTEXITCODE -ne 0) {
 
 $dbApps = @(
   @{ Name = 'radar-ejecucion'; Path = 'apps\radar-ejecucion\api'; Port = 5432 },
+  @{ Name = 'radar-inversiones'; Path = 'apps\radar-inversiones\api'; Port = 5434 },
+  @{ Name = 'inversion-privada'; Path = 'apps\inversion-privada\api'; Port = 5443 },
   @{ Name = 'actividad-agraria'; Path = 'apps\actividad-agraria\api'; Port = 5440 },
   @{ Name = 'ceplan-geo'; Path = 'apps\ceplan-geo\api'; Port = 5437 },
   @{ Name = 'seguridad-ciudadana'; Path = 'apps\seguridad-ciudadana\api'; Port = 5441 }
@@ -142,22 +144,31 @@ if (-not $SkipIngest) {
 
   # SIDPOL La Libertad — denominadores/tasas (opcional pero recomendado)
   Invoke-AppStep 'ingest:sidpol' 'apps\seguridad-ciudadana\api' { npm run ingest:sidpol }
+
+  # PROINVERSIÓN VERTIX (APP/PA) + OxI — snapshot nacional; filtro territorial en la API
+  Invoke-AppStep 'ingest:vertix' 'apps\inversion-privada\api' { npm run ingest:vertix }
+  Invoke-AppStep 'ingest:oxi' 'apps\inversion-privada\api' { npm run ingest:oxi }
 }
 
 if ($StartApis) {
   Start-ApiDev 'radar-ejecucion' 'apps\radar-ejecucion\api' 4000
+  Start-ApiDev 'radar-inversiones' 'apps\radar-inversiones\api' 4002
+  Start-ApiDev 'inversion-privada' 'apps\inversion-privada\api' 4012
   Start-ApiDev 'actividad-agraria' 'apps\actividad-agraria\api' 4009
   Start-ApiDev 'ceplan-geo' 'apps\ceplan-geo\api' 4005
   Start-ApiDev 'seguridad-ciudadana' 'apps\seguridad-ciudadana\api' 4010
 
   Wait-HttpOk 'http://127.0.0.1:4000/health'
+  Wait-HttpOk 'http://127.0.0.1:4002/health'
+  Wait-HttpOk 'http://127.0.0.1:4012/health'
   Wait-HttpOk 'http://127.0.0.1:4009/health'
   Wait-HttpOk 'http://127.0.0.1:4005/health'
   Wait-HttpOk 'http://127.0.0.1:4010/health'
   Log 'APIs en marcha (ventanas minimizadas).'
 } else {
-  Log 'Omitido -StartApis. Para smoke HTTP, abre 4 terminales con npm run dev en:'
-  Log '  apps/radar-ejecucion/api (4000), actividad-agraria/api (4009), ceplan-geo/api (4005), seguridad-ciudadana/api (4010)'
+  Log 'Omitido -StartApis. Para smoke HTTP, abre terminales con npm run dev en:'
+  Log '  radar-ejecucion (4000), radar-inversiones (4002), inversion-privada (4012),'
+  Log '  actividad-agraria (4009), ceplan-geo (4005), seguridad-ciudadana (4010)'
 }
 
 if (-not $SkipSmoke) {
@@ -167,6 +178,8 @@ if (-not $SkipSmoke) {
     Log '== Smoke tests (5 frentes) =='
     $smokes = @(
       "http://127.0.0.1:4009/api/crossref?departamento=LA%20LIBERTAD&anio=2024",
+      "http://127.0.0.1:4012/api/crossref?departamento=LA%20LIBERTAD",
+      "http://127.0.0.1:4012/api/oxi/projects?departamento=LA%20LIBERTAD",
       "http://127.0.0.1:4000/api/turismo/crossref?departamento=LA%20LIBERTAD&anioFiscal=$Year",
       "http://127.0.0.1:4000/api/infraestructura/activos/ACTIVO-DRENAJE-2539202",
       "http://127.0.0.1:4005/api/crossref/ejecucion?ubigeo=130101",
