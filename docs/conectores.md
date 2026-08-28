@@ -220,3 +220,15 @@ Piloto ALSOL: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distritos
 | **Qué sí tiene, a diferencia del resto** | API REST real, documentada, sin sesión ni scraping — confirmado en vivo. El conector más simple de construir de todos, si se acepta la granularidad limitada del agregado nacional. |
 | **Fuente de datos** | `estadisticas.bcrp.gob.pe/estadisticas/series/api` (Banco Central de Reserva del Perú). |
 | **Detalle completo** | [`docs/data-contracts/bcrp-comercio-exterior.md`](data-contracts/bcrp-comercio-exterior.md) |
+
+<a id="proinversion-vertix"></a>
+### proinversion-vertix — Cartera APP/PA/OxI (PROINVERSIÓN / VERTIX), candidato no construido
+
+| | |
+|---|---|
+| **Descripción** | Cartera de inversión privada promovida por PROINVERSIÓN — APP, Proyectos en Activos y Obras por Impuestos — vía plataforma VERTIX. |
+| **Por qué no está construido** | Spike reciente (ADR-0010): el endpoint JSON funciona sin login pero **no está documentado oficialmente**; sin CUI para cruce exacto con `radar-inversiones` / `infobras`; OxI y GIS aún sin data contract completo. |
+| **Qué sí tiene** | `vertixService.php` devuelve JSON paginado (340 proyectos verificados 2026-08-28); filtros por departamento INEI; export OxI en XLSX base64. Más simple que `sanciones-connector.ts`, más frágil que fuentes con CSV estable. |
+| **Fuente de datos** | `https://www.investinperu.pe/` — proxy `__api/service/app/vertixService.php` (POST multipart). |
+| **Detalle completo** | [`docs/data-contracts/proinversion-vertix-cartera-app-pa-oxi.md`](data-contracts/proinversion-vertix-cartera-app-pa-oxi.md) |
+| **Investigación** | [`docs/adr/0010-research-spike-proinversion-vertix-cartera-app-pa-oxi.md`](adr/0010-research-spike-proinversion-vertix-cartera-app-pa-oxi.md) |

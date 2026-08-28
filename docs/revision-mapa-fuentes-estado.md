@@ -147,7 +147,23 @@
 
 ---
 
-### ⚠️ PROINVERSIÓN / OEFA / MINAM / ANA (NO VERIFICADOS)
+### ✅ PROINVERSIÓN / VERTIX (VERIFICADO — spike ADR-0010)
+
+**Afirmación**: "portales y documentos estructurados parcialmente / datasets abiertos"
+
+**Estado**: Verificado en vivo (2026-08-28). La cartera APP/PA es JSON estructurado vía
+`vertixService.php` en `investinperu.pe` (340 proyectos, sin login). OxI exporta XLSX en
+base64; GIS y documentos PDF siguen pendientes de profundizar.
+
+**Detalle**: `docs/adr/0010-research-spike-proinversion-vertix-cartera-app-pa-oxi.md`,
+`docs/data-contracts/proinversion-vertix-cartera-app-pa-oxi.md`
+
+**No confundir** con Invierte.pe (`radar-inversiones`) — universos distintos; VERTIX no publica
+CUI en el corte actual.
+
+---
+
+### ⚠️ OEFA / MINAM / ANA (NO VERIFICADOS)
 
 **Afirmación**: "portales y documentos estructurados parcialmente / datasets abiertos"
 
