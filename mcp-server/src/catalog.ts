@@ -997,9 +997,55 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "inversion_privada_meta_sources",
     app: "inversion-privada",
-    description: "Metadata de los últimos lotes de ingesta VERTIX y desglose APP/PA.",
+    description: "Metadata de los últimos lotes de ingesta VERTIX/OxI y desglose territorial.",
     pathTemplate: "/api/meta/sources",
     pathParams: [],
     querySchema: {},
+  },
+  {
+    name: "inversion_privada_oxi_projects",
+    app: "inversion-privada",
+    description:
+      "Cartera OxI en promoción (XLSX investmentpromotionExport.php) con código SNIP/Invierte, " +
+      "territorio y monto referencial. Cobertura nacional del export público. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/oxi/projects",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      entidad: z.string().min(1).optional(),
+      codigoSnip: z.string().min(1).optional(),
+    },
+  },
+  {
+    name: "inversion_privada_oxi_project_by_id",
+    app: "inversion-privada",
+    description: "Detalle de un proyecto OxI por su N° interno del export.",
+    pathTemplate: "/api/oxi/projects/{oxiId}",
+    pathParams: ["oxiId"],
+    querySchema: {},
+  },
+  {
+    name: "inversion_privada_gis_status",
+    app: "inversion-privada",
+    description:
+      "Estado del GIS VERTIX: iframe autenticado, ausencia de geometría pública y conteo de url_geo.",
+    pathTemplate: "/api/gis/status",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
+    name: "inversion_privada_crossref",
+    app: "inversion-privada",
+    description:
+      "Cruce contextual por departamento: cartera APP/PA + OxI vs inversiones públicas. " +
+      "Match confirmado solo por código SNIP en OxI (APP/PA sin CUI). " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/crossref",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1),
+    },
   },
 ];

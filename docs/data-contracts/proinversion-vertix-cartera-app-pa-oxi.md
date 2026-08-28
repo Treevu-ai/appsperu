@@ -10,7 +10,7 @@
 - Owner del conector: app `inversion-privada` (`apps/inversion-privada/api`).
 - **Confirmado en vivo el 2026-08-28** con `curl` contra los endpoints PHP del tema WordPress.
 
-## Estado: PARCIALMENTE CONFIRMADO — JSON de cartera APP/PA sí; OxI y GIS pendientes
+## Estado: CONFIRMADO — cartera APP/PA, OxI y límites GIS documentados
 
 ### Hallazgo decisivo: cartera APP/PA vía `vertixService.php`
 
@@ -87,15 +87,28 @@ literal. Ejemplo: `13` = La Libertad.
 | `url_geo` | *(vacío en muestra)* | GIS — sin confirmar uso |
 | `CodigosSubProyectos` / `CodigosSubProyectosList` | vacíos | **Sin CUI en corte completo (340/340)** |
 
-### OxI — export XLSX (confirmado contenedor, pendiente esquema)
+### OxI — export XLSX (confirmado esquema 2026-08-28)
 
 ```http
 POST /wp-content/themes/hello-elementor-child/__api/service/oxi/investmentpromotionExport.php
 ```
 
 - Respuesta JSON con `Data` = XLSX en base64 (~122 KB en prueba 2026-08-28).
-- Archivo ZIP/XLSX válido con `xl/worksheets/sheet1.xml`.
-- **Pendiente**: leer columnas, contar filas, confirmar solapamiento con APP/PA.
+- **761 filas** de datos en el corte probado (`Nº Registros: 761` en hoja).
+- Encabezados en fila 5; columnas B–Q: `N°`, `FASE OXI 2/.`, `TIPO DE INVERSIÓN`,
+  `ÚLTIMO NIVEL DE ESTUDIO`, `NIVEL DE GOBIERNO`, `DEPARTAMENTO`, `PROVINCIA`, `DISTRITO`,
+  `ENTIDAD`, `LINK WEB`, `CODIGO SNIP / INVIERTE.PE / CÓDIGO IDEA`, `NOMBRE DEL PROYECTO`,
+  `FUNCIÓN`, `TIPOLOGIA`, `MONTO DE INVERSIÓN REFERENCIAL`, `RANGO MONTO INVERSIÓN`.
+- **Código SNIP/Invierte presente** — habilita cruce exacto con `radar-inversiones` (vía
+  `GET /api/crossref` en `inversion-privada`).
+- Universo distinto de APP/PA (IOARR y promoción territorial, no concesiones).
+
+### GIS — sin geometría pública (confirmado 2026-08-28)
+
+- Página pública: `https://www.investinperu.pe/gis-vertix/`
+- Embebe iframe `https://vertix.proinversion.gob.pe/gis/dashboard/index` (backend autenticado).
+- `url_geo` vacío en **340/340** proyectos de `vertixService.php`.
+- No hay endpoint GeoJSON/WFS público en el spike; ver `GET /api/gis/status`.
 
 ### Fuentes descartadas o no aptas para conector primario
 
@@ -110,10 +123,10 @@ POST /wp-content/themes/hello-elementor-child/__api/service/oxi/investmentpromot
 
 | Entidad destino | Clave disponible | Viabilidad |
 |---|---|---|
-| `radar-inversiones` (Invierte.pe) | CUI | **No** — VERTIX no publica CUI en el corte actual |
+| `radar-inversiones` (Invierte.pe) | CUI / código SNIP | **OxI sí** (columna SNIP en export). **APP/PA no** — VERTIX no publica CUI |
 | `infobras` | CUI | **No** — mismo motivo |
 | `radar-ejecucion` (MEF) | `SEC_EJEC` / nombre entidad | Débil — solo `Titular` como texto libre |
-| `ceplan-geo` | Geometría | Pendiente — explorar `gis-vertix` |
+| `ceplan-geo` | Geometría | **No** — GIS embebido autenticado; sin capa descargable |
 | Análisis sectorial / territorial | `Sector`, `DepartamentoList` en filtros | Sí — filtro por dept INEI confirmado |
 
 ## Riesgos de ingesta
@@ -122,13 +135,9 @@ POST /wp-content/themes/hello-elementor-child/__api/service/oxi/investmentpromot
 2. **Paginación por defecto engañosa** — sin `PageLimit` alto solo devuelve 6 filas.
 3. **Sin incremental** — cada corrida es snapshot completo (patrón aceptable en el proyecto).
 4. **Medios en dominio autenticado** — thumbnails apuntan a `vertix.proinversion.gob.pe`.
-5. **OxI sin validar** — no asumir paridad de esquema con APP/PA.
+5. **OxI sin solapamiento con APP/PA** — universos distintos; no deduplicar por nombre.
 
-## Pendientes antes de ADR de app standalone
+## Pendientes de monitoreo
 
-1. Documentar columnas del XLSX OxI.
-2. Probar `gis-vertix` para geometría o enlace territorial por proyecto.
-3. Corrida de regresión periódica (`RecordsTotal`, hash del JSON) para detectar cambios de
-   esquema.
-4. Decidir si una sola app `proinversion-vertix` basta para APP+PA+OxI o si OxI merece
-   contrato separado.
+1. Regresión periódica (`RecordsTotal` VERTIX, filas OxI, checksum).
+2. Detectar si `url_geo` o un endpoint GIS público aparece en futuras versiones de VERTIX.

@@ -36,4 +36,8 @@ echo "==> ceplan-geo: red hídrica principal + proyectos agro sectoriales"
 echo "==> radar-ejecucion: MINCETUR hospedaje (2023-2024)"
 (cd "$ROOT/apps/radar-ejecucion/api" && npm run ingest:mincetur-hospedaje)
 
+echo "==> inversion-privada: cartera VERTIX APP/PA + OxI (snapshot nacional)"
+(cd "$ROOT/apps/inversion-privada/api" && npm run ingest:vertix)
+(cd "$ROOT/apps/inversion-privada/api" && npm run ingest:oxi)
+
 echo "Ingesta La Libertad completa finalizada."

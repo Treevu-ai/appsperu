@@ -70,10 +70,12 @@ automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incl
 `mcp-server/README.md`, sección "Alcance actual y lo que falta", antes de exponerlo fuera de
 `localhost`).
 
-78 tools (13 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA (`inversion-privada`); resultado agro SIEA, turismo MINCETUR, cadena infra obra, denominadores INEI, meta vs sede en crossref.
+82 tools (13 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA + OxI + crossref SNIP (`inversion-privada`); resultado agro SIEA, turismo MINCETUR, cadena infra obra, denominadores INEI, meta vs sede en crossref.
 
 ## Cruces entre apps (todos verificados con datos reales)
 
+- **inversion-privada ↔ radar-inversiones**, por departamento + código SNIP en OxI (match
+  exacto solo para proyectos OxI; APP/PA sin CUI) — `GET /api/crossref` en `inversion-privada/api`.
 - **radar-inversiones ↔ radar-ejecucion**, por `SEC_EJEC` (match exacto, sin fuzzy) —
   `GET /api/crossref` en `radar-inversiones/api`.
 - **compras-publicas ↔ radar-ejecucion**, por nombre de entidad (matcher difuso,

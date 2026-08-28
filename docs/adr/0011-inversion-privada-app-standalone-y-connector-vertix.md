@@ -52,7 +52,8 @@ apps/inversion-privada/
 - `departamentos_inei` / `departamentos` — arrays rellenados en ingesta consultando los 25
   filtros departamentales del buscador (el JSON por proyecto no trae departamento).
 
-OxI queda **fuera** de este ADR — pendiente parseo del XLSX (`investmentpromotionExport.php`).
+OxI implementado en la misma app (`oxi-connector.ts`, `npm run ingest:oxi`) con cruce SNIP vía
+`GET /api/crossref`. GIS documentado en `GET /api/gis/status` — sin geometría pública.
 
 ### Connector
 
@@ -70,8 +71,8 @@ GET /api/projects?departamento=LA+LIBERTAD&sector=&tipo=APP|PA&titular=
 GET /api/meta/sources
 ```
 
-Sin `GET /api/crossref` en el MVP: no hay CUI ni `SEC_EJEC`; un cruce con `radar-inversiones` sería
-por nombre y quedaría fuera del estándar de confianza del proyecto.
+Sin `GET /api/crossref` en el MVP inicial: no hay CUI ni `SEC_EJEC` en APP/PA. **Actualización
+2026-08-28**: se añadió cruce contextual por departamento + match SNIP para OxI.
 
 ## Alternativas consideradas
 
