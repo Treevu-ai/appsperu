@@ -50,12 +50,22 @@ problema de datos ni un bug — es una diferencia real de alcance entre las dos 
 el del batch recién creado — es decir, todo lo que el upsert no tocó porque ya no vino en el
 feed. Sin esto, un proyecto que desaparece de `ListaRegistrosCapas` (por ejemplo, si pasa a
 una fase que el GIS ya no expone) se quedaría en la base indefinidamente sin que nada lo
-marque como obsoleto. Mismo criterio de "snapshot completo por corrida" que ya usan
-`vertix-connector.ts` y `oxi-connector.ts` a nivel de su propia tabla (upsert + implícitamente
-sin purga, porque hasta ahora nunca se detectó el problema en esas dos — GIS es la primera vez
-que se corrige explícitamente). Verificado en vivo: se insertó una fila de prueba con
-`source_batch_id` de un batch viejo y la siguiente corrida de `npm run ingest:gis` la eliminó
-(`deletedStale: 1`).
+marque como obsoleto. Verificado en vivo: se insertó una fila de prueba con `source_batch_id`
+de un batch viejo y la siguiente corrida de `npm run ingest:gis` la eliminó (`deletedStale: 1`).
+
+**Extendido a `vertix-connector.ts` y `oxi-connector.ts` (mismo día).** Mismo problema, mismo
+fix: cada uno purga al final de su corrida lo que no tocó el upsert, **condicionado a que el
+lote haya llegado completo** (`rowsUpserted === recordsTotal`) — a diferencia de GIS, estos
+dos sí declaran un total esperado (`RecordsTotal`/`"Nº Registros"`) que puede diferir de lo
+recibido si la fuente corta la respuesta a medias; sin esa salvaguarda, un lote parcial
+borraría proyectos reales que simplemente no llegaron en esa corrida, no que salieron de
+cartera. GIS no tiene esa noción de total esperado (una sola respuesta HTTP, sin paginación),
+así que no necesita la misma condición.
+
+Verificado en vivo con datos reales, no solo simulados: la primera re-ingesta de VERTIX tras
+este cambio purgó **3 proyectos** que efectivamente salieron de la cartera nacional entre la
+corrida original (340) y esta (337) — el mecanismo detectó un cambio real de la fuente que
+antes se habría quedado sin purgar. OxI se mantuvo estable (761/761, `deletedStale: 0`).
 
 **JSONB, no PostGIS.** El Postgres de `inversion-privada` es `postgres:16-alpine` plano
 (`docker-compose.yml`), con datos ya cargados en su volumen. Migrar a `postgis/postgis` habría

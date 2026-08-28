@@ -189,11 +189,26 @@ async function upsertOxiRow(client: PoolClient, batchId: number, row: Normalized
   );
 }
 
+/**
+ * Borra las filas OxI que no vinieron en el batch actual — evita que
+ * proyectos que salen del listado de promoción queden huérfanos para
+ * siempre. Solo aplica cuando el lote llegó completo (ver
+ * `ingestOxiPortfolio`); mismo criterio que `vertix-connector.ts` y
+ * `gis-connector.ts` (ADR-0013, "Limpieza de geometrías obsoletas").
+ */
+async function deleteStaleOxiRows(client: PoolClient, batchId: number): Promise<number> {
+  const { rowCount } = await client.query(`DELETE FROM oxi_investment_promotions WHERE source_batch_id != $1`, [
+    batchId,
+  ]);
+  return rowCount ?? 0;
+}
+
 export interface OxiIngestSummary {
   batchId: number;
   recordsTotal: number;
   rowsUpserted: number;
   isPartial: boolean;
+  deletedStale: number;
 }
 
 export async function ingestOxiPortfolio(): Promise<OxiIngestSummary> {
@@ -208,13 +223,18 @@ export async function ingestOxiPortfolio(): Promise<OxiIngestSummary> {
     for (const row of rows) {
       await upsertOxiRow(client, batchId, row);
     }
+    const isPartial = rows.length < recordsTotal;
+    // Solo purga si el lote llegó completo — con un lote parcial no se
+    // puede distinguir "salió del listado" de "no llegó en esta corrida".
+    const deletedStale = isPartial ? 0 : await deleteStaleOxiRows(client, batchId);
     await client.query("COMMIT");
 
     return {
       batchId,
       recordsTotal,
       rowsUpserted: rows.length,
-      isPartial: rows.length < recordsTotal,
+      isPartial,
+      deletedStale,
     };
   } catch (error) {
     await client.query("ROLLBACK");

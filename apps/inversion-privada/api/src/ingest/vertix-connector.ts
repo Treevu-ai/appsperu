@@ -170,11 +170,29 @@ async function upsertProject(client: PoolClient, batchId: number, row: Normalize
   );
 }
 
+/**
+ * Borra los proyectos que no vinieron en el batch actual (su
+ * `source_batch_id` sigue apuntando a un batch anterior porque el upsert de
+ * este batch no los tocó) — evita que proyectos que salen de cartera
+ * queden huérfanos en la base para siempre. Cada corrida trae el universo
+ * nacional completo (`ingestVertixPortfolio` no filtra por departamento),
+ * así que "no vino en este batch" equivale a "ya no está en cartera VERTIX".
+ * Mismo criterio que `gis-connector.ts` (ver ADR-0013, sección "Limpieza de
+ * geometrías obsoletas").
+ */
+async function deleteStaleProjects(client: PoolClient, batchId: number): Promise<number> {
+  const { rowCount } = await client.query(`DELETE FROM private_investment_projects WHERE source_batch_id != $1`, [
+    batchId,
+  ]);
+  return rowCount ?? 0;
+}
+
 export interface IngestSummary {
   batchId: number;
   recordsTotal: number;
   rowsUpserted: number;
   isPartial: boolean;
+  deletedStale: number;
 }
 
 export async function ingestVertixPortfolio(): Promise<IngestSummary> {
@@ -194,13 +212,19 @@ export async function ingestVertixPortfolio(): Promise<IngestSummary> {
     for (const row of normalized) {
       await upsertProject(client, batchId, row);
     }
+    const isPartial = normalized.length < recordsTotal;
+    // Solo purga si el lote llegó completo — con un lote parcial (por un
+    // corte en la fuente, no por diseño) borrar lo que "faltó" eliminaría
+    // proyectos reales que simplemente no llegaron en esta corrida.
+    const deletedStale = isPartial ? 0 : await deleteStaleProjects(client, batchId);
     await client.query("COMMIT");
 
     return {
       batchId,
       recordsTotal,
       rowsUpserted: normalized.length,
-      isPartial: normalized.length < recordsTotal,
+      isPartial,
+      deletedStale,
     };
   } catch (error) {
     await client.query("ROLLBACK");
