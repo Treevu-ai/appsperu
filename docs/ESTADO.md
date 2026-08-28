@@ -55,6 +55,7 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `actividad-agraria` | Series MIDAGRI regionales: jornal, alquiler tractor y yunta por departamento | 4009 | 5440 | Construida (API) |
 | `seguridad-ciudadana` | Denuncias policiales SIDPOL (MININTER) por distrito/mes/modalidad | 4010 | 5441 | Construida (API) |
 | `bcrp-comercio-exterior` | Comercio exterior agregado nacional (BCRP PN38714–PN38723) | 4011 | 5442 | Construida (API) |
+| `inversion-privada` | Cartera APP/PA PROINVERSIÓN (VERTIX / investinperu.pe) | 4012 | 5443 | Construida (API) |
 
 ## `mcp-server` (2026-08-26)
 
@@ -69,7 +70,7 @@ automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incl
 `mcp-server/README.md`, sección "Alcance actual y lo que falta", antes de exponerlo fuera de
 `localhost`).
 
-74 tools (12 apps). Ampliación 2026-08-28: resultado agro SIEA, turismo MINCETUR, cadena infra obra, denominadores INEI, meta vs sede en crossref.
+78 tools (13 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA (`inversion-privada`); resultado agro SIEA, turismo MINCETUR, cadena infra obra, denominadores INEI, meta vs sede en crossref.
 
 ## Cruces entre apps (todos verificados con datos reales)
 

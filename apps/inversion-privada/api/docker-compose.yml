@@ -1,0 +1,16 @@
+name: inversion-privada
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: inversion_privada
+      POSTGRES_PASSWORD: inversion_privada
+      POSTGRES_DB: inversion_privada
+    ports:
+      - "127.0.0.1:5443:5432"
+    volumes:
+      - inversion_privada_pgdata:/var/lib/postgresql/data
+
+volumes:
+  inversion_privada_pgdata:
