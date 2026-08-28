@@ -12,24 +12,16 @@ const CrossrefQuerySchema = z.object({
   anio: z.string().regex(/^\d{4}$/, "anio debe ser un año de 4 dígitos"),
 });
 
-/**
- * Cruce actividad-agraria (MIDAGRI, costo de jornal) <-> radar-ejecucion
- * (gasto en la función AGROPECUARIA), por `departamento` exacto — mismo
- * patrón de bucket exacto sin matcher difuso que usa el cruce CEPLAN
- * (ver ADR-0003 y ADR-0008). Propósito: "cuánto cuesta operar en el campo"
- * (costo de jornal) junto a "cuánto invierte el Estado en agro" en la
- * misma región y año.
- *
- * Desde la implementación de ADR-0006 (Decisión 2, `ingestMefFullYearForMetaDepartamento`
- * en radar-ejecucion), este cruce distingue dos fuentes de ejecución que antes
- * eran indistinguibles porque solo existía una: la del Gobierno Regional/Local
- * CON SEDE en el departamento (`ejecucionRegionalLocal`, vía `territories.departamento`)
- * y la de Gobierno Nacional DIRIGIDA al departamento (`ejecucionNacionalDirigida`,
- * vía `budget_execution.meta_departamento` — ej. ANIN/reconstrucción, MIDAGRI,
- * programas ejecutados desde Lima). Antes de esa ingesta, la segunda era
- * invisible en `budget_execution` — no es que el gasto no existiera, es que
- * nunca se había ingerido.
- */
+async function promedioMensual(table: string, departamento: string, anio: number): Promise<number | null> {
+  const { rows } = await pool.query<{ valor_soles: string | null }>(
+    `SELECT valor_soles FROM ${table} WHERE departamento = $1 AND anio = $2 AND valor_soles IS NOT NULL`,
+    [departamento, anio]
+  );
+  if (rows.length === 0) return null;
+  const sum = rows.reduce((acc, row) => acc + Number(row.valor_soles), 0);
+  return Math.round((sum / rows.length) * 100) / 100;
+}
+
 crossrefRouter.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -41,6 +33,22 @@ crossrefRouter.get(
 
     const { rows: wageRows } = await pool.query<{ mes: number; valor_soles: string | null }>(
       `SELECT mes, valor_soles FROM agricultural_wage WHERE departamento = $1 AND anio = $2 ORDER BY mes`,
+      [departamento, anio]
+    );
+
+    const { rows: outcomeRows } = await pool.query<{
+      metric_key: string;
+      metric_label: string;
+      valor_numeric: string | null;
+      valor_text: string | null;
+      unidad: string;
+      ingestion_mode: string;
+      limitation: string;
+    }>(
+      `SELECT metric_key, metric_label, valor_numeric, valor_text, unidad, ingestion_mode, limitation
+       FROM agricultural_regional_outcome
+       WHERE departamento = $1 AND anio = $2
+       ORDER BY metric_key`,
       [departamento, anio]
     );
 
@@ -83,8 +91,6 @@ crossrefRouter.get(
       devengado: toNum(nacionalRows[0]?.devengado),
       entidades: toNum(nacionalRows[0]?.entidades),
     };
-    const pimTotal = regional.pim + nacional.pim;
-    const devengadoTotal = regional.devengado + nacional.devengado;
 
     const valoresReportados = wageRows.filter((r) => r.valor_soles !== null);
     const promedioJornal =
@@ -94,12 +100,39 @@ crossrefRouter.get(
           ) / 100
         : null;
 
+    const [promedioTractor, promedioYunta] = await Promise.all([
+      promedioMensual("agricultural_tractor_rental", departamento, anio),
+      promedioMensual("agricultural_yunta_rental", departamento, anio),
+    ]);
+
     res.json({
       departamento,
       anio,
-      jornalAgricola: {
-        promedioAnualSoles: promedioJornal,
-        porMes: wageRows.map((r) => ({ mes: r.mes, valorSoles: r.valor_soles !== null ? Number(r.valor_soles) : null })),
+      insumosAgricolas: {
+        jornal: {
+          promedioAnualSoles: promedioJornal,
+          porMes: wageRows.map((r) => ({
+            mes: r.mes,
+            valorSoles: r.valor_soles !== null ? Number(r.valor_soles) : null,
+          })),
+        },
+        alquilerTractorPromedioSoles: promedioTractor,
+        alquilerYuntaPromedioSoles: promedioYunta,
+      },
+      resultadoAgropecuario: {
+        metricas: outcomeRows.map((row) => ({
+          clave: row.metric_key,
+          etiqueta: row.metric_label,
+          valorNumerico: row.valor_numeric !== null ? Number(row.valor_numeric) : null,
+          valorTexto: row.valor_text,
+          unidad: row.unidad,
+          modoIngesta: row.ingestion_mode,
+          limitacion: row.limitation,
+        })),
+        cautela:
+          outcomeRows.length === 0
+            ? "Sin métricas de resultado materializadas para el año; solo insumos y gasto."
+            : "Resultado (VBP/superficie) y gasto AGROPECUARIA miden dimensiones distintas; no implica eficiencia.",
       },
       ejecucionAgropecuaria: {
         ejecucionRegionalLocal: {
@@ -113,11 +146,8 @@ crossrefRouter.get(
           avancePct: nacional.pim > 0 ? Math.round((nacional.devengado / nacional.pim) * 10000) / 100 : null,
           entidadesDistintas: nacional.entidades,
         },
-        total: {
-          pim: pimTotal,
-          devengado: devengadoTotal,
-          avancePct: pimTotal > 0 ? Math.round((devengadoTotal / pimTotal) * 10000) / 100 : null,
-        },
+        advertenciaGasto:
+          "No sumar ejecucionRegionalLocal y ejecucionNacionalDirigida: miden sede regional/local vs gasto nacional dirigido al departamento.",
       },
     });
   })

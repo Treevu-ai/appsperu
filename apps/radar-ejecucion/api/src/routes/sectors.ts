@@ -192,7 +192,7 @@ sectorsRouter.get("/:sectorId/ficha", asyncHandler(async (req, res) => {
   const budget = rows.map(mapBudget); const projects = await projectsForEntities(rows.map((row) => row.entity_code));
   const works = await worksForCuis(projects.map((project) => project.cui));
   const procurement = await procurementForEntities(rows.map((row) => row.entity_code));
-  res.json({ sector: { id: sectorId, nombre: rows[0].sector_nombre }, anio: query.anio, departamento: query.departamento.toUpperCase(), entidades: budget, inversiones: { estado: projects.length ? "VINCULO_OFICIAL" : "SIN_VINCULO_OFICIAL", resultados: projects }, obras: works, contrataciones: procurement, limitation: "CUI, obra y contratación aparecen solo mediante claves exactas verificadas. La ausencia de un puente no equivale a ausencia de inversión, obra o contratación." });
+  res.json({ sector: { id: sectorId, nombre: rows[0].sector_nombre }, anio: query.anio, departamento: query.departamento.toUpperCase(), entidades: budget, inversiones: { estado: projects.length ? "VINCULO_OFICIAL" : "SIN_VINCULO_OFICIAL", resultados: projects }, obras: works, contrataciones: procurement, advertenciaGasto: "No sumar entidades con reglaTerritorial META_DEPARTAMENTO y SEDE_EJECUTORA: miden gasto nacional dirigido vs ejecución con sede regional.", limitation: "CUI, obra y contratación aparecen solo mediante claves exactas verificadas. La ausencia de un puente no equivale a ausencia de inversión, obra o contratación." });
 }));
 
 sectorsRouter.get("/entidades/:entityCode/ficha", asyncHandler(async (req, res) => {

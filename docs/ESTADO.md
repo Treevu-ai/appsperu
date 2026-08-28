@@ -69,7 +69,7 @@ automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incl
 `mcp-server/README.md`, sección "Alcance actual y lo que falta", antes de exponerlo fuera de
 `localhost`).
 
-69 tools (12 apps). Ampliación 2026-08-27: tractor/yunta MIDAGRI + capas geo `cb_redhidricaprinx`/`ip_prysecagr`.
+74 tools (12 apps). Ampliación 2026-08-28: resultado agro SIEA, turismo MINCETUR, cadena infra obra, denominadores INEI, meta vs sede en crossref.
 
 ## Cruces entre apps (todos verificados con datos reales)
 

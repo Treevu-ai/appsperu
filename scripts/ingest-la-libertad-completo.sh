@@ -33,4 +33,7 @@ echo "==> actividad-agraria: series MIDAGRI regionales (jornal, tractor, yunta)"
 echo "==> ceplan-geo: red hídrica principal + proyectos agro sectoriales"
 (cd "$ROOT/apps/ceplan-geo/api" && npm run ingest:extended-infrastructure)
 
+echo "==> radar-ejecucion: MINCETUR hospedaje (2023-2024)"
+(cd "$ROOT/apps/radar-ejecucion/api" && npm run ingest:mincetur-hospedaje)
+
 echo "Ingesta La Libertad completa finalizada."

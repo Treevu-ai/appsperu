@@ -13,6 +13,7 @@
     "ingest:libertad": "tsx src/cli/reingest-meta-departamento.ts LA LIBERTAD",
     "ingest:mef:pilot": "tsx src/cli/ingest-pilot-mef.ts",
     "ingest:mef:pilot:ejecutora": "tsx src/cli/ingest-pilot-ejecutora.ts",
+    "ingest:mincetur-hospedaje": "tsx src/ingest/run-mincetur-hospedaje.ts",
     "cobertura:territorial": "tsx src/cli/territorial-coverage.ts",
     "tablero:lluvias": "tsx src/cli/lluvias-seguimiento.ts",
     "integrity:budget": "tsx src/cli/integrity-budget.ts",
