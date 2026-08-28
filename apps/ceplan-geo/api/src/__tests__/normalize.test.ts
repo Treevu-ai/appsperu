@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   featureIdFromGeoJson,
   normalizeTerritoryToken,
+  parseAgroProjectName,
   parseDistrictProperties,
+  parseHydroPrincipalName,
   parseInfrastructureName,
 } from "../ingest/normalize.js";
 
@@ -37,6 +39,11 @@ describe("normalize", () => {
       "AEROPUERTO ANDAHUAYLAS"
     );
     expect(parseInfrastructureName({ nompue: "MATARANI" }, "puerto")).toBe("MATARANI");
+  });
+
+  it("parses red hidrica principal and proyecto agro", () => {
+    expect(parseHydroPrincipalName({ nombre_ca: "CANAL CHAVIMOCHIC" })).toBe("CANAL CHAVIMOCHIC");
+    expect(parseAgroProjectName({ codigounic: "PRY-001", nombre: "RIEGO VALLE" })).toBe("RIEGO VALLE");
   });
 
   it("derives feature id from GeoJSON id or fallback", () => {

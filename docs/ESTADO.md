@@ -48,11 +48,11 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `radar-inversiones` | Inversiones (Invierte.pe) | 4002 | 5434 | Construida, probada, verificada |
 | `infobras` | Obras públicas (Contraloría) | 4003 | 5435 | Construida, probada, verificada |
 | `ceplan-estrategico` | Gestión estratégica del Estado (ObservaPerú, agregado por nivel de gobierno) | 4004 | 5436 | Construida, probada, verificada |
-| `ceplan-geo` | GeoServer (capas territoriales/infraestructura) | 4005 | 5437 (PostGIS) | Construida (API) |
+| `ceplan-geo` | GeoServer (capas territoriales/infraestructura + red hídrica/proyectos agro) | 4005 | 5437 (PostGIS) | Construida (API) |
 | `identidad-fiscal` | Padrón RUC (SUNAT) + cruce con proveedores/entidades | 4006 | 5438 | Construida, probada, verificada |
 | `salud-institucional` | Score compuesto por entidad (agrega las otras 5, sin base propia) | 4007 | — | Construida, probada, verificada |
 | `proveedores-sancionados` | Inhabilitaciones/multas del Tribunal de Contrataciones (RNP/OECE) | 4008 | 5439 | Construida, probada, verificada |
-| `actividad-agraria` | Serie MIDAGRI de jornal agrícola por departamento/año/mes | 4009 | 5440 | Construida (API) |
+| `actividad-agraria` | Series MIDAGRI regionales: jornal, alquiler tractor y yunta por departamento | 4009 | 5440 | Construida (API) |
 | `seguridad-ciudadana` | Denuncias policiales SIDPOL (MININTER) por distrito/mes/modalidad | 4010 | 5441 | Construida (API) |
 | `bcrp-comercio-exterior` | Comercio exterior agregado nacional (BCRP PN38714–PN38723) | 4011 | 5442 | Construida (API) |
 
@@ -69,7 +69,7 @@ automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incl
 `mcp-server/README.md`, sección "Alcance actual y lo que falta", antes de exponerlo fuera de
 `localhost`).
 
-67 tools (12 apps). `bcrp-comercio-exterior` y `ceplan_estrategico_meta_aplicativo` se registraron el 2026-08-27.
+69 tools (12 apps). Ampliación 2026-08-27: tractor/yunta MIDAGRI + capas geo `cb_redhidricaprinx`/`ip_prysecagr`.
 
 ## Cruces entre apps (todos verificados con datos reales)
 
@@ -248,7 +248,7 @@ avance (S/2,242.1M devengado / S/4,558.8M PIM), Gobiernos Locales 39.9%
 ## Pendientes conocidos (no bloqueantes, para cuando se retome)
 
 1. ~~`ceplan-estrategico`: modelo per-entidad~~ — **bloqueado por fuente**: ObservaPerú solo trae agregados por nivel de gobierno; `GET /api/meta/aplicativo` y `npm run probe:aplicativo` verifican en vivo si Aplicativo CEPLAN V.01 vuelve a exponer PEI/POI per-pliego. Tablas `strategic_objectives`/`strategic_actions`/`poi_activities`/`physical_targets` siguen vacías por diseño.
-2. ~~Implementación de `ceplan-geo`~~ — **hecho (API-only, 2026-08-26)**. Spike Fase 2: `cb_redhidricax` POSPONER (345k); `cb_redhidricaprinx` AUTOMATIZABLE; `cb_proyectos` no existe — usar `ip_pry*`.
+2. ~~Implementación de `ceplan-geo`~~ — **hecho (API-only, 2026-08-26)**. Ingesta extendida 2026-08-27: `cb_redhidricaprinx` (`ingest:hydro-principal`) e `ip_prysecagr` (`ingest:projects-sectorial`). `cb_redhidricax` sigue POSPONER (345k).
 3. El resto del PRD de INFOBRAS (sprints 1-6: MCP tools, resolución de identidad avanzada, dashboard consolidado) — quedó fuera de alcance de la rebanada construida.
 4. ~~Ingestas parciales acotadas a La Libertad~~ — **mitigado (2026-08-27)**: defaults de `.env.example` y `DEFAULT_TERRITORIAL_SCOPE` apuntan solo a `LA LIBERTAD`; scripts `ingest:libertad` por app y orquestador `scripts/ingest-la-libertad-completo.sh` para cobertura verificada.
 5. ~~Migración a Next 16 + React 19~~ — **N/A**: frontends web eliminados; el proyecto es API-only.
