@@ -107,9 +107,13 @@ rigor del resto del proyecto.
 Son fuentes **complementarias**. Un megaproyecto puede aparecer en narrativa pública de ambos
 lados sin compartir CUI en VERTIX.
 
-## Decisión
+## Decisión (spike)
 
-**No se decide construir ninguna app todavía.** Este spike deja registrado:
+**Decisión inicial del spike: no construir todavía.** Actualización: la app `inversion-privada` y el
+connector `vertix-connector.ts` se implementaron en `ADR-0011` (2026-08-28). Este documento conserva
+el hallazgo de investigación; la decisión de build está en el ADR siguiente.
+
+Este spike deja registrado:
 
 1. **Candidato viable de mayor prioridad**: `vertixService.php` — JSON estructurado, sin login,
    universo completo en una sola corrida con `PageLimit=500`.

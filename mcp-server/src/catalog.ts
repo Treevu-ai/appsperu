@@ -898,4 +898,40 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: [],
     querySchema: {},
   },
+
+  // ---- inversion-privada (PROINVERSIÓN / VERTIX) ----
+  {
+    name: "inversion_privada_projects",
+    app: "inversion-privada",
+    description:
+      "Cartera de inversión privada PROINVERSIÓN (VERTIX) — proyectos APP y PA con sector, fase, " +
+      "titular y monto. Sin CUI; departamento inferido por filtro del buscador. Cobertura completa " +
+      "de la cartera consultable. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/projects",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      sector: z.string().min(1).optional(),
+      tipo: z.enum(["APP", "PA"]).optional(),
+      titular: z.string().min(1).optional(),
+      fase: z.string().min(1).optional(),
+    },
+  },
+  {
+    name: "inversion_privada_project_by_id",
+    app: "inversion-privada",
+    description: "Detalle de un proyecto de la cartera VERTIX por su Id interno PROINVERSIÓN.",
+    pathTemplate: "/api/projects/{vertixId}",
+    pathParams: ["vertixId"],
+    querySchema: {},
+  },
+  {
+    name: "inversion_privada_meta_sources",
+    app: "inversion-privada",
+    description: "Metadata de los últimos lotes de ingesta VERTIX y desglose APP/PA.",
+    pathTemplate: "/api/meta/sources",
+    pathParams: [],
+    querySchema: {},
+  },
 ];

@@ -1,11 +1,13 @@
 # Data contract — PROINVERSIÓN: Cartera VERTIX (APP, PA y OxI)
 
 > Ficha técnica: `docs/adr/0010-research-spike-proinversion-vertix-cartera-app-pa-oxi.md`
+> (investigación) y `docs/adr/0011-inversion-privada-app-standalone-y-connector-vertix.md`
+> (app `inversion-privada`, connector `vertix-connector.ts`).
 
 - Fuente oficial: Agencia de Promoción de la Inversión Privada (PROINVERSIÓN) — plataforma
   **VERTIX**, expuesta públicamente vía `https://www.investinperu.pe/` (buscador de cartera,
   dashboard y GIS). Backend autenticado en `https://vertix.proinversion.gob.pe/`.
-- Owner del conector: sin asignar — research spike (ADR-0010), no app en construcción.
+- Owner del conector: app `inversion-privada` (`apps/inversion-privada/api`).
 - **Confirmado en vivo el 2026-08-28** con `curl` contra los endpoints PHP del tema WordPress.
 
 ## Estado: PARCIALMENTE CONFIRMADO — JSON de cartera APP/PA sí; OxI y GIS pendientes

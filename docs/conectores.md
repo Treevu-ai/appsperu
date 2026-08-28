@@ -179,6 +179,22 @@ Piloto ALSOL: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distritos
 
 ---
 
+<a id="inversion-privada"></a>
+## inversion-privada — Cartera APP/PA (PROINVERSIÓN / VERTIX)
+
+| | |
+|---|---|
+| **Descripción** | Trae la cartera de inversión privada promovida por PROINVERSIÓN — Asociaciones Público-Privadas (APP) y Proyectos en Activos (PA) — vía plataforma VERTIX. Complementa `radar-inversiones` (Invierte.pe / inversión pública), no la sustituye. |
+| **Qué hace** | Descarga el JSON nacional de `vertixService.php`, enriquece cada proyecto con departamentos INEI (25 consultas filtradas) y normaliza hacia `private_investment_projects`. |
+| **Cómo lo hace** | POST `multipart/form-data` al proxy PHP de `investinperu.pe` (`PageLimit=500`). Sin sesión. Departamento por proyecto inferido del buscador — el JSON por fila no trae columna territorial. |
+| **Frecuencia** | Manual (`npm run ingest:vertix`). Snapshot completo de la cartera en cada corrida. |
+| **Fuente de datos** | `https://www.investinperu.pe/wp-content/themes/hello-elementor-child/__api/service/app/vertixService.php` |
+| **Cobertura real ingerida** | Cartera VERTIX APP+PA — ~340 proyectos verificados 2026-08-28 (`RecordsTotal` = filas upsertadas). OxI y GIS fuera de alcance del conector actual. |
+| **Detalle completo** | [`docs/data-contracts/proinversion-vertix-cartera-app-pa-oxi.md`](data-contracts/proinversion-vertix-cartera-app-pa-oxi.md) |
+| **ADR** | [`docs/adr/0011-inversion-privada-app-standalone-y-connector-vertix.md`](adr/0011-inversion-privada-app-standalone-y-connector-vertix.md) |
+
+---
+
 <a id="salud-institucional"></a>
 ## salud-institucional — Score compuesto (sin conector propio)
 
@@ -206,6 +222,7 @@ Piloto ALSOL: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distritos
 | `geoserver-connector.ts` | ceplan-geo | CEPLAN GeoServer | WFS GeoJSON paginado | Manual | Completa (distritos + infra MVP) |
 | `padron-connector.ts` | identidad-fiscal | SUNAT Padrón RUC | Descarga ZIP completo | Manual | Completa (nacional, ~2.3M filas) |
 | `sanciones-connector.ts` | proveedores-sancionados | RNP/OECE Tribunal de Contrataciones | Sesión ASP + export HTML | Manual | Completa (nacional, ~17.9K filas) |
+| `vertix-connector.ts` | inversion-privada | PROINVERSIÓN VERTIX (investinperu.pe) | POST multipart JSON | Manual | Completa (cartera APP/PA) |
 | — (agregador) | salud-institucional | Las otras 5 apps | Query en vivo, sin ingesta | Bajo demanda (por request) | N/A |
 
 ## Candidatos evaluados, no implementados
@@ -221,14 +238,3 @@ Piloto ALSOL: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distritos
 | **Fuente de datos** | `estadisticas.bcrp.gob.pe/estadisticas/series/api` (Banco Central de Reserva del Perú). |
 | **Detalle completo** | [`docs/data-contracts/bcrp-comercio-exterior.md`](data-contracts/bcrp-comercio-exterior.md) |
 
-<a id="proinversion-vertix"></a>
-### proinversion-vertix — Cartera APP/PA/OxI (PROINVERSIÓN / VERTIX), candidato no construido
-
-| | |
-|---|---|
-| **Descripción** | Cartera de inversión privada promovida por PROINVERSIÓN — APP, Proyectos en Activos y Obras por Impuestos — vía plataforma VERTIX. |
-| **Por qué no está construido** | Spike reciente (ADR-0010): el endpoint JSON funciona sin login pero **no está documentado oficialmente**; sin CUI para cruce exacto con `radar-inversiones` / `infobras`; OxI y GIS aún sin data contract completo. |
-| **Qué sí tiene** | `vertixService.php` devuelve JSON paginado (340 proyectos verificados 2026-08-28); filtros por departamento INEI; export OxI en XLSX base64. Más simple que `sanciones-connector.ts`, más frágil que fuentes con CSV estable. |
-| **Fuente de datos** | `https://www.investinperu.pe/` — proxy `__api/service/app/vertixService.php` (POST multipart). |
-| **Detalle completo** | [`docs/data-contracts/proinversion-vertix-cartera-app-pa-oxi.md`](data-contracts/proinversion-vertix-cartera-app-pa-oxi.md) |
-| **Investigación** | [`docs/adr/0010-research-spike-proinversion-vertix-cartera-app-pa-oxi.md`](adr/0010-research-spike-proinversion-vertix-cartera-app-pa-oxi.md) |
