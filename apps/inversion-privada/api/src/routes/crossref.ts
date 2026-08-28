@@ -40,7 +40,10 @@ crossrefRouter.get(
 
     const conCodigo = oxiRows.filter((r) => r.codigo_referencia && /^\d+$/.test(r.codigo_referencia.trim()));
 
-    let inversionByCodigo = new Map<string, { nombre: string; estado: string; monto_viable: string; costo_actualizado: string }>();
+    let inversionByCodigo = new Map<
+      string,
+      { nombre: string; estado: string; monto_viable: string | null; costo_actualizado: string | null }
+    >();
     if (conCodigo.length > 0) {
       const codigos = conCodigo.map((r) => r.codigo_referencia.trim());
       const { rows: inversionRows } = await inversionesPool.query(
@@ -64,8 +67,10 @@ crossrefRouter.get(
         enInvierte: Boolean(inversion),
         nombreInvierte: inversion?.nombre ?? null,
         estadoInvierte: inversion?.estado ?? null,
-        montoViableInvierte: inversion ? Number(inversion.monto_viable) || 0 : null,
-        costoActualizadoInvierte: inversion ? Number(inversion.costo_actualizado) || 0 : null,
+        montoViableInvierte:
+          inversion && inversion.monto_viable !== null ? Number(inversion.monto_viable) : null,
+        costoActualizadoInvierte:
+          inversion && inversion.costo_actualizado !== null ? Number(inversion.costo_actualizado) : null,
       };
     });
 

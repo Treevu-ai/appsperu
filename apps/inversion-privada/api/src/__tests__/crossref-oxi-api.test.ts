@@ -76,6 +76,40 @@ describe("GET /api/crossref/oxi", () => {
     expect(res.body.resumen).toEqual({ totalOxi: 1, conCodigoReferencia: 1, confirmadosEnInvierte: 1 });
   });
 
+  it("preserva null en monto_viable/costo_actualizado cuando Invierte.pe no tiene el dato (no lo convierte en 0)", async () => {
+    oxiQueryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          oxi_id: 1111,
+          nombre_proyecto: "PROYECTO SIN MONTO REGISTRADO EN INVIERTE",
+          codigo_referencia: "9999999",
+          monto_inversion_referencial: "100000.00",
+          funcion: "SALUD",
+        },
+      ],
+    });
+    investmentsQueryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          codigo_snip: "9999999",
+          nombre: "PROYECTO SIN MONTO REGISTRADO",
+          estado: "EN FORMULACIÓN",
+          monto_viable: null,
+          costo_actualizado: null,
+        },
+      ],
+    });
+
+    const app = createApp();
+    const res = await request(app).get("/api/crossref/oxi");
+
+    expect(res.body.resultados[0]).toMatchObject({
+      enInvierte: true,
+      montoViableInvierte: null,
+      costoActualizadoInvierte: null,
+    });
+  });
+
   it("marca enInvierte: false en vez de descartar la fila cuando no hay match", async () => {
     oxiQueryMock.mockResolvedValueOnce({
       rows: [
