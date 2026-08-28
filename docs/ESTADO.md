@@ -1,8 +1,21 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-08-27.
+Última actualización: 2026-08-28.
 
-Doce apps standalone con API propia; todas son API-only (sin frontend web). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+Trece apps standalone con API propia; todas son API-only (sin frontend web). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+
+## Última sesión — 2026-08-28
+
+- **Nueva app — `inversion-privada`** (PROINVERSIÓN / VERTIX en investinperu.pe): cartera APP/PA +
+  OxI en promoción, API `:4012`, Postgres `:5443`. PRs [#34](https://github.com/Treevu-ai/appsperu/pull/34)
+  y [#35](https://github.com/Treevu-ai/appsperu/pull/35) mergeados.
+- **Fuentes:** `vertixService.php` (340 APP/PA) + `investmentpromotionExport.php` (761 OxI, todos con
+  código SNIP). Sin CUI en APP/PA; sin geometría GIS pública.
+- **Cruce:** `GET /api/crossref` — match confirmado OxI ↔ `radar-inversiones` por SNIP; contexto
+  territorial APP/PA + OxI por departamento.
+- **Operación:** ingestas en `corrida-operativa-la-libertad.ps1` e `ingest-la-libertad-completo.sh`.
+- **Documentación:** [`docs/SESION_INVERSION_PRIVADA_PROINVERSION_2026-08-28.md`](SESION_INVERSION_PRIVADA_PROINVERSION_2026-08-28.md),
+  [`docs/MENSAJE_PRODUCTO_INVERSION_PRIVADA_PROINVERSION_2026-08-28.md`](MENSAJE_PRODUCTO_INVERSION_PRIVADA_PROINVERSION_2026-08-28.md).
 
 ## Última sesión operativa — 2026-08-27
 
@@ -55,7 +68,7 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `actividad-agraria` | Series MIDAGRI regionales: jornal, alquiler tractor y yunta por departamento | 4009 | 5440 | Construida (API) |
 | `seguridad-ciudadana` | Denuncias policiales SIDPOL (MININTER) por distrito/mes/modalidad | 4010 | 5441 | Construida (API) |
 | `bcrp-comercio-exterior` | Comercio exterior agregado nacional (BCRP PN38714–PN38723) | 4011 | 5442 | Construida (API) |
-| `inversion-privada` | Cartera APP/PA PROINVERSIÓN (VERTIX / investinperu.pe) | 4012 | 5443 | Construida (API) |
+| `inversion-privada` | Inversión privada PROINVERSIÓN: VERTIX APP/PA + OxI (investinperu.pe) | 4012 | 5443 | Construida (API) |
 
 ## `mcp-server` (2026-08-26)
 
@@ -235,6 +248,19 @@ el cero inicial en el origen para departamentos 01-09 (ej. `10202` en vez de `01
 reconstruye a 6 dígitos en la normalización; La Libertad (departamento 13) nunca tiene este
 problema. Certificada `COMPLETA_VERIFICADA` en `territorial_coverage`.
 
+## `inversion-privada` (2026-08-28)
+
+Ingiere la cartera PROINVERSIÓN / VERTIX vía investinperu.pe — sin login, endpoints PHP no
+documentados oficialmente. Dos conectores: `vertixService.php` (APP/PA, JSON) y
+`investmentpromotionExport.php` (OxI, XLSX base64). `GET /api/projects` y `GET /api/oxi/projects`
+(con filtro `departamento`); `GET /api/crossref` cruza OxI con `radar-inversiones` por código SNIP
+(match confirmado). APP/PA no publican CUI — no hay cruce exacto con Invierte ni INFOBRAS. GIS
+público sin geometría descargable (`GET /api/gis/status`). Corte verificado: 340 APP/PA y 761 OxI
+nacionales; ~22 y ~55 en La Libertad. Ingesta manual (`ingest:vertix`, `ingest:oxi`); incluida en
+scripts de corrida La Libertad. Detalle en
+`docs/data-contracts/proinversion-vertix-cartera-app-pa-oxi.md` y
+`docs/SESION_INVERSION_PRIVADA_PROINVERSION_2026-08-28.md`.
+
 ## Fix de datos — PIM=0 en `radar-ejecucion` (2026-08-18)
 
 `budget_execution.pim` estaba en 0 en el 100% de las filas ingeridas: el MEF no puebla
@@ -256,3 +282,4 @@ avance (S/2,242.1M devengado / S/4,558.8M PIM), Gobiernos Locales 39.9%
 4. ~~Ingestas parciales acotadas a La Libertad~~ — **mitigado (2026-08-27)**: defaults de `.env.example` y `DEFAULT_TERRITORIAL_SCOPE` apuntan solo a `LA LIBERTAD`; scripts `ingest:libertad` por app y orquestador `scripts/ingest-la-libertad-completo.sh` para cobertura verificada.
 5. ~~Migración a Next 16 + React 19~~ — **N/A**: frontends web eliminados; el proyecto es API-only.
 6. ~~BCRP comercio exterior~~ — **hecho (2026-08-27)**: app `bcrp-comercio-exterior` (API 4011) ingiere series nacionales `PN38714BM`–`PN38723BM`; sin desagregado departamental (`RD38*` sigue congelado en origen).
+7. `inversion-privada`: certificar en `territorial_coverage` para La Libertad; memo analítico APP/PA + OxI con cruce SNIP.

@@ -192,6 +192,7 @@ Piloto ALSOL: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distritos
 | **Cobertura real ingerida** | Cartera VERTIX APP+PA (~340 proyectos, 2026-08-28). OxI en promoción (~761 filas en export 2026-08-28). GIS sin geometría pública — ver `GET /api/gis/status`. |
 | **Detalle completo** | [`docs/data-contracts/proinversion-vertix-cartera-app-pa-oxi.md`](data-contracts/proinversion-vertix-cartera-app-pa-oxi.md) |
 | **ADR** | [`docs/adr/0011-inversion-privada-app-standalone-y-connector-vertix.md`](adr/0011-inversion-privada-app-standalone-y-connector-vertix.md) |
+| **Sesión / producto** | [`docs/SESION_INVERSION_PRIVADA_PROINVERSION_2026-08-28.md`](SESION_INVERSION_PRIVADA_PROINVERSION_2026-08-28.md), [`docs/MENSAJE_PRODUCTO_INVERSION_PRIVADA_PROINVERSION_2026-08-28.md`](MENSAJE_PRODUCTO_INVERSION_PRIVADA_PROINVERSION_2026-08-28.md) |
 
 ---
 
