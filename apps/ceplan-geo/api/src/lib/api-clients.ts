@@ -42,6 +42,14 @@ export type EjecucionRow = {
   pim: number;
   devengado: number;
   fechaCorte: string;
+  alcance: "SEDE_EJECUTORA" | "META_DEPARTAMENTO";
+  metaDepartamento?: string | null;
+};
+
+export type DenunciaAgg = {
+  ubigeo: string;
+  distrito: string;
+  cantidad: number;
 };
 
 async function fetchJson<T>(url: string): Promise<{ data: T; dependency: DependencyStatus }> {
@@ -80,11 +88,16 @@ export async function fetchInversiones(departamento: string): Promise<{
   return { inversiones: data.resultados ?? [], dependency };
 }
 
-export async function fetchEjecucionByUbigeo(ubigeo: string): Promise<{
-  filas: EjecucionRow[];
+export async function fetchEjecucionByUbigeo(
+  ubigeo: string,
+  departamentoMeta?: string
+): Promise<{
+  filasSede: EjecucionRow[];
+  filasNacionalDirigido: EjecucionRow[];
   dependency: DependencyStatus;
 }> {
-  const url = `${baseUrl("RADAR_EJECUCION_API_URL", "http://localhost:4000")}/api/execution?ubigeo=${encodeURIComponent(ubigeo)}`;
+  const base = baseUrl("RADAR_EJECUCION_API_URL", "http://localhost:4000");
+  const urlSede = `${base}/api/execution?ubigeo=${encodeURIComponent(ubigeo)}`;
   const { data, dependency } = await fetchJson<{
     resultados: Array<{
       entityCode: string;
@@ -95,18 +108,63 @@ export async function fetchEjecucionByUbigeo(ubigeo: string): Promise<{
       devengado: number;
       fechaCorte: string;
     }>;
-  }>(url);
+  }>(urlSede);
   dependency.app = "radar-ejecucion";
-  return {
-    filas: (data.resultados ?? []).map((row) => ({
-      entityCode: row.entityCode,
-      nombre: row.nombre,
-      nivelGobierno: row.nivelGobierno,
-      funcion: row.funcion,
-      pim: row.pim,
-      devengado: row.devengado,
-      fechaCorte: row.fechaCorte,
-    })),
-    dependency,
-  };
+
+  const mapRow = (row: (typeof data.resultados)[number], alcance: EjecucionRow["alcance"], meta?: string | null): EjecucionRow => ({
+    entityCode: row.entityCode,
+    nombre: row.nombre,
+    nivelGobierno: row.nivelGobierno,
+    funcion: row.funcion,
+    pim: row.pim,
+    devengado: row.devengado,
+    fechaCorte: row.fechaCorte,
+    alcance,
+    metaDepartamento: meta ?? null,
+  });
+
+  const filasSede = (data.resultados ?? []).map((row) => mapRow(row, "SEDE_EJECUTORA"));
+
+  let filasNacionalDirigido: EjecucionRow[] = [];
+  if (departamentoMeta) {
+    const urlMeta = `${base}/api/execution?metaDepartamento=${encodeURIComponent(departamentoMeta)}`;
+    const { data: metaData } = await fetchJson<{
+      resultados: Array<{
+        entityCode: string;
+        nombre: string;
+        nivelGobierno: string;
+        funcion: string;
+        pim: number;
+        devengado: number;
+        fechaCorte: string;
+        metaDepartamento?: string | null;
+      }>;
+    }>(urlMeta);
+    filasNacionalDirigido = (metaData.resultados ?? []).map((row) =>
+      mapRow(row, "META_DEPARTAMENTO", row.metaDepartamento ?? departamentoMeta)
+    );
+  }
+
+  return { filasSede, filasNacionalDirigido, dependency };
+}
+
+export async function fetchDenunciasByProvincia(
+  departamento: string,
+  provincia: string,
+  anio: number
+): Promise<{ denuncias: DenunciaAgg[]; dependency: DependencyStatus }> {
+  const url = `${baseUrl("SEGURIDAD_CIUDADANA_API_URL", "http://localhost:4010")}/api/denuncias?departamento=${encodeURIComponent(departamento)}&provincia=${encodeURIComponent(provincia)}&anio=${anio}`;
+  const { data, dependency } = await fetchJson<{
+    resultados: Array<{ ubigeo: string; distrito: string; cantidad: number }>;
+  }>(url);
+  dependency.app = "seguridad-ciudadana";
+
+  const byUbigeo = new Map<string, DenunciaAgg>();
+  for (const row of data.resultados ?? []) {
+    const current = byUbigeo.get(row.ubigeo) ?? { ubigeo: row.ubigeo, distrito: row.distrito, cantidad: 0 };
+    current.cantidad += Number(row.cantidad ?? 0);
+    byUbigeo.set(row.ubigeo, current);
+  }
+
+  return { denuncias: [...byUbigeo.values()], dependency };
 }

@@ -248,6 +248,34 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: {},
   },
   {
+    name: "radar_ejecucion_tourism_hospedaje",
+    app: "radar-ejecucion",
+    description:
+      "Indicadores MINCETUR de hospedaje (arribos, pernoctaciones) por departamento/mes, fuente Indicadores de Ocupabilidad PNDA. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/turismo/hospedaje",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      anio: z.string().regex(/^\d{4}$/).optional(),
+    },
+  },
+  {
+    name: "radar_ejecucion_tourism_crossref",
+    app: "radar-ejecucion",
+    description:
+      "Cruce turismo: flujo hospedaje MINCETUR vs gasto función TURISMO (MEF), con PIM/devengado MPT Trujillo y separación sede vs meta departamento. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/turismo/crossref",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      anio: z.coerce.number().optional(),
+      anioFiscal: z.coerce.number().optional(),
+      entidadMpt: z.string().min(1).optional(),
+    },
+  },
+  {
     name: "radar_ejecucion_infrastructure_assets",
     app: "radar-ejecucion",
     description:
@@ -378,10 +406,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
     app: "radar-inversiones",
     description:
       "Proyectos de inversión pública (Invierte.pe) — costos, estado, entidad responsable. " +
-      "Cobertura PARCIAL a nivel de fuente: snapshot por ventana de bytes del CSV, no el " +
-      "archivo completo. La respuesta trae `total`/`hasMore` para saber si hay más filas ya " +
-      "ingeridas más allá de `limit` (máx. 5000, default 1000) — pedir varias páginas con " +
-      "`offset` cuando `hasMore` sea true. " +
+      "Cobertura PARCIAL: snapshot por ventana de bytes del CSV, no el archivo completo. " +
       SIN_SCHEDULER,
     pathTemplate: "/api/investments",
     pathParams: [],
@@ -390,8 +415,6 @@ export const TOOL_CATALOG: ToolSpec[] = [
       estado: z.string().min(1).optional(),
       situacion: z.string().min(1).optional(),
       funcion: z.string().min(1).optional(),
-      limit: z.coerce.number().int().min(1).max(5000).optional(),
-      offset: z.coerce.number().int().min(0).optional(),
     },
   },
   {
@@ -679,12 +702,40 @@ export const TOOL_CATALOG: ToolSpec[] = [
     name: "ceplan_geo_crossref_ejecucion",
     app: "ceplan-geo",
     description:
-      "Cruce ceplan-geo <-> radar-ejecucion por UBIGEO exacto, con infraestructura cercana al distrito. " +
-      "Requiere radar-ejecucion corriendo. " +
+      "Cruce ceplan-geo <-> radar-ejecucion por UBIGEO: ejecución por sede (ubigeo) y gasto nacional dirigido (metaDepartamento) " +
+      "en secciones separadas, con infraestructura cercana. No sumar ambos ámbitos. Requiere radar-ejecucion. " +
       SIN_SCHEDULER,
     pathTemplate: "/api/crossref/ejecucion",
     pathParams: [],
     querySchema: { ubigeo: z.string().regex(/^\d{6}$/) },
+  },
+  {
+    name: "ceplan_geo_denominadores_poblacion",
+    app: "ceplan-geo",
+    description:
+      "Población por UBIGEO (piloto provincia Trujillo, Censo INEI 2017) para denominadores territoriales. " + SIN_SCHEDULER,
+    pathTemplate: "/api/denominadores/poblacion",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+    },
+  },
+  {
+    name: "ceplan_geo_denominadores_tasas",
+    app: "ceplan-geo",
+    description:
+      "Tasas por distrito dentro de una provincia (ej. denuncias por 1 000 hab.) usando población INEI 2017 y volumen de seguridad-ciudadana. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/denominadores/tasas",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      anio: z.coerce.number().optional(),
+      por: z.coerce.number().optional(),
+      metrica: z.enum(["denuncias"]).optional(),
+    },
   },
 
   // ---- identidad-fiscal (SUNAT Padrón RUC) ----
@@ -800,12 +851,24 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
   {
+    name: "actividad_agraria_regional_outcome",
+    app: "actividad-agraria",
+    description:
+      "Métricas de resultado agropecuario regional (VBP, superficie, productores) — piloto SIEA La Libertad 2024 " +
+      "materializado como MANUAL_PILOT hasta existir CSV PNDA equivalente. " + SIN_SCHEDULER,
+    pathTemplate: "/api/regional-outcome",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      anio: z.string().regex(/^\d{4}$/).optional(),
+    },
+  },
+  {
     name: "actividad_agraria_crossref",
     app: "actividad-agraria",
     description:
-      "Cruce actividad-agraria <-> radar-ejecucion por departamento exacto (sin fuzzy) — jornal agrícola promedio " +
-      "del año junto a la ejecución presupuestal de la función AGROPECUARIA, separando ejecución con sede regional/" +
-      "local de gasto de Gobierno Nacional dirigido al departamento (meta_departamento).",
+      "Cruce resultado agro (SIEA piloto) + insumos MIDAGRI (jornal/tractor/yunta) vs gasto AGROPECUARIA en radar-ejecucion, " +
+      "separando ejecución con sede regional/local de gasto nacional dirigido (meta_departamento). No sumar ambos ámbitos.",
     pathTemplate: "/api/crossref",
     pathParams: [],
     querySchema: {
