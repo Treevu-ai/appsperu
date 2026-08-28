@@ -185,11 +185,11 @@ Piloto ALSOL: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distritos
 | | |
 |---|---|
 | **Descripción** | Trae la cartera de inversión privada promovida por PROINVERSIÓN — Asociaciones Público-Privadas (APP) y Proyectos en Activos (PA) — vía plataforma VERTIX. Complementa `radar-inversiones` (Invierte.pe / inversión pública), no la sustituye. |
-| **Qué hace** | Descarga el JSON nacional de `vertixService.php`, enriquece cada proyecto con departamentos INEI (25 consultas filtradas) y normaliza hacia `private_investment_projects`. |
-| **Cómo lo hace** | POST `multipart/form-data` al proxy PHP de `investinperu.pe` (`PageLimit=500`). Sin sesión. Departamento por proyecto inferido del buscador — el JSON por fila no trae columna territorial. |
-| **Frecuencia** | Manual (`npm run ingest:vertix`). Snapshot completo de la cartera en cada corrida. |
-| **Fuente de datos** | `https://www.investinperu.pe/wp-content/themes/hello-elementor-child/__api/service/app/vertixService.php` |
-| **Cobertura real ingerida** | Cartera VERTIX APP+PA — ~340 proyectos verificados 2026-08-28 (`RecordsTotal` = filas upsertadas). OxI y GIS fuera de alcance del conector actual. |
+| **Qué hace** | Descarga el JSON nacional de `vertixService.php`, enriquece cada proyecto con departamentos INEI (25 consultas filtradas) y normaliza hacia `private_investment_projects`. Ingesta adicional OxI vía `investmentpromotionExport.php` (XLSX base64). |
+| **Cómo lo hace** | POST `multipart/form-data` al proxy PHP de `investinperu.pe` (`PageLimit=500`). OxI: POST al export XLSX, parseo SheetJS. Sin sesión. Departamento APP/PA inferido del buscador. |
+| **Frecuencia** | Manual (`npm run ingest:vertix`, `npm run ingest:oxi`). Snapshot completo en cada corrida. |
+| **Fuente de datos** | `vertixService.php`, `oxi/investmentpromotionExport.php` en `investinperu.pe` |
+| **Cobertura real ingerida** | Cartera VERTIX APP+PA (~340 proyectos, 2026-08-28). OxI en promoción (~761 filas en export 2026-08-28). GIS sin geometría pública — ver `GET /api/gis/status`. |
 | **Detalle completo** | [`docs/data-contracts/proinversion-vertix-cartera-app-pa-oxi.md`](data-contracts/proinversion-vertix-cartera-app-pa-oxi.md) |
 | **ADR** | [`docs/adr/0011-inversion-privada-app-standalone-y-connector-vertix.md`](adr/0011-inversion-privada-app-standalone-y-connector-vertix.md) |
 
@@ -223,6 +223,7 @@ Piloto ALSOL: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distritos
 | `padron-connector.ts` | identidad-fiscal | SUNAT Padrón RUC | Descarga ZIP completo | Manual | Completa (nacional, ~2.3M filas) |
 | `sanciones-connector.ts` | proveedores-sancionados | RNP/OECE Tribunal de Contrataciones | Sesión ASP + export HTML | Manual | Completa (nacional, ~17.9K filas) |
 | `vertix-connector.ts` | inversion-privada | PROINVERSIÓN VERTIX (investinperu.pe) | POST multipart JSON | Manual | Completa (cartera APP/PA) |
+| `oxi-connector.ts` | inversion-privada | PROINVERSIÓN OxI (investinperu.pe) | POST XLSX base64 | Manual | Completa (promoción OxI) |
 | — (agregador) | salud-institucional | Las otras 5 apps | Query en vivo, sin ingesta | Bajo demanda (por request) | N/A |
 
 ## Candidatos evaluados, no implementados

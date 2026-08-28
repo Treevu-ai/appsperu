@@ -21,6 +21,26 @@ metaRouter.get(
        ORDER BY tipo_proyecto`
     );
 
-    res.json({ lotes: batches, desgloseTipo: breakdown });
+    const { rows: oxiBatches } = await pool.query(
+      `SELECT id, records_total, checksum, fetched_at
+       FROM raw_oxi_batches
+       ORDER BY fetched_at DESC
+       LIMIT 10`
+    );
+
+    const { rows: oxiBreakdown } = await pool.query(
+      `SELECT departamento, COUNT(*)::int AS total
+       FROM oxi_promotion_projects
+       GROUP BY departamento
+       ORDER BY total DESC
+       LIMIT 10`
+    );
+
+    res.json({
+      lotesVertix: batches,
+      desgloseTipo: breakdown,
+      lotesOxi: oxiBatches,
+      oxiTopDepartamentos: oxiBreakdown,
+    });
   })
 );
