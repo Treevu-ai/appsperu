@@ -65,28 +65,52 @@ function Wait-PostgresPort([int]$port, [string]$label, [int]$timeoutSec = 90) {
   throw "Timeout esperando Postgres $label en puerto $port. ¿Docker Desktop está corriendo?"
 }
 
+function Test-DockerNetwork([string]$name) {
+  docker network inspect $name 2>$null | Out-Null
+  return $LASTEXITCODE -eq 0
+}
+
+function Ensure-AppsPeruSharedNetwork {
+  if (Test-DockerNetwork 'appsperu_shared') {
+    Log 'Red Docker appsperu_shared OK.'
+    return
+  }
+  Log 'Red appsperu_shared no existe — creando...'
+  docker network create appsperu_shared 2>&1 | Tee-Object -FilePath $logPath -Append
+  if ($LASTEXITCODE -ne 0 -or -not (Test-DockerNetwork 'appsperu_shared')) {
+    throw @"
+No se pudo crear la red Docker 'appsperu_shared'.
+Ejecuta primero: .\scripts\repair-docker-networks.ps1
+Si persiste: .\scripts\repair-docker-networks.ps1 -Aggressive
+"@
+  }
+  Log 'Red appsperu_shared creada.'
+}
+
 function Repair-DockerNetworks {
   Log 'Reparando redes Docker (pools agotados)...'
   $repair = Join-Path $repoRoot 'scripts\repair-docker-networks.ps1'
   if (Test-Path -LiteralPath $repair) {
     & $repair
+    if ($LASTEXITCODE -ne 0) {
+      throw "repair-docker-networks.ps1 falló (código $LASTEXITCODE)"
+    }
   } else {
     docker network prune -f | Tee-Object -FilePath $logPath -Append
-    docker network inspect appsperu_shared 2>$null | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-      docker network create appsperu_shared | Tee-Object -FilePath $logPath -Append
-    }
+    Ensure-AppsPeruSharedNetwork
   }
+  Ensure-AppsPeruSharedNetwork
 }
 
 function Invoke-DockerComposeUp([string]$relativeApiPath) {
+  Ensure-AppsPeruSharedNetwork
   Push-Location (Join-Path $repoRoot $relativeApiPath)
   try {
     docker compose up -d 2>&1 | Tee-Object -FilePath $logPath -Append
     if ($LASTEXITCODE -ne 0) {
       $logTail = Get-Content -LiteralPath $logPath -Tail 30 -ErrorAction SilentlyContinue | Out-String
-      if ($logTail -match 'fully subnetted|address pools') {
-        Log 'Detectado agotamiento de subredes Docker — reparando y reintentando...'
+      if ($logTail -match 'fully subnetted|address pools|could not be found|declared as external') {
+        Log 'Error de red Docker — reparando y reintentando...'
         Repair-DockerNetworks
         docker compose up -d 2>&1 | Tee-Object -FilePath $logPath -Append
       }

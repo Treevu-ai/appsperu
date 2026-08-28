@@ -15,6 +15,27 @@ $ErrorActionPreference = 'Stop'
 
 function Log([string]$msg) { Write-Host "[repair-docker] $msg" }
 
+function Test-DockerNetwork([string]$name) {
+  docker network inspect $name 2>$null | Out-Null
+  return $LASTEXITCODE -eq 0
+}
+
+function Ensure-DockerNetwork([string]$name) {
+  if (Test-DockerNetwork $name) {
+    Log "Red $name ya existe."
+    return
+  }
+  Log "Creando red compartida $name (una sola subred para todas las apps)..."
+  docker network create $name 2>&1 | ForEach-Object { Log "  $_" }
+  if ($LASTEXITCODE -ne 0 -or -not (Test-DockerNetwork $name)) {
+    throw @"
+No se pudo crear la red Docker '$name'.
+Si ves 'fully subnetted', amplía default-address-pools en Docker Desktop → Settings → Docker Engine
+o ejecuta de nuevo con -Aggressive tras reiniciar Docker Desktop.
+"@
+  }
+}
+
 $before = (docker network ls -q | Measure-Object).Count
 Log "Redes Docker antes: $before"
 
@@ -31,12 +52,7 @@ if ($Aggressive) {
     }
 }
 
-if (-not (docker network inspect appsperu_shared 2>$null)) {
-  Log "Creando red compartida appsperu_shared (una sola subred para todas las apps)..."
-  docker network create appsperu_shared | Out-Null
-} else {
-  Log "Red appsperu_shared ya existe."
-}
+Ensure-DockerNetwork 'appsperu_shared'
 
 $after = (docker network ls -q | Measure-Object).Count
 Log "Redes Docker después: $after"
