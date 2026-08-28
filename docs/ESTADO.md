@@ -70,7 +70,7 @@ automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incl
 `mcp-server/README.md`, sección "Alcance actual y lo que falta", antes de exponerlo fuera de
 `localhost`).
 
-72 tools (13 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA (`inversion-privada`).
+78 tools (13 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA (`inversion-privada`); resultado agro SIEA, turismo MINCETUR, cadena infra obra, denominadores INEI, meta vs sede en crossref.
 
 ## Cruces entre apps (todos verificados con datos reales)
 

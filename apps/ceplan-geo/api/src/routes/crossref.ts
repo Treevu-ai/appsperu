@@ -205,10 +205,14 @@ crossrefRouter.get(
       return;
     }
 
-    let filas;
+    let filasSede;
+    let filasNacionalDirigido;
     let dependency: DependencyStatus;
     try {
-      ({ filas, dependency } = await fetchEjecucionByUbigeo(parsed.ubigeo));
+      ({ filasSede, filasNacionalDirigido, dependency } = await fetchEjecucionByUbigeo(
+        parsed.ubigeo,
+        territory.departamento
+      ));
     } catch (error) {
       const dep = (error as { dependency?: DependencyStatus }).dependency;
       if (dep) {
@@ -223,8 +227,9 @@ crossrefRouter.get(
     res.json(
       crossrefEnvelope({
         matcher: "ubigeo_exacto",
-        cobertura: filas.length > 0 ? "PARCIAL" : "SIN_DATOS_EN_FUENTE",
-        restriccion: "Ejecución presupuestal agregada por entidad; no cubre universo regional completo.",
+        cobertura: filasSede.length + filasNacionalDirigido.length > 0 ? "PARCIAL" : "SIN_DATOS_EN_FUENTE",
+        restriccion:
+          "Ejecución por sede (ubigeo) y gasto nacional dirigido (metaDepartamento) se entregan en secciones separadas; no deben sumarse.",
         dependencias: [dependency],
         corte: { ubigeo: parsed.ubigeo },
         resultados: [
@@ -235,7 +240,10 @@ crossrefRouter.get(
               provincia: territory.provincia,
               distrito: territory.distrito,
             },
-            ejecucion: filas,
+            ejecucionSedeRegional: filasSede,
+            ejecucionNacionalDirigida: filasNacionalDirigido,
+            advertenciaGasto:
+              "Mezclar ejecucionSedeRegional y ejecucionNacionalDirigida es el error más común en lecturas territoriales de Trujillo/La Libertad.",
             nearbyInfrastructure,
           },
         ],
