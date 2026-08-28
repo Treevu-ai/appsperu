@@ -27,9 +27,12 @@ verificadas, cada una con `geometry` — string JSON de `Point`/`LineString`/`Po
 
 **Cruce verificado**: de 156 `IDPROYECTO` únicos en el feed GIS, 151 matchean exactamente un
 `vertix_id` ya en `private_investment_projects` (la tabla que alimenta `vertixService.php`,
-ver `ADR-0011`). Es la misma clave `Id`, no un cruce por nombre — 5 IDs del GIS no tienen
-proyecto correspondiente en el snapshot APP/PA actual (no investigado a fondo; podrían ser
-proyectos fuera de cartera vigente).
+ver `ADR-0011`). Es la misma clave `Id`, no un cruce por nombre. **Los 5 sin match se
+investigaron (2026-08-28)**: 4 están en fase `"Formulación"` (Proyecto de Agua Tumbes,
+Teleférico Huascarán, Nueva Villa Panamericana, Mercado Minorista de Piura) y 1 en fase
+`"Transacción"` (Adenda TGP) — el feed GIS incluye un pipeline más amplio de proyectos en
+preparación que `vertixService.php` no expone (ese solo trae cartera ya activa). No es un
+problema de datos ni un bug — es una diferencia real de alcance entre las dos fuentes VERTIX.
 
 ## Decisión
 
@@ -41,6 +44,18 @@ proyectos fuera de cartera vigente).
   `id_proyecto` **sin FK dura** hacia `private_investment_projects.vertix_id` — el feed GIS
   trae proyectos fuera del snapshot APP/PA actual, una FK forzaría rechazar filas válidas.
   Geometría en `geometry JSONB`, ya parseada desde el string crudo del feed.
+
+**Limpieza de geometrías obsoletas (agregado 2026-08-28, revisión post-implementación).**
+`ingestGisFeatures()` borra al final de cada corrida toda fila cuyo `source_batch_id` no sea
+el del batch recién creado — es decir, todo lo que el upsert no tocó porque ya no vino en el
+feed. Sin esto, un proyecto que desaparece de `ListaRegistrosCapas` (por ejemplo, si pasa a
+una fase que el GIS ya no expone) se quedaría en la base indefinidamente sin que nada lo
+marque como obsoleto. Mismo criterio de "snapshot completo por corrida" que ya usan
+`vertix-connector.ts` y `oxi-connector.ts` a nivel de su propia tabla (upsert + implícitamente
+sin purga, porque hasta ahora nunca se detectó el problema en esas dos — GIS es la primera vez
+que se corrige explícitamente). Verificado en vivo: se insertó una fila de prueba con
+`source_batch_id` de un batch viejo y la siguiente corrida de `npm run ingest:gis` la eliminó
+(`deletedStale: 1`).
 
 **JSONB, no PostGIS.** El Postgres de `inversion-privada` es `postgres:16-alpine` plano
 (`docker-compose.yml`), con datos ya cargados en su volumen. Migrar a `postgis/postgis` habría

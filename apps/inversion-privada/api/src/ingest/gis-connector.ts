@@ -73,11 +73,26 @@ async function upsertGisFeature(client: PoolClient, batchId: number, row: Normal
   );
 }
 
+/**
+ * Borra las geometrías que no vinieron en el batch actual (su
+ * `source_batch_id` sigue apuntando a un batch anterior porque el upsert de
+ * este batch no las tocó) — evita que proyectos que desaparecen del feed
+ * queden huérfanos en la base para siempre. Snapshot completo por corrida,
+ * mismo criterio que `vertix-connector.ts`/`oxi-connector.ts`.
+ */
+async function deleteStaleGeometries(client: PoolClient, batchId: number): Promise<number> {
+  const { rowCount } = await client.query(`DELETE FROM vertix_project_geometries WHERE source_batch_id != $1`, [
+    batchId,
+  ]);
+  return rowCount ?? 0;
+}
+
 export interface GisIngestSummary {
   batchId: number;
   featureCount: number;
   rowsUpserted: number;
   rejected: number;
+  deletedStale: number;
 }
 
 export async function ingestGisFeatures(): Promise<GisIngestSummary> {
@@ -94,6 +109,7 @@ export async function ingestGisFeatures(): Promise<GisIngestSummary> {
     for (const row of normalized) {
       await upsertGisFeature(client, batchId, row);
     }
+    const deletedStale = await deleteStaleGeometries(client, batchId);
     await client.query("COMMIT");
 
     return {
@@ -101,6 +117,7 @@ export async function ingestGisFeatures(): Promise<GisIngestSummary> {
       featureCount: collection.features.length,
       rowsUpserted: normalized.length,
       rejected,
+      deletedStale,
     };
   } catch (error) {
     await client.query("ROLLBACK");

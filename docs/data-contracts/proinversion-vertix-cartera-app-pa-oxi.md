@@ -176,8 +176,16 @@ redirect a login (a diferencia de otras rutas del mismo dominio) y carga
 
 **Corte verificado 2026-08-28**: 473 features nacional. De 156 `IDPROYECTO` únicos, **151
 matchean exactamente** un `vertix_id` ya en `private_investment_projects` — cruce fuerte, no
-por nombre. Los 5 sin match no se investigaron a fondo. La Libertad: 13 features (filtrando
-por `"13"` en `IDDEPARTAMENTO`, incluyendo los casos multi-región).
+por nombre. La Libertad: 13 features (filtrando por `"13"` en `IDDEPARTAMENTO`, incluyendo los
+casos multi-región).
+
+**Los 5 sin match, investigados (2026-08-28)**: Proyecto de Agua Tumbes, Teleférico
+Huascarán, Nueva Villa Panamericana y Mercado Minorista de Piura están en fase
+`"Formulación"`; Adenda TGP está en fase `"Transacción"`. **No es un problema de datos** — el
+feed GIS incluye un pipeline más amplio (proyectos en preparación, antes de entrar
+formalmente a la cartera pública) que `vertixService.php` no expone. El buscador de cartera
+(`private_investment_projects`) solo muestra proyectos ya en cartera activa; el GIS interno de
+PROINVERSIÓN parece alimentarse de un universo previo a ese filtro.
 
 **Cierra el límite "sin mapa descargable"** que quedaba en ADR-0011 y en el memo territorial:
 `GET /api/gis/geojson?departamento=` de `inversion-privada` sirve un `FeatureCollection` real,
