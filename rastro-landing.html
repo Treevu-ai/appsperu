@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="es-PE" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rastro — Trazabilidad real de la inversión pública</title>
+  <meta name="description" content="Del expediente técnico al último comprobante. Visibilidad total de la inversión pública para gobiernos, contratistas, auditores y ciudadanos." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+            serif: ['"DM Serif Display"', 'serif'],
+          },
+          colors: {
+            ink: { 950: '#0a0e14', 900: '#0d1117', 850: '#11161e', 800: '#161b22', 700: '#1c2128', 600: '#21262d' },
+            line: { DEFAULT: '#21262d', soft: '#1c2128' },
+            muted: { DEFAULT: '#7d8590', soft: '#545d68' },
+            fg: { DEFAULT: '#e6edf3', soft: '#b1bac4' },
+            accent: { DEFAULT: '#10b981', soft: '#059669', deep: '#022c22' },
+            warn: '#f59e0b',
+            danger: '#f43f5e',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    html, body { background-color: #0a0e14; color: #e6edf3; }
+    body { font-feature-settings: "ss01", "cv11"; }
+
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 64px 64px;
+    }
+    .radial-glow {
+      background:
+        radial-gradient(60% 50% at 20% 0%, rgba(16,185,129,0.10) 0%, transparent 60%),
+        radial-gradient(50% 40% at 85% 10%, rgba(16,185,129,0.06) 0%, transparent 60%);
+    }
+    .mono-num { font-variant-numeric: tabular-nums; font-family: 'JetBrains Mono', monospace; }
+
+    /* Status pulse */
+    .pulse-dot {
+      position: relative; width: 8px; height: 8px; border-radius: 9999px; background: #10b981;
+    }
+    .pulse-dot::after {
+      content: ''; position: absolute; inset: -4px; border-radius: 9999px;
+      background: rgba(16,185,129,0.4); animation: pulse 1.8s ease-out infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.6); opacity: 0.8; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+
+    /* Caret blink */
+    .caret { display: inline-block; width: 8px; height: 1em; background: #10b981; margin-left: 4px; vertical-align: -2px; animation: blink 1.05s steps(2, start) infinite; }
+    @keyframes blink { to { visibility: hidden; } }
+
+    /* Hero trace typing effect container */
+    .trace-line { opacity: 0; transform: translateY(2px); transition: opacity .25s ease, transform .25s ease; }
+    .trace-line.in { opacity: 1; transform: translateY(0); }
+
+    /* Funnel step connector */
+    .step-connector { position: relative; }
+    .step-connector::after {
+      content: ''; position: absolute; left: 50%; bottom: -28px; width: 1px; height: 28px;
+      background: linear-gradient(180deg, rgba(16,185,129,0.6), rgba(16,185,129,0));
+    }
+    .step-connector:last-child::after { display: none; }
+
+    /* Section divider line */
+    .section-rule { height: 1px; background: linear-gradient(90deg, transparent, rgba(125,133,144,0.25), transparent); }
+
+    /* Subtle scanline on hero terminal */
+    .scanline {
+      position: absolute; inset: 0; pointer-events: none;
+      background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(255,255,255,0.012) 3px 4px);
+    }
+
+    /* Buttons */
+    .btn-primary {
+      background: #10b981; color: #04221a; font-weight: 600;
+      padding: 12px 20px; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px;
+      transition: all .2s ease; box-shadow: 0 0 0 0 rgba(16,185,129,0);
+    }
+    .btn-primary:hover { background: #34d399; transform: translateY(-1px); box-shadow: 0 8px 24px -8px rgba(16,185,129,0.4); }
+    .btn-ghost {
+      color: #e6edf3; padding: 12px 20px; border-radius: 10px;
+      border: 1px solid #30363d; background: transparent;
+      transition: all .2s ease; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-ghost:hover { border-color: #10b981; color: #10b981; }
+
+    /* Card hover */
+    .card { transition: transform .2s ease, border-color .2s ease, background-color .2s ease; }
+    .card:hover { transform: translateY(-2px); border-color: #10b981; }
+
+    /* Reduce focus ring noise */
+    a:focus-visible, button:focus-visible { outline: 2px solid #10b981; outline-offset: 2px; border-radius: 6px; }
+  </style>
+</head>
+<body class="font-sans antialiased">
+
+  <!-- ============================================================== -->
+  <!-- 1. HERO                                                          -->
+  <!-- ============================================================== -->
+  <header class="relative overflow-hidden radial-glow">
+    <div class="absolute inset-0 grid-bg opacity-60"></div>
+
+    <!-- Nav -->
+    <nav class="relative z-10 max-w-6xl mx-auto px-6 md:px-8 py-5 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-2.5">
+        <span class="relative inline-block w-7 h-7 rounded-md bg-accent/20 border border-accent/40 flex items-center justify-center">
+          <span class="block w-2.5 h-2.5 rounded-sm bg-accent"></span>
+        </span>
+        <span class="font-mono font-semibold tracking-[0.18em] text-sm text-fg">Rastro</span>
+      </a>
+      <div class="hidden md:flex items-center gap-7 text-sm text-muted">
+        <a href="#problema" class="hover:text-fg transition">Producto</a>
+        <a href="#como" class="hover:text-fg transition">Cómo funciona</a>
+        <a href="#capacidades" class="hover:text-fg transition">Capacidades</a>
+        <a href="#para-quien" class="hover:text-fg transition">Casos</a>
+        <a href="#empezar" class="hover:text-fg transition">Contacto</a>
+      </div>
+      <a href="#empezar" class="btn-ghost text-sm py-2 px-4">Acceder <span aria-hidden="true">→</span></a>
+    </nav>
+
+    <!-- Hero content -->
+    <div class="relative z-10 max-w-6xl mx-auto px-6 md:px-8 pt-16 md:pt-24 pb-20 md:pb-28">
+      <div class="grid lg:grid-cols-12 gap-12 lg:gap-10 items-center">
+
+        <div class="lg:col-span-7">
+          <!-- Status line -->
+          <div class="flex items-center gap-2 text-xs mono-num text-muted mb-7">
+            <span class="pulse-dot"></span>
+            <span>v0.4 · piloto activo · 3 regiones</span>
+          </div>
+
+          <h1 class="font-sans font-semibold text-4xl md:text-5xl lg:text-6xl leading-[1.05] tracking-[-0.02em] text-fg">
+            Trazabilidad real de la
+            <span class="font-serif italic font-normal text-accent">inversión pública</span>.
+          </h1>
+
+          <p class="mt-6 text-lg md:text-xl text-fg-soft max-w-2xl leading-relaxed">
+            Del expediente técnico al último comprobante. Una capa de visibilidad que conecta
+            Invierte.pe, SIAF, MEF y SEACE en una sola línea de tiempo auditable.
+          </p>
+
+          <div class="mt-9 flex flex-wrap items-center gap-3">
+            <a href="#empezar" class="btn-primary">
+              Solicitar piloto de 30 días
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </a>
+            <a href="#como" class="btn-ghost">
+              Ver demo en vivo
+            </a>
+          </div>
+
+          <!-- Trust strip -->
+          <div class="mt-12">
+            <p class="text-xs mono-num text-muted-soft uppercase tracking-[0.18em] mb-4">Integración nativa</p>
+            <div class="flex flex-wrap gap-x-8 gap-y-3 text-sm mono-num text-muted">
+              <span>Invierte.pe</span>
+              <span class="text-line">·</span>
+              <span>MEF</span>
+              <span class="text-line">·</span>
+              <span>SIAF</span>
+              <span class="text-line">·</span>
+              <span>OSCE</span>
+              <span class="text-line">·</span>
+              <span>SEACE</span>
+              <span class="text-line">·</span>
+              <span>Contraloría</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero terminal mockup -->
+        <div class="lg:col-span-5">
+          <div class="relative rounded-2xl border border-line bg-ink-900/80 backdrop-blur overflow-hidden">
+            <div class="scanline"></div>
+            <!-- titlebar -->
+            <div class="flex items-center justify-between px-4 py-3 border-b border-line bg-ink-850">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-danger/70"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-warn/70"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-accent/80"></span>
+              </div>
+              <span class="text-[11px] mono-num text-muted-soft">rastro@trace — live</span>
+              <span class="text-[11px] mono-num text-accent">●</span>
+            </div>
+            <!-- body -->
+            <div class="p-5 font-mono text-[13px] leading-relaxed text-fg-soft" id="trace">
+              <div class="trace-line"><span class="text-accent">›</span> ¿Por qué se retrasó la obra del colegio 4085?</div>
+              <div class="trace-line text-muted"><span class="text-accent">⎔</span> Analizando 14 fuentes… 2.1s</div>
+              <div class="trace-line"><span class="text-accent">⎔</span> Detecté 3 adicionales de obra <span class="text-warn">(+S/ 480K)</span> y 2 cambios de supervisor.</div>
+              <div class="trace-line"><span class="text-accent">⎔</span> Probabilidad de sobrecosto final: <span class="text-danger">73%</span>.</div>
+              <div class="trace-line"><span class="text-accent">⎔</span> Recomendación: pedir informe al OCI sobre el supervisor <span class="text-fg">"Consorcio Delta"</span>.</div>
+              <div class="trace-line text-muted"><span class="text-accent">⎔</span> ¿Quieres que redacte el pedido?<span class="caret"></span></div>
+            </div>
+          </div>
+          <p class="mt-3 text-xs mono-num text-muted-soft text-center">Datos ilustrativos. La traza real incluye evidencia firmada y hash.</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="section-rule max-w-6xl mx-auto"></div>
+
+  <!-- ============================================================== -->
+  <!-- 2. EL PROBLEMA                                                  -->
+  <!-- ============================================================== -->
+  <section id="problema" class="relative max-w-6xl mx-auto px-6 md:px-8 py-24 md:py-32">
+    <div class="grid lg:grid-cols-12 gap-12">
+      <div class="lg:col-span-4">
+        <p class="text-xs mono-num text-accent uppercase tracking-[0.18em] mb-5">01 — El problema</p>
+        <h2 class="font-sans font-semibold text-3xl md:text-4xl leading-[1.1] tracking-[-0.01em] text-fg">
+          La inversión pública se pierde en el camino.
+        </h2>
+        <p class="mt-5 text-fg-soft leading-relaxed">
+          Miles de proyectos, cientos de miles de millones de soles, y casi cero visibilidad operativa
+          entre el momento en que un expediente se aprueba y el último sol ejecutado.
+        </p>
+      </div>
+
+      <div class="lg:col-span-8">
+        <!-- Funnel of leakage -->
+        <div class="rounded-2xl border border-line bg-ink-900/60 p-6 md:p-8">
+
+          <div class="space-y-3">
+            <!-- step -->
+            <div class="grid grid-cols-12 items-center gap-3 text-sm">
+              <div class="col-span-2 mono-num text-muted text-right">100%</div>
+              <div class="col-span-9 h-12 rounded-md bg-accent/85 flex items-center px-4 font-medium text-ink-950">
+                Presupuesto asignado (PIA + PIM)
+              </div>
+              <div class="col-span-1 mono-num text-muted-soft text-xs">S/ 54.8 MM</div>
+            </div>
+            <div class="grid grid-cols-12 items-center gap-3 text-sm">
+              <div class="col-span-2 mono-num text-muted text-right">72%</div>
+              <div class="col-span-8 h-12 rounded-md bg-accent/70 flex items-center px-4 font-medium text-ink-950">
+                Expediente técnico aprobado
+              </div>
+              <div class="col-span-2 mono-num text-muted-soft text-xs">Demora 11 meses prom.</div>
+            </div>
+            <div class="grid grid-cols-12 items-center gap-3 text-sm">
+              <div class="col-span-2 mono-num text-muted text-right">48%</div>
+              <div class="col-span-6 h-12 rounded-md bg-accent/50 flex items-center px-4 font-medium text-ink-950">
+                Ejecución iniciada en plazo
+              </div>
+              <div class="col-span-4 mono-num text-warn text-xs">+ 34% con adicionales</div>
+            </div>
+            <div class="grid grid-cols-12 items-center gap-3 text-sm">
+              <div class="col-span-2 mono-num text-muted text-right">18%</div>
+              <div class="col-span-4 h-12 rounded-md bg-accent/30 flex items-center px-4 text-ink-100">
+                Culminado a tiempo y dentro del costo
+              </div>
+              <div class="col-span-6 mono-num text-danger text-xs">Sobrecosto + 67% en los que se retrasan</div>
+            </div>
+            <div class="grid grid-cols-12 items-center gap-3 text-sm">
+              <div class="col-span-2 mono-num text-muted text-right">3%</div>
+              <div class="col-span-3 h-12 rounded-md bg-accent/15 border border-accent/30 flex items-center px-4 text-fg">
+                Liquidado y en operación
+              </div>
+              <div class="col-span-7 mono-num text-muted-soft text-xs">82% de obras cerradas sin liquidación formal</div>
+            </div>
+          </div>
+
+          <div class="mt-8 pt-6 border-t border-line grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
+            <div>
+              <div class="mono-num text-2xl text-fg">S/ 54.8<span class="text-muted text-base">mil M</span></div>
+              <div class="text-muted mt-1">Presupuesto de inversión pública 2026</div>
+            </div>
+            <div>
+              <div class="mono-num text-2xl text-fg">2,847</div>
+              <div class="text-muted mt-1">Proyectos paralizados a nivel nacional</div>
+            </div>
+            <div>
+              <div class="mono-num text-2xl text-fg">11<span class="text-muted text-base">meses</span></div>
+              <div class="text-muted mt-1">Demora promedio entre viabilidad y ejecución</div>
+            </div>
+            <div>
+              <div class="mono-num text-2xl text-fg">0%</div>
+              <div class="text-muted mt-1">Visibilidad ciudadana en tiempo real</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-rule max-w-6xl mx-auto"></div>
+
+  <!-- ============================================================== -->
+  <!-- 3. CÓMO FUNCIONA                                                 -->
+  <!-- ============================================================== -->
+  <section id="como" class="relative max-w-6xl mx-auto px-6 md:px-8 py-24 md:py-32">
+    <div class="max-w-3xl mb-14">
+      <p class="text-xs mono-num text-accent uppercase tracking-[0.18em] mb-5">02 — Cómo funciona</p>
+      <h2 class="font-sans font-semibold text-3xl md:text-4xl leading-[1.1] tracking-[-0.01em] text-fg">
+        Una cadena de evidencia inmutable, del planeamiento a la liquidación.
+      </h2>
+      <p class="mt-5 text-fg-soft leading-relaxed">
+        Conectamos los sistemas nacionales y construimos una capa de trazabilidad que ningún actor
+        puede alterar sin dejar huella. Lo que hoy está disperso en 7 portales distintos,
+        mañana vive en una sola línea de tiempo.
+      </p>
+    </div>
+
+    <!-- Process flow: 5 steps -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-3">
+
+      <!-- Step 1 -->
+      <div class="step-connector card rounded-2xl border border-line bg-ink-900/60 p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="mono-num text-xs text-accent">01</span>
+          <span class="h-px flex-1 bg-line"></span>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
+          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </div>
+        <h3 class="font-semibold text-fg mb-2">Ingesta</h3>
+        <p class="text-sm text-muted leading-relaxed">
+          Conectores API nativos a MEF, SIAF, Invierte.pe, SEACE y OSCE. Sincronización continua.
+        </p>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step-connector card rounded-2xl border border-line bg-ink-900/60 p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="mono-num text-xs text-accent">02</span>
+          <span class="h-px flex-1 bg-line"></span>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
+          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+        </div>
+        <h3 class="font-semibold text-fg mb-2">Normalización</h3>
+        <p class="text-sm text-muted leading-relaxed">
+          Catálogo único de proyectos, componentes, metas y partidas. Misma CUI, misma lectura.
+        </p>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step-connector card rounded-2xl border border-line bg-ink-900/60 p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="mono-num text-xs text-accent">03</span>
+          <span class="h-px flex-1 bg-line"></span>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
+          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h3 class="font-semibold text-fg mb-2">Trazabilidad</h3>
+        <p class="text-sm text-muted leading-relaxed">
+          Cada hito con timestamp, responsable, evidencia firmada y hash encadenado.
+        </p>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="step-connector card rounded-2xl border border-line bg-ink-900/60 p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="mono-num text-xs text-accent">04</span>
+          <span class="h-px flex-1 bg-line"></span>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
+          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <h3 class="font-semibold text-fg mb-2">Alertas</h3>
+        <p class="text-sm text-muted leading-relaxed">
+          Patrones de riesgo detectados antes de que se vuelvan escándalo. Cronograma, costo, metas.
+        </p>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="step-connector card rounded-2xl border border-line bg-ink-900/60 p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="mono-num text-xs text-accent">05</span>
+          <span class="h-px flex-1 bg-line"></span>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
+          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <h3 class="font-semibold text-fg mb-2">Visibilidad</h3>
+        <p class="text-sm text-muted leading-relaxed">
+          Dashboards por actor. Gobierno, contratista, auditor y ciudadano, cada uno con su lente.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Schema snippet -->
+    <div class="mt-10 rounded-2xl border border-line bg-ink-900/60 p-6 md:p-7">
+      <div class="flex items-center justify-between mb-4">
+        <p class="text-xs mono-num text-muted uppercase tracking-[0.18em]">Modelo de evidencia</p>
+        <span class="text-xs mono-num text-accent">inmutable</span>
+      </div>
+      <pre class="font-mono text-[12.5px] leading-relaxed text-fg-soft overflow-x-auto"><span class="text-muted">{</span>
+  <span class="text-accent">"cui"</span>: <span class="text-warn">"245891"</span>,
+  <span class="text-accent">"fase"</span>: <span class="text-warn">"ejecucion"</span>,
+  <span class="text-accent">"hito"</span>: <span class="text-warn">"valorizacion-14"</span>,
+  <span class="text-accent">"ts"</span>: <span class="text-warn">"2026-08-27T20:14:08Z"</span>,
+  <span class="text-accent">"actor"</span>: <span class="text-warn">"supervisor-externo"</span>,
+  <span class="text-accent">"hash_prev"</span>: <span class="text-muted-soft">"0x9f4a…b21c"</span>,
+  <span class="text-accent">"hash"</span>: <span class="text-muted-soft">"0xc12e…7a4f"</span>,
+  <span class="text-accent">"evidencia"</span>: [<span class="text-warn">"acta.pdf"</span>, <span class="text-warn">"foto-meta-7.jpg"</span>]
+<span class="text-muted">}</span></pre>
+    </div>
+  </section>
+
+  <div class="section-rule max-w-6xl mx-auto"></div>
+
+  <!-- ============================================================== -->
+  <!-- 4. CAPACIDADES                                                   -->
+  <!-- ============================================================== -->
+  <section id="capacidades" class="relative max-w-6xl mx-auto px-6 md:px-8 py-24 md:py-32">
+    <div class="max-w-3xl mb-14">
+      <p class="text-xs mono-num text-accent uppercase tracking-[0.18em] mb-5">03 — Capacidades</p>
+      <h2 class="font-sans font-semibold text-3xl md:text-4xl leading-[1.1] tracking-[-0.01em] text-fg">
+        Construido para los actores reales del sistema.
+      </h2>
+      <p class="mt-5 text-fg-soft leading-relaxed">
+        No es un dashboard más. Es la infraestructura de transparencia sobre la que se monta la próxima
+        década de inversión pública en Latinoamérica.
+      </p>
+    </div>
+
+    <!-- Asymmetric grid: 1 wide + 2x2 narrow -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+      <!-- Wide card -->
+      <div class="md:col-span-3 lg:col-span-2 card rounded-2xl border border-line bg-ink-900/60 p-7 md:p-8">
+        <div class="flex items-start gap-5">
+          <div class="w-12 h-12 rounded-xl bg-accent/10 border border-accent/30 flex items-center justify-center shrink-0">
+            <svg class="w-6 h-6 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div>
+            <p class="text-xs mono-num text-accent mb-1">Capacidad núcleo</p>
+            <h3 class="font-semibold text-xl text-fg">Monitoreo en tiempo real, multi-fuente</h3>
+            <p class="mt-3 text-fg-soft leading-relaxed">
+              Sincronización continua con MEF, SIAF, Invierte.pe, SEACE y OSCE. Una sola línea de
+              tiempo por proyecto, con cada hito cruzado contra la fuente oficial. Si un dato cambia
+              en un sistema, el reflejo aparece en menos de 5 minutos.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="card rounded-2xl border border-line bg-ink-900/60 p-6">
+        <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
+          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3 class="font-semibold text-fg mb-2">Cadena de evidencia</h3>
+        <p class="text-sm text-muted leading-relaxed">
+          Hash encadenado por hito. Cualquier modificación deja rastro verificable.
+        </p>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="card rounded-2xl border border-line bg-ink-900/60 p-6">
+        <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
+          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        </div>
+        <h3 class="font-semibold text-fg mb-2">Alertas tempranas</h3>
+        <p class="text-sm text-muted leading-relaxed">
+          Cronograma, sobrecosto, cambio de metas, paralización. Antes del titular.
+        </p>
+      </div>
+
+      <!-- Feature 4 -->
+      <div class="card rounded-2xl border border-line bg-ink-900/60 p-6">
+        <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
+          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        </div>
+        <h3 class="font-semibold text-fg mb-2">Dashboards por actor</h3>
+        <p class="text-sm text-muted leading-relaxed">
+          Cuatro lentes: gobierno, contratista, auditor, ciudadano. La misma verdad, distinta utilidad.
+        </p>
+      </div>
+
+      <!-- Feature 5 -->
+      <div class="card rounded-2xl border border-line bg-ink-900/60 p-6">
+        <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
+          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6h6V2"/><path d="M5 8h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z"/></svg>
+        </div>
+        <h3 class="font-semibold text-fg mb-2">Reportes automáticos</h3>
+        <p class="text-sm text-muted leading-relaxed">
+          Exportación lista para Contraloría, OCI y comisión de presupuesto. Formato institucional.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="section-rule max-w-6xl mx-auto"></div>
+
+  <!-- ============================================================== -->
+  <!-- 5. PARA QUIÉN                                                    -->
+  <!-- ============================================================== -->
+  <section id="para-quien" class="relative max-w-6xl mx-auto px-6 md:px-8 py-24 md:py-32">
+    <div class="max-w-3xl mb-14">
+      <p class="text-xs mono-num text-accent uppercase tracking-[0.18em] mb-5">04 — Para quién</p>
+      <h2 class="font-sans font-semibold text-3xl md:text-4xl leading-[1.1] tracking-[-0.01em] text-fg">
+        Un mismo proyecto, cuatro lentes diferentes.
+      </h2>
+      <p class="mt-5 text-fg-soft leading-relaxed">
+        El dato es el mismo. Lo que cambia es la pregunta. Rastro entrega a cada actor la vista
+        que necesita, sin pedir reportes adicionales ni accesos especiales.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+
+      <!-- Main audience -->
+      <div class="md:col-span-7 card rounded-2xl border border-accent/30 bg-ink-900/70 p-7 md:p-8 relative overflow-hidden">
+        <div class="absolute top-0 right-0 px-3 py-1 text-[10px] mono-num text-accent bg-accent/10 border-l border-b border-accent/30 rounded-bl-lg">PRIMARIO</div>
+        <p class="text-xs mono-num text-muted mb-2">GOB-001 · Gobierno regional y municipal</p>
+        <h3 class="font-semibold text-2xl text-fg mb-3">El gerente de obras, con control real.</h3>
+        <p class="text-fg-soft leading-relaxed mb-5">
+          Visibilidad sobre toda la cartera bajo su responsabilidad. Detección de cuellos de botella
+          antes de que se traduzcan en adicionales, ampliaciones de plazo o noticias.
+        </p>
+        <ul class="space-y-2 text-sm">
+          <li class="flex items-start gap-2"><span class="text-accent mt-1">▸</span><span class="text-fg-soft">Tablero de cartera por fase, costo y tiempo</span></li>
+          <li class="flex items-start gap-2"><span class="text-accent mt-1">▸</span><span class="text-fg-soft">Alertas configurables por tipo de riesgo</span></li>
+          <li class="flex items-start gap-2"><span class="text-accent mt-1">▸</span><span class="text-fg-soft">Exportación directa a PCM y consejo regional</span></li>
+        </ul>
+      </div>
+
+      <!-- Citizens -->
+      <div class="md:col-span-5 card rounded-2xl border border-line bg-ink-900/60 p-7">
+        <p class="text-xs mono-num text-muted mb-2">SOC-002 · Ciudadanos y prensa</p>
+        <h3 class="font-semibold text-xl text-fg mb-3">Vigilancia accesible, sin pedir información.</h3>
+        <p class="text-sm text-fg-soft leading-relaxed mb-4">
+          Una vista pública del avance de cada obra en su distrito, con foto, monto y plazo.
+          La transparencia como defecto, no como excepción.
+        </p>
+        <ul class="space-y-2 text-sm">
+          <li class="flex items-start gap-2"><span class="text-accent mt-1">▸</span><span class="text-fg-soft">Mapa de obras por distrito</span></li>
+          <li class="flex items-start gap-2"><span class="text-accent mt-1">▸</span><span class="text-fg-soft">Línea de tiempo con evidencia pública</span></li>
+          <li class="flex items-start gap-2"><span class="text-accent mt-1">▸</span><span class="text-fg-soft">Compatible con la Ley 27806</span></li>
+        </ul>
+      </div>
+
+      <!-- Auditors -->
+      <div class="md:col-span-5 card rounded-2xl border border-line bg-ink-900/60 p-7">
+        <p class="text-xs mono-num text-muted mb-2">AUD-003 · Auditores y OCI</p>
+        <h3 class="font-semibold text-xl text-fg mb-3">Trazabilidad lista para informe.</h3>
+        <p class="text-sm text-fg-soft leading-relaxed mb-4">
+          Cruce automático entre lo planificado, lo certificado y lo ejecutado. La Contraloría
+          pasa de reaccionar a prevenir.
+        </p>
+        <ul class="space-y-2 text-sm">
+          <li class="flex items-start gap-2"><span class="text-accent mt-1">▸</span><span class="text-fg-soft">Reportes de auditoría pre-armados</span></li>
+          <li class="flex items-start gap-2"><span class="text-accent mt-1">▸</span><span class="text-fg-soft">Detección de patrones de riesgo</span></li>
+        </ul>
+      </div>
+
+      <!-- Contractors -->
+      <div class="md:col-span-7 card rounded-2xl border border-line bg-ink-900/60 p-7">
+        <p class="text-xs mono-num text-muted mb-2">CON-004 · Contratistas y supervisores</p>
+        <h3 class="font-semibold text-xl text-fg mb-3">Tu expediente, ordenado.</h3>
+        <p class="text-sm text-fg-soft leading-relaxed mb-4">
+          Un expediente que se arma solo. Cada valorización, adicional, conformidad y acta con
+          firma, hash y trazabilidad. Lo que antes requería un equipo de cumplimiento, ahora vive
+          en la plataforma.
+        </p>
+        <ul class="space-y-2 text-sm">
+          <li class="flex items-start gap-2"><span class="text-accent mt-1">▸</span><span class="text-fg-soft">Expediente digital firmado y verificable</span></li>
+          <li class="flex items-start gap-2"><span class="text-accent mt-1">▸</span><span class="text-fg-soft">Histórico de valorizaciones y adicionales</span></li>
+          <li class="flex items-start gap-2"><span class="text-accent mt-1">▸</span><span class="text-fg-soft">Notificaciones de hitos críticos</span></li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="section-rule max-w-6xl mx-auto"></div>
+
+  <!-- ============================================================== -->
+  <!-- 6. CTA FINAL                                                     -->
+  <!-- ============================================================== -->
+  <section id="empezar" class="relative max-w-6xl mx-auto px-6 md:px-8 py-24 md:py-32">
+    <div class="rounded-3xl border border-line bg-ink-900/70 p-8 md:p-14 relative overflow-hidden">
+      <div class="absolute inset-0 radial-glow opacity-60 pointer-events-none"></div>
+
+      <div class="relative grid lg:grid-cols-12 gap-10 items-start">
+        <div class="lg:col-span-7">
+          <p class="text-xs mono-num text-accent uppercase tracking-[0.18em] mb-5">05 — Empezar</p>
+          <h2 class="font-sans font-semibold text-3xl md:text-5xl leading-[1.05] tracking-[-0.01em] text-fg">
+            Empieza a ver tu inversión pública
+            <span class="font-serif italic font-normal text-accent">como nunca</span>.
+          </h2>
+          <p class="mt-5 text-fg-soft text-lg leading-relaxed max-w-2xl">
+            Tres caminos para entrar. Elige el que calce con tu rol y el momento en que estás.
+          </p>
+        </div>
+
+        <div class="lg:col-span-5 space-y-3">
+          <a href="#" class="card block rounded-xl border border-accent/30 bg-accent/5 p-5 hover:bg-accent/10">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="text-xs mono-num text-accent mb-1">Camino 01</p>
+                <h3 class="font-semibold text-fg">Solicitar piloto de 30 días</h3>
+                <p class="text-sm text-muted mt-1">Una cartera, una región, sin costo.</p>
+              </div>
+              <span class="text-accent text-xl">→</span>
+            </div>
+          </a>
+          <a href="#" class="card block rounded-xl border border-line bg-ink-850 p-5">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="text-xs mono-num text-muted mb-1">Camino 02</p>
+                <h3 class="font-semibold text-fg">Agendar demo de 20 min</h3>
+                <p class="text-sm text-muted mt-1">Con un especialista del equipo fundador.</p>
+              </div>
+              <span class="text-fg-soft text-xl">→</span>
+            </div>
+          </a>
+          <a href="#" class="card block rounded-xl border border-line bg-ink-850 p-5">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="text-xs mono-num text-muted mb-1">Camino 03</p>
+                <h3 class="font-semibold text-fg">Leer la documentación técnica</h3>
+                <p class="text-sm text-muted mt-1">API, modelo de datos, casos de uso.</p>
+              </div>
+              <span class="text-fg-soft text-xl">→</span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <!-- Trust bar -->
+      <div class="relative mt-12 pt-8 border-t border-line grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
+        <div>
+          <p class="text-xs mono-num text-muted-soft uppercase tracking-[0.18em] mb-2">Seguridad</p>
+          <p class="text-fg">Cifrado AES-256</p>
+        </div>
+        <div>
+          <p class="text-xs mono-num text-muted-soft uppercase tracking-[0.18em] mb-2">Residencia</p>
+          <p class="text-fg">Alojado en Perú</p>
+        </div>
+        <div>
+          <p class="text-xs mono-num text-muted-soft uppercase tracking-[0.18em] mb-2">Cumplimiento</p>
+          <p class="text-fg">Ley 27806 · 29783</p>
+        </div>
+        <div>
+          <p class="text-xs mono-num text-muted-soft uppercase tracking-[0.18em] mb-2">Soporte</p>
+          <p class="text-fg">SLA 24/7 en piloto</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-line">
+    <div class="max-w-6xl mx-auto px-6 md:px-8 py-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div class="flex items-center gap-2.5">
+        <span class="relative inline-block w-6 h-6 rounded-md bg-accent/20 border border-accent/40 flex items-center justify-center">
+          <span class="block w-2 h-2 rounded-sm bg-accent"></span>
+        </span>
+        <span class="font-mono font-semibold tracking-[0.18em] text-xs text-fg-soft">Rastro</span>
+        <span class="text-muted-soft text-xs mono-num">·  trazabilidad de inversión pública</span>
+      </div>
+      <div class="flex flex-wrap gap-x-6 gap-y-2 text-xs mono-num text-muted">
+        <a href="#" class="hover:text-fg transition">Términos</a>
+        <a href="#" class="hover:text-fg transition">Privacidad</a>
+        <a href="#" class="hover:text-fg transition">Seguridad</a>
+        <a href="#" class="hover:text-fg transition">Contacto</a>
+        <span class="text-muted-soft">© 2026</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============================================================== -->
+  <!-- Trace typing effect (hero)                                       -->
+  <!-- ============================================================== -->
+  <script>
+    (function () {
+      const lines = document.querySelectorAll('#trace .trace-line');
+      lines.forEach((el, i) => {
+        setTimeout(() => el.classList.add('in'), 120 + i * 220);
+      });
+    })();
+  </script>
+
+</body>
+</html>
