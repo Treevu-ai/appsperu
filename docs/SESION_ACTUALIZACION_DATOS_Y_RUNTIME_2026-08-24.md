@@ -4,7 +4,7 @@ Fecha de ejecución: 2026-08-24 (America/Lima).
 
 ## Propósito
 
-Recuperar y verificar los servicios locales de ALSOL para un análisis integrado de
+Recuperar y verificar los servicios locales de Rastro para un análisis integrado de
 La Libertad, actualizar los cortes locales de INFOBRAS e Invierte.pe y corregir el
 fallo que impedía renovar el export de INFOBRAS.
 
@@ -133,7 +133,7 @@ iniciado.
 Los puertos 4001 y 4002 estaban ocupados por dos procesos de `compras-publicas`.
 Como consecuencia, 4002 respondía salud pero servía rutas de compras, no de
 `radar-inversiones`. Se identificaron los procesos por su línea de comandos, se
-detuvieron solamente esas instancias de ALSOL y se iniciaron nuevamente:
+detuvieron solamente esas instancias de Rastro y se iniciaron nuevamente:
 
 - `compras-publicas` en 4001;
 - `radar-inversiones` en 4002.

@@ -1,6 +1,6 @@
 # Backlog ejecutable — Infraestructura que funciona y desarrollo territorial v1
 
-**Producto:** ALSOL
+**Producto:** Rastro
 **Regla transversal:** API/terminal/MCP únicamente. Un activo, operador, mantenimiento o indicador entra solo mediante clave oficial y evidencia trazable.
 **Estimación:** S ≤ 1 día, M 2–3 días, L 4–6 días. No es compromiso de calendario.
 

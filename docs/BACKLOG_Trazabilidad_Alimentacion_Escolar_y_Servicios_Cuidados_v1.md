@@ -1,6 +1,6 @@
 # Backlog ejecutable — Trazabilidad de alimentación escolar y servicios que cuidan
 
-**Producto:** ALSOL
+**Producto:** Rastro
 **Regla transversal:** API/terminal/MCP únicamente; ninguna interfaz nueva. Los vínculos solo entran con una clave y evidencia oficial.
 **Estimación:** S ≤ 1 día, M 2–3 días, L 4–6 días. Las estimaciones no son compromiso de calendario.
 
@@ -63,4 +63,4 @@
 1. El portal solo permite lectura manual, cambia de formato o prohíbe automatización: se conserva flujo manual asistido y no se promete conector.
 2. Los documentos no contienen RUC/lote/colegio: se mantiene `SIN_EVIDENCIA_INGRESADA`; no se completa con la muestra OCDS general.
 3. No existe denominador oficial por distrito/período: se reporta cohorte materializada, no cobertura total.
-4. La evidencia revela datos personales de menores: se excluyen antes de persistir; ALSOL trabaja con servicio, colegio y agregados, no personas.
+4. La evidencia revela datos personales de menores: se excluyen antes de persistir; Rastro trabaja con servicio, colegio y agregados, no personas.

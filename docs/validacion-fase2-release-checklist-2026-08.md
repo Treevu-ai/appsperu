@@ -1,4 +1,4 @@
-# Release checklist — CEPLAN × ALSOL Fase 2 (AL2-35)
+# Release checklist — CEPLAN × Rastro Fase 2 (AL2-35)
 
 **Fecha:** 2026-08-26  
 **Rama:** `cursor/ceplan-fase2-prd-backlog-f938`  

@@ -3,12 +3,12 @@
 **Versión:** 1.0  
 **Estado:** planificado — sin implementación en código  
 **Fecha:** 2026-08-26  
-**Producto:** ALSOL / Follow the Sol  
+**Producto:** Rastro / Follow the Sol  
 **Ámbito:** API, base de datos PostGIS, ingesta WFS, cruces con apps existentes, pruebas, documentación y MCP. **No incluye interfaz web.**
 
 ## 1. Decisión de producto
 
-ALSOL ya cruza presupuesto, inversión, obra, compra y entidad por claves administrativas (`SEC_EJEC`, CUI, RUC, nombre difuso). Le falta una capa que responda preguntas territoriales con evidencia reproducible:
+Rastro ya cruza presupuesto, inversión, obra, compra y entidad por claves administrativas (`SEC_EJEC`, CUI, RUC, nombre difuso). Le falta una capa que responda preguntas territoriales con evidencia reproducible:
 
 1. ¿En qué distrito/provincia/departamento cae una inversión u obra según el catálogo oficial?
 2. ¿Qué infraestructura logística (aeropuertos, puertos) publica CEPLAN cerca de un territorio?
@@ -24,14 +24,14 @@ Objetivo:  UBIGEO verificado → polígono/distrito oficial → infraestructura 
 
 ## 2. Problema
 
-La discusión territorial en ALSOL hoy depende de campos textuales o de un catálogo UBIGEO derivado del MEF, sin geometría ni infraestructura de referencia. Eso limita el análisis:
+La discusión territorial en Rastro hoy depende de campos textuales o de un catálogo UBIGEO derivado del MEF, sin geometría ni infraestructura de referencia. Eso limita el análisis:
 
 | Fuente actual | Qué trae | Qué falta |
 |---|---|---|
 | `infobras` | `departamento`, `provincia`, `distrito` (texto) | UBIGEO, coordenadas |
 | `radar-inversiones` | `ubigeo`, nombres territoriales | geometría, infraestructura |
 | `radar-ejecucion` | `entities.ubigeo`, tabla `territories` sin geometría | polígonos, activos logísticos |
-| GeoServer CEPLAN | 84 capas WFS/WMS, distritos con `ubigeo` | no integrado en ALSOL |
+| GeoServer CEPLAN | 84 capas WFS/WMS, distritos con `ubigeo` | no integrado en Rastro |
 
 Sin `ceplan-geo`, no hay una fuente canónica de territorio con geometría ni de infraestructura logística publicada por CEPLAN dentro del ecosistema.
 

@@ -1,6 +1,6 @@
 # Data contract — Plan–Budget Alignment (PBA) v1
 
-> PRD: [`docs/PRD_CEPLAN_ALSOL_Fase2_5Regiones_v1.md`](../PRD_CEPLAN_ALSOL_Fase2_5Regiones_v1.md)  
+> PRD: [`docs/PRD_CEPLAN_Rastro_Fase2_5Regiones_v1.md`](../PRD_CEPLAN_Rastro_Fase2_5Regiones_v1.md)  
 > Ticket: AL2-05  
 > App propietaria: `ceplan-estrategico/api` (indicadores) + lectura `radar-ejecucion`
 

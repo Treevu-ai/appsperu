@@ -1,6 +1,6 @@
 # Memo — La Libertad: inversión pública + obras + inversión privada PROINVERSIÓN, por sector
 
-> Sigue `docs/plantilla-memo-regional-alsol-v1.md`, con una sección nueva (§4) para
+> Sigue `docs/plantilla-memo-regional-rastro-v1.md`, con una sección nueva (§4) para
 > `inversion-privada` (VERTIX APP/PA y OxI) que la plantilla v1 todavía no cubre.
 >
 > **Actualización 2026-08-28 (misma fecha, corrida posterior):** la sección OxI de §4 y el

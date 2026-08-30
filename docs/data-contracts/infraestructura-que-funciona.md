@@ -2,7 +2,7 @@
 
 ## Propósito
 
-`/api/infraestructura` extiende ALSOL desde la obra hacia el activo y el servicio, sin presentar ejecución física o presupuesto como prueba de funcionamiento. Su unidad es el activo materializado y su cadena se lee como: identidad → cierre/recepción → operador → mantenimiento → disponibilidad → indicador de servicio.
+`/api/infraestructura` extiende Rastro desde la obra hacia el activo y el servicio, sin presentar ejecución física o presupuesto como prueba de funcionamiento. Su unidad es el activo materializado y su cadena se lee como: identidad → cierre/recepción → operador → mantenimiento → disponibilidad → indicador de servicio.
 
 ## Identificadores y vínculos permitidos
 
@@ -17,7 +17,7 @@
 
 ## Estados de evidencia
 
-- `SIN_EVIDENCIA_DE_CIERRE`: ALSOL no materializó un acto de recepción/cierre; no prueba que no exista.
+- `SIN_EVIDENCIA_DE_CIERRE`: Rastro no materializó un acto de recepción/cierre; no prueba que no exista.
 - `SIN_EVIDENCIA_DE_OPERADOR`: no hay fuente que asigne el rol de operación.
 - `SIN_EVIDENCIA_DE_MANTENIMIENTO`: no se materializó evidencia atribuida al activo.
 - `SIN_EVIDENCIA_DE_OPERACION`: no hay registro sectorial/operador que documente disponibilidad.

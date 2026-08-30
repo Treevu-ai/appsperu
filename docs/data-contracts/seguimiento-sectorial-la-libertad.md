@@ -17,7 +17,7 @@ Describe la ficha terminal que compara entidades del Gobierno Nacional y del Gob
 
 ## Cobertura y temporalidad
 
-Todo resultado presupuestal incluye `reglaTerritorial`, `cortesUsados`, `recursos` y el estado de `budget_coverage_snapshots`. `NO_VERIFICADA` significa que ALSOL conoce el alcance materializado, pero no certifica el universo externo total.
+Todo resultado presupuestal incluye `reglaTerritorial`, `cortesUsados`, `recursos` y el estado de `budget_coverage_snapshots`. `NO_VERIFICADA` significa que Rastro conoce el alcance materializado, pero no certifica el universo externo total.
 
 ## Estados importantes
 

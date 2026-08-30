@@ -1,4 +1,4 @@
-# Runbook — corte territorial verificable de ALSOL
+# Runbook — corte territorial verificable de Rastro
 
 **Propósito:** producir y revisar un corte reproducible desde terminal. No actualiza interfaces ni convierte una descarga en una certificación del universo público.
 

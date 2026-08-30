@@ -1,6 +1,6 @@
 # Backlog ejecutable — CEPLAN Geo v1
 
-**Producto:** ALSOL / Follow the Sol  
+**Producto:** Rastro / Follow the Sol  
 **PRD:** [`docs/PRD_CEPLAN_Geo_v1.md`](PRD_CEPLAN_Geo_v1.md)  
 **Regla transversal:** API/terminal/MCP únicamente. Sin web. Sin coordenadas inventadas. Todo cruce declara matcher, cobertura y restricción.  
 **Estimación:** S ≤ 1 día, M 2–3 días, L 4–6 días. No es compromiso de calendario.

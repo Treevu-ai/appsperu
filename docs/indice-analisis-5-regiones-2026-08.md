@@ -1,8 +1,8 @@
-# Índice comparativo — La Libertad ALSOL (Fase 2)
+# Índice comparativo — La Libertad Rastro (Fase 2)
 
 **Fecha de corte:** 2026-08-26  
 **Alcance:** LA LIBERTAD (único departamento en scope del proyecto)  
-**PRD:** [`docs/PRD_CEPLAN_ALSOL_Fase2_5Regiones_v1.md`](PRD_CEPLAN_ALSOL_Fase2_5Regiones_v1.md)  
+**PRD:** [`docs/PRD_CEPLAN_Rastro_Fase2_5Regiones_v1.md`](PRD_CEPLAN_Rastro_Fase2_5Regiones_v1.md)  
 **Ticket:** AL2-33
 
 > **Nota de alcance (2026-08-26):** el sprint se redujo a La Libertad. Lambayeque, Piura, Cajamarca y Cusco quedan fuera de scope; sus memos se conservan como histórico pero no se actualizan.
@@ -67,6 +67,6 @@ No usar estas cifras como desempeño departamental — ver `GET /api/crossref/te
 
 ## Documentación relacionada
 
-- Plantilla: [`docs/plantilla-memo-regional-alsol-v1.md`](plantilla-memo-regional-alsol-v1.md)
+- Plantilla: [`docs/plantilla-memo-regional-rastro-v1.md`](plantilla-memo-regional-rastro-v1.md)
 - Matriz cobertura: [`docs/matriz-cobertura-5-regiones-2026-08.md`](matriz-cobertura-5-regiones-2026-08.md)
 - Release Fase 2: [`docs/validacion-fase2-release-checklist-2026-08.md`](validacion-fase2-release-checklist-2026-08.md)
