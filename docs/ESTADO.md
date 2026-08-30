@@ -1,8 +1,19 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-08-27.
+Última actualización: 2026-08-29.
 
-Doce apps standalone con API propia; todas son API-only (sin frontend web). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+Doce apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+
+## Rename ALSOL → Rastro completado + alta de `rastro-web` (2026-08-29)
+
+- **Rename de marca cerrado en `docs/`**: 7 archivos con "ALSOL" en el nombre renombrados a "Rastro" (`git mv`, historial preservado) y 79 menciones sueltas del nombre de producto reemplazadas en 34 archivos (PRDs, backlogs, memos regionales, reportes, data-contracts). `alsol-landing.html` → `rastro-landing.html`. PR #38.
+  - Se dejaron intactas dos menciones que no son parte del rename: el nombre real de una branch histórica en este mismo archivo (línea de PR #27, arriba) y la directiva `@alsol-meta` que usa de verdad el linter en `apps/rastro-web/scripts/lint-meta.mjs` — renombrarlas habría desincronizado la doc del código real.
+- **`apps/rastro-web` entra al repo por primera vez** (PR #39): SPA Vite + React que consume las 14 APIs del monorepo; existía en disco desde antes pero nunca se había trackeado en git.
+  - `.github/workflows/rastro-web-ci.yml`: typecheck + `lint:meta` + tests + build en cada PR/push a master que toque la app.
+  - `.github/workflows/rastro-web-deploy.yml`: dispara el Deploy Hook de Cloudflare Pages en push, `workflow_dispatch` manual y cron semanal (miércoles 12:00 UTC = 07:00 Perú), siempre después de pasar el mismo CI.
+  - `apps/rastro-web/.gitignore` corregido para excluir `.env` (placeholders localhost, pero el propio archivo pedía "no commit") y `tsconfig.app.tsbuildinfo` (cache de build que se había colado en el primer commit).
+  - `package-lock.json` tuvo que regenerarse desde cero: el lockfile generado en Windows no resolvía completa la dependencia WASM de `@tailwindcss/oxide-wasm32-wasi` que el runner Linux de CI necesita — `npm ci` fallaba con `EUSAGE`.
+- **Pendiente real, no resuelto**: falta el secret `CLOUDFLARE_DEPLOY_HOOK_URL` en GitHub. Se investigó usar un token de API para automatizarlo — el archivo de credenciales que se tenía a mano resultó ser un **token de R2** (Access Key ID/Secret + token S3-scoped), no un API Token de cuenta general; falla `"Invalid API Token"` contra `/user/tokens/verify` y no tiene alcance sobre Pages. Cloudflare tampoco expone un endpoint de API para crear Deploy Hooks (es dashboard-only); si se quiere automatizar de verdad, la alternativa es `POST /accounts/{account_id}/pages/projects/rastro/deployments` con un API Token nuevo con permiso `Pages:Edit`, cambiando el workflow de deploy para no depender de un hook. Se decidió pausar y crear el hook manualmente cuando se retome (Cloudflare → Pages → proyecto `rastro` → Settings → Builds → Deploy hooks).
 
 ## Última sesión operativa — 2026-08-27
 
@@ -291,3 +302,4 @@ avance (S/2,242.1M devengado / S/4,558.8M PIM), Gobiernos Locales 39.9%
 4. ~~Ingestas parciales acotadas a La Libertad~~ — **mitigado (2026-08-27)**: defaults de `.env.example` y `DEFAULT_TERRITORIAL_SCOPE` apuntan solo a `LA LIBERTAD`; scripts `ingest:libertad` por app y orquestador `scripts/ingest-la-libertad-completo.sh` para cobertura verificada.
 5. ~~Migración a Next 16 + React 19~~ — **N/A**: frontends web eliminados; el proyecto es API-only.
 6. ~~BCRP comercio exterior~~ — **hecho (2026-08-27)**: app `bcrp-comercio-exterior` (API 4011) ingiere series nacionales `PN38714BM`–`PN38723BM`; sin desagregado departamental (`RD38*` sigue congelado en origen).
+7. **Secret `CLOUDFLARE_DEPLOY_HOOK_URL` sin crear** — `rastro-web-deploy.yml` (mergeado en PR #39) falla explícitamente en cada push/cron hasta que exista. Crear en Cloudflare → Pages → proyecto `rastro` → Settings → Builds → Deploy hooks, y cargarlo en GitHub → Settings → Secrets and variables → Actions. Detalle de por qué no se automatizó vía API en la sección de arriba (2026-08-29).
