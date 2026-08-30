@@ -1,0 +1,49 @@
+# Configuración de Cloudflare Pages para Rastro.
+#
+# Este archivo NO se usa para deploys via Git (Cloudflare lee la config
+# desde el dashboard). Sí se usa para:
+#   - `wrangler pages dev dist`  → simular el entorno Pages en local
+#   - `wrangler pages deploy dist --project-name=rastro` → deploy manual
+#
+# URL pública: https://rastro.pages.dev/
+
+name = "rastro"
+compatibility_date = "2025-09-01"
+pages_build_output_dir = "./dist"
+
+# Variables de entorno NO se ponen aquí. Se configuran en el dashboard
+# de Cloudflare Pages bajo Settings → Environment variables.
+# Ver DEPLOY.md para la lista de las 14 variables VITE_API_BASE_URL_*.
+
+# Headers HTTP personalizados (Cache-Control, Security, etc.)
+# Aplican a todo el sitio. Se pueden sobreescribir por ruta si se necesita.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+    # Cache corta por defecto; assets versionados tienen cache largo.
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    # Vite genera assets con hash → cachear 1 año.
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.txt"
+  [headers.values]
+    # robots.txt y llms.txt se sirven siempre frescos.
+    Cache-Control = "public, max-age=300"
+
+# SPA fallback: todas las rutas devuelven index.html (necesario para
+# React Router). Ya está implícito en Pages para archivos estáticos,
+# pero lo declaramos explícito por claridad.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+

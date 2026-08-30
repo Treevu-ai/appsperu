@@ -1,0 +1,133 @@
+name: Rastro Web Deploy
+
+# Tres triggers:
+#   1. push a master (solo si cambia apps/rastro-web/** o este workflow)
+#   2. workflow_dispatch (botón "Run workflow" en GitHub Actions — para forzar redeploy)
+#   3. schedule semanal (miércoles 12:00 UTC = 07:00 hora Perú)
+#
+# El deploy a Cloudflare Pages se hace **vía Deploy Hook URL** (no con wrangler):
+#   - Cloudflare Pages (vía GitHub App en el dashboard) ya hace rebuild en push a master.
+#   - El hook es solo para los triggers que no son push (workflow_dispatch, schedule).
+#   - Configurar el hook una sola vez: Cloudflare → Pages → proyecto "rastro" → Settings
+#     → Builds → Deploy hooks → Create hook → pegar como secret `CLOUDFLARE_DEPLOY_HOOK_URL`.
+#
+# El CI completo (typecheck + lint:meta + test + build) corre ANTES del trigger del
+# hook, así un push con tests rotos no llega a producción.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "apps/rastro-web/**"
+      - ".github/workflows/rastro-web-deploy.yml"
+  workflow_dispatch:
+  schedule:
+    # Miércoles 12:00 UTC = 07:00 hora Perú. Refresca el build para arrastrar
+    # cambios en los datos de las 14 APIs (ingestas diarias/semanales).
+    - cron: "0 12 * * 3"
+
+permissions:
+  contents: read
+
+concurrency:
+  # No cancelamos in-progress: si hay un deploy semanal corriendo y alguien pushea,
+  # el nuevo espera al anterior. Producción estable gana sobre velocidad.
+  group: rastro-web-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: CI + trigger Cloudflare deploy
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/rastro-web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/rastro-web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint meta
+        run: npm run lint:meta
+
+      - name: Unit tests
+        run: npm test
+        env:
+          VITE_API_BASE_URL_RADAR_EJECUCION: http://localhost:4000
+          VITE_API_BASE_URL_COMPRAS_PUBLICAS: http://localhost:4001
+          VITE_API_BASE_URL_RADAR_INVERSIONES: http://localhost:4002
+          VITE_API_BASE_URL_INFOBRAS: http://localhost:4003
+          VITE_API_BASE_URL_CEPLAN_ESTRATEGICO: http://localhost:4004
+          VITE_API_BASE_URL_CEPLAN_GEO: http://localhost:4005
+          VITE_API_BASE_URL_IDENTIDAD_FISCAL: http://localhost:4006
+          VITE_API_BASE_URL_SALUD_INSTITUCIONAL: http://localhost:4007
+          VITE_API_BASE_URL_PROVEEDORES_SANCIONADOS: http://localhost:4008
+          VITE_API_BASE_URL_ACTIVIDAD_AGRARIA: http://localhost:4009
+          VITE_API_BASE_URL_SEGURIDAD_CIUDADANA: http://localhost:4010
+          VITE_API_BASE_URL_BCRP_COMERCIO_EXTERIOR: http://localhost:4011
+          VITE_API_BASE_URL_INVERSION_PRIVADA: http://localhost:4012
+          VITE_API_BASE_URL_BCRP_LA_LIBERTAD: http://localhost:4013
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_BASE_URL_RADAR_EJECUCION: http://localhost:4000
+          VITE_API_BASE_URL_COMPRAS_PUBLICAS: http://localhost:4001
+          VITE_API_BASE_URL_RADAR_INVERSIONES: http://localhost:4002
+          VITE_API_BASE_URL_INFOBRAS: http://localhost:4003
+          VITE_API_BASE_URL_CEPLAN_ESTRATEGICO: http://localhost:4004
+          VITE_API_BASE_URL_CEPLAN_GEO: http://localhost:4005
+          VITE_API_BASE_URL_IDENTIDAD_FISCAL: http://localhost:4006
+          VITE_API_BASE_URL_SALUD_INSTITUCIONAL: http://localhost:4007
+          VITE_API_BASE_URL_PROVEEDORES_SANCIONADOS: http://localhost:4008
+          VITE_API_BASE_URL_ACTIVIDAD_AGRARIA: http://localhost:4009
+          VITE_API_BASE_URL_SEGURIDAD_CIUDADANA: http://localhost:4010
+          VITE_API_BASE_URL_BCRP_COMERCIO_EXTERIOR: http://localhost:4011
+          VITE_API_BASE_URL_INVERSION_PRIVADA: http://localhost:4012
+          VITE_API_BASE_URL_BCRP_LA_LIBERTAD: http://localhost:4013
+
+      - name: Resumen del build
+        run: |
+          echo "## Build resumen" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Trigger: \`${{ github.event_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Ref: \`${{ github.ref }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Tamaño JS: $(du -h apps/rastro-web/dist/assets/index-*.js | cut -f1)" >> $GITHUB_STEP_SUMMARY
+          echo "- Tamaño CSS: $(du -h apps/rastro-web/dist/assets/index-*.css | cut -f1)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Verificar que CLOUDFLARE_DEPLOY_HOOK_URL existe
+        id: check-hook
+        if: github.event_name != 'pull_request'
+        run: |
+          if [ -z "${{ secrets.CLOUDFLARE_DEPLOY_HOOK_URL }}" ]; then
+            echo "::error::Secret CLOUDFLARE_DEPLOY_HOOK_URL no está configurado."
+            echo "::error::Créala en: Cloudflare → Pages → rastro → Settings → Builds → Deploy hooks → Create hook."
+            echo "::error::Luego agrégala en GitHub: Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          echo "hook_present=true" >> $GITHUB_OUTPUT
+
+      - name: Trigger Cloudflare Pages deploy
+        if: steps.check-hook.outputs.hook_present == 'true'
+        run: |
+          echo "Disparando redeploy en Cloudflare Pages..."
+          response=$(curl -sS -o /dev/null -w "%{http_code}" -X POST "${{ secrets.CLOUDFLARE_DEPLOY_HOOK_URL }}")
+          if [ "$response" = "200" ] || [ "$response" = "201" ]; then
+            echo "✅ Hook OK (HTTP $response). Cloudflare Pages empezará el build en ~30s."
+            echo "- Deployment en cola en: https://dash.cloudflare.com → Pages → rastro → Deployments" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "::error::Hook devolvió HTTP $response. Revisa que la URL del hook sea válida."
+            exit 1
+          fi
