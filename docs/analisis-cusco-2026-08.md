@@ -1,7 +1,7 @@
 # Análisis — Cusco: brechas y competitividad (2026-08)
 
-Memo ALSOL Fase 2 para **Cusco** (UBIGEO `08`), plantilla
-[`docs/plantilla-memo-regional-alsol-v1.md`](plantilla-memo-regional-alsol-v1.md).
+Memo Rastro Fase 2 para **Cusco** (UBIGEO `08`), plantilla
+[`docs/plantilla-memo-regional-rastro-v1.md`](plantilla-memo-regional-rastro-v1.md).
 
 ## Resumen ejecutivo
 

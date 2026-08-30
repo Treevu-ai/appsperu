@@ -1,4 +1,4 @@
-# Backlog ejecutable — Cobertura territorial verificable ALSOL
+# Backlog ejecutable — Cobertura territorial verificable Rastro
 
 **Regla de priorización:** primero se prueba la fuente y su corte; luego se habilitan los cruces. Prioridad `P0` bloquea cualquier afirmación territorial pública.
 
@@ -41,4 +41,4 @@ Los P0 constituyen el mínimo para ampliar territorio de manera honesta. No se d
 | CT-05, CT-08, CT-09 | Instrumentado; pendiente de corte terminal | Los conectores registran conteos y límites por jurisdicción. INFOBRAS tiene un corte verificable de cinco regiones; OECE y SEACE aún no tienen corrida nacional verificable. |
 | CT-07 | Ejecutado y verificado | Invierte recorrió sin huecos los cinco rangos del CSV público (246,344,022 bytes) y consolidó las 25 regiones como `COMPLETA_VERIFICADA`; el alcance continúa acotado a lo expuesto por esa fuente pública. |
 | CT-06, CT-10 a CT-17, CT-20 | Pendiente | Requieren fuente/corrida o dependencias que todavía no están verificadas. |
-| CT-19 | Implementado de forma inicial | `docs/RUNBOOK_Cobertura_Territorial_ALSOL.md`; falta automatización programada, expresamente fuera de alcance. |
+| CT-19 | Implementado de forma inicial | `docs/RUNBOOK_Cobertura_Territorial_Rastro.md`; falta automatización programada, expresamente fuera de alcance. |

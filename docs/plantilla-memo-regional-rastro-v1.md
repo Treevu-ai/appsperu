@@ -1,4 +1,4 @@
-# Plantilla — Memo regional ALSOL v1
+# Plantilla — Memo regional Rastro v1
 
 > **Uso:** análisis territorial Follow the Sol / CEPLAN Fase 2 (5 regiones piloto).  
 > **Ticket:** AL2-22  
@@ -12,7 +12,7 @@
 | UBIGEO prefijo | `{UBIGEO_PREFIJO}` |
 | Fecha de corte | `{YYYY-MM-DD}` |
 | Preflight territorial | `COMPLETA_VERIFICADA` / `PARCIAL` / `BLOQUEADA` |
-| Autor / corrida | Cloud Agent ALSOL Fase 2 |
+| Autor / corrida | Cloud Agent Rastro Fase 2 |
 
 ## 1. Preflight territorial
 

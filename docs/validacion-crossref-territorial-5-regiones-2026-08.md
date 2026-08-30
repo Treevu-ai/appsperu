@@ -1,4 +1,4 @@
-# Validación manual — crossref territorial CEPLAN × 5 regiones ALSOL (Sprint 7)
+# Validación manual — crossref territorial CEPLAN × 5 regiones Rastro (Sprint 7)
 
 **Fecha:** 2026-08-26  
 **Tickets:** AL2-09, AL2-11, AL2-13  

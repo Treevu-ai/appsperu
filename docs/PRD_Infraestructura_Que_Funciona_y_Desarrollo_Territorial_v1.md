@@ -2,12 +2,12 @@
 
 **Estado:** núcleo implementado; piloto de fuentes y ampliación sectorial pendientes
 **Fecha:** 2026-08-24
-**Producto:** ALSOL
+**Producto:** Rastro
 **Ámbito:** API, base de datos, CLI, MCP, pruebas y documentación. **No incluye interfaz web.**
 
 ## 1. Decisión de producto
 
-ALSOL ya puede seguir una parte importante de la cadena pública: presupuesto, inversión, CUI, obra, territorio, avance físico y paralización. El siguiente salto no es otro ranking: es distinguir una obra registrada de un activo que presta el servicio prometido.
+Rastro ya puede seguir una parte importante de la cadena pública: presupuesto, inversión, CUI, obra, territorio, avance físico y paralización. El siguiente salto no es otro ranking: es distinguir una obra registrada de un activo que presta el servicio prometido.
 
 ```text
 Hoy:       presupuesto → inversión/CUI → obra → avance o paralización
@@ -27,7 +27,7 @@ La discusión pública suele terminar en “se gastó” o “la obra figura con
 4. ¿El servicio está disponible, restringido o fuera de servicio según una fuente publicada?
 5. ¿Qué población, colegios, usuarios productivos o territorio reconoce la propia fuente como atendidos?
 
-Sin ese tramo, ALSOL puede describir ejecución física, pero no explicar si infraestructura de drenaje, agua/saneamiento, educación, transporte o riego se transformó en capacidad pública utilizable.
+Sin ese tramo, Rastro puede describir ejecución física, pero no explicar si infraestructura de drenaje, agua/saneamiento, educación, transporte o riego se transformó en capacidad pública utilizable.
 
 ## 3. Objetivo y no objetivos
 
@@ -63,7 +63,7 @@ El piloto cubrirá tres familias con alto valor ciudadano: drenaje urbano, infra
 | C | Nota de inauguración, comunicado agregado, testimonio | Contexto e hipótesis para buscar la fuente primaria. | Cierre, operación o impacto individual. |
 | Prohibido | Título parecido, ubicación aproximada, embeddings, sede de entidad | Ningún vínculo automático. | Todo vínculo oficial. |
 
-El estado `SIN_EVIDENCIA_DE_OPERACION` describe el alcance de ALSOL, no demuestra que el activo esté inoperativo en la realidad.
+El estado `SIN_EVIDENCIA_DE_OPERACION` describe el alcance de Rastro, no demuestra que el activo esté inoperativo en la realidad.
 
 ## 5. Modelo de grafo y datos
 
@@ -128,7 +128,7 @@ MCP expone las mismas consultas de lectura; ni MCP ni CLI disparan ingestas.
 
 ## 7. Desarrollo territorial: qué puede y qué no puede decir
 
-ALSOL podrá describir una **cadena de capacidad pública**: activo identificado → servicio documentado → cobertura publicada → territorio reconocido. Para desarrollo, el resultado permitido es descriptivo: “el operador reportó disponibilidad para X ámbito” o “la fuente publica Y usuarios/cobertura”.
+Rastro podrá describir una **cadena de capacidad pública**: activo identificado → servicio documentado → cobertura publicada → territorio reconocido. Para desarrollo, el resultado permitido es descriptivo: “el operador reportó disponibilidad para X ámbito” o “la fuente publica Y usuarios/cobertura”.
 
 No se atribuirán cambios en empleo, productividad, matrícula, aprendizaje, salud, comercio, valor del suelo o reducción de pérdidas a una obra específica sin una evaluación sectorial que publique metodología, periodo de comparación y ámbito identificable. La capa geoespacial futura puede enriquecer contexto de acceso y exposición a riesgo, pero no sustituye una clave del activo ni demuestra causalidad.
 
@@ -165,5 +165,5 @@ No se atribuirán cambios en empleo, productividad, matrícula, aprendizaje, sal
 - Se implementó el modelo de activo, cierre, operador, mantenimiento, disponibilidad, indicador y revisión append-only.
 - Se materializaron dos activos con fuentes existentes: drenaje de Trujillo (CUI `2539202`) y educación en Casa Grande (sin CUI/código durable publicado).
 - Los dos quedan deliberadamente bloqueados para una afirmación de funcionamiento: no se cargó recepción, operador, mantenimiento, disponibilidad ni indicador sin fuente primaria.
-- Agua/saneamiento no fue materializado: la fase de viabilidad sigue pendiente y ALSOL no crea una tercera familia por similitud territorial.
+- Agua/saneamiento no fue materializado: la fase de viabilidad sigue pendiente y Rastro no crea una tercera familia por similitud territorial.
 - API, CLI y MCP exponen el vacío y `estricto=true` devuelve bloqueo controlado mientras falten los eslabones mínimos.

@@ -111,7 +111,7 @@ estándar OCDS (Open Contracting Data Standard).
 | **Fuente de datos** | `observaperu.ceplan.gob.pe/assets/data/seguimiento-estrategico/indicadores_priorizados_gestion_estrategica_estado.json`. |
 | **Detalle completo** | [`docs/data-contracts/ceplan-strategic-planning.md`](data-contracts/ceplan-strategic-planning.md) |
 
-**Fase 2 ALSOL (2026-08-26)** — endpoints adicionales sin nuevo conector HTTP:
+**Fase 2 Rastro (2026-08-26)** — endpoints adicionales sin nuevo conector HTTP:
 
 | Endpoint | Descripción |
 |---|---|
@@ -138,13 +138,13 @@ Contratos: [`ceplan-crossref-territorial-v1.md`](data-contracts/ceplan-crossref-
 | **Cobertura real ingerida (MVP)** | Nacional en distritos (`geoceplan:cb_limdistx`), aeropuertos y puertos; departamental/provincial como features sin tabla `territories` separada. |
 | **Detalle completo** | [`docs/data-contracts/ceplan-geo.md`](data-contracts/ceplan-geo.md) |
 
-**Fase 2 ALSOL (2026-08-26):**
+**Fase 2 Rastro (2026-08-26):**
 
 | Endpoint | Descripción |
 |---|---|
 | `GET /api/territories/summary?departamento=` | Agregados dept: distritos + infra (5 regiones piloto) |
 
-Piloto ALSOL: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distritos verificables.
+Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distritos verificables.
 
 ---
 

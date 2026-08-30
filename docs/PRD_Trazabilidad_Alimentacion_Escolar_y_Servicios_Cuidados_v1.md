@@ -2,12 +2,12 @@
 
 **Estado:** núcleo implementado; ampliación de evidencia bloqueada por claves fuente no publicadas
 **Fecha:** 2026-08-24
-**Producto:** ALSOL
+**Producto:** Rastro
 **Ámbito:** API, base de datos, conector/manual de evidencia, CLI, MCP y documentación. **No incluye interfaz web.**
 
 ## 1. Decisión de producto
 
-ALSOL debe pasar de informar cobertura agregada a responder una pregunta verificable: **¿qué evidencia pública conecta una necesidad infantil con una obra, un lote de alimentos, un proveedor, una entrega y un control?**
+Rastro debe pasar de informar cobertura agregada a responder una pregunta verificable: **¿qué evidencia pública conecta una necesidad infantil con una obra, un lote de alimentos, un proveedor, una entrega y un control?**
 
 La cadena se conserva en dos planos que no se sustituyen entre sí:
 
@@ -20,7 +20,7 @@ Una flecha existe solo si una fuente oficial publica ambas claves o declara expr
 
 ## 2. Punto de partida
 
-La versión actual de ALSOL ya ofrece `GET /api/servicios-cuidados` y el comando `npm run servicios:cuidados`. Materializa tres registros iniciales:
+La versión actual de Rastro ya ofrece `GET /api/servicios-cuidados` y el comando `npm run servicios:cuidados`. Materializa tres registros iniciales:
 
 1. Drenaje pluvial de Trujillo, con CUI `2539202` y territorio publicado.
 2. Institución educativa de Casa Grande: beneficio, drenaje, agua y saneamiento publicados; **sin CUI ni código INFOBRAS atribuido**.
@@ -101,7 +101,7 @@ evidence_batch           URL, checksum, extracción, transformación, cobertura 
 - `EVIDENCIA_DE_CONTROL`: acto de supervisión o control; no equivale a entrega si no la documenta.
 - `CONTEXTO_AGREGADO`: solo describe cobertura o actividad agregada.
 - `CANDIDATO_NO_USADO` y `REQUIERE_EVIDENCIA`: se conservan para revisión, no alimentan agregados.
-- `SIN_EVIDENCIA_INGRESADA`: estado de cobertura de ALSOL; no es evidencia de ausencia en el mundo real.
+- `SIN_EVIDENCIA_INGRESADA`: estado de cobertura de Rastro; no es evidencia de ausencia en el mundo real.
 
 ## 7. Contratos de salida y terminal
 
@@ -131,7 +131,7 @@ La implementación agrega `GET /api/servicios-cuidados/alimentacion/integridad?e
 
 ## 8. Cómo demostrar buena gestión sin fabricar rankings
 
-ALSOL no creará una nota única. Publicará una matriz de evidencia por cadena:
+Rastro no creará una nota única. Publicará una matriz de evidencia por cadena:
 
 | Pregunta | Evidencia mínima positiva | Resultado permitido |
 |---|---|---|

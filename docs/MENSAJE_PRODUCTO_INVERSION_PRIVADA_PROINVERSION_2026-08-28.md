@@ -19,7 +19,7 @@ Con la nueva app **`inversion-privada`** podemos responder, con evidencia trazab
 3. **¿Qué OxI ya están en Invierte.pe?** Cruce **confirmado por código SNIP** — no por nombre ni por intuición.
 
 Esto no reemplaza a Invierte.pe: **complementa** el mapa de inversión con el universo que gestiona
-PROINVERSIÓN y que antes no estaba en ALSOL.
+PROINVERSIÓN y que antes no estaba en Rastro.
 
 ---
 
@@ -87,7 +87,7 @@ Incluido en `scripts/corrida-operativa-la-libertad.ps1` y `scripts/ingest-la-lib
 
 ## Texto listo para copiar (Slack / correo)
 
-> **Nueva capacidad en ALSOL — inversión privada PROINVERSIÓN (VERTIX)**
+> **Nueva capacidad en Rastro — inversión privada PROINVERSIÓN (VERTIX)**
 >
 > Ya está en master la app `inversion-privada`: cartera nacional de proyectos APP/PA (~340) y OxI en
 > promoción (~761), consultable por departamento. En La Libertad: ~22 APP/PA y ~55 OxI.

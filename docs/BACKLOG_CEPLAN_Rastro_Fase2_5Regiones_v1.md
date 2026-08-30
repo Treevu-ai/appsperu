@@ -1,7 +1,7 @@
-# Backlog ejecutable — CEPLAN × ALSOL Fase 2 (5 regiones)
+# Backlog ejecutable — CEPLAN × Rastro Fase 2 (5 regiones)
 
-**Producto:** ALSOL / Follow the Sol  
-**PRD:** [`docs/PRD_CEPLAN_ALSOL_Fase2_5Regiones_v1.md`](PRD_CEPLAN_ALSOL_Fase2_5Regiones_v1.md)  
+**Producto:** Rastro / Follow the Sol  
+**PRD:** [`docs/PRD_CEPLAN_Rastro_Fase2_5Regiones_v1.md`](PRD_CEPLAN_Rastro_Fase2_5Regiones_v1.md)  
 **Regiones en alcance:** LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — **solo estas cinco**  
 **Regla transversal:** API/CLI/MCP. Sin web nueva. Sin coordenadas inventadas. Sin cobertura nacional simulada.  
 **Estimación:** S ≤ 1 día, M 2–3 días, L 4–6 días (esfuerzo relativo, no calendario).
@@ -80,7 +80,7 @@ Sprint 10: ingestas CAJ+CUS → memos → índice comparativo → docs ESTADO/co
 
 | ID | Épica | Objetivo | Criterios de aceptación | Dep. | P | Esf. | Sprint |
 |---|---|---|---|---|---|---|---|
-| AL2-22 | Plantilla | `docs/plantilla-memo-regional-alsol-v1.md`. | Secciones fijas: preflight, ejecución, obras, inversiones, compras, CEPLAN marco, geo contexto, SEG proxy, caveats. | AL2-13, AL2-19 | P0 | S | 9 |
+| AL2-22 | Plantilla | `docs/plantilla-memo-regional-rastro-v1.md`. | Secciones fijas: preflight, ejecución, obras, inversiones, compras, CEPLAN marco, geo contexto, SEG proxy, caveats. | AL2-13, AL2-19 | P0 | S | 9 |
 | AL2-23 | Memo | Lambayeque — brechas y competitividad. | `docs/analisis-lambayeque-2026-08.md`; cifras con fuente y corte; comparación opcional vs La Libertad. | AL2-03, AL2-22 | P0 | M | 9 |
 | AL2-24 | Memo | Lambayeque — desarrollo económico productivo. | `docs/analisis-lambayeque-desarrollo-economico-2026-08.md`. | AL2-23 | P1 | M | 9 |
 | AL2-25 | Memo | Lambayeque — sector focal (agro/riego). | `docs/analisis-agro-lambayeque-2026-08.md` o equivalente. | AL2-23 | P1 | M | 9 |
@@ -135,7 +135,7 @@ AL2-22 → AL2-23..32 → AL2-33 → AL2-34, AL2-35
 
 | Ítem | Motivo |
 |---|---|
-| Departamentos 16–25 restantes | Decisión de producto: concentrar en 5 regiones ALSOL |
+| Departamentos 16–25 restantes | Decisión de producto: concentrar en 5 regiones Rastro |
 | Frontend mapas / dashboards CEPLAN | Política API-only |
 | Pulso SINAPLAN scraping | Volatilidad; no priorizado |
 | Cruce ceplan-estrategico per-entidad | Fuente no lo permite |
@@ -170,7 +170,7 @@ npm run indicators:regional -- --departamento=LAMBAYEQUE
 
 ## Referencias
 
-- [`docs/PRD_CEPLAN_ALSOL_Fase2_5Regiones_v1.md`](PRD_CEPLAN_ALSOL_Fase2_5Regiones_v1.md)
+- [`docs/PRD_CEPLAN_Rastro_Fase2_5Regiones_v1.md`](PRD_CEPLAN_Rastro_Fase2_5Regiones_v1.md)
 - [`docs/BACKLOG_CEPLAN_Geo_v1.md`](BACKLOG_CEPLAN_Geo_v1.md) (CG-25 continúa como AL2-01)
 - [`docs/analisis-la-libertad-2026-08.md`](analisis-la-libertad-2026-08.md) (plantilla de referencia)
-- [`docs/PRD_Cobertura_Territorial_Verificable_ALSOL_v1.md`](PRD_Cobertura_Territorial_Verificable_ALSOL_v1.md)
+- [`docs/PRD_Cobertura_Territorial_Verificable_Rastro_v1.md`](PRD_Cobertura_Territorial_Verificable_Rastro_v1.md)

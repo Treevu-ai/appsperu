@@ -1,4 +1,4 @@
-# Matriz de cobertura territorial — La Libertad ALSOL (AL2-02)
+# Matriz de cobertura territorial — La Libertad Rastro (AL2-02)
 
 **Fecha:** 2026-08-26  
 **Alcance:** LA LIBERTAD (único departamento en scope del proyecto)  

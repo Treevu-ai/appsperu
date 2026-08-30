@@ -242,7 +242,7 @@ ObservaPerú.
   y los indicadores derivados (SEG, Execution Efficiency) devuelven `null` hoy: no es un bug
   del cruce, es que la fuente aguas arriba no trae PIM utilizable en esta muestra.
 
-### Con `ceplan-geo` (Fase 2 ALSOL, 2026-08-26)
+### Con `ceplan-geo` (Fase 2 Rastro, 2026-08-26)
 - **Cruce por**: departamento piloto → agregados territoriales (distritos, infraestructura)
 - **API**: `GET /api/crossref/territorial?departamento=` (lee ceplan-geo vía HTTP)
 - **Contrato**: [`docs/data-contracts/ceplan-crossref-territorial-v1.md`](ceplan-crossref-territorial-v1.md)

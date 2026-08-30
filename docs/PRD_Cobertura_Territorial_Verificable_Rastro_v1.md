@@ -1,12 +1,12 @@
-# PRD — Cobertura territorial verificable de ALSOL
+# PRD — Cobertura territorial verificable de Rastro
 
 **Versión:** 1.0
 **Estado:** implementación parcial verificada; corte nacional de Invierte completado y otras fuentes pendientes
-**Ámbito:** las nueve aplicaciones de ALSOL; consulta por terminal, sin cambios de interfaz.
+**Ámbito:** las nueve aplicaciones de Rastro; consulta por terminal, sin cambios de interfaz.
 
 ## 1. Problema
 
-ALSOL puede recibir una región como filtro y, aun así, no tener evidencia suficiente para decir que está cubierta. Una fuente puede ser nacional pero estar ingerida solo en un rango parcial; otra puede depender de una tabla territorial incompleta; una tercera puede ser un cruce derivado. Hoy esos estados no se expresan con una semántica común.
+Rastro puede recibir una región como filtro y, aun así, no tener evidencia suficiente para decir que está cubierta. Una fuente puede ser nacional pero estar ingerida solo en un rango parcial; otra puede depender de una tabla territorial incompleta; una tercera puede ser un cruce derivado. Hoy esos estados no se expresan con una semántica común.
 
 El riesgo no es solo técnico: presentar una ausencia de filas como ausencia de actividad, o un filtro aceptado como cobertura real, induciría conclusiones equivocadas sobre entidades, proveedores o territorios.
 
@@ -18,7 +18,7 @@ La unidad territorial inicial será el catálogo de **25 jurisdicciones**: 24 de
 
 ## 3. Resultado esperado
 
-Para una combinación `app + fuente + jurisdicción + corte`, ALSOL devolverá:
+Para una combinación `app + fuente + jurisdicción + corte`, Rastro devolverá:
 
 | Campo | Significado |
 |---|---|

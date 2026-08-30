@@ -1,7 +1,7 @@
 # Análisis — Piura: brechas y competitividad (2026-08)
 
-Primer memo ALSOL Fase 2 para **Piura** (UBIGEO `20`), plantilla
-[`docs/plantilla-memo-regional-alsol-v1.md`](plantilla-memo-regional-alsol-v1.md).
+Primer memo Rastro Fase 2 para **Piura** (UBIGEO `20`), plantilla
+[`docs/plantilla-memo-regional-rastro-v1.md`](plantilla-memo-regional-rastro-v1.md).
 
 ## Resumen ejecutivo
 

@@ -1,7 +1,7 @@
 # Análisis — Lambayeque: brechas y competitividad (2026-08)
 
-Primer memo ALSOL Fase 2 para **Lambayeque** (UBIGEO `14`), siguiendo
-[`docs/plantilla-memo-regional-alsol-v1.md`](plantilla-memo-regional-alsol-v1.md). Complementa el
+Primer memo Rastro Fase 2 para **Lambayeque** (UBIGEO `14`), siguiendo
+[`docs/plantilla-memo-regional-rastro-v1.md`](plantilla-memo-regional-rastro-v1.md). Complementa el
 baseline de La Libertad ([`docs/analisis-la-libertad-2026-08.md`](analisis-la-libertad-2026-08.md)).
 
 ## Resumen ejecutivo
@@ -137,7 +137,7 @@ Fórmula proxy (cuando haya datos): `% devengado/PIM (MEF) − avance físico me
 
 Lambayeque es referencia nacional en **agroexportación de la costa norte** (espárrago, arándano,
 caña) con capital en Chiclayo. Este párrafo es **contexto sectorial público**, no cifra del
-ecosistema ALSOL — las métricas de inversión productiva se desarrollan en el memo de desarrollo
+ecosistema Rastro — las métricas de inversión productiva se desarrollan en el memo de desarrollo
 económico y agro.
 
 ---
@@ -150,6 +150,6 @@ económico y agro.
 
 ## Reproducibilidad
 
-- Plantilla: [`docs/plantilla-memo-regional-alsol-v1.md`](plantilla-memo-regional-alsol-v1.md)
+- Plantilla: [`docs/plantilla-memo-regional-rastro-v1.md`](plantilla-memo-regional-rastro-v1.md)
 - Matriz cobertura: [`docs/matriz-cobertura-5-regiones-2026-08.md`](matriz-cobertura-5-regiones-2026-08.md)
 - Geo SQL: `territories` + `infrastructure` en `ceplan_geo`, corrida 2026-08-26

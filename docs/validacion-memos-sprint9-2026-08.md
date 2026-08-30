@@ -7,7 +7,7 @@
 
 | ID | Documento | Estado |
 |---|---|---|
-| AL2-22 | [`docs/plantilla-memo-regional-alsol-v1.md`](plantilla-memo-regional-alsol-v1.md) | ✅ |
+| AL2-22 | [`docs/plantilla-memo-regional-rastro-v1.md`](plantilla-memo-regional-rastro-v1.md) | ✅ |
 | AL2-23 | [`docs/analisis-lambayeque-2026-08.md`](analisis-lambayeque-2026-08.md) | ✅ |
 | AL2-24 | [`docs/analisis-lambayeque-desarrollo-economico-2026-08.md`](analisis-lambayeque-desarrollo-economico-2026-08.md) | ✅ |
 | AL2-25 | [`docs/analisis-agro-lambayeque-2026-08.md`](analisis-agro-lambayeque-2026-08.md) | ✅ |

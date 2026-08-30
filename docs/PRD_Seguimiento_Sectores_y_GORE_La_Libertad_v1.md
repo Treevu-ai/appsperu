@@ -4,7 +4,7 @@
 
 **Fecha:** 2026-08-24
 
-**Producto:** ALSOL (AppsPerú)
+**Producto:** Rastro (AppsPerú)
 
 **Ámbito:** API, bases de datos, conectores existentes, MCP y comandos de terminal. No incluye interfaz web.
 
@@ -18,11 +18,11 @@
 | SGR-13 a SGR-14 | Implementado | Comandos de terminal, contrato de datos y cuatro herramientas MCP de solo lectura. |
 | SGR-15 a SGR-16 | Implementado | Pruebas de reglas territoriales/no-inferencia y protocolo de alta institucional. |
 
-Las integraciones INFOBRAS y compras se activan solo si se configura su conexión de lectura. Sin ella, ALSOL devuelve `INFOBRAS_NO_CONFIGURADO` o `COMPRAS_NO_CONFIGURADO`; no reemplaza esa evidencia con un matcher de nombres.
+Las integraciones INFOBRAS y compras se activan solo si se configura su conexión de lectura. Sin ella, Rastro devuelve `INFOBRAS_NO_CONFIGURADO` o `COMPRAS_NO_CONFIGURADO`; no reemplaza esa evidencia con un matcher de nombres.
 
 ## 1. Decisión de producto
 
-ALSOL debe permitir responder, de manera reproducible y prudente, una pregunta pública simple: **¿qué hacen el Gobierno Nacional y el Gobierno Regional La Libertad con recursos, inversiones, obras y contrataciones vinculadas al departamento?**
+Rastro debe permitir responder, de manera reproducible y prudente, una pregunta pública simple: **¿qué hacen el Gobierno Nacional y el Gobierno Regional La Libertad con recursos, inversiones, obras y contrataciones vinculadas al departamento?**
 
 No se construirá un ranking político ni una narrativa de culpabilidad. Se construirá una ficha técnica por sector y entidad que preserve cuatro dimensiones distintas:
 
@@ -45,7 +45,7 @@ La base actual ya permite las piezas fundamentales:
 - `project_evidence_links` conserva CUI, fuente, territorio y la ausencia explícita de vínculo presupuestal oficial cuando corresponda.
 - Los contratos menores ya tienen agregación por territorio de ejecución y las señales poseen bitácora de revisión humana.
 
-El caso de ANIN demuestra la regla: puede existir gasto nacional dirigido a La Libertad, un CUI y una lista territorial oficial, sin que la fuente publique la llave que autorice atribuir una actividad MEF concreta a ese CUI. ALSOL debe conservar las tres evidencias, no rellenar el puente faltante.
+El caso de ANIN demuestra la regla: puede existir gasto nacional dirigido a La Libertad, un CUI y una lista territorial oficial, sin que la fuente publique la llave que autorice atribuir una actividad MEF concreta a ese CUI. Rastro debe conservar las tres evidencias, no rellenar el puente faltante.
 
 Referencias internas: [ADR-0006](adr/0006-radar-ejecucion-generica-de-gasto-y-gasto-nacional-por-meta-departamento.md), [contrato MEF](data-contracts/mef-presupuesto-ejecucion.md) y [PRD de gobernanza](PRD_Gobernanza_de_Vinculos_y_Cortes_v1.md).
 
@@ -61,12 +61,12 @@ Entregar consultas de terminal y contratos API que comparen sectores nacionales 
 |---|---|
 | Ciudadanía y prensa | Pedir una explicación concreta sobre un sector, entidad, proyecto u obra. |
 | Regidor, consejero o equipo técnico | Identificar qué parte depende del GORE y qué parte depende de un sector nacional. |
-| Analista ALSOL | Reproducir una cifra, verificar su corte y encontrar la fuente primaria. |
+| Analista Rastro | Reproducir una cifra, verificar su corte y encontrar la fuente primaria. |
 | Funcionario responsable | Mostrar evidencia de ejecución y corregir vacíos de publicación. |
 
 ### Resultado esperado
 
-Para una entidad priorizada, ALSOL podrá devolver una ficha terminal con:
+Para una entidad priorizada, Rastro podrá devolver una ficha terminal con:
 
 1. identidad institucional verificada y sector;
 2. alcance territorial y fecha de corte;
@@ -240,7 +240,7 @@ La estimación es relativa (`S`, `M`, `L`) y no supone capacidad ni fecha de ent
 
 ## 9. Plan de sprint sugerido
 
-Sin capacidad declarada, el compromiso recomendado es una primera iteración de cuatro tickets P0: **SGR-01 a SGR-04**. Su objetivo es que ALSOL pueda decir, antes de cualquier comparativo: “estas son las entidades verificadas, estas son las que faltan clasificar y estos son los cortes aplicables”.
+Sin capacidad declarada, el compromiso recomendado es una primera iteración de cuatro tickets P0: **SGR-01 a SGR-04**. Su objetivo es que Rastro pueda decir, antes de cualquier comparativo: “estas son las entidades verificadas, estas son las que faltan clasificar y estos son los cortes aplicables”.
 
 El segundo bloque comprometible es **SGR-05 y SGR-06**. SGR-07 y todo puente hacia CUI, obra o compra es trabajo posterior; no debe adelantarse si la identidad institucional o la cobertura temporal siguen incompletas.
 

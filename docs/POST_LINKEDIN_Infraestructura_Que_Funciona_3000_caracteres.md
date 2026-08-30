@@ -2,7 +2,7 @@ Una obra no mejora una ciudad cuando se aprueba su presupuesto. La mejora empiez
 
 La conversación pública suele detenerse antes: en cuánto se asignó, cuánto se devengó o qué avance físico figura en un sistema. Son datos necesarios, pero no responden la pregunta que importa a una familia, un emprendedor, un agricultor o un colegio: ¿la infraestructura funciona hoy?
 
-Por eso ALSOL abre una nueva cadena de evidencia para La Libertad: “infraestructura que funciona”. No es un ranking ni un semáforo de sospechas. Es una forma de seguir qué información pública existe entre la promesa de una obra y el servicio que debería prestar.
+Por eso Rastro abre una nueva cadena de evidencia para La Libertad: “infraestructura que funciona”. No es un ranking ni un semáforo de sospechas. Es una forma de seguir qué información pública existe entre la promesa de una obra y el servicio que debería prestar.
 
 presupuesto → CUI → obra → recepción → activo → operador → mantenimiento → disponibilidad → servicio.
 
@@ -10,7 +10,7 @@ Cada flecha cambia la conversación. Un CUI puede identificar una inversión. Un
 
 El piloto parte de dos activos con fuentes públicas identificadas: el drenaje pluvial urbano de Trujillo, asociado al CUI 2539202, y una institución educativa en Casa Grande cuya fuente publica inversión y población beneficiaria, pero no CUI ni código durable. Son dos familias: drenaje y educación.
 
-El resultado inicial es útil precisamente porque es incompleto: 2 activos materializados y 8 vacíos de evidencia pendientes de revisión. En ambos casos, ALSOL todavía no tiene un acta de recepción, una entidad operadora, evidencia de mantenimiento ni un registro que documente disponibilidad.
+El resultado inicial es útil precisamente porque es incompleto: 2 activos materializados y 8 vacíos de evidencia pendientes de revisión. En ambos casos, Rastro todavía no tiene un acta de recepción, una entidad operadora, evidencia de mantenimiento ni un registro que documente disponibilidad.
 
 Esto NO significa que las obras no funcionen. Significa algo más preciso: la evidencia materializada todavía no permite afirmarlo. El observatorio no rellena ese vacío con una nota de inauguración, con un presupuesto ni con nombres parecidos. Lo deja visible para buscar la respuesta correcta.
 
@@ -24,4 +24,4 @@ El siguiente paso para hablar seriamente de desarrollo no es contar obras como t
 
 Datos que sigan la obra hasta el servicio.
 
-#ALSOL #LaLibertad #Infraestructura #DatosAbiertos #GestiónPública #DesarrolloTerritorial
+#Rastro #LaLibertad #Infraestructura #DatosAbiertos #GestiónPública #DesarrolloTerritorial

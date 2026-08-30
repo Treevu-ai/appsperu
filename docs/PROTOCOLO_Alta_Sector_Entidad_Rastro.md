@@ -1,4 +1,4 @@
-# Protocolo de alta de un ministerio, organismo o unidad regional en ALSOL
+# Protocolo de alta de un ministerio, organismo o unidad regional en Rastro
 
 No se incorpora una entidad por reconocimiento de nombre. El alta termina solo cuando se cumplen los pasos siguientes.
 

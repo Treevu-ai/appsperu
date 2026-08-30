@@ -1,15 +1,15 @@
-# PRD — CEPLAN × ALSOL Fase 2 (5 regiones piloto) v1
+# PRD — CEPLAN × Rastro Fase 2 (5 regiones piloto) v1
 
 **Versión:** 1.0  
 **Estado:** planificado  
 **Fecha:** 2026-08-26  
-**Producto:** ALSOL / Follow the Sol  
+**Producto:** Rastro / Follow the Sol  
 **PRD anterior:** [`docs/PRD_CEPLAN_Geo_v1.md`](PRD_CEPLAN_Geo_v1.md) (Sprints 3–5, implementado)  
 **Ámbito:** API/CLI/MCP, indicadores derivados, capas geo adicionales, análisis sectorial reproducible. **Sin nuevos frontends web.**
 
 ## 1. Decisión de producto
 
-La Fase 1 de CEPLAN dejó operativas **`ceplan-estrategico`** (indicadores ObservaPerú agregados por nivel de gobierno) y **`ceplan-geo`** (territorio + infraestructura WFS). La Fase 2 **no expande a las 25 regiones**: se concentra en el **corte ALSOL ya verificado** en cinco departamentos:
+La Fase 1 de CEPLAN dejó operativas **`ceplan-estrategico`** (indicadores ObservaPerú agregados por nivel de gobierno) y **`ceplan-geo`** (territorio + infraestructura WFS). La Fase 2 **no expande a las 25 regiones**: se concentra en el **corte Rastro ya verificado** en cinco departamentos:
 
 | Código UBIGEO (prefijo) | Departamento | Rol en piloto |
 |---|---|---|
@@ -43,7 +43,7 @@ Objetivo: puente estratégico↔territorial honesto + indicadores derivados + ca
 2. **Indicadores derivados productizados** — SEG, Execution Efficiency y Plan–Budget Alignment (PBA) como endpoints/CLI documentados, con proxies departamentales donde la fuente no permita granularidad CEPLAN.
 3. **Spike e ingesta condicional** de `cb_redhidrica` y `cb_proyectos` — decisión `AUTOMATIZABLE` / `POSPONER` / `MVP_ACOTADO` con evidencia de tamaño y paginación.
 4. **Paquete de análisis regional** — plantilla y corrida reproducible para Lambayeque, Piura, Cajamarca y Cusco, alineada a los memos de La Libertad.
-5. **Cobertura verificable** — cada región nueva debe pasar por el runbook territorial (`docs/RUNBOOK_Cobertura_Territorial_ALSOL.md`) antes de publicar conclusiones.
+5. **Cobertura verificable** — cada región nueva debe pasar por el runbook territorial (`docs/RUNBOOK_Cobertura_Territorial_Rastro.md`) antes de publicar conclusiones.
 
 ### No objetivos
 
@@ -229,8 +229,8 @@ Completitud mínima para publicar memo: `COMPLETA_VERIFICADA` o `PARCIAL` docume
 
 ## 13. Referencias
 
-- [`docs/BACKLOG_CEPLAN_ALSOL_Fase2_5Regiones_v1.md`](BACKLOG_CEPLAN_ALSOL_Fase2_5Regiones_v1.md)
+- [`docs/BACKLOG_CEPLAN_Rastro_Fase2_5Regiones_v1.md`](BACKLOG_CEPLAN_Rastro_Fase2_5Regiones_v1.md)
 - [`docs/validacion-ceplan-geo-la-libertad-2026-08.md`](validacion-ceplan-geo-la-libertad-2026-08.md)
 - [`docs/data-contracts/ceplan-strategic-planning.md`](data-contracts/ceplan-strategic-planning.md)
 - [`docs/adr/0005-matriz-de-cruces-ceplan-con-ecosistema-existente.md`](adr/0005-matriz-de-cruces-ceplan-con-ecosistema-existente.md)
-- [`docs/RUNBOOK_Cobertura_Territorial_ALSOL.md`](RUNBOOK_Cobertura_Territorial_ALSOL.md)
+- [`docs/RUNBOOK_Cobertura_Territorial_Rastro.md`](RUNBOOK_Cobertura_Territorial_Rastro.md)
