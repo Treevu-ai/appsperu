@@ -1,0 +1,44 @@
+# Rastro (https://rastro.pages.dev/) — robots.txt
+# Permite indexación completa y referencia el sitemap.
+# Pensado para SEO (Google, Bing) y GEO (GPTBot, ClaudeBot, Perplexity).
+
+User-agent: *
+Allow: /
+
+# Sitemap principal
+Sitemap: https://rastro.pages.dev/sitemap.xml
+
+# Crawlers de LLM (GEO — Generative Engine Optimization)
+# Estos bots indexan el sitio para entrenar o citar modelos.
+# Por defecto los permitimos, pero si el tráfico se vuelve problema
+# se puede revocar individualmente.
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+# Bots que NO queremos (scrapers agresivos, scrapers de email)
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /

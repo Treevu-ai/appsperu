@@ -1,0 +1,103 @@
+# Rastro
+
+> RASTRO convierte señales dispersas en inteligencia clara para decidir mejor.
+> Cada señal deja un rastro. Nosotros lo hacemos visible.
+
+Rastro es una plataforma de inteligencia que ayuda a equipos y organizaciones a encontrar, conectar y entender las señales que importan. Transformamos información dispersa en contexto accionable, con foco en trazabilidad, claridad y decisiones más seguras.
+
+Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tiempo cambia lo que viene después.
+
+## URLs públicas
+
+- Inicio: https://rastro.pages.dev/
+- Lector GORE La Libertad: https://rastro.pages.dev/gore/la-libertad
+- Perfil de proveedor (RUC de 11 dígitos): https://rastro.pages.dev/proveedor/{ruc}
+- Obras y activos de un distrito (UBIGEO de 6 dígitos): https://rastro.pages.dev/distrito/{ubigeo}
+- Estado del producto (14 APIs en vivo): https://rastro.pages.dev/estado
+- Documentación de la API y setup MCP: https://rastro.pages.dev/docs/api
+- Buscar (RUC, CUI, UBIGEO): https://rastro.pages.dev/buscar
+- Cómo citar: https://rastro.pages.dev/citar-rastro.md
+- LLM-friendly manifest: https://rastro.pages.dev/llms.txt (este archivo)
+
+## Para agentes IA (MCP)
+
+Rastro expone un servidor MCP (Model Context Protocol) con **82 tools de solo lectura** sobre inversión pública peruana. Compatible con:
+
+- Claude Code (`claude mcp add rastro -- node /ruta/al/repo/mcp-server/dist/index.js`)
+- Claude Desktop (`claude_desktop_config.json`)
+- Cursor (Settings → MCP → Add)
+- Windsurf
+- Cline / Continue.dev
+
+El servidor usa transporte **stdio**. Una vez conectado, tu agente encadena los tools, razona sobre los resultados y entrega respuestas con citas verificables por RUC, OCID, CUI, UBIGEO, SEC_EJEC.
+
+### Ejemplo · una sola query
+
+Tu usuario escribe:
+
+> "Para los últimos 12 meses: lista proveedores sancionados por la OECE que también ganaron contratos del GORE La Libertad en el sector transporte, con valor total adjudicado y % de concentración. Cita cada RUC y cada OCID."
+
+El agente orquesta internamente:
+1. `proveedores_sancionados_sanciones` (filtrado por estado=VIGENTE)
+2. `compras_publicas_suppliers` (filtrado por departamento=LA LIBERTAD)
+3. `compras_publicas_supplier_by_id` (uno por RUC)
+4. `compras_publicas_procurement_by_ocid` (los OCID resultantes)
+5. `compras_publicas_suppliers` otra vez para calcular concentración
+
+Y devuelve una tabla con citas (RUC, OCID, fuente, corte) sin que el usuario haya tocado la terminal.
+
+## Lo que Rastro SÍ hace
+
+- Convierte señales dispersas (presupuesto, contrataciones, inversiones, obras, sanciones, etc.) en una vista con citas verificables.
+- Muestra cifras con metadatos: fuente (app + tool MCP), corte (fecha del dato), cobertura (COMPLETA / PARCIAL / BLOQUEADA / NO_APLICA), matcher (cómo se vinculó).
+- Sirve 3 lectores: GORE (ficha, comparativo, benchmark de sectores), Prensa (perfil de proveedor), Auditoría (obras y activos por distrito).
+- Expone los 82 tools MCP en `/docs/api` para que agentes IA los orquesten.
+- Muestra el estado de las 14 APIs en `/estado`.
+
+## Lo que Rastro NO hace
+
+- No edita ni publica datos. Es solo lectura.
+- No infiere. La ausencia de un dato se muestra como "404 = no vínculo materializado, no conclusión" (texto literal del backend).
+- No es un buscador nacional. Solo La Libertad en v1.
+- No tiene login. No captura leads. No usa cookies de marketing.
+- No entrena un modelo de lenguaje ni usa uno para responder (la búsqueda es keyword en v1).
+- No se despliega en Vercel. Solo en Cloudflare Pages.
+
+## Fuentes de datos (appsperu)
+
+Rastro NO genera ni infiere datos. Cada cifra viene verbatim de una API del repositorio `Treevu-ai/appsperu`. Las 14 apps backend:
+
+- radar-ejecucion (MEF, presupuesto/ejecución)
+- compras-publicas (OECE/OCDS, contrataciones)
+- radar-inversiones (Invierte.pe, proyectos de inversión)
+- infobras (Contraloría, obras públicas)
+- ceplan-estrategico (CEPLAN, indicadores estratégicos)
+- ceplan-geo (CEPLAN, capas geoespaciales)
+- identidad-fiscal (SUNAT, padrón RUC)
+- salud-institucional (score compuesto, sin BD propia)
+- proveedores-sancionados (RNP/OECE, inhabilitaciones)
+- actividad-agraria (MIDAGRI, jornal y alquiler)
+- seguridad-ciudadana (SIDPOL, denuncias)
+- bcrp-comercio-exterior (BCRP, comercio nacional)
+- inversion-privada (PROINVERSIÓN, APP/PA)
+- bcrp-la-libertad (BCRP Trujillo, síntesis regional)
+
+## Persona y proyecto
+
+- Autor formal: Ricardo Cuba Alván
+- Repositorio: https://github.com/Treevu-ai/appsperu
+- Documentos clave del proyecto:
+  - PRD: https://github.com/Treevu-ai/appsperu/blob/master/docs/PRD_Rastro_Capa_Lectura_v1.md
+  - Tickets: https://github.com/Treevu-ai/appsperu/blob/master/docs/TICKETS_Rastro_Capa_Lectura_v1.md
+  - Backlog: https://github.com/Treevu-ai/appsperu/blob/master/docs/BACKLOG_Rastro_Capa_Lectura_v1.md
+  - Estado del backend: https://github.com/Treevu-ai/appsperu/blob/master/docs/ESTADO.md
+  - Conectores: https://github.com/Treevu-ai/appsperu/blob/master/docs/conectores.md
+  - MCP server (código): https://github.com/Treevu-ai/appsperu/tree/master/mcp-server
+
+## Cita sugerida
+
+```
+Rastro v0.1.0 · La Libertad · [fuente app/tool] · corte [YYYY-MM-DD] · cobertura [COMPLETA|PARCIAL|BLOQUEADA] · https://rastro.pages.dev/[ruta]
+```
+
+Rastro no debe usarse como fuente de declaraciones causales (fraude, favorecimiento, abandono). Las cifras son descriptivas; las conclusiones requieren consulta a la fuente oficial primaria (MEF, OECE, INFOBRAS, etc.).
