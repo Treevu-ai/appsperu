@@ -49,7 +49,7 @@ Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tie
 6. **Build output directory:** `apps/rastro-web/dist`
 7. **Root directory:** dejar en blanco (la build ya apunta al subdirectorio).
 8. **Deploy command:** dejar **vacío** (Pages publica el output automáticamente). No uses `npx wrangler versions upload` aquí — ver §1b si tu proyecto es Workers Builds.
-9. **Environment variables:** agregar las 14 `VITE_API_BASE_URL_*` apuntando a tus APIs públicas. Recomendado: proxy público único (`https://api.rastro.pe/<app>`). Si faltan, el repo incluye `.env.production` como fallback.
+9. **Environment variables:** el repo ya trae `.env.production` con las 14 URLs en `https://api.rastro.pe/<app>`. Opcional: duplicarlas en el dashboard (Production) — sobreescriben el archivo. Script automatizado: `bash scripts/set-cloudflare-pages-env.sh` (requiere `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`).
 10. **Save and Deploy.** El primer build tarda ~2 min.
 
 A partir de aquí, **cada push a `master` que toque `apps/rastro-web/**` triggerea rebuild automático** vía la GitHub App. No necesitas hacer nada más para el deploy on push.
