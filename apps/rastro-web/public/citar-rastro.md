@@ -12,13 +12,13 @@ Si usas una cifra de Rastro en un informe público, una noticia o un trabajo aca
 ## Formato de citación sugerido
 
 ```
-Rastro v0.1.0 · La Libertad · [fuente] · corte [YYYY-MM-DD] · cobertura [COMPLETA|PARCIAL|BLOQUEADA] · https://rastro.pages.dev/[ruta]
+Rastro v0.1.0 · La Libertad · [fuente] · corte [YYYY-MM-DD] · cobertura [COMPLETA|PARCIAL|BLOQUEADA] · https://rastro.fyi/[ruta]
 ```
 
 Ejemplo:
 
 ```
-Rastro v0.1.0 · La Libertad · radar-ejecucion / radar_ejecucion_sector_ficha · corte 2026-08-26 · cobertura PARCIAL · https://rastro.pages.dev/gore/la-libertad/ficha?sector=TRANSPORTE
+Rastro v0.1.0 · La Libertad · radar-ejecucion / radar_ejecucion_sector_ficha · corte 2026-08-26 · cobertura PARCIAL · https://rastro.fyi/gore/la-libertad/ficha?sector=TRANSPORTE
 ```
 
 ## En un informe público (PDF/DOCX)
@@ -27,7 +27,7 @@ Pega el bloque arriba en la nota al pie de la cifra. Si la cobertura es `PARCIAL
 
 ## En una noticia
 
-Cita la URL exacta (ej. `rastro.pages.dev/proveedor/20123456789`) y la fecha en que consultaste la página. Rastro no actualiza automáticamente; la fecha de la consulta importa tanto como el corte del dato.
+Cita la URL exacta (ej. `rastro.fyi/proveedor/20123456789`) y la fecha en que consultaste la página. Rastro no actualiza automáticamente; la fecha de la consulta importa tanto como el corte del dato.
 
 ## Lo que Rastro NO te permite concluir
 

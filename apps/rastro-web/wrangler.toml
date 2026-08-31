@@ -5,7 +5,7 @@
 #   - `wrangler pages dev dist`  → simular el entorno Pages en local
 #   - `wrangler pages deploy dist --project-name=rastro` → deploy manual
 #
-# URL pública: https://rastro.pages.dev/
+# URL pública: https://rastro.fyi/ (fallback: https://rastro-5zm.pages.dev/)
 
 name = "rastro"
 compatibility_date = "2025-09-01"

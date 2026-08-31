@@ -15,7 +15,7 @@ Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tie
 |---|---|
 | Plataforma | Cloudflare Pages |
 | Proyecto | `rastro` |
-| URL pública | https://rastro.pages.dev/ |
+| URL pública | https://rastro.fyi/ (custom domain sobre el proyecto Pages `rastro`; fallback `rastro-5zm.pages.dev`) |
 | Repo | `Treevu-ai/appsperu` (monorepo) |
 | App | `apps/rastro-web/` (Vite 8 + React 19) |
 | Build command | `npm --prefix apps/rastro-web run build` |
@@ -41,7 +41,7 @@ Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tie
 
 1. Dashboard Cloudflare → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**.
 2. Selecciona el repo `Treevu-ai/appsperu` → autorice la GitHub App de Cloudflare.
-3. **Project name:** `rastro` (fija el subdominio `rastro.pages.dev`).
+3. **Project name:** `rastro` (subdominio asignado por Cloudflare: `rastro-5zm.pages.dev` — el sufijo `-5zm` lo agrega Cloudflare automáticamente cuando `rastro.pages.dev` ya está tomado).
 4. **Framework preset:** *Vite* (Cloudflare lo detecta).
 5. **Build command:** `npm --prefix apps/rastro-web run build`
 6. **Build output directory:** `apps/rastro-web/dist`
@@ -68,15 +68,21 @@ Los triggers que **no son push** (botón "Run workflow" en GitHub Actions, o el 
 
 Con esto, el workflow `Rastro Web Deploy` puede triggerear redeploys manuales y semanales sin tokens de Cloudflare.
 
-### 4. Dominio personalizado (opcional)
+### 4. Dominio personalizado: `rastro.fyi`
 
-**Custom domains** → **Set up a custom domain** (`rastro.pe`, etc.). Cloudflare configura DNS automáticamente.
+El proyecto Pages `rastro` quedó publicado en `rastro-5zm.pages.dev` (Cloudflare le agregó el sufijo `-5zm` porque `rastro.pages.dev` ya estaba tomado). El dominio `rastro.fyi` no vive en la misma cuenta/zona que ese proyecto, así que Cloudflare **no** auto-genera el DNS — pide verificación manual vía CNAME:
+
+1. **Workers & Pages** → proyecto `rastro` → tab **Custom domains** → **Set up a custom domain** → escribe `rastro.fyi` → **Continue**. Queda en estado **Verifying** y Cloudflare muestra el registro que hay que crear.
+2. En el proveedor de DNS que controla `rastro.fyi` (zona de Cloudflare si el dominio ya está ahí, o el panel del registrador si no): crea un `CNAME` — **Name:** `rastro.fyi` (o `@`) → **Target:** `rastro-5zm.pages.dev` → si la zona es de Cloudflare, **Proxy status:** Proxied (naranja).
+3. Guarda y vuelve a **Custom domains** en el proyecto Pages → botón **Check DNS records** para forzar la verificación. El estado pasa de **Verifying** a **Active** cuando propague (hasta 24 h, normalmente minutos si el DNS ya está en Cloudflare) y Cloudflare emite el certificado TLS automáticamente.
+4. Repite con `www.rastro.fyi` si quieres servir ambas variantes, y agrega una **redirect rule** (`www` → raíz o viceversa) en **Rules → Redirect Rules** de la zona `rastro.fyi` para no dejar la otra variante huérfana (los custom domains de Pages no redirigen entre sí automáticamente).
+5. Una vez **Active**, `rastro-5zm.pages.dev` sigue funcionando como fallback (Cloudflare nunca lo retira), pero `rastro.fyi` pasa a ser la URL canónica — ya reflejada en `index.html`, `robots.txt`, `sitemap.xml`, `llms.txt` y `citar-rastro.md` de este repo.
 
 ### 5. Migrar el URL viejo (si tenías `alsolperu.pages.dev`)
 
 Para no perder SEO de enlaces antiguos:
 
-1. Cloudflare Pages → proyecto viejo `alsolperu` → **Settings** → **Custom domains / redirects** → crear un **bulk redirect** (`301`) desde `alsolperu.pages.dev/*` a `https://rastro.pages.dev/$1`. Cloudflare lo soporta nativamente.
+1. Cloudflare Pages → proyecto viejo `alsolperu` → **Settings** → **Custom domains / redirects** → crear un **bulk redirect** (`301`) desde `alsolperu.pages.dev/*` a `https://rastro.fyi/$1`. Cloudflare lo soporta nativamente.
 2. (Opcional) Google Search Console → **Change of Address** tool, si `alsolperu.pages.dev` estaba indexado.
 
 ---
@@ -106,7 +112,7 @@ Cloudflare Pages sirve los archivos `public/` directamente en la raíz. No requi
 - `public/sitemap.xml` — incluye las rutas públicas.
 - `public/llms.txt` — descripción del sitio para LLM crawlers (ChatGPT, Perplexity, Claude).
 - `index.html` — JSON-LD con `Organization`, `WebSite` y `SoftwareApplication` (este último para que AI crawlers descubran el MCP server con sus 82 tools).
-- `index.html` — `<link rel="canonical">` apunta a `https://rastro.pages.dev/`.
+- `index.html` — `<link rel="canonical">` apunta a `https://rastro.fyi/`.
 
 ---
 
@@ -121,7 +127,7 @@ Cloudflare Pages sirve los archivos `public/` directamente en la raíz. No requi
 
 Si la UI muestra "API no disponible" para una app específica:
 
-1. `https://rastro.pages.dev/estado` — la app caída aparece en rojo.
+1. `https://rastro.fyi/estado` — la app caída aparece en rojo.
 2. Revisar logs de esa API (puerto 4000–4013).
 3. Si la API está caída, re-ejecutar su conector (ver `docs/conectores.md`).
 4. Cloudflare Pages sirve el último build válido mientras tanto.
