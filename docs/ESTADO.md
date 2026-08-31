@@ -1,8 +1,14 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-08-29.
+Última actualización: 2026-08-31.
 
 Doce apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+
+## Dominio `rastro.fyi` + auditoría real de `rastro-web` (2026-08-31)
+
+- **Custom domain `rastro.fyi`** conectado al proyecto Cloudflare Pages `rastro` (PR #40): metadatos SEO/GEO (`index.html`, `robots.txt`, `sitemap.xml`, `llms.txt`, `citar-rastro.md`) apuntan a `rastro.fyi` como URL canónica; `rastro-5zm.pages.dev` (alias real del proyecto — no `rastro.pages.dev`, que ya estaba tomado) queda como fallback. Requirió CNAME manual en el DNS de `rastro.fyi` porque esa zona no vive en la misma cuenta/proyecto Cloudflare — el custom domain no se auto-configuró. Pasos documentados en `apps/rastro-web/DEPLOY.md` §4.
+- **Auditoría de código vs. backlog**: `docs/TICKETS_Rastro_Capa_Lectura_v1.md` y `docs/BACKLOG_Rastro_Capa_Lectura_No_Tecnicos_v1.md` describían un plan pre-build (Sprints 11-14) que nunca se actualizó contra lo que realmente se construyó. Se contrastó ticket por ticket contra `apps/rastro-web/src`: de los 20 tickets AL3-*, **6 hechos, 9 parciales, 5 pendientes**. Huecos más relevantes: 8 de las 14 apps backend no tienen función de datos en `api-client.ts` (solo health-check genérico); sin suite E2E (Playwright) pese a que el CI la asume; búsqueda libre en `/buscar` explícitamente no implementada; sin ranking de proveedores (`/prensa/proveedores`) ni integridad de infraestructura (`/distrito/:ubigeo/integridad`); sin rate limit; sin reporte de smoke test firmado. Detalle ticket por ticket en la tabla "Estado real" al inicio de `docs/TICKETS_Rastro_Capa_Lectura_v1.md`.
+- El pendiente #7 de abajo (`CLOUDFLARE_DEPLOY_HOOK_URL`) sigue sin resolverse — no forma parte de esta sesión.
 
 ## Rename ALSOL → Rastro completado + alta de `rastro-web` (2026-08-29)
 
