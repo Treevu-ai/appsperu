@@ -46,8 +46,14 @@ Desde la raíz del repo:
 
 ```bash
 cd /path/to/appsperu
+export PATH="$HOME/.fly/bin:$PATH"   # tras instalar flyctl
+flyctl auth login
 bash scripts/fly-bootstrap.sh
 ```
+
+Org por defecto: `personal`. Otra org: `FLY_ORG=tu-org bash scripts/fly-bootstrap.sh`
+
+Si Postgres ya existe: `bash scripts/fly-bootstrap.sh --skip-pg`
 
 Eso hace:
 
