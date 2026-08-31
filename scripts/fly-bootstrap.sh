@@ -3,23 +3,26 @@
 #
 # Requisitos:
 #   flyctl auth login   (o export FLY_API_TOKEN)
-#   DNS api.rastro.pe apuntará a Fly tras: fly certs setup (ver docs/FLY_DEPLOY.md)
 #
 # Uso:
 #   bash scripts/fly-bootstrap.sh              # postgres + deploy todo
 #   bash scripts/fly-bootstrap.sh --skip-pg    # solo deploy (postgres ya existe)
+#   bash scripts/fly-bootstrap.sh --gateway-only
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FLY="${FLYCTL:-flyctl}"
 REGION="${FLY_REGION:-gru}"
+ORG="${FLY_ORG:-personal}"
 PG_APP="${FLY_PG_APP:-rastro-pg}"
 WEB_ORIGIN="${WEB_ORIGIN:-https://www.rastro.fyi,https://rastro.fyi,https://rastro-5zm.pages.dev}"
 SKIP_PG=0
+GATEWAY_ONLY=0
 
 for arg in "$@"; do
   case "$arg" in
     --skip-pg) SKIP_PG=1 ;;
+    --gateway-only) GATEWAY_ONLY=1 ;;
   esac
 done
 
@@ -33,24 +36,31 @@ if ! "$FLY" auth whoami >/dev/null 2>&1; then
   exit 1
 fi
 
+fly_app_exists() {
+  "$FLY" apps list --json 2>/dev/null | jq -e --arg name "$1" '.[] | select(.name == $name)' >/dev/null
+}
+
 bash "${ROOT}/scripts/fly-generate-configs.sh"
 
+if [ "$GATEWAY_ONLY" -eq 1 ]; then
+  exec bash "${ROOT}/scripts/fly-deploy-gateway.sh"
+fi
+
 if [ "$SKIP_PG" -eq 0 ]; then
-  if ! "$FLY" apps list 2>/dev/null | grep -q "^${PG_APP} "; then
-    echo "==> Creando Postgres ${PG_APP} (${REGION})..."
+  if ! fly_app_exists "$PG_APP"; then
+    echo "==> Creando Postgres ${PG_APP} (${REGION}, org ${ORG})..."
     "$FLY" postgres create \
-      --name "$PG_APP" \
-      --region "$REGION" \
+      -n "$PG_APP" \
+      -r "$REGION" \
+      -o "$ORG" \
       --initial-cluster-size 1 \
       --vm-size shared-cpu-1x \
-      --volume-size 20 \
-      --yes
+      --volume-size 20
   else
     echo "==> Postgres ${PG_APP} ya existe."
   fi
 fi
 
-# Map slug → database name (matches docker-compose defaults)
 declare -A DB_NAMES=(
   [radar-ejecucion]=radar_ejecucion
   [compras-publicas]=compras_publicas
@@ -75,40 +85,46 @@ while IFS=$'\t' read -r slug _ app_dir _; do
   db_name="${DB_NAMES[$slug]:-${slug//-/_}}"
   config="${ROOT}/infra/fly/apps/${slug}/fly.toml"
 
-  if ! "$FLY" apps list 2>/dev/null | grep -q "^${fly_app} "; then
+  if ! fly_app_exists "$fly_app"; then
     echo "   → fly apps create ${fly_app}"
-    "$FLY" apps create "$fly_app" 2>/dev/null || true
+    "$FLY" apps create "$fly_app" -o "$ORG"
   fi
 
   if [ "$SKIP_PG" -eq 0 ] && [ "$slug" != "salud-institucional" ]; then
-    echo "   → attach postgres ${fly_app}"
-    "$FLY" postgres attach "$PG_APP" --app "$fly_app" --database-name "$db_name" --yes 2>/dev/null || true
+    echo "   → attach postgres ${fly_app} → ${db_name}"
+    if ! "$FLY" secrets list -a "$fly_app" 2>/dev/null | grep -q DATABASE_URL; then
+      "$FLY" postgres attach "$PG_APP" -a "$fly_app" --database-name "$db_name" -y
+    fi
   fi
 
   if [ "$slug" = "salud-institucional" ]; then
-    # Agregador: apunta a otras BDs vía URLs internas (ver docs/FLY_DEPLOY.md)
-    "$FLY" secrets set -a "$fly_app" \
-      WEB_ORIGIN="$WEB_ORIGIN" \
-      EJECUCION_DATABASE_URL="postgres://placeholder:configure@rastro-radar-ejecucion.internal:5432/radar_ejecucion" \
-      --stage 2>/dev/null || true
+    echo "   → salud-institucional: configurar BDs cruzadas después del deploy base"
   fi
 
-  echo "   → deploy ${fly_app}"
-  "$FLY" deploy --config "$config" --app "$fly_app" --remote-only --ha=false
+  echo "   → deploy ${fly_app} (desde raíz del repo)"
+  (
+    cd "$ROOT"
+    "$FLY" deploy \
+      --config "$config" \
+      --dockerfile infra/fly/Dockerfile.api \
+      --build-arg "APP_DIR=${app_dir}" \
+      --app "$fly_app" \
+      --remote-only \
+      --ha=false
+  )
 done < "${ROOT}/infra/api-proxy/apps.tsv"
 
 echo "==> Desplegando gateway rastro-api-gateway..."
-if ! "$FLY" apps list 2>/dev/null | grep -q "^rastro-api-gateway "; then
-  "$FLY" apps create rastro-api-gateway --org personal 2>/dev/null || "$FLY" apps create rastro-api-gateway
+if ! fly_app_exists "rastro-api-gateway"; then
+  "$FLY" apps create rastro-api-gateway -o "$ORG"
 fi
 (cd "${ROOT}/infra/fly/gateway" && "$FLY" deploy --remote-only --ha=false)
 
 echo ""
-echo "==> Certificado custom domain"
-echo "Ejecuta:"
+echo "==> Siguiente: certificado y DNS"
 echo "  fly certs add api.rastro.pe -a rastro-api-gateway"
 echo "  fly certs show api.rastro.pe -a rastro-api-gateway"
 echo ""
-echo "Luego actualiza DNS de api.rastro.pe según las instrucciones (quita A → 149.104.66.100 LightNode)."
+echo "Quita el A → 149.104.66.100 (LightNode) y usa los registros que indique Fly."
 echo ""
 bash "${ROOT}/scripts/health-check-apis.sh" || true
