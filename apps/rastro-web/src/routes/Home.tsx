@@ -34,13 +34,9 @@ export function Home() {
         <div className="card">
           <h2 className="text-fg font-semibold text-lg">Acerca de</h2>
           <p className="text-fg-soft mt-3 leading-relaxed">
-            Rastro es una plataforma de inteligencia que ayuda a equipos y organizaciones a encontrar, conectar y
-            entender las señales que importan. Transformamos información dispersa en contexto accionable, con foco en
-            trazabilidad, claridad y decisiones más seguras.
-          </p>
-          <p className="text-fg-soft mt-3 leading-relaxed">
-            Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tiempo cambia lo que viene
-            después.
+            Tres lectores (GORE, prensa de datos, auditoría), 14 APIs de solo lectura y un servidor MCP con 82
+            tools. Cada cifra lleva fuente, corte y cobertura; lo que falta se declara vacío, no se rellena con
+            suposiciones.
           </p>
         </div>
       </section>

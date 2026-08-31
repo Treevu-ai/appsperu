@@ -1,13 +1,9 @@
 # Cómo citar Rastro
 
-> **RASTRO** convierte señales dispersas en inteligencia clara para decidir mejor.
+> Rastro convierte señales dispersas en inteligencia clara para decidir mejor.
 > *Cada señal deja un rastro. Nosotros lo hacemos visible.*
 
-**Rastro** es una plataforma de inteligencia que ayuda a equipos y organizaciones a encontrar, conectar y entender las señales que importan. Transformamos información dispersa en contexto accionable, con foco en trazabilidad, claridad y decisiones más seguras.
-
-Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tiempo cambia lo que viene después.
-
-Si usas una cifra de Rastro en un informe público, una noticia o un trabajo académico, incluye los metadatos que la UI muestra al lado de cada número.
+**Rastro** es una plataforma de trazabilidad sobre datos abiertos del Estado peruano. Si usas una cifra en un informe, noticia o trabajo académico, incluye los metadatos que la UI muestra al lado de cada número.
 
 ## Formato de citación sugerido
 
