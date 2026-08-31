@@ -1,7 +1,8 @@
-# Configuración de Cloudflare Pages para Rastro.
+# Configuración local / deploy manual con wrangler CLI desde apps/rastro-web/.
+# Para Cloudflare Workers Builds (Git deploy desde la raíz del monorepo),
+# usa el wrangler.toml de la raíz del repo + scripts/cloudflare-rastro-deploy.sh.
 #
-# Deploys via Git usan public/_redirects y public/_headers (copiados al dist).
-# Este archivo NO se usa en esos deploys. Sí se usa para:
+# Deploys via Git (Pages clásico) usan public/_redirects y public/_headers.
 #   - `wrangler pages dev dist`  → simular el entorno Pages en local
 #   - `wrangler pages deploy dist --project-name=rastro` → deploy manual
 #

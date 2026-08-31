@@ -18,8 +18,10 @@ Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tie
 | URL pública | https://rastro.fyi/ (custom domain sobre el proyecto Pages `rastro`; fallback `rastro-5zm.pages.dev`) |
 | Repo | `Treevu-ai/appsperu` (monorepo) |
 | App | `apps/rastro-web/` (Vite 8 + React 19) |
-| Build command | `npm --prefix apps/rastro-web run build` |
-| Build output | `apps/rastro-web/dist` |
+| Build command (Pages vía Git) | `npm --prefix apps/rastro-web ci && npm --prefix apps/rastro-web run build` |
+| Build output (Pages vía Git) | `apps/rastro-web/dist` |
+| Deploy command (Workers Builds) | `bash scripts/cloudflare-rastro-deploy.sh` |
+| Config wrangler (raíz del repo) | `wrangler.toml` → `[assets] directory = "./apps/rastro-web/dist"` |
 | Deploy on push | GitHub App (Cloudflare) |
 | Deploy semanal | Cron miércoles 12:00 UTC → curl a Deploy Hook |
 | Secret requerido (deploy manual/cron) | `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` **o** `CLOUDFLARE_DEPLOY_HOOK_URL` |
@@ -42,14 +44,28 @@ Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tie
 1. Dashboard Cloudflare → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**.
 2. Selecciona el repo `Treevu-ai/appsperu` → autorice la GitHub App de Cloudflare.
 3. **Project name:** `rastro` (subdominio asignado por Cloudflare: `rastro-5zm.pages.dev` — el sufijo `-5zm` lo agrega Cloudflare automáticamente cuando `rastro.pages.dev` ya está tomado).
-4. **Framework preset:** *Vite* (Cloudflare lo detecta).
-5. **Build command:** `npm --prefix apps/rastro-web run build`
+4. **Framework preset:** *Vite* (Cloudflare lo detecta) **o** *None* si usas Workers Builds (§1b).
+5. **Build command:** `npm --prefix apps/rastro-web ci && npm --prefix apps/rastro-web run build`
 6. **Build output directory:** `apps/rastro-web/dist`
 7. **Root directory:** dejar en blanco (la build ya apunta al subdirectorio).
-8. **Environment variables:** agregar las 14 `VITE_API_BASE_URL_*` apuntando a tus APIs públicas. Recomendado: proxy público único (`https://api.rastro.pe/<app>`).
-9. **Save and Deploy.** El primer build tarda ~2 min.
+8. **Deploy command:** dejar **vacío** (Pages publica el output automáticamente). No uses `npx wrangler versions upload` aquí — ver §1b si tu proyecto es Workers Builds.
+9. **Environment variables:** agregar las 14 `VITE_API_BASE_URL_*` apuntando a tus APIs públicas. Recomendado: proxy público único (`https://api.rastro.pe/<app>`). Si faltan, el repo incluye `.env.production` como fallback.
+10. **Save and Deploy.** El primer build tarda ~2 min.
 
 A partir de aquí, **cada push a `master` que toque `apps/rastro-web/**` triggerea rebuild automático** vía la GitHub App. No necesitas hacer nada más para el deploy on push.
+
+#### 1b. Si Cloudflare usa Workers Builds (`wrangler versions upload`)
+
+Si en los logs ves `Executing user deploy command: npx wrangler versions upload` y falla con **Missing entry-point to Worker script or to assets directory**, el dashboard está en modo **Workers Builds**, no Pages clásico. Configura así:
+
+| Campo | Valor |
+|---|---|
+| **Build command** | *(vacío — el script build+deploy lo hace todo)* |
+| **Deploy command** | `bash scripts/cloudflare-rastro-deploy.sh` |
+
+Ese script instala deps, corre `vite build` y luego `wrangler versions upload`. El `wrangler.toml` en la **raíz del repo** declara `assets.directory = "./apps/rastro-web/dist"` y `not_found_handling = "single-page-application"` para React Router.
+
+> **No** ejecutes `npx wrangler versions upload` a secas: Cloudflare clona el monorepo en `/` y sin el `wrangler.toml` raíz no encuentra los assets. Tampoco sirve el `wrangler.toml` de `apps/rastro-web/` solo — wrangler busca config en el cwd del deploy.
 
 ### 2. Crear el Deploy Hook (para workflow_dispatch y cron semanal)
 
