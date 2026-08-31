@@ -9,15 +9,15 @@ Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tie
 
 ## URLs públicas
 
-- Inicio: https://rastro.pages.dev/
-- Lector GORE La Libertad: https://rastro.pages.dev/gore/la-libertad
-- Perfil de proveedor (RUC de 11 dígitos): https://rastro.pages.dev/proveedor/{ruc}
-- Obras y activos de un distrito (UBIGEO de 6 dígitos): https://rastro.pages.dev/distrito/{ubigeo}
-- Estado del producto (14 APIs en vivo): https://rastro.pages.dev/estado
-- Documentación de la API y setup MCP: https://rastro.pages.dev/docs/api
-- Buscar (RUC, CUI, UBIGEO): https://rastro.pages.dev/buscar
-- Cómo citar: https://rastro.pages.dev/citar-rastro.md
-- LLM-friendly manifest: https://rastro.pages.dev/llms.txt (este archivo)
+- Inicio: https://rastro.fyi/
+- Lector GORE La Libertad: https://rastro.fyi/gore/la-libertad
+- Perfil de proveedor (RUC de 11 dígitos): https://rastro.fyi/proveedor/{ruc}
+- Obras y activos de un distrito (UBIGEO de 6 dígitos): https://rastro.fyi/distrito/{ubigeo}
+- Estado del producto (14 APIs en vivo): https://rastro.fyi/estado
+- Documentación de la API y setup MCP: https://rastro.fyi/docs/api
+- Buscar (RUC, CUI, UBIGEO): https://rastro.fyi/buscar
+- Cómo citar: https://rastro.fyi/citar-rastro.md
+- LLM-friendly manifest: https://rastro.fyi/llms.txt (este archivo)
 
 ## Para agentes IA (MCP)
 
@@ -97,7 +97,7 @@ Rastro NO genera ni infiere datos. Cada cifra viene verbatim de una API del repo
 ## Cita sugerida
 
 ```
-Rastro v0.1.0 · La Libertad · [fuente app/tool] · corte [YYYY-MM-DD] · cobertura [COMPLETA|PARCIAL|BLOQUEADA] · https://rastro.pages.dev/[ruta]
+Rastro v0.1.0 · La Libertad · [fuente app/tool] · corte [YYYY-MM-DD] · cobertura [COMPLETA|PARCIAL|BLOQUEADA] · https://rastro.fyi/[ruta]
 ```
 
 Rastro no debe usarse como fuente de declaraciones causales (fraude, favorecimiento, abandono). Las cifras son descriptivas; las conclusiones requieren consulta a la fuente oficial primaria (MEF, OECE, INFOBRAS, etc.).

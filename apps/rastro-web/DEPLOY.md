@@ -15,7 +15,7 @@ Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tie
 |---|---|
 | Plataforma | Cloudflare Pages |
 | Proyecto | `rastro` |
-| URL pública | https://rastro.pages.dev/ |
+| URL pública | https://rastro.fyi/ (custom domain sobre el proyecto Pages `rastro`; fallback `rastro.pages.dev`) |
 | Repo | `Treevu-ai/appsperu` (monorepo) |
 | App | `apps/rastro-web/` (Vite 8 + React 19) |
 | Build command | `npm --prefix apps/rastro-web run build` |
@@ -68,15 +68,22 @@ Los triggers que **no son push** (botón "Run workflow" en GitHub Actions, o el 
 
 Con esto, el workflow `Rastro Web Deploy` puede triggerear redeploys manuales y semanales sin tokens de Cloudflare.
 
-### 4. Dominio personalizado (opcional)
+### 4. Dominio personalizado: `rastro.fyi`
 
-**Custom domains** → **Set up a custom domain** (`rastro.pe`, etc.). Cloudflare configura DNS automáticamente.
+El dominio `rastro.fyi` ya está registrado en la misma cuenta de Cloudflare que el proyecto Pages `rastro`, así que el setup es el camino corto (sin tocar nameservers en un registrador externo):
+
+1. Dashboard Cloudflare → confirma que `rastro.fyi` aparece como **zone** activa (**Websites** / **Zone list**). Si lo compraste vía Cloudflare Registrar ya está en Cloudflare DNS automáticamente; si lo compraste en otro registrador, primero agrégalo como sitio (**Add a domain**) y apunta los nameservers del registrador a los que te dé Cloudflare.
+2. **Workers & Pages** → proyecto `rastro` → tab **Custom domains** → **Set up a custom domain**.
+3. Escribe `rastro.fyi` → **Continue** → **Activate domain**. Como la zona ya vive en la misma cuenta, Cloudflare crea el registro DNS (CNAME proxied hacia el proyecto Pages) y emite el certificado TLS automáticamente; no hace falta ningún paso manual en DNS.
+4. Repite con `www.rastro.fyi` si quieres servir ambas variantes, y agrega una **redirect rule** (`www` → raíz o viceversa) en **Rules → Redirect Rules** de la zona `rastro.fyi` para no dejar la otra variante huérfana (los custom domains de Pages no redirigen entre sí automáticamente).
+5. Verifica en `https://dash.cloudflare.com/?to=/:account/workers-and-pages` → `rastro` → **Custom domains** que el estado quede en **Active** (puede tardar unos minutos en emitir el certificado).
+6. Una vez activo, actualiza el DNS-only fallback: `rastro.pages.dev` sigue funcionando (Cloudflare nunca lo retira), pero `rastro.fyi` pasa a ser la URL canónica — ya reflejada en `index.html`, `robots.txt`, `sitemap.xml`, `llms.txt` y `citar-rastro.md` de este repo.
 
 ### 5. Migrar el URL viejo (si tenías `alsolperu.pages.dev`)
 
 Para no perder SEO de enlaces antiguos:
 
-1. Cloudflare Pages → proyecto viejo `alsolperu` → **Settings** → **Custom domains / redirects** → crear un **bulk redirect** (`301`) desde `alsolperu.pages.dev/*` a `https://rastro.pages.dev/$1`. Cloudflare lo soporta nativamente.
+1. Cloudflare Pages → proyecto viejo `alsolperu` → **Settings** → **Custom domains / redirects** → crear un **bulk redirect** (`301`) desde `alsolperu.pages.dev/*` a `https://rastro.fyi/$1`. Cloudflare lo soporta nativamente.
 2. (Opcional) Google Search Console → **Change of Address** tool, si `alsolperu.pages.dev` estaba indexado.
 
 ---
@@ -106,7 +113,7 @@ Cloudflare Pages sirve los archivos `public/` directamente en la raíz. No requi
 - `public/sitemap.xml` — incluye las rutas públicas.
 - `public/llms.txt` — descripción del sitio para LLM crawlers (ChatGPT, Perplexity, Claude).
 - `index.html` — JSON-LD con `Organization`, `WebSite` y `SoftwareApplication` (este último para que AI crawlers descubran el MCP server con sus 82 tools).
-- `index.html` — `<link rel="canonical">` apunta a `https://rastro.pages.dev/`.
+- `index.html` — `<link rel="canonical">` apunta a `https://rastro.fyi/`.
 
 ---
 
@@ -121,7 +128,7 @@ Cloudflare Pages sirve los archivos `public/` directamente en la raíz. No requi
 
 Si la UI muestra "API no disponible" para una app específica:
 
-1. `https://rastro.pages.dev/estado` — la app caída aparece en rojo.
+1. `https://rastro.fyi/estado` — la app caída aparece en rojo.
 2. Revisar logs de esa API (puerto 4000–4013).
 3. Si la API está caída, re-ejecutar su conector (ver `docs/conectores.md`).
 4. Cloudflare Pages sirve el último build válido mientras tanto.

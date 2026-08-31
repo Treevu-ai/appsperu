@@ -1,4 +1,4 @@
-# Rastro (https://rastro.pages.dev/) — robots.txt
+# Rastro (https://rastro.fyi/) — robots.txt
 # Permite indexación completa y referencia el sitemap.
 # Pensado para SEO (Google, Bing) y GEO (GPTBot, ClaudeBot, Perplexity).
 
@@ -6,7 +6,7 @@ User-agent: *
 Allow: /
 
 # Sitemap principal
-Sitemap: https://rastro.pages.dev/sitemap.xml
+Sitemap: https://rastro.fyi/sitemap.xml
 
 # Crawlers de LLM (GEO — Generative Engine Optimization)
 # Estos bots indexan el sitio para entrenar o citar modelos.

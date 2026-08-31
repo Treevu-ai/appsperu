@@ -9,7 +9,7 @@ Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tie
 
 Esta web app (Vite + React Router 7 SPA) consume las **14 APIs de appsperu** y expone **82 tools MCP** para que agentes IA (Claude Code, Claude Desktop, Cursor, Windsurf, Cline, Continue.dev) encadenen consultas complejas con una sola query.
 
-- **URL producción:** https://rastro.pages.dev/
+- **URL producción:** https://rastro.fyi/
 - **Stack:** Vite 8 + React 19 + TypeScript 6 + React Router 7 + Tailwind v4
 - **MCP:** 82 tools de solo lectura, transporte stdio
 - **Hosting:** Cloudflare Pages (proyecto `rastro`)
@@ -102,5 +102,5 @@ npm run ci               # todo lo anterior en orden
 - Backlog: [`docs/BACKLOG_Rastro_Capa_Lectura_v1.md`](../../docs/BACKLOG_Rastro_Lectura_v1.md)
 - Estado: [`docs/ESTADO.md`](../../docs/ESTADO.md)
 - Conectores: [`docs/conectores.md`](../../docs/conectores.md)
-- Brand: Rastro. URL público: `rastro.pages.dev`.
+- Brand: Rastro. URL público: `rastro.fyi`.
 
