@@ -13,6 +13,7 @@
  */
 
 import { AppUnavailableError, type AppKey, APP_CATALOG } from "./types.js";
+import { apisPublishedForBrowser, APIS_NOT_PUBLISHED_MESSAGE } from "./api-config.js";
 
 export interface RequestOptions {
   /** Query params ya encoded como Record<string,string>. */
@@ -51,6 +52,9 @@ function buildUrl(base: string, path: string, query?: RequestOptions["query"]): 
 }
 
 async function requestJson<T>(appKey: AppKey, path: string, options: RequestOptions = {}): Promise<T> {
+  if (!apisPublishedForBrowser()) {
+    throw new AppUnavailableError(appKey, path, "network", APIS_NOT_PUBLISHED_MESSAGE);
+  }
   const base = envBaseUrl(appKey);
   const url = buildUrl(base, path, options.query);
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;

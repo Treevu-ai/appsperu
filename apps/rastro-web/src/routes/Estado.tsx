@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { APP_CATALOG, type AppKey } from "../lib/types.js";
+import { formatApiErrorForUi } from "../lib/api-config.js";
 import { getAppHealth } from "../lib/api-client.js";
 
 interface AppState {
@@ -23,7 +24,7 @@ export function Estado() {
             await getAppHealth(k);
             updates.push({ appKey: k, status: "up" });
           } catch (err) {
-            updates.push({ appKey: k, status: "down", detail: (err as Error).message });
+            updates.push({ appKey: k, status: "down", detail: formatApiErrorForUi(err) });
           }
         }),
       );

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AppUnavailableError, type Cobertura, type WithMetadata } from "../lib/types.js";
+import { apisPublishedForBrowser, APIS_NOT_PUBLISHED_MESSAGE } from "../lib/api-config.js";
 import { getRadarEjecucionMetaSources, type MetaSource } from "../lib/api-client.js";
 
 type FreshnessState =
@@ -27,6 +28,10 @@ export function DataFreshnessBar() {
   const [state, setState] = useState<FreshnessState>({ status: "loading" });
 
   useEffect(() => {
+    if (!apisPublishedForBrowser()) {
+      setState({ status: "unavailable", message: APIS_NOT_PUBLISHED_MESSAGE });
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -72,10 +77,10 @@ export function DataFreshnessBar() {
 
   if (state.status === "unavailable") {
     return (
-      <div className="border-t border-line-soft bg-danger/10">
-        <div className="mx-auto max-w-6xl px-6 py-2 text-xs text-danger flex items-center gap-2">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-danger" />
-          API no disponible: <span className="text-fg-soft">{state.message}</span>
+      <div className="border-t border-line-soft bg-ink-900/40">
+        <div className="mx-auto max-w-6xl px-6 py-2 text-xs text-muted flex items-center gap-2">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-muted" />
+          {state.message}
         </div>
       </div>
     );
