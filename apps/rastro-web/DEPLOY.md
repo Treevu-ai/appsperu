@@ -15,7 +15,7 @@ Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tie
 |---|---|
 | Plataforma | Cloudflare Pages |
 | Proyecto | `rastro` |
-| URL pública | https://rastro.fyi/ (custom domain sobre el proyecto Pages `rastro`; fallback `rastro.pages.dev`) |
+| URL pública | https://rastro.fyi/ (custom domain sobre el proyecto Pages `rastro`; fallback `rastro-5zm.pages.dev`) |
 | Repo | `Treevu-ai/appsperu` (monorepo) |
 | App | `apps/rastro-web/` (Vite 8 + React 19) |
 | Build command | `npm --prefix apps/rastro-web run build` |
@@ -41,7 +41,7 @@ Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tie
 
 1. Dashboard Cloudflare → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**.
 2. Selecciona el repo `Treevu-ai/appsperu` → autorice la GitHub App de Cloudflare.
-3. **Project name:** `rastro` (fija el subdominio `rastro.pages.dev`).
+3. **Project name:** `rastro` (subdominio asignado por Cloudflare: `rastro-5zm.pages.dev` — el sufijo `-5zm` lo agrega Cloudflare automáticamente cuando `rastro.pages.dev` ya está tomado).
 4. **Framework preset:** *Vite* (Cloudflare lo detecta).
 5. **Build command:** `npm --prefix apps/rastro-web run build`
 6. **Build output directory:** `apps/rastro-web/dist`
@@ -70,14 +70,13 @@ Con esto, el workflow `Rastro Web Deploy` puede triggerear redeploys manuales y 
 
 ### 4. Dominio personalizado: `rastro.fyi`
 
-El dominio `rastro.fyi` ya está registrado en la misma cuenta de Cloudflare que el proyecto Pages `rastro`, así que el setup es el camino corto (sin tocar nameservers en un registrador externo):
+El proyecto Pages `rastro` quedó publicado en `rastro-5zm.pages.dev` (Cloudflare le agregó el sufijo `-5zm` porque `rastro.pages.dev` ya estaba tomado). El dominio `rastro.fyi` no vive en la misma cuenta/zona que ese proyecto, así que Cloudflare **no** auto-genera el DNS — pide verificación manual vía CNAME:
 
-1. Dashboard Cloudflare → confirma que `rastro.fyi` aparece como **zone** activa (**Websites** / **Zone list**). Si lo compraste vía Cloudflare Registrar ya está en Cloudflare DNS automáticamente; si lo compraste en otro registrador, primero agrégalo como sitio (**Add a domain**) y apunta los nameservers del registrador a los que te dé Cloudflare.
-2. **Workers & Pages** → proyecto `rastro` → tab **Custom domains** → **Set up a custom domain**.
-3. Escribe `rastro.fyi` → **Continue** → **Activate domain**. Como la zona ya vive en la misma cuenta, Cloudflare crea el registro DNS (CNAME proxied hacia el proyecto Pages) y emite el certificado TLS automáticamente; no hace falta ningún paso manual en DNS.
+1. **Workers & Pages** → proyecto `rastro` → tab **Custom domains** → **Set up a custom domain** → escribe `rastro.fyi` → **Continue**. Queda en estado **Verifying** y Cloudflare muestra el registro que hay que crear.
+2. En el proveedor de DNS que controla `rastro.fyi` (zona de Cloudflare si el dominio ya está ahí, o el panel del registrador si no): crea un `CNAME` — **Name:** `rastro.fyi` (o `@`) → **Target:** `rastro-5zm.pages.dev` → si la zona es de Cloudflare, **Proxy status:** Proxied (naranja).
+3. Guarda y vuelve a **Custom domains** en el proyecto Pages → botón **Check DNS records** para forzar la verificación. El estado pasa de **Verifying** a **Active** cuando propague (hasta 24 h, normalmente minutos si el DNS ya está en Cloudflare) y Cloudflare emite el certificado TLS automáticamente.
 4. Repite con `www.rastro.fyi` si quieres servir ambas variantes, y agrega una **redirect rule** (`www` → raíz o viceversa) en **Rules → Redirect Rules** de la zona `rastro.fyi` para no dejar la otra variante huérfana (los custom domains de Pages no redirigen entre sí automáticamente).
-5. Verifica en `https://dash.cloudflare.com/?to=/:account/workers-and-pages` → `rastro` → **Custom domains** que el estado quede en **Active** (puede tardar unos minutos en emitir el certificado).
-6. Una vez activo, actualiza el DNS-only fallback: `rastro.pages.dev` sigue funcionando (Cloudflare nunca lo retira), pero `rastro.fyi` pasa a ser la URL canónica — ya reflejada en `index.html`, `robots.txt`, `sitemap.xml`, `llms.txt` y `citar-rastro.md` de este repo.
+5. Una vez **Active**, `rastro-5zm.pages.dev` sigue funcionando como fallback (Cloudflare nunca lo retira), pero `rastro.fyi` pasa a ser la URL canónica — ya reflejada en `index.html`, `robots.txt`, `sitemap.xml`, `llms.txt` y `citar-rastro.md` de este repo.
 
 ### 5. Migrar el URL viejo (si tenías `alsolperu.pages.dev`)
 
