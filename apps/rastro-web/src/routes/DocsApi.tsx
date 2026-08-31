@@ -17,13 +17,9 @@ import { Link } from "react-router-dom";
  * dependencia cruzada al build del frontend.
  *
  * Si agregas o quitas un tool en `mcp-server/src/catalog.ts`, actualiza
- * también este array. El check de `EXPECTED_TOOL_COUNT` rompe el build
- * en build-time si el número de tools cambia sin actualizar este sync.
- *
- * Cuenta actual: ver `EXPECTED_TOOL_COUNT` al final del array.
+ * también este array. El script `scripts/check-mcp-tools-sync.mjs` rompe
+ * el build si hay desincronía (no usar throw en runtime — tumba toda la SPA).
  */
-const EXPECTED_TOOL_COUNT = 82;
-
 const TOOLS: { app: string; name: string; desc: string }[] = [
   // radar-ejecucion (26)
   { app: "radar-ejecucion", name: "radar_ejecucion_execution", desc: "PIA/PIM/Devengado por entidad + función + año." },
@@ -111,24 +107,17 @@ const TOOLS: { app: string; name: string; desc: string }[] = [
   // bcrp-comercio-exterior (2)
   { app: "bcrp-comercio-exterior", name: "bcrp_trade", desc: "Comercio exterior nacional BCRP." },
   { app: "bcrp-comercio-exterior", name: "bcrp_meta_sources", desc: "Metadata de ingesta BCRP." },
-  // inversion-privada (6)
+  // inversion-privada (7)
   { app: "inversion-privada", name: "inversion_privada_projects", desc: "Cartera APP/PA PROINVERSIÓN." },
   { app: "inversion-privada", name: "inversion_privada_project_by_id", desc: "Detalle de un proyecto APP." },
   { app: "inversion-privada", name: "inversion_privada_meta_sources", desc: "Metadata de ingesta." },
   { app: "inversion-privada", name: "inversion_privada_oxi_projects", desc: "Obras por Impuestos." },
   { app: "inversion-privada", name: "inversion_privada_oxi_crossref_invierte", desc: "Cruce OxI con Invierte." },
   { app: "inversion-privada", name: "inversion_privada_gis_geojson", desc: "Capas GIS GeoJSON." },
+  { app: "inversion-privada", name: "inversion_privada_gis_project_geometry", desc: "Geometría GIS de un proyecto APP/PA por vertix_id." },
   // bcrp-la-libertad (1)
   { app: "bcrp-la-libertad", name: "bcrp_la_libertad_indicadores", desc: "Síntesis BCRP Sucursal Trujillo (ingesta manual)." },
 ];
-
-// Check de sincronía en build-time. Si modificas TOOLS, actualiza el conteo.
-if (TOOLS.length !== EXPECTED_TOOL_COUNT) {
-  throw new Error(
-    `[DocsApi] Desincronía con mcp-server/src/catalog.ts: TOOLS tiene ${TOOLS.length} entradas, esperado ${EXPECTED_TOOL_COUNT}. ` +
-      `Actualiza este array o EXPECTED_TOOL_COUNT.`,
-  );
-}
 
 export function DocsApi() {
   const byApp: Record<string, typeof TOOLS> = {};
