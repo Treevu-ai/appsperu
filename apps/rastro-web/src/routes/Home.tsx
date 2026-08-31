@@ -78,7 +78,7 @@ export function Home() {
             <span className="text-xs text-muted">MCP · 82 tools · stdio</span>
           </div>
           <h2 className="text-fg font-semibold text-lg mt-2">
-            Una sola query. Cuarenta y dos tools a tu disposición.
+            Una sola query. Ochenta y dos tools a tu disposición.
           </h2>
           <p className="text-fg-soft mt-3">
             Rastro expone un servidor MCP (Model Context Protocol) con 82 herramientas de solo lectura. Compatible con
@@ -117,7 +117,7 @@ concentración. Cita cada RUC y cada OCID."`}</code>
               <p className="text-xs text-muted mt-2">
                 El agente invoca <code className="text-fg">proveedores_sancionados_sanciones</code>,{" "}
                 <code className="text-fg">compras_publicas_suppliers</code>,{" "}
-                <code className="text-fg">compras_publicas_supplier_by_id</code> y los encadena — sin que vos
+                <code className="text-fg">compras_publicas_supplier_by_id</code> y los encadena — sin que tú
                 toques la terminal.
               </p>
             </div>

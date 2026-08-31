@@ -59,7 +59,7 @@ export function Distrito() {
   return (
     <div className="max-w-5xl mx-auto px-6 py-12">
       <p className="text-xs text-muted font-mono">LECTOR AUDITORÍA · UBIGEO {ubigeo}</p>
-      <h1 className="font-serif text-3xl text-fg mt-2">Obras y activos del departamento</h1>
+      <h1 className="font-serif text-3xl text-fg mt-2">Obras y activos (alcance departamental)</h1>
       <p className="text-fg-soft mt-2 max-w-3xl">
         INFOBRAS (Contraloría) para el departamento al que pertenece este distrito. Sin coordenadas: INFOBRAS no las
         publica.
