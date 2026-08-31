@@ -1,0 +1,15 @@
+# slug	port	app_dir	start_cmd
+radar-ejecucion	4000	radar-ejecucion	npm run start
+compras-publicas	4001	compras-publicas	npm run start
+radar-inversiones	4002	radar-inversiones	npx tsx src/index.ts
+infobras	4003	infobras	npx tsx src/index.ts
+ceplan-estrategico	4004	ceplan-estrategico	npm run start
+ceplan-geo	4005	ceplan-geo	npm run start
+identidad-fiscal	4006	identidad-fiscal	npx tsx src/index.ts
+salud-institucional	4007	salud-institucional	npx tsx src/index.ts
+proveedores-sancionados	4008	proveedores-sancionados	npx tsx src/index.ts
+actividad-agraria	4009	actividad-agraria	npm run start
+seguridad-ciudadana	4010	seguridad-ciudadana	npm run start
+bcrp-comercio-exterior	4011	bcrp-comercio-exterior	npm run start
+inversion-privada	4012	inversion-privada	npm run start
+bcrp-la-libertad	4013	bcrp-la-libertad	npm run start
