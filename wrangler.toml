@@ -1,0 +1,12 @@
+# Configuración para Cloudflare Workers Builds (deploy command: wrangler versions upload).
+# Cloudflare clona el monorepo en / y ejecuta el deploy desde la raíz — este archivo
+# debe vivir aquí, no solo en apps/rastro-web/.
+#
+# Requiere build previo: apps/rastro-web/dist (ver scripts/cloudflare-rastro-deploy.sh).
+
+name = "rastro"
+compatibility_date = "2025-09-01"
+
+[assets]
+directory = "./apps/rastro-web/dist"
+not_found_handling = "single-page-application"
