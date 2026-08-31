@@ -33,15 +33,15 @@ Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tie
 
 1. Cuenta Cloudflare con acceso al proyecto `rastro`.
 2. Repositorio `Treevu-ai/appsperu` con la carpeta `apps/rastro-web/`.
-3. Las 14 APIs accesibles vía proxy en el VPS (`https://api.rastro.pe/<app>`). Runbook: **`docs/API_PROXY_DEPLOY.md`**.
+3. Las 14 APIs en **Fly.io** → `https://api.rastro.pe/<app>`. Runbook: **`docs/FLY_DEPLOY.md`** (recomendado). Alternativa VPS: **`docs/API_PROXY_DEPLOY.md`**.
 
 ```bash
-# En el VPS (149.104.66.100)
-cd /opt/appsperu
-bash scripts/start-all-postgres.sh
-bash scripts/start-all-apis.sh --build
-CERTBOT_EMAIL=tu@email.com sudo bash scripts/setup-api-rastro-pe.sh
-bash scripts/health-check-apis.sh
+# Fly.io (recomendado)
+curl -L https://fly.io/install.sh | sh
+flyctl auth login
+bash scripts/fly-bootstrap.sh
+fly certs add api.rastro.pe -a rastro-api-gateway
+# Cambiar DNS api.rastro.pe → Fly (quitar A 149.104.66.100 LightNode)
 ```
 
 

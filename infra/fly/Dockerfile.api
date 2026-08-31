@@ -1,0 +1,24 @@
+# Build any appsperu API from monorepo root context.
+ARG APP_DIR=radar-ejecucion
+
+FROM node:22-alpine AS build
+WORKDIR /repo
+ARG APP_DIR
+COPY apps/${APP_DIR}/api/package.json apps/${APP_DIR}/api/package-lock.json ./apps/${APP_DIR}/api/
+RUN npm --prefix apps/${APP_DIR}/api ci
+COPY apps/${APP_DIR}/api ./apps/${APP_DIR}/api
+RUN npm --prefix apps/${APP_DIR}/api run build 2>/dev/null || true
+
+FROM node:22-alpine
+WORKDIR /app
+ARG APP_DIR
+ENV NODE_ENV=production
+ENV PORT=8080
+COPY --from=build /repo/apps/${APP_DIR}/api/package.json /repo/apps/${APP_DIR}/api/package-lock.json ./
+RUN npm ci
+COPY --from=build /repo/apps/${APP_DIR}/api ./
+RUN test -f dist/index.js || npm install tsx
+COPY infra/fly/docker-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+EXPOSE 8080
+ENTRYPOINT ["/entrypoint.sh"]
