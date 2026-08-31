@@ -19,3 +19,8 @@ services:
 
 volumes:
   ceplan_geo_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true

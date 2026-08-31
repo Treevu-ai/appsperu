@@ -65,6 +65,64 @@ function Wait-PostgresPort([int]$port, [string]$label, [int]$timeoutSec = 90) {
   throw "Timeout esperando Postgres $label en puerto $port. ¿Docker Desktop está corriendo?"
 }
 
+function Test-DockerNetwork([string]$name) {
+  docker network inspect $name 2>$null | Out-Null
+  return $LASTEXITCODE -eq 0
+}
+
+function Ensure-AppsPeruSharedNetwork {
+  if (Test-DockerNetwork 'appsperu_shared') {
+    Log 'Red Docker appsperu_shared OK.'
+    return
+  }
+  Log 'Red appsperu_shared no existe — creando...'
+  docker network create appsperu_shared 2>&1 | Tee-Object -FilePath $logPath -Append
+  if ($LASTEXITCODE -ne 0 -or -not (Test-DockerNetwork 'appsperu_shared')) {
+    throw @"
+No se pudo crear la red Docker 'appsperu_shared'.
+Ejecuta primero: .\scripts\repair-docker-networks.ps1
+Si persiste: .\scripts\repair-docker-networks.ps1 -Aggressive
+"@
+  }
+  Log 'Red appsperu_shared creada.'
+}
+
+function Repair-DockerNetworks {
+  Log 'Reparando redes Docker (pools agotados)...'
+  $repair = Join-Path $repoRoot 'scripts\repair-docker-networks.ps1'
+  if (Test-Path -LiteralPath $repair) {
+    & $repair
+    if ($LASTEXITCODE -ne 0) {
+      throw "repair-docker-networks.ps1 falló (código $LASTEXITCODE)"
+    }
+  } else {
+    docker network prune -f | Tee-Object -FilePath $logPath -Append
+    Ensure-AppsPeruSharedNetwork
+  }
+  Ensure-AppsPeruSharedNetwork
+}
+
+function Invoke-DockerComposeUp([string]$relativeApiPath) {
+  Ensure-AppsPeruSharedNetwork
+  Push-Location (Join-Path $repoRoot $relativeApiPath)
+  try {
+    docker compose up -d 2>&1 | Tee-Object -FilePath $logPath -Append
+    if ($LASTEXITCODE -ne 0) {
+      $logTail = Get-Content -LiteralPath $logPath -Tail 30 -ErrorAction SilentlyContinue | Out-String
+      if ($logTail -match 'fully subnetted|address pools|could not be found|declared as external') {
+        Log 'Error de red Docker — reparando y reintentando...'
+        Repair-DockerNetworks
+        docker compose up -d 2>&1 | Tee-Object -FilePath $logPath -Append
+      }
+      if ($LASTEXITCODE -ne 0) {
+        throw "docker compose up -d falló en $relativeApiPath (código $LASTEXITCODE). Ejecuta: .\scripts\repair-docker-networks.ps1 -Aggressive"
+      }
+    }
+  } finally {
+    Pop-Location
+  }
+}
+
 function Invoke-AppStep([string]$description, [string]$relativeApiPath, [scriptblock]$action) {
   $apiDir = Join-Path $repoRoot $relativeApiPath
   if (-not (Test-Path -LiteralPath $apiDir)) {
@@ -104,6 +162,8 @@ function Wait-HttpOk([string]$url, [int]$timeoutSec = 60) {
 Log "Corrida operativa La Libertad — repo: $repoRoot"
 Log "Log: $logPath"
 
+Repair-DockerNetworks
+
 # Volumen externo de radar-ejecucion (primera vez)
 docker volume inspect api_radar_pgdata 2>$null | Out-Null
 if ($LASTEXITCODE -ne 0) {
@@ -123,7 +183,8 @@ $dbApps = @(
 foreach ($app in $dbApps) {
   $apiDir = Join-Path $repoRoot $app.Path
   Ensure-EnvFile $apiDir
-  Invoke-AppStep "docker compose up -d ($($app.Name))" $app.Path { docker compose up -d }
+  Log "== docker compose up -d ($($app.Name)) =="
+  Invoke-DockerComposeUp $app.Path
   Wait-PostgresPort -port $app.Port -label $app.Name
 }
 

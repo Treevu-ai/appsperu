@@ -14,3 +14,8 @@ services:
 
 volumes:
   agraria_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true
