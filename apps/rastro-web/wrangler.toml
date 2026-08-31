@@ -1,7 +1,7 @@
 # Configuración de Cloudflare Pages para Rastro.
 #
-# Este archivo NO se usa para deploys via Git (Cloudflare lee la config
-# desde el dashboard). Sí se usa para:
+# Deploys via Git usan public/_redirects y public/_headers (copiados al dist).
+# Este archivo NO se usa en esos deploys. Sí se usa para:
 #   - `wrangler pages dev dist`  → simular el entorno Pages en local
 #   - `wrangler pages deploy dist --project-name=rastro` → deploy manual
 #

@@ -22,7 +22,7 @@ Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tie
 | Build output | `apps/rastro-web/dist` |
 | Deploy on push | GitHub App (Cloudflare) |
 | Deploy semanal | Cron miércoles 12:00 UTC → curl a Deploy Hook |
-| Secret requerido | `CLOUDFLARE_DEPLOY_HOOK_URL` |
+| Secret requerido (deploy manual/cron) | `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` **o** `CLOUDFLARE_DEPLOY_HOOK_URL` |
 | Decisión cerrada | **No Vercel**. Solo Cloudflare o Fly.io. |
 
 ---
@@ -60,23 +60,44 @@ Los triggers que **no son push** (botón "Run workflow" en GitHub Actions, o el 
 3. **Branch:** `master`
 4. **Deploy hook URL:** copia la URL que Cloudflare genera (es un secreto, no la pegues en el repo).
 
-### 3. Agregar el secret en GitHub
+### 3. Secrets en GitHub (deploy manual y cron)
 
-1. GitHub → repo `appsperu` → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**.
-2. **Name:** `CLOUDFLARE_DEPLOY_HOOK_URL`
-3. **Value:** la URL del paso 2.
+El workflow `Rastro Web Deploy` puede publicar de dos formas (prefiere la primera):
 
-Con esto, el workflow `Rastro Web Deploy` puede triggerear redeploys manuales y semanales sin tokens de Cloudflare.
+**Opción A — wrangler (recomendada):** sube el `dist/` que ya pasó CI.
+
+1. Cloudflare → **My Profile** → **API Tokens** → **Create Token** → plantilla **Edit Cloudflare Workers** (incluye Pages:Edit).
+2. Copia el **Account ID** desde el dashboard (barra lateral derecha de cualquier zona).
+3. GitHub → repo `appsperu` → **Settings** → **Secrets and variables** → **Actions**:
+   - `CLOUDFLARE_API_TOKEN` = el token
+   - `CLOUDFLARE_ACCOUNT_ID` = el account id
+
+**Opción B — Deploy Hook:** pide a Cloudflare que rebuildee desde Git (requiere que el build en Pages también pase).
+
+1. Cloudflare → **Pages** → `rastro` → **Settings** → **Builds** → **Deploy hooks** → **Create hook**.
+2. **Name:** `GitHub Actions weekly + manual` · **Branch:** `master`
+3. GitHub → secret `CLOUDFLARE_DEPLOY_HOOK_URL` = la URL del hook.
+
+Con cualquiera de las dos, el workflow puede triggerear redeploys manuales y semanales.
 
 ### 4. Dominio personalizado: `rastro.fyi`
 
-El proyecto Pages `rastro` quedó publicado en `rastro-5zm.pages.dev` (Cloudflare le agregó el sufijo `-5zm` porque `rastro.pages.dev` ya estaba tomado). El dominio `rastro.fyi` no vive en la misma cuenta/zona que ese proyecto, así que Cloudflare **no** auto-genera el DNS — pide verificación manual vía CNAME:
+El proyecto Pages `rastro` quedó publicado en `rastro-5zm.pages.dev` (Cloudflare le agregó el sufijo `-5zm` porque `rastro.pages.dev` ya está tomado por **otro proyecto ajeno** — no usar ese subdominio). El dominio `rastro.fyi` no vive en la misma cuenta/zona que ese proyecto, así que Cloudflare **no** auto-genera el DNS — pide verificación manual vía CNAME:
 
 1. **Workers & Pages** → proyecto `rastro` → tab **Custom domains** → **Set up a custom domain** → escribe `rastro.fyi` → **Continue**. Queda en estado **Verifying** y Cloudflare muestra el registro que hay que crear.
-2. En el proveedor de DNS que controla `rastro.fyi` (zona de Cloudflare si el dominio ya está ahí, o el panel del registrador si no): crea un `CNAME` — **Name:** `rastro.fyi` (o `@`) → **Target:** `rastro-5zm.pages.dev` → si la zona es de Cloudflare, **Proxy status:** Proxied (naranja).
-3. Guarda y vuelve a **Custom domains** en el proyecto Pages → botón **Check DNS records** para forzar la verificación. El estado pasa de **Verifying** a **Active** cuando propague (hasta 24 h, normalmente minutos si el DNS ya está en Cloudflare) y Cloudflare emite el certificado TLS automáticamente.
-4. Repite con `www.rastro.fyi` si quieres servir ambas variantes, y agrega una **redirect rule** (`www` → raíz o viceversa) en **Rules → Redirect Rules** de la zona `rastro.fyi` para no dejar la otra variante huérfana (los custom domains de Pages no redirigen entre sí automáticamente).
-5. Una vez **Active**, `rastro-5zm.pages.dev` sigue funcionando como fallback (Cloudflare nunca lo retira), pero `rastro.fyi` pasa a ser la URL canónica — ya reflejada en `index.html`, `robots.txt`, `sitemap.xml`, `llms.txt` y `citar-rastro.md` de este repo.
+2. En el proveedor de DNS que controla `rastro.fyi`: **elimina registros `A` sueltos** apuntando a IPs de Cloudflare si no pasaste por el paso 1 — eso deja el dominio "activo" en DNS pero Pages no lo reconoce (error **522**). Crea un **`CNAME`** — **Name:** `@` (apex) o `rastro.fyi` → **Target:** `rastro-5zm.pages.dev` → si la zona es de Cloudflare, **Proxy status:** Proxied (naranja).
+3. Guarda y vuelve a **Custom domains** en el proyecto Pages → botón **Check DNS records**. El estado pasa de **Verifying** a **Active** cuando propague (minutos si el DNS ya está en Cloudflare).
+4. Repite con `www.rastro.fyi` (`CNAME` → `rastro-5zm.pages.dev`) y agrega una **redirect rule** (`www` → raíz) en **Rules → Redirect Rules** de la zona `rastro.fyi`.
+5. Verifica que `https://rastro-5zm.pages.dev/` responde **200** antes de probar el custom domain. Si el subdominio Pages devuelve **522**, el build falló o no hay deploy exitoso — revisa **Deployments** en el dashboard y los logs de build (suele faltar alguna `VITE_API_BASE_URL_*`; el repo incluye `.env.production` como fallback para que el build no falle vacío).
+
+> **Diagnóstico rápido**
+>
+> | Síntoma | Causa probable | Fix |
+> |---|---|---|
+> | Custom domain **Active** pero **522** | CNAME apunta mal, o no hay deploy exitoso en Pages | CNAME → `rastro-5zm.pages.dev`; revisar Deployments |
+> | `rastro.pages.dev` muestra sitio ajeno | Ese subdominio es de otro proyecto | Usar solo `rastro-5zm.pages.dev` |
+> | Rutas `/gore/...` dan 404 en refresh | Falta SPA fallback | `public/_redirects` en el repo (ya incluido) |
+> | Build falla en Cloudflare | Faltan 14 vars `VITE_*` | Agregar en dashboard **o** confiar en `.env.production` del repo |
 
 ### 5. Migrar el URL viejo (si tenías `alsolperu.pages.dev`)
 

@@ -5,14 +5,12 @@ name: Rastro Web Deploy
 #   2. workflow_dispatch (botón "Run workflow" en GitHub Actions — para forzar redeploy)
 #   3. schedule semanal (miércoles 12:00 UTC = 07:00 hora Perú)
 #
-# El deploy a Cloudflare Pages se hace **vía Deploy Hook URL** (no con wrangler):
-#   - Cloudflare Pages (vía GitHub App en el dashboard) ya hace rebuild en push a master.
-#   - El hook es solo para los triggers que no son push (workflow_dispatch, schedule).
-#   - Configurar el hook una sola vez: Cloudflare → Pages → proyecto "rastro" → Settings
-#     → Builds → Deploy hooks → Create hook → pegar como secret `CLOUDFLARE_DEPLOY_HOOK_URL`.
+# Deploy a Cloudflare Pages (en orden de preferencia):
+#   A) `wrangler pages deploy` con CLOUDFLARE_API_TOKEN — sube el dist que pasó CI.
+#   B) Deploy Hook (CLOUDFLARE_DEPLOY_HOOK_URL) — pide a Cloudflare que rebuildee desde Git.
+#   C) Push a master — la GitHub App de Cloudflare Pages rebuildea sola (si está conectada).
 #
-# El CI completo (typecheck + lint:meta + test + build) corre ANTES del trigger del
-# hook, así un push con tests rotos no llega a producción.
+# El CI completo (typecheck + lint:meta + test + build) corre ANTES del deploy.
 
 on:
   push:
@@ -30,14 +28,12 @@ permissions:
   contents: read
 
 concurrency:
-  # No cancelamos in-progress: si hay un deploy semanal corriendo y alguien pushea,
-  # el nuevo espera al anterior. Producción estable gana sobre velocidad.
   group: rastro-web-deploy-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   build:
-    name: CI + trigger Cloudflare deploy
+    name: CI + deploy Cloudflare Pages
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -97,6 +93,11 @@ jobs:
           VITE_API_BASE_URL_INVERSION_PRIVADA: http://localhost:4012
           VITE_API_BASE_URL_BCRP_LA_LIBERTAD: http://localhost:4013
 
+      - name: Verificar artefactos de Pages (_redirects, _headers)
+        run: |
+          test -f dist/_redirects || (echo "::error::Falta dist/_redirects (SPA fallback)" && exit 1)
+          test -f dist/_headers || (echo "::error::Falta dist/_headers" && exit 1)
+
       - name: Resumen del build
         run: |
           echo "## Build resumen" >> $GITHUB_STEP_SUMMARY
@@ -104,29 +105,47 @@ jobs:
           echo "- Trigger: \`${{ github.event_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Ref: \`${{ github.ref }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Tamaño JS: $(du -h apps/rastro-web/dist/assets/index-*.js | cut -f1)" >> $GITHUB_STEP_SUMMARY
-          echo "- Tamaño CSS: $(du -h apps/rastro-web/dist/assets/index-*.css | cut -f1)" >> $GITHUB_STEP_SUMMARY
+          echo "- Tamaño JS: $(du -h dist/assets/index-*.js | cut -f1)" >> $GITHUB_STEP_SUMMARY
+          echo "- Tamaño CSS: $(du -h dist/assets/index-*.css | cut -f1)" >> $GITHUB_STEP_SUMMARY
 
-      - name: Verificar que CLOUDFLARE_DEPLOY_HOOK_URL existe
-        id: check-hook
-        if: github.event_name != 'pull_request'
+      - name: Deploy a Cloudflare Pages (wrangler)
+        id: wrangler-deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          if [ -z "${{ secrets.CLOUDFLARE_DEPLOY_HOOK_URL }}" ]; then
-            echo "::error::Secret CLOUDFLARE_DEPLOY_HOOK_URL no está configurado."
-            echo "::error::Créala en: Cloudflare → Pages → rastro → Settings → Builds → Deploy hooks → Create hook."
-            echo "::error::Luego agrégala en GitHub: Settings → Secrets and variables → Actions."
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "wrangler_skipped=true" >> "$GITHUB_OUTPUT"
+            echo "Sin CLOUDFLARE_API_TOKEN o CLOUDFLARE_ACCOUNT_ID — se omite wrangler deploy."
+            exit 0
+          fi
+          echo "wrangler_skipped=false" >> "$GITHUB_OUTPUT"
+          npx wrangler pages deploy dist \
+            --project-name=rastro \
+            --branch="${GITHUB_REF_NAME}" \
+            --commit-dirty=true
+          echo "- Deploy vía wrangler → proyecto \`rastro\` (branch \`${GITHUB_REF_NAME}\`)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Trigger Cloudflare Pages deploy (hook)
+        id: hook-deploy
+        if: steps.wrangler-deploy.outputs.wrangler_skipped == 'true'
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$DEPLOY_HOOK_URL" ]; then
+            echo "hook_skipped=true" >> "$GITHUB_OUTPUT"
+            if [ "${{ github.event_name }}" = "push" ]; then
+              echo "::warning::Sin hook ni token de Cloudflare. El push debería triggerear rebuild vía GitHub App de Pages."
+              exit 0
+            fi
+            echo "::error::Para workflow_dispatch/schedule hace falta CLOUDFLARE_API_TOKEN o CLOUDFLARE_DEPLOY_HOOK_URL."
             exit 1
           fi
-          echo "hook_present=true" >> $GITHUB_OUTPUT
-
-      - name: Trigger Cloudflare Pages deploy
-        if: steps.check-hook.outputs.hook_present == 'true'
-        run: |
-          echo "Disparando redeploy en Cloudflare Pages..."
-          response=$(curl -sS -o /dev/null -w "%{http_code}" -X POST "${{ secrets.CLOUDFLARE_DEPLOY_HOOK_URL }}")
+          echo "hook_skipped=false" >> "$GITHUB_OUTPUT"
+          response=$(curl -sS -o /dev/null -w "%{http_code}" -X POST "$DEPLOY_HOOK_URL")
           if [ "$response" = "200" ] || [ "$response" = "201" ]; then
             echo "✅ Hook OK (HTTP $response). Cloudflare Pages empezará el build en ~30s."
-            echo "- Deployment en cola en: https://dash.cloudflare.com → Pages → rastro → Deployments" >> $GITHUB_STEP_SUMMARY
+            echo "- Deployment en cola vía Deploy Hook" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "::error::Hook devolvió HTTP $response. Revisa que la URL del hook sea válida."
             exit 1
