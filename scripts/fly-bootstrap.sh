@@ -169,8 +169,10 @@ while IFS=$'\t' read -r slug _ app_dir _; do
   fi
 
   if [ "$slug" = "salud-institucional" ]; then
-    echo "   → salud-institucional: configurar BDs cruzadas después"
+    echo "   → salud-institucional: secrets cruzados antes del deploy"
   fi
+
+  bash "${ROOT}/scripts/fly-cross-secrets-for-app.sh" "$slug" || true
 
   echo "   → deploy ${fly_app}"
   (
