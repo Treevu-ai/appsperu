@@ -1,0 +1,50 @@
+# Desarrollo local — Rastro + MCP
+
+Stack completo en tu máquina. Sin Fly, sin VPS, sin URLs públicas de API.
+
+## Requisitos
+
+- Docker (Postgres de las 13 apps con BD)
+- Node.js 22+
+- PM2 (`npm i -g pm2`) — lo instala `dev-local.sh` si falta
+
+## Arranque rápido
+
+```bash
+# Terminal 1 — Postgres + APIs + build MCP
+bash scripts/dev-local.sh
+
+# Terminal 2 — frontend
+bash scripts/dev-local.sh --web
+```
+
+Abre **http://localhost:5173** — el `.env` apunta a `localhost:4000–4013`.
+
+## MCP (Cursor / Claude Code)
+
+```bash
+bash scripts/dev-local.sh --mcp
+```
+
+Copia `.mcp.json.example` a la raíz del repo como `.mcp.json` (Claude Code) o pégalo en `~/.cursor/mcp.json` (Cursor) ajustando la ruta absoluta a `mcp-server/dist/index.js`.
+
+Reinicia Cursor. Verás **82 tools** de solo lectura.
+
+## Comandos útiles
+
+| Acción | Comando |
+|--------|---------|
+| Solo Postgres | `bash scripts/dev-local.sh --postgres` |
+| Solo APIs | `bash scripts/dev-local.sh --apis` |
+| Health local | `bash scripts/dev-local.sh --check` |
+| Logs PM2 | `pm2 logs` |
+| Parar APIs | `pm2 delete all` |
+
+## Frontend vs producción
+
+- **Local:** `apps/rastro-web/.env` con URLs `http://localhost:400*`
+- **Cloudflare Pages:** no usa APIs en la nube; el sitio público es informativo + docs MCP. Datos en vivo solo vía MCP local.
+
+## Ingesta de datos
+
+Las BDs arrancan vacías. Para datos de La Libertad, corre ingestas manualmente en cada `apps/<nombre>/api` (ver `docs/ESTADO.md`).

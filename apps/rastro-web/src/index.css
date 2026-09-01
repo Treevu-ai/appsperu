@@ -17,9 +17,9 @@
   --color-muted-soft: #545d68;
   --color-fg: #e6edf3;
   --color-fg-soft: #b1bac4;
-  --color-accent: #10b981;
-  --color-accent-soft: #059669;
-  --color-accent-deep: #022c22;
+  --color-accent: #e4002b;
+  --color-accent-soft: #b8001f;
+  --color-accent-deep: #4a0010;
   --color-warn: #f59e0b;
   --color-danger: #f43f5e;
 
@@ -54,13 +54,13 @@ body {
 
 .radial-glow {
   background:
-    radial-gradient(60% 50% at 20% 0%, rgba(16, 185, 129, 0.1) 0%, transparent 60%),
-    radial-gradient(50% 40% at 85% 10%, rgba(16, 185, 129, 0.06) 0%, transparent 60%);
+    radial-gradient(60% 50% at 20% 0%, rgba(228, 0, 43, 0.12) 0%, transparent 60%),
+    radial-gradient(50% 40% at 85% 10%, rgba(228, 0, 43, 0.06) 0%, transparent 60%);
 }
 
 .btn-primary {
   background: var(--color-accent);
-  color: #04221a;
+  color: #fff;
   font-weight: 600;
   padding: 12px 20px;
   border-radius: 10px;
@@ -70,9 +70,9 @@ body {
   transition: all 0.2s ease;
 }
 .btn-primary:hover {
-  background: #34d399;
+  background: #ff1a47;
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px -8px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 8px 24px -8px rgba(228, 0, 43, 0.45);
 }
 
 .btn-ghost {
