@@ -2,6 +2,28 @@
 
 Stack completo en tu máquina. Sin Fly, sin VPS, sin URLs públicas de API.
 
+## ⚠️ Terminal remota vs tu PC (ERR_CONNECTION_REFUSED)
+
+Si la terminal muestra `/workspace/...` o `ubuntu@`, **Vite corre en la VM de Cursor**, no en Windows.
+
+| Vite en… | Navegador en… | Resultado |
+|----------|---------------|-----------|
+| VM remota | `localhost` Windows | **Rechazado** |
+| Tu PC (PowerShell) | `localhost` Windows | ✓ |
+| VM remota | Link **Ports** en Cursor | ✓ |
+
+**Arreglo:** PowerShell **local** (fuera de Cursor remoto):
+
+```powershell
+cd ~\appsperu
+git pull
+.\scripts\start-web.ps1
+```
+
+O: panel **Ports / Puertos** en Cursor → forward **5173** tras `bash scripts/start-web.sh`.
+
+Diagnóstico: `bash scripts/diagnose-web.sh`
+
 ## Requisitos
 
 - Docker (Postgres de las 13 apps con BD)
