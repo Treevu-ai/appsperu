@@ -8,4 +8,7 @@ fi
 if [ -f dist/index.js ]; then
   exec node dist/index.js
 fi
+if [ -x node_modules/.bin/tsx ]; then
+  exec node_modules/.bin/tsx src/index.ts
+fi
 exec npx tsx src/index.ts
