@@ -70,11 +70,11 @@ while IFS=$'\t' read -r slug _ app_dir _; do
   mkdir -p "${APPS_DIR}/${slug}"
   cat > "${APPS_DIR}/${slug}/fly.toml" <<EOF
 # Generado por scripts/fly-generate-configs.sh (prefix: ${FLY_APP_PREFIX})
+# Deploy SIEMPRE desde la raíz: fly deploy . --config infra/fly/apps/${slug}/fly.toml --dockerfile infra/fly/Dockerfile.api
 app = "${fly_app}"
 primary_region = "${REGION}"
 
 [build]
-  dockerfile = "infra/fly/Dockerfile.api"
   [build.args]
     APP_DIR = "${app_dir}"
 

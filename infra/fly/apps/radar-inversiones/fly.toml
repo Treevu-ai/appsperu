@@ -1,9 +1,9 @@
 # Generado por scripts/fly-generate-configs.sh (prefix: treevu-rastro)
+# Deploy SIEMPRE desde la raíz: fly deploy . --config infra/fly/apps/radar-inversiones/fly.toml --dockerfile infra/fly/Dockerfile.api
 app = "treevu-rastro-radar-inversiones"
 primary_region = "gru"
 
 [build]
-  dockerfile = "infra/fly/Dockerfile.api"
   [build.args]
     APP_DIR = "radar-inversiones"
 

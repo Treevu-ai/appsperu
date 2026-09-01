@@ -125,11 +125,12 @@ while IFS=$'\t' read -r slug _ app_dir _; do
     cd "$ROOT"
     "$FLY" deploy . \
       --config "infra/fly/apps/${slug}/fly.toml" \
-      --dockerfile infra/fly/Dockerfile.api \
+      --dockerfile "${ROOT}/infra/fly/Dockerfile.api" \
       --build-arg "APP_DIR=${app_dir}" \
       --app "$fly_app" \
       --remote-only \
-      --ha=false
+      --ha=false \
+      --now
   )
 done < "${ROOT}/infra/api-proxy/apps.tsv"
 
