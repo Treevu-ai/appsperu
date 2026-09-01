@@ -46,7 +46,7 @@ attach_with_retry() {
   return 1
 }
 
-while IFS=$'\t' read -r slug _ _ _; do
+while IFS=$'\t' read -r slug _ _ _ <&3 || [ -n "${slug:-}" ]; do
   [[ "$slug" =~ ^# ]] && continue
   [[ -z "$slug" ]] && continue
   [[ "$slug" == "salud-institucional" ]] && continue
@@ -70,6 +70,6 @@ while IFS=$'\t' read -r slug _ _ _; do
     echo "ATTACH ${fly_app} → ${db_name}"
     attach_with_retry "$fly_app" "$db_name"
   fi
-done < "${ROOT}/infra/api-proxy/apps.tsv"
+done 3< "${ROOT}/infra/api-proxy/apps.tsv"
 
 echo "Listo. Redeploy apps fallidas: FLY_APP_PREFIX=${FLY_APP_PREFIX} bash scripts/fly-bootstrap.sh --skip-pg"

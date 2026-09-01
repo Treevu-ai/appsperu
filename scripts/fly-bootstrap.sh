@@ -156,7 +156,8 @@ declare -A DB_NAMES=(
 )
 
 echo "==> Desplegando 14 APIs..."
-while IFS=$'\t' read -r slug _ app_dir _; do
+# fd 3: fly deploy puede leer stdin y vaciar el TSV si usamos done < file
+while IFS=$'\t' read -r slug _ app_dir _ <&3 || [ -n "${slug:-}" ]; do
   [[ "$slug" =~ ^# ]] && continue
   [[ -z "$slug" ]] && continue
   fly_app="$(fly_app_name "$slug")"
@@ -183,9 +184,10 @@ while IFS=$'\t' read -r slug _ app_dir _; do
       --app "$fly_app" \
       --remote-only \
       --ha=false \
-      --now
+      --now \
+      </dev/null
   )
-done < "${ROOT}/infra/api-proxy/apps.tsv"
+done 3< "${ROOT}/infra/api-proxy/apps.tsv"
 
 echo "==> Desplegando gateway ${GATEWAY_APP}..."
 ensure_fly_app "$GATEWAY_APP" || exit 1
