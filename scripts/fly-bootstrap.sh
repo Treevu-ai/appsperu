@@ -101,11 +101,11 @@ while IFS=$'\t' read -r slug _ app_dir _; do
     echo "   → salud-institucional: configurar BDs cruzadas después del deploy base"
   fi
 
-  echo "   → deploy ${fly_app} (desde raíz del repo)"
+  echo "   → deploy ${fly_app} (contexto = raíz del repo)"
   (
     cd "$ROOT"
-    "$FLY" deploy \
-      --config "$config" \
+    "$FLY" deploy . \
+      --config "infra/fly/apps/${slug}/fly.toml" \
       --dockerfile infra/fly/Dockerfile.api \
       --build-arg "APP_DIR=${app_dir}" \
       --app "$fly_app" \
