@@ -7,15 +7,15 @@ Rastro es una plataforma de trazabilidad sobre datos abiertos del Estado peruano
 
 ## URLs públicas
 
-- Inicio: https://rastro.fyi/
-- Lector GORE La Libertad: https://rastro.fyi/gore/la-libertad
-- Perfil de proveedor (RUC de 11 dígitos): https://rastro.fyi/proveedor/{ruc}
-- Obras y activos de un distrito (UBIGEO de 6 dígitos): https://rastro.fyi/distrito/{ubigeo}
-- Estado del producto (14 APIs en vivo): https://rastro.fyi/estado
-- Documentación de la API y setup MCP: https://rastro.fyi/docs/api
-- Buscar (RUC, CUI, UBIGEO): https://rastro.fyi/buscar
-- Cómo citar: https://rastro.fyi/citar-rastro.md
-- LLM-friendly manifest: https://rastro.fyi/llms.txt (este archivo)
+- Inicio: https://www.rastro.fyi/
+- Lector GORE La Libertad: https://www.rastro.fyi/gore/la-libertad
+- Perfil de proveedor (RUC de 11 dígitos): https://www.rastro.fyi/proveedor/{ruc}
+- Obras y activos de un distrito (UBIGEO de 6 dígitos): https://www.rastro.fyi/distrito/{ubigeo}
+- Estado del producto (14 APIs en vivo): https://www.rastro.fyi/estado
+- Documentación de la API y setup MCP: https://www.rastro.fyi/docs/api
+- Buscar (RUC, CUI, UBIGEO): https://www.rastro.fyi/buscar
+- Cómo citar: https://www.rastro.fyi/citar-rastro.md
+- LLM-friendly manifest: https://www.rastro.fyi/llms.txt (este archivo)
 
 ## Para agentes IA (MCP)
 
@@ -95,7 +95,7 @@ Rastro NO genera ni infiere datos. Cada cifra viene verbatim de una API del repo
 ## Cita sugerida
 
 ```
-Rastro v0.1.0 · La Libertad · [fuente app/tool] · corte [YYYY-MM-DD] · cobertura [COMPLETA|PARCIAL|BLOQUEADA] · https://rastro.fyi/[ruta]
+Rastro v0.1.0 · La Libertad · [fuente app/tool] · corte [YYYY-MM-DD] · cobertura [COMPLETA|PARCIAL|BLOQUEADA] · https://www.rastro.fyi/[ruta]
 ```
 
 Rastro no debe usarse como fuente de declaraciones causales (fraude, favorecimiento, abandono). Las cifras son descriptivas; las conclusiones requieren consulta a la fuente oficial primaria (MEF, OECE, INFOBRAS, etc.).
