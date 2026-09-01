@@ -55,7 +55,7 @@ Org por defecto: `personal`. Otra org: `FLY_ORG=tu-org bash scripts/fly-bootstra
 
 **Nombres de app:** el prefijo por defecto es `treevu-rastro` (p. ej. `treevu-rastro-radar-ejecucion`). Los nombres genéricos `rastro-*` suelen estar **tomados globalmente** en Fly.io. Cambia con `FLY_APP_PREFIX=tu-prefijo-unico`.
 
-Si Postgres ya existe: `bash scripts/fly-bootstrap.sh --skip-pg`
+Si Postgres ya existe: `bash scripts/fly-bootstrap.sh --skip-pg` (solo omite **crear** el cluster; igual adjunta DATABASE_URL a cada app).
 
 Si creaste apps viejas con prefijo `rastro-` que fallaron, puedes borrarlas: `fly apps destroy rastro-radar-ejecucion -y` (opcional).
 
@@ -162,7 +162,7 @@ Configura esto **después** de que las otras apps tengan datos.
 | Problema | Solución |
 |----------|----------|
 | `Name has already been taken` | Nombre global ocupado en Fly.io → usa `FLY_APP_PREFIX=treevu-rastro` (default) u otro único |
-| `dockerfile ... not found` | Usar `fly deploy .` desde la raíz (el script ya lo hace) |
+| `dockerfile ... not found` | `git pull` y usa `infra/fly/manifests/*.toml` (no `infra/fly/apps/`). Deploy: `fly deploy . --config infra/fly/manifests/radar-ejecucion.toml` |
 | `502` en api.rastro.pe | DNS aún apunta a LightNode → cambia DNS a Fly |
 | `502` tras DNS OK | `fly logs -a rastro-api-gateway` — backend caído |
 | App no arranca | Falta `DATABASE_URL` → `fly secrets list -a rastro-radar-ejecucion` |

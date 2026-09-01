@@ -96,6 +96,22 @@ if [ "$SKIP_PG" -eq 0 ]; then
   fi
 fi
 
+# Attach postgres a cada API (incluso con --skip-pg — solo salta CREAR el cluster)
+attach_postgres_if_needed() {
+  local fly_app="$1"
+  local db_name="$2"
+  if ! fly_app_exists "$PG_APP"; then
+    echo "ERROR: Postgres ${PG_APP} no existe. Quita --skip-pg o crea el cluster primero." >&2
+    return 1
+  fi
+  if "$FLY" secrets list -a "$fly_app" 2>/dev/null | grep -q DATABASE_URL; then
+    echo "   → ${fly_app} ya tiene DATABASE_URL"
+    return 0
+  fi
+  echo "   → attach postgres ${fly_app} → ${db_name}"
+  "$FLY" postgres attach "$PG_APP" -a "$fly_app" --database-name "$db_name" -y
+}
+
 declare -A DB_NAMES=(
   [radar-ejecucion]=radar_ejecucion
   [compras-publicas]=compras_publicas
@@ -121,11 +137,8 @@ while IFS=$'\t' read -r slug _ app_dir _; do
 
   ensure_fly_app "$fly_app" || exit 1
 
-  if [ "$SKIP_PG" -eq 0 ] && [ "$slug" != "salud-institucional" ]; then
-    echo "   → attach postgres ${fly_app} → ${db_name}"
-    if ! "$FLY" secrets list -a "$fly_app" 2>/dev/null | grep -q DATABASE_URL; then
-      "$FLY" postgres attach "$PG_APP" -a "$fly_app" --database-name "$db_name" -y
-    fi
+  if [ "$slug" != "salud-institucional" ]; then
+    attach_postgres_if_needed "$fly_app" "$db_name" || exit 1
   fi
 
   if [ "$slug" = "salud-institucional" ]; then
