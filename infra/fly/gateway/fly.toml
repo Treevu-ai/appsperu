@@ -1,12 +1,9 @@
-# rastro-api-gateway — api.rastro.pe (path router → 14 apps .internal)
-app = "rastro-api-gateway"
+# Generado por scripts/fly-generate-configs.sh
+app = "treevu-rastro-gw"
 primary_region = "gru"
 
 [build]
   dockerfile = "Dockerfile"
-
-[env]
-  PRIMARY_REGION = "gru"
 
 [http_service]
   internal_port = 8080
@@ -15,11 +12,6 @@ primary_region = "gru"
   auto_start_machines = true
   min_machines_running = 1
   processes = ["app"]
-
-  [http_service.concurrency]
-    type = "requests"
-    hard_limit = 250
-    soft_limit = 200
 
 [[vm]]
   memory = "256mb"

@@ -8,20 +8,46 @@ FLY_DIR="${ROOT}/infra/fly"
 GATEWAY_DIR="${FLY_DIR}/gateway"
 APPS_DIR="${FLY_DIR}/apps"
 REGION="${FLY_REGION:-gru}"
+# Prefijo único — los nombres rastro-* suelen estar tomados globalmente en Fly.io
+FLY_APP_PREFIX="${FLY_APP_PREFIX:-treevu-rastro}"
+GATEWAY_APP="${FLY_GATEWAY_APP:-${FLY_APP_PREFIX}-gw}"
 
 mkdir -p "$APPS_DIR"
 
+# --- Gateway fly.toml ---
+cat > "${GATEWAY_DIR}/fly.toml" <<EOF
+# Generado por scripts/fly-generate-configs.sh
+app = "${GATEWAY_APP}"
+primary_region = "${REGION}"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
+EOF
+
 # --- Caddyfile ---
 {
-  echo "# Generado por scripts/fly-generate-configs.sh"
+  echo "# Generado por scripts/fly-generate-configs.sh (prefix: ${FLY_APP_PREFIX})"
   echo ":8080 {"
   echo "  handle / {"
   echo '    respond "{\"status\":\"ok\",\"service\":\"api.rastro.pe\",\"apps\":14}" 200'
   echo "  }"
-  while IFS=$'\t' read -r slug _ app_dir _; do
+  while IFS=$'\t' read -r slug _ _ _; do
     [[ "$slug" =~ ^# ]] && continue
     [[ -z "$slug" ]] && continue
-    fly_app="rastro-${slug}"
+    fly_app="${FLY_APP_PREFIX}-${slug}"
     cat <<EOF
 
   handle_path /${slug}/* {
@@ -40,10 +66,10 @@ EOF
 while IFS=$'\t' read -r slug _ app_dir _; do
   [[ "$slug" =~ ^# ]] && continue
   [[ -z "$slug" ]] && continue
-  fly_app="rastro-${slug}"
+  fly_app="${FLY_APP_PREFIX}-${slug}"
   mkdir -p "${APPS_DIR}/${slug}"
   cat > "${APPS_DIR}/${slug}/fly.toml" <<EOF
-# Generado por scripts/fly-generate-configs.sh
+# Generado por scripts/fly-generate-configs.sh (prefix: ${FLY_APP_PREFIX})
 app = "${fly_app}"
 primary_region = "${REGION}"
 
@@ -78,5 +104,5 @@ primary_region = "${REGION}"
 EOF
 done < "$TSV"
 
-count="$(grep -vc '^#' "$TSV" || true)"
-echo "OK: Caddyfile + ${count} fly.toml en ${APPS_DIR}/"
+count="$(grep -v '^#' "$TSV" | grep -cv '^[[:space:]]*$' || true)"
+echo "OK: prefix=${FLY_APP_PREFIX} gateway=${GATEWAY_APP} → Caddyfile + ${count} fly.toml"

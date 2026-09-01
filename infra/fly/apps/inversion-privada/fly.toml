@@ -1,5 +1,5 @@
-# Generado por scripts/fly-generate-configs.sh
-app = "rastro-inversion-privada"
+# Generado por scripts/fly-generate-configs.sh (prefix: treevu-rastro)
+app = "treevu-rastro-inversion-privada"
 primary_region = "gru"
 
 [build]

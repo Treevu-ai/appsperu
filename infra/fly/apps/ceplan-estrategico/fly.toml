@@ -1,5 +1,5 @@
-# Generado por scripts/fly-generate-configs.sh
-app = "rastro-ceplan-estrategico"
+# Generado por scripts/fly-generate-configs.sh (prefix: treevu-rastro)
+app = "treevu-rastro-ceplan-estrategico"
 primary_region = "gru"
 
 [build]

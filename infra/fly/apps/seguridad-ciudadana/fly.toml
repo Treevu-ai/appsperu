@@ -1,5 +1,5 @@
-# Generado por scripts/fly-generate-configs.sh
-app = "rastro-seguridad-ciudadana"
+# Generado por scripts/fly-generate-configs.sh (prefix: treevu-rastro)
+app = "treevu-rastro-seguridad-ciudadana"
 primary_region = "gru"
 
 [build]

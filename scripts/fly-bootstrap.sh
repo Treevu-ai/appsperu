@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # Bootstrap Fly.io: Postgres + secrets + deploy gateway + 14 APIs.
 #
-# Requisitos:
-#   flyctl auth login   (o export FLY_API_TOKEN)
+# Variables:
+#   FLY_APP_PREFIX   default treevu-rastro (único en Fly.io; evita rastro-* tomados)
+#   FLY_PG_APP       default ${FLY_APP_PREFIX}-pg
+#   FLY_GATEWAY_APP  default ${FLY_APP_PREFIX}-gw
+#   FLY_ORG          default personal
+#   FLY_REGION       default gru
 #
 # Uso:
-#   bash scripts/fly-bootstrap.sh              # postgres + deploy todo
-#   bash scripts/fly-bootstrap.sh --skip-pg    # solo deploy (postgres ya existe)
+#   bash scripts/fly-bootstrap.sh
+#   bash scripts/fly-bootstrap.sh --skip-pg
 #   bash scripts/fly-bootstrap.sh --gateway-only
 set -euo pipefail
 
@@ -14,10 +18,14 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FLY="${FLYCTL:-flyctl}"
 REGION="${FLY_REGION:-gru}"
 ORG="${FLY_ORG:-personal}"
-PG_APP="${FLY_PG_APP:-rastro-pg}"
+FLY_APP_PREFIX="${FLY_APP_PREFIX:-treevu-rastro}"
+GATEWAY_APP="${FLY_GATEWAY_APP:-${FLY_APP_PREFIX}-gw}"
+PG_APP="${FLY_PG_APP:-${FLY_APP_PREFIX}-pg}"
 WEB_ORIGIN="${WEB_ORIGIN:-https://www.rastro.fyi,https://rastro.fyi,https://rastro-5zm.pages.dev}"
 SKIP_PG=0
 GATEWAY_ONLY=0
+
+export FLY_APP_PREFIX GATEWAY_APP
 
 for arg in "$@"; do
   case "$arg" in
@@ -40,7 +48,13 @@ fly_app_exists() {
   "$FLY" apps list --json 2>/dev/null | jq -e --arg name "$1" '.[] | select(.name == $name)' >/dev/null
 }
 
+fly_app_name() {
+  echo "${FLY_APP_PREFIX}-${1}"
+}
+
 bash "${ROOT}/scripts/fly-generate-configs.sh"
+
+echo "==> Prefijo Fly: ${FLY_APP_PREFIX} (gateway: ${GATEWAY_APP}, postgres: ${PG_APP})"
 
 if [ "$GATEWAY_ONLY" -eq 1 ]; then
   exec bash "${ROOT}/scripts/fly-deploy-gateway.sh"
@@ -81,13 +95,18 @@ echo "==> Desplegando 14 APIs..."
 while IFS=$'\t' read -r slug _ app_dir _; do
   [[ "$slug" =~ ^# ]] && continue
   [[ -z "$slug" ]] && continue
-  fly_app="rastro-${slug}"
+  fly_app="$(fly_app_name "$slug")"
   db_name="${DB_NAMES[$slug]:-${slug//-/_}}"
-  config="${ROOT}/infra/fly/apps/${slug}/fly.toml"
 
   if ! fly_app_exists "$fly_app"; then
     echo "   → fly apps create ${fly_app}"
-    "$FLY" apps create "$fly_app" -o "$ORG"
+    "$FLY" apps create "$fly_app" -o "$ORG" || {
+      echo "ERROR: no se pudo crear ${fly_app}. Prueba otro prefijo:" >&2
+      echo "  FLY_APP_PREFIX=treevu-rastro-$(date +%s) bash scripts/fly-bootstrap.sh --skip-pg" >&2
+      exit 1
+    }
+  else
+    echo "   → ${fly_app} ya existe, deploy only"
   fi
 
   if [ "$SKIP_PG" -eq 0 ] && [ "$slug" != "salud-institucional" ]; then
@@ -98,10 +117,10 @@ while IFS=$'\t' read -r slug _ app_dir _; do
   fi
 
   if [ "$slug" = "salud-institucional" ]; then
-    echo "   → salud-institucional: configurar BDs cruzadas después del deploy base"
+    echo "   → salud-institucional: configurar BDs cruzadas después"
   fi
 
-  echo "   → deploy ${fly_app} (contexto = raíz del repo)"
+  echo "   → deploy ${fly_app}"
   (
     cd "$ROOT"
     "$FLY" deploy . \
@@ -114,17 +133,15 @@ while IFS=$'\t' read -r slug _ app_dir _; do
   )
 done < "${ROOT}/infra/api-proxy/apps.tsv"
 
-echo "==> Desplegando gateway rastro-api-gateway..."
-if ! fly_app_exists "rastro-api-gateway"; then
-  "$FLY" apps create rastro-api-gateway -o "$ORG"
+echo "==> Desplegando gateway ${GATEWAY_APP}..."
+if ! fly_app_exists "$GATEWAY_APP"; then
+  "$FLY" apps create "$GATEWAY_APP" -o "$ORG"
 fi
-(cd "${ROOT}/infra/fly/gateway" && "$FLY" deploy --remote-only --ha=false)
+(cd "${ROOT}/infra/fly/gateway" && "$FLY" deploy --app "$GATEWAY_APP" --remote-only --ha=false)
 
 echo ""
 echo "==> Siguiente: certificado y DNS"
-echo "  fly certs add api.rastro.pe -a rastro-api-gateway"
-echo "  fly certs show api.rastro.pe -a rastro-api-gateway"
-echo ""
-echo "Quita el A → 149.104.66.100 (LightNode) y usa los registros que indique Fly."
+echo "  fly certs add api.rastro.pe -a ${GATEWAY_APP}"
+echo "  fly certs show api.rastro.pe -a ${GATEWAY_APP}"
 echo ""
 bash "${ROOT}/scripts/health-check-apis.sh" || true
