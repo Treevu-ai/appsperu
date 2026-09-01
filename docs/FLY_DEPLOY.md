@@ -157,6 +157,7 @@ Configura esto **después** de que las otras apps tengan datos.
 
 | Problema | Solución |
 |----------|----------|
+| `dockerfile ... not found` | Usar `fly deploy .` desde la raíz (el script ya lo hace). No correr deploy dentro de `infra/fly/apps/` |
 | `502` en api.rastro.pe | DNS aún apunta a LightNode → cambia DNS a Fly |
 | `502` tras DNS OK | `fly logs -a rastro-api-gateway` — backend caído |
 | App no arranca | Falta `DATABASE_URL` → `fly secrets list -a rastro-radar-ejecucion` |
