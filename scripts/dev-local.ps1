@@ -17,17 +17,18 @@ $Root = Split-Path -Parent $PSScriptRoot
 
 function Start-Web {
   $webDir = Join-Path $Root "apps\rastro-web"
+  $port = if ($env:PORT) { $env:PORT } else { "5173" }
   $envExample = Join-Path $webDir ".env.example"
   $envFile = Join-Path $webDir ".env"
   if (-not (Test-Path $envFile) -and (Test-Path $envExample)) {
     Copy-Item $envExample $envFile
     Write-Host "   -> apps/rastro-web/.env (localhost APIs)"
   }
-  Write-Host "==> Rastro Web -> http://localhost:5173"
+  Write-Host "==> Rastro Web -> http://localhost:$port"
   Push-Location $webDir
   try {
     npm ci
-    npm run dev -- --host 127.0.0.1
+    npm run dev -- --host 127.0.0.1 --port $port
   } finally {
     Pop-Location
   }

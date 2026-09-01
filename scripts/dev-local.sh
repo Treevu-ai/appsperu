@@ -61,12 +61,13 @@ build_mcp() {
 
 start_web() {
   web_dir="${ROOT}/apps/rastro-web"
+  local port="${PORT:-5173}"
   if [ ! -f "${web_dir}/.env" ] && [ -f "${web_dir}/.env.example" ]; then
     cp "${web_dir}/.env.example" "${web_dir}/.env"
     echo "   → apps/rastro-web/.env (localhost APIs)"
   fi
-  echo "==> Rastro Web → http://localhost:5173"
-  (cd "$web_dir" && npm ci && npm run dev -- --host 127.0.0.1)
+  echo "==> Rastro Web → http://localhost:${port}"
+  (cd "$web_dir" && npm ci && npm run dev -- --host 127.0.0.1 --port "$port")
 }
 
 health_check() {

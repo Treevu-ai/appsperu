@@ -32,6 +32,23 @@ bash scripts/dev-local.sh --web
 
 Abre **http://localhost:5173** — el `.env` apunta a `localhost:4000–4013`.
 
+Si el puerto 5173 está ocupado (otra instancia de Vite):
+
+```bash
+# otro puerto
+PORT=5174 bash scripts/dev-local.sh --web
+```
+
+```powershell
+$env:PORT=5174; .\scripts\dev-local.ps1 -Web
+```
+
+O mata el proceso anterior (PowerShell):
+
+```powershell
+Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
+```
+
 ## MCP (Cursor / Claude Code)
 
 ```bash
