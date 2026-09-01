@@ -24,11 +24,14 @@ function Start-Web {
     Copy-Item $envExample $envFile
     Write-Host "   -> apps/rastro-web/.env (localhost APIs)"
   }
-  Write-Host "==> Rastro Web -> http://localhost:$port"
+  if (-not (Test-Path $envFile)) {
+    Write-Error "Falta apps/rastro-web/.env — copia .env.example"
+  }
+  Write-Host "==> Rastro Web (espera el URL que imprima Vite abajo)"
   Push-Location $webDir
   try {
     npm ci
-    npm run dev -- --host 127.0.0.1 --port $port
+    npm run dev -- --host --port $port
   } finally {
     Pop-Location
   }

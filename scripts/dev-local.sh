@@ -64,10 +64,14 @@ start_web() {
   local port="${PORT:-5173}"
   if [ ! -f "${web_dir}/.env" ] && [ -f "${web_dir}/.env.example" ]; then
     cp "${web_dir}/.env.example" "${web_dir}/.env"
-    echo "   → apps/rastro-web/.env (localhost APIs)"
+    echo "   → apps/rastro-web/.env (desde .env.example)"
   fi
-  echo "==> Rastro Web → http://localhost:${port}"
-  (cd "$web_dir" && npm ci && npm run dev -- --host 127.0.0.1 --port "$port")
+  if [ ! -f "${web_dir}/.env" ]; then
+    echo "ERROR: falta apps/rastro-web/.env — copia .env.example" >&2
+    exit 1
+  fi
+  echo "==> Rastro Web (espera el URL que imprima Vite abajo)"
+  (cd "$web_dir" && npm ci && npm run dev -- --host --port "$port")
 }
 
 health_check() {

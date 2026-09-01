@@ -38,7 +38,8 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     server: {
       port: 5173,
-      strictPort: true,
+      strictPort: false,
+      host: true,
     },
     build: {
       outDir: "dist",

@@ -30,6 +30,24 @@ bash scripts/dev-local.sh --web
 > Si Git Bash falla con `set: pipefail: invalid option`, haz `git pull` (`.gitattributes` fuerza LF en `*.sh`) o corre:
 > `sed -i 's/\r$//' scripts/dev-local.sh`
 
+## Frontend no abre (localhost rechaza la conexión)
+
+1. **¿Vite sigue corriendo?** La terminal debe quedar abierta mostrando algo como:
+   `Local: http://localhost:5173/` — usa **exactamente** esa URL (http, no https).
+2. **¿Falta `.env`?** Sin él Vite no arranca:
+   ```bash
+   cd apps/rastro-web
+   cp .env.example .env   # Git Bash
+   copy .env.example .env # PowerShell
+   npm run dev
+   ```
+3. **Puerto ocupado:** Vite elige el siguiente libre (5174, 5175…). Mira la línea `Local:` en la terminal.
+4. **Mata procesos viejos (PowerShell):**
+   ```powershell
+   Get-NetTCPConnection -LocalPort 5173,5174 -ErrorAction SilentlyContinue |
+     ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
+   ```
+
 Abre **http://localhost:5173** — el `.env` apunta a `localhost:4000–4013`.
 
 Si el puerto 5173 está ocupado (otra instancia de Vite):
