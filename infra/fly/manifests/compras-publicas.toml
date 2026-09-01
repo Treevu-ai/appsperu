@@ -1,11 +1,12 @@
-# Generado por scripts/fly-generate-configs.sh (prefix: treevu-rastro)
-# Deploy SIEMPRE desde la raíz: fly deploy . --config infra/fly/apps/bcrp-comercio-exterior/fly.toml --dockerfile infra/fly/Dockerfile.api
-app = "treevu-rastro-bcrp-comercio-exterior"
+# Generado por scripts/fly-generate-configs.sh
+# Deploy desde raíz: fly deploy . --config infra/fly/manifests/compras-publicas.toml
+app = "treevu-rastro-compras-publicas"
 primary_region = "gru"
 
 [build]
+  dockerfile = "../Dockerfile.api"
   [build.args]
-    APP_DIR = "bcrp-comercio-exterior"
+    APP_DIR = "compras-publicas"
 
 [env]
   PORT = "8080"

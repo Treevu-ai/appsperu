@@ -124,8 +124,7 @@ while IFS=$'\t' read -r slug _ app_dir _; do
   (
     cd "$ROOT"
     "$FLY" deploy . \
-      --config "infra/fly/apps/${slug}/fly.toml" \
-      --dockerfile "${ROOT}/infra/fly/Dockerfile.api" \
+      --config "infra/fly/manifests/${slug}.toml" \
       --build-arg "APP_DIR=${app_dir}" \
       --app "$fly_app" \
       --remote-only \

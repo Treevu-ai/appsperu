@@ -1,11 +1,12 @@
-# Generado por scripts/fly-generate-configs.sh (prefix: treevu-rastro)
-# Deploy SIEMPRE desde la raíz: fly deploy . --config infra/fly/apps/proveedores-sancionados/fly.toml --dockerfile infra/fly/Dockerfile.api
-app = "treevu-rastro-proveedores-sancionados"
+# Generado por scripts/fly-generate-configs.sh
+# Deploy desde raíz: fly deploy . --config infra/fly/manifests/ceplan-geo.toml
+app = "treevu-rastro-ceplan-geo"
 primary_region = "gru"
 
 [build]
+  dockerfile = "../Dockerfile.api"
   [build.args]
-    APP_DIR = "proveedores-sancionados"
+    APP_DIR = "ceplan-geo"
 
 [env]
   PORT = "8080"

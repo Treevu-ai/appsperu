@@ -1,11 +1,12 @@
-# Generado por scripts/fly-generate-configs.sh (prefix: treevu-rastro)
-# Deploy SIEMPRE desde la raíz: fly deploy . --config infra/fly/apps/inversion-privada/fly.toml --dockerfile infra/fly/Dockerfile.api
-app = "treevu-rastro-inversion-privada"
+# Generado por scripts/fly-generate-configs.sh
+# Deploy desde raíz: fly deploy . --config infra/fly/manifests/identidad-fiscal.toml
+app = "treevu-rastro-identidad-fiscal"
 primary_region = "gru"
 
 [build]
+  dockerfile = "../Dockerfile.api"
   [build.args]
-    APP_DIR = "inversion-privada"
+    APP_DIR = "identidad-fiscal"
 
 [env]
   PORT = "8080"

@@ -81,8 +81,8 @@ bash scripts/fly-bootstrap.sh --skip-pg
 Tras el deploy:
 
 ```bash
-fly certs add api.rastro.pe -a rastro-api-gateway
-fly certs show api.rastro.pe -a rastro-api-gateway
+fly certs add api.rastro.pe -a treevu-rastro-gw
+fly certs show api.rastro.pe -a treevu-rastro-gw
 ```
 
 Fly muestra qué registro DNS crear. **Importante:**
@@ -162,6 +162,7 @@ Configura esto **después** de que las otras apps tengan datos.
 | Problema | Solución |
 |----------|----------|
 | `Name has already been taken` | Nombre global ocupado en Fly.io → usa `FLY_APP_PREFIX=treevu-rastro` (default) u otro único |
+| `dockerfile ... not found` | Usar `fly deploy .` desde la raíz (el script ya lo hace) |
 | `502` en api.rastro.pe | DNS aún apunta a LightNode → cambia DNS a Fly |
 | `502` tras DNS OK | `fly logs -a rastro-api-gateway` — backend caído |
 | App no arranca | Falta `DATABASE_URL` → `fly secrets list -a rastro-radar-ejecucion` |

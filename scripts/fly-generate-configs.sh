@@ -6,15 +6,14 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TSV="${ROOT}/infra/api-proxy/apps.tsv"
 FLY_DIR="${ROOT}/infra/fly"
 GATEWAY_DIR="${FLY_DIR}/gateway"
-APPS_DIR="${FLY_DIR}/apps"
+MANIFESTS_DIR="${FLY_DIR}/manifests"
 REGION="${FLY_REGION:-gru}"
-# Prefijo único — los nombres rastro-* suelen estar tomados globalmente en Fly.io
 FLY_APP_PREFIX="${FLY_APP_PREFIX:-treevu-rastro}"
 GATEWAY_APP="${FLY_GATEWAY_APP:-${FLY_APP_PREFIX}-gw}"
 
-mkdir -p "$APPS_DIR"
+mkdir -p "$MANIFESTS_DIR"
 
-# --- Gateway fly.toml ---
+# --- Gateway fly.toml (queda en gateway/ junto a su Dockerfile) ---
 cat > "${GATEWAY_DIR}/fly.toml" <<EOF
 # Generado por scripts/fly-generate-configs.sh
 app = "${GATEWAY_APP}"
@@ -62,19 +61,19 @@ EOF
   echo "}"
 } > "${GATEWAY_DIR}/Caddyfile"
 
-# --- fly.toml per API ---
+# --- fly.toml per API: en infra/fly/manifests/ (dockerfile = ../Dockerfile.api) ---
 while IFS=$'\t' read -r slug _ app_dir _; do
   [[ "$slug" =~ ^# ]] && continue
   [[ -z "$slug" ]] && continue
   fly_app="${FLY_APP_PREFIX}-${slug}"
-  mkdir -p "${APPS_DIR}/${slug}"
-  cat > "${APPS_DIR}/${slug}/fly.toml" <<EOF
-# Generado por scripts/fly-generate-configs.sh (prefix: ${FLY_APP_PREFIX})
-# Deploy SIEMPRE desde la raíz: fly deploy . --config infra/fly/apps/${slug}/fly.toml --dockerfile infra/fly/Dockerfile.api
+  cat > "${MANIFESTS_DIR}/${slug}.toml" <<EOF
+# Generado por scripts/fly-generate-configs.sh
+# Deploy desde raíz: fly deploy . --config infra/fly/manifests/${slug}.toml
 app = "${fly_app}"
 primary_region = "${REGION}"
 
 [build]
+  dockerfile = "../Dockerfile.api"
   [build.args]
     APP_DIR = "${app_dir}"
 
@@ -105,4 +104,4 @@ EOF
 done < "$TSV"
 
 count="$(grep -v '^#' "$TSV" | grep -cv '^[[:space:]]*$' || true)"
-echo "OK: prefix=${FLY_APP_PREFIX} gateway=${GATEWAY_APP} → Caddyfile + ${count} fly.toml"
+echo "OK: prefix=${FLY_APP_PREFIX} gateway=${GATEWAY_APP} → manifests/${count} + Caddyfile"
