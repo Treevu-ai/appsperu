@@ -100,16 +100,40 @@ fi
 attach_postgres_if_needed() {
   local fly_app="$1"
   local db_name="$2"
+  local attempt max=5 delay=5
   if ! fly_app_exists "$PG_APP"; then
     echo "ERROR: Postgres ${PG_APP} no existe. Quita --skip-pg o crea el cluster primero." >&2
     return 1
   fi
-  if "$FLY" secrets list -a "$fly_app" 2>/dev/null | grep -q DATABASE_URL; then
-    echo "   → ${fly_app} ya tiene DATABASE_URL"
+  local secrets
+  secrets="$("$FLY" secrets list -a "$fly_app" 2>/dev/null || true)"
+  if echo "$secrets" | grep -q DATABASE_URL; then
+    if echo "$secrets" | grep DATABASE_URL | grep -q Staged; then
+      echo "   → ${fly_app} DATABASE_URL staged, desplegando..."
+      "$FLY" secrets deploy -a "$fly_app"
+    else
+      echo "   → ${fly_app} ya tiene DATABASE_URL"
+    fi
     return 0
   fi
   echo "   → attach postgres ${fly_app} → ${db_name}"
-  "$FLY" postgres attach "$PG_APP" -a "$fly_app" --database-name "$db_name" -y
+  for attempt in $(seq 1 "$max"); do
+    if "$FLY" postgres attach "$PG_APP" -a "$fly_app" --database-name "$db_name" -y; then
+      return 0
+    fi
+    if [ "$attempt" -lt "$max" ]; then
+      echo "   → attach falló (intento ${attempt}/${max}), reintento en ${delay}s..."
+      sleep "$delay"
+      delay=$((delay * 2))
+      if [ "$attempt" -eq 2 ]; then
+        echo "   → reiniciando Postgres ${PG_APP}..."
+        "$FLY" machine restart -a "$PG_APP" 2>/dev/null || true
+        sleep 10
+      fi
+    fi
+  done
+  echo "ERROR: attach postgres falló para ${fly_app} tras ${max} intentos." >&2
+  return 1
 }
 
 declare -A DB_NAMES=(

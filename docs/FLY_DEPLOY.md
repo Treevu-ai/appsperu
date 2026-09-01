@@ -166,6 +166,7 @@ Configura esto **después** de que las otras apps tengan datos.
 | `502` en api.rastro.pe | DNS aún apunta a LightNode → cambia DNS a Fly |
 | `502` tras DNS OK | `fly logs -a rastro-api-gateway` — backend caído |
 | App no arranca | Falta `DATABASE_URL` → `fly secrets list -a rastro-radar-ejecucion` |
+| `connect tcp ...:5500: operation timed out` en attach | Postgres ocupado; reintenta: `bash scripts/fly-attach-postgres.sh`. Si el secret quedó **Staged**: `fly secrets deploy -a treevu-rastro-<app>` |
 | CORS en browser | `WEB_ORIGIN` debe incluir `rastro.fyi` (ya en fly.toml) |
 | Muy caro | `min_machines_running = 0` ya está; apps hibernan solas |
 
