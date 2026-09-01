@@ -106,15 +106,23 @@ El workflow `Rastro Web Deploy` puede publicar de dos formas (prefiere la primer
 
 Con cualquiera de las dos, el workflow puede triggerear redeploys manuales y semanales.
 
-### 4. Dominio personalizado: `rastro.fyi`
+### 4. Dominio personalizado: `www.rastro.fyi` (canónica)
 
-El proyecto Pages `rastro` quedó publicado en `rastro-5zm.pages.dev` (Cloudflare le agregó el sufijo `-5zm` porque `rastro.pages.dev` ya está tomado por **otro proyecto ajeno** — no usar ese subdominio). El dominio `rastro.fyi` no vive en la misma cuenta/zona que ese proyecto, así que Cloudflare **no** auto-genera el DNS — pide verificación manual vía CNAME:
+**Decisión:** el sitio vive en **`https://www.rastro.fyi`**. El apex `rastro.fyi` redirige **301 → www**.
 
-1. **Workers & Pages** → proyecto `rastro` → tab **Custom domains** → **Set up a custom domain** → escribe `rastro.fyi` → **Continue**. Queda en estado **Verifying** y Cloudflare muestra el registro que hay que crear.
-2. En el proveedor de DNS que controla `rastro.fyi`: **elimina registros `A` sueltos** apuntando a IPs de Cloudflare si no pasaste por el paso 1 — eso deja el dominio "activo" en DNS pero Pages no lo reconoce (error **522**). Crea un **`CNAME`** — **Name:** `@` (apex) o `rastro.fyi` → **Target:** `rastro-5zm.pages.dev` → si la zona es de Cloudflare, **Proxy status:** Proxied (naranja).
-3. Guarda y vuelve a **Custom domains** en el proyecto Pages → botón **Check DNS records**. El estado pasa de **Verifying** a **Active** cuando propague (minutos si el DNS ya está en Cloudflare).
-4. Repite con `www.rastro.fyi` (`CNAME` → `rastro-5zm.pages.dev`) y agrega una **redirect rule** (`www` → raíz) en **Rules → Redirect Rules** de la zona `rastro.fyi`.
-5. Verifica que `https://rastro-5zm.pages.dev/` responde **200** antes de probar el custom domain. Si el subdominio Pages devuelve **522**, el build falló o no hay deploy exitoso — revisa **Deployments** en el dashboard y los logs de build (suele faltar alguna `VITE_API_BASE_URL_*`; el repo incluye `.env.production` como fallback para que el build no falle vacío).
+1. **Workers & Pages** → proyecto `rastro` → **Custom domains** → agrega solo **`www.rastro.fyi`** (no el apex si da **522**).
+2. **DNS** (`rastro.fyi`): `www` → **CNAME** → `rastro-5zm.pages.dev` (Proxied).
+3. **Redirect Rule** (Rules → Redirect Rules):
+   - **When:** `(http.host eq "rastro.fyi")`
+   - **Then:** Dynamic redirect → `https://www.rastro.fyi${http.request.uri.path}` · **301** · preserve query string
+4. Automatizado: `CLOUDFLARE_API_TOKEN=... bash scripts/cloudflare-www-canonical.sh`
+
+Verifica:
+
+```bash
+curl -sI https://rastro.fyi/ | grep -i location    # -> www
+curl -sI https://www.rastro.fyi/ | head -1           # HTTP/2 200
+```
 
 > **Diagnóstico rápido**
 >
