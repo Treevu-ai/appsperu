@@ -10,22 +10,21 @@ Stack completo en tu máquina. Sin Fly, sin VPS, sin URLs públicas de API.
 
 ## Arranque rápido
 
-**Linux / macOS / Git Bash (Windows):**
+**Git Bash (desde la raíz `appsperu/`):**
 
 ```bash
-# Terminal 1 — Postgres + APIs + build MCP
-bash scripts/dev-local.sh
-
-# Terminal 2 — frontend
-bash scripts/dev-local.sh --web
+bash scripts/start-web.sh
 ```
 
-**PowerShell (Windows):**
+**PowerShell (desde la raíz `appsperu/`):**
 
 ```powershell
-.\scripts\dev-local.ps1 -Web
-.\scripts\dev-local.ps1 -Mcp
+.\scripts\start-web.ps1
 ```
+
+No uses `apps\rastro-web` en Git Bash — usa `/` o el script de arriba.
+
+Abre la URL **`Local:`** que imprima Vite (ej. `http://localhost:5173/`). La terminal debe **seguir abierta**.
 
 > Si Git Bash falla con `set: pipefail: invalid option`, haz `git pull` (`.gitattributes` fuerza LF en `*.sh`) o corre:
 > `sed -i 's/\r$//' scripts/dev-local.sh`
