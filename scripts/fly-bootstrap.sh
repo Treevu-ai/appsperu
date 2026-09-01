@@ -77,6 +77,9 @@ bash "${ROOT}/scripts/fly-generate-configs.sh"
 
 echo "==> Prefijo Fly: ${FLY_APP_PREFIX} (gateway: ${GATEWAY_APP}, postgres: ${PG_APP})"
 
+echo "==> Creando apps Fly (14 APIs + gateway)..."
+bash "${ROOT}/scripts/fly-create-apps.sh"
+
 if [ "$GATEWAY_ONLY" -eq 1 ]; then
   exec bash "${ROOT}/scripts/fly-deploy-gateway.sh"
 fi
@@ -187,8 +190,10 @@ ensure_fly_app "$GATEWAY_APP" || exit 1
 (cd "${ROOT}/infra/fly/gateway" && "$FLY" deploy --app "$GATEWAY_APP" --remote-only --ha=false)
 
 echo ""
-echo "==> Siguiente: certificado y DNS"
+echo "==> Siguiente: certificado, DNS y frontend"
 echo "  fly certs add api.rastro.pe -a ${GATEWAY_APP}"
 echo "  fly certs show api.rastro.pe -a ${GATEWAY_APP}"
+echo "  (Cloudflare DNS) quita A -> 149.104.66.100; usa lo que indique Fly"
+echo "  (Cloudflare Pages) VITE_PUBLIC_APIS_LIVE=true + redeploy rastro-web"
 echo ""
 bash "${ROOT}/scripts/health-check-apis.sh" || true

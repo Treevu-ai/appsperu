@@ -172,6 +172,18 @@ Configura esto **después** de que las otras apps tengan datos.
 
 ---
 
+## 8. Frontend `www.rastro.fyi` (tras API en vivo)
+
+Cuando `https://api.rastro.pe/radar-ejecucion/health` responda OK:
+
+1. **Cloudflare Pages** → proyecto `rastro` → **Environment variables** (Production):
+   - `VITE_PUBLIC_APIS_LIVE=true`
+2. **Actions** → **Rastro Web Deploy** → Run workflow (o push a `master`).
+
+Sin eso, `www.rastro.fyi` no llama APIs (modo shell + MCP local). Ver `apps/rastro-web/.env.production`.
+
+---
+
 ## Relación con Cloudflare Pages
 
 El frontend en `www.rastro.fyi` ya usa `https://api.rastro.pe/...` (`.env.production`). Cuando Fly responda en ese dominio, **no hace falta** cambiar Cloudflare Pages.
