@@ -1,2 +1,2 @@
-# Shell scripts must use LF (Git Bash on Windows breaks with CRLF + pipefail)
-*.sh text eol=lf
+# PowerShell scripts: ASCII only (Windows encoding breaks Unicode dashes)
+*.ps1 text eol=crlf

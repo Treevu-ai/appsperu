@@ -1,4 +1,4 @@
-# Dev local en Windows (PowerShell) — equivalente a dev-local.sh
+# Dev local en Windows (PowerShell) - equivalente a dev-local.sh
 #
 # Uso:
 #   .\scripts\dev-local.ps1 -Web
@@ -25,7 +25,7 @@ function Start-Web {
     Write-Host "   -> apps/rastro-web/.env (localhost APIs)"
   }
   if (-not (Test-Path $envFile)) {
-    Write-Error "Falta apps/rastro-web/.env — copia .env.example"
+    Write-Error "Falta apps/rastro-web/.env - copia .env.example"
   }
   Write-Host "==> Rastro Web (espera el URL que imprima Vite abajo)"
   Push-Location $webDir

@@ -1,4 +1,4 @@
-# Arranca Rastro Web (Vite). Ejecutar desde la raíz del repo.
+# Arranca Rastro Web (Vite). Ejecutar desde la raiz del repo.
 #   .\scripts\start-web.ps1
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
@@ -25,7 +25,7 @@ Write-Host ""
 Write-Host "============================================"
 Write-Host "  Rastro Web"
 Write-Host "  Abre la URL Local: que aparezca abajo"
-Write-Host "  (http://localhost:XXXX — deja esta ventana abierta)"
+Write-Host "  (http://localhost:XXXX - deja esta ventana abierta)"
 Write-Host "============================================"
 Write-Host ""
 
