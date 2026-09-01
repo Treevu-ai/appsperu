@@ -10,6 +10,8 @@ Stack completo en tu máquina. Sin Fly, sin VPS, sin URLs públicas de API.
 
 ## Arranque rápido
 
+**Linux / macOS / Git Bash (Windows):**
+
 ```bash
 # Terminal 1 — Postgres + APIs + build MCP
 bash scripts/dev-local.sh
@@ -17,6 +19,16 @@ bash scripts/dev-local.sh
 # Terminal 2 — frontend
 bash scripts/dev-local.sh --web
 ```
+
+**PowerShell (Windows):**
+
+```powershell
+.\scripts\dev-local.ps1 -Web
+.\scripts\dev-local.ps1 -Mcp
+```
+
+> Si Git Bash falla con `set: pipefail: invalid option`, haz `git pull` (`.gitattributes` fuerza LF en `*.sh`) o corre:
+> `sed -i 's/\r$//' scripts/dev-local.sh`
 
 Abre **http://localhost:5173** — el `.env` apunta a `localhost:4000–4013`.
 

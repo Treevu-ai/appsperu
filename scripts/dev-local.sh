@@ -8,7 +8,8 @@
 #   bash scripts/dev-local.sh --mcp        # build MCP (stdio, para Cursor)
 #   bash scripts/dev-local.sh --web        # solo frontend Vite
 #   bash scripts/dev-local.sh --check      # health check local
-set -euo pipefail
+# Compatible con Git Bash en Windows (sin pipefail — CRLF rompe "set -o pipefail")
+set -eu
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODE="${1:-all}"
