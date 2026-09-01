@@ -45,7 +45,28 @@ if ! "$FLY" auth whoami >/dev/null 2>&1; then
 fi
 
 fly_app_exists() {
-  "$FLY" apps list --json 2>/dev/null | jq -e --arg name "$1" '.[] | select(.name == $name)' >/dev/null
+  "$FLY" apps list --json 2>/dev/null | jq -e --arg name "$1" \
+    '.[] | select(.Name == $name or .name == $name)' >/dev/null 2>&1
+}
+
+ensure_fly_app() {
+  local fly_app="$1"
+  if fly_app_exists "$fly_app"; then
+    echo "   → ${fly_app} ya existe, deploy only"
+    return 0
+  fi
+  echo "   → fly apps create ${fly_app}"
+  if "$FLY" apps create "$fly_app" -o "$ORG" 2>/dev/null; then
+    return 0
+  fi
+  # Creación falló — si la app es nuestra, seguir (nombre tomado en org)
+  if "$FLY" status -a "$fly_app" >/dev/null 2>&1; then
+    echo "   → ${fly_app} ya existe en tu cuenta (deploy only)"
+    return 0
+  fi
+  echo "ERROR: no se pudo crear ${fly_app}. Prueba otro prefijo:" >&2
+  echo "  FLY_APP_PREFIX=treevu-rastro-$(date +%s) bash scripts/fly-bootstrap.sh --skip-pg" >&2
+  return 1
 }
 
 fly_app_name() {
@@ -98,16 +119,7 @@ while IFS=$'\t' read -r slug _ app_dir _; do
   fly_app="$(fly_app_name "$slug")"
   db_name="${DB_NAMES[$slug]:-${slug//-/_}}"
 
-  if ! fly_app_exists "$fly_app"; then
-    echo "   → fly apps create ${fly_app}"
-    "$FLY" apps create "$fly_app" -o "$ORG" || {
-      echo "ERROR: no se pudo crear ${fly_app}. Prueba otro prefijo:" >&2
-      echo "  FLY_APP_PREFIX=treevu-rastro-$(date +%s) bash scripts/fly-bootstrap.sh --skip-pg" >&2
-      exit 1
-    }
-  else
-    echo "   → ${fly_app} ya existe, deploy only"
-  fi
+  ensure_fly_app "$fly_app" || exit 1
 
   if [ "$SKIP_PG" -eq 0 ] && [ "$slug" != "salud-institucional" ]; then
     echo "   → attach postgres ${fly_app} → ${db_name}"
@@ -134,9 +146,7 @@ while IFS=$'\t' read -r slug _ app_dir _; do
 done < "${ROOT}/infra/api-proxy/apps.tsv"
 
 echo "==> Desplegando gateway ${GATEWAY_APP}..."
-if ! fly_app_exists "$GATEWAY_APP"; then
-  "$FLY" apps create "$GATEWAY_APP" -o "$ORG"
-fi
+ensure_fly_app "$GATEWAY_APP" || exit 1
 (cd "${ROOT}/infra/fly/gateway" && "$FLY" deploy --app "$GATEWAY_APP" --remote-only --ha=false)
 
 echo ""
