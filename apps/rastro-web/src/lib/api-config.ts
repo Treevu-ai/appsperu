@@ -5,23 +5,31 @@ function baseUrlFor(appKey: AppKey): string {
   return String(import.meta.env[envKey as keyof ImportMetaEnv] ?? "");
 }
 
-/** True cuando el navegador puede llamar a las APIs (no es build prod con localhost). */
+/** True cuando el navegador debe llamar APIs (dev local o APIs publicadas en prod). */
 export function apisPublishedForBrowser(): boolean {
   if (import.meta.env.DEV) return true;
   if (typeof window === "undefined") return true;
+
   const host = window.location.hostname;
   if (host === "localhost" || host === "127.0.0.1") return true;
+
+  const live = String(import.meta.env.VITE_PUBLIC_APIS_LIVE ?? "").toLowerCase();
+  if (live === "false" || live === "0" || live === "no") return false;
+
   return !(Object.keys(APP_CATALOG) as AppKey[]).some((key) =>
     /localhost|127\.0\.0\.1/.test(baseUrlFor(key)),
   );
 }
 
 export const APIS_NOT_PUBLISHED_MESSAGE =
-  "Las 14 APIs aún no tienen URL pública. Este deploy usa localhost en el build; configura VITE_API_BASE_URL_* en Cloudflare Pages para datos en vivo.";
+  "Datos en vivo no están en la web pública. Usa el servidor MCP local (82 tools) o levanta las APIs en tu máquina con scripts/dev-local.sh.";
 
 export function formatApiErrorForUi(err: unknown): string {
   if (!apisPublishedForBrowser()) return APIS_NOT_PUBLISHED_MESSAGE;
   if (err instanceof AppUnavailableError) {
+    if (err.kind === "network" || err.kind === "timeout") {
+      return "api.rastro.pe no responde. Los datos en vivo están disponibles via MCP local (ver /docs/api).";
+    }
     const label = APP_CATALOG[err.appKey]?.label ?? err.appKey;
     if (import.meta.env.PROD) {
       return `${label} no disponible (${err.kind}).`;

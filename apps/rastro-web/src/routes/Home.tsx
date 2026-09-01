@@ -2,43 +2,37 @@ import { Link } from "react-router-dom";
 
 export function Home() {
   return (
-    <div className="relative overflow-hidden radial-glow">
-      <div className="absolute inset-0 grid-bg opacity-60 pointer-events-none" />
-
-      {/* Hero */}
-      <section className="relative max-w-5xl mx-auto px-6 py-20">
-        <p className="text-xs tracking-widest text-accent font-mono">RASTRO · ALPHA</p>
-        <h1 className="font-serif text-5xl md:text-6xl text-fg mt-3 leading-tight">
-          Cada señal deja un <span className="text-accent">rastro</span>.
-          <br />
-          Nosotros lo hacemos visible.
-        </h1>
-        <p className="mt-6 text-fg-soft text-lg max-w-3xl">
-          <strong className="text-fg">Rastro</strong> convierte señales dispersas en inteligencia clara para decidir
-          mejor. Plataforma de trazabilidad sobre datos abiertos del Estado peruano — accesible desde el navegador y
-          desde agentes IA vía MCP.
-        </p>
-
-        <div className="mt-10 flex flex-wrap gap-3">
-          <Link to="/gore/la-libertad/ficha" className="btn-primary">
-            Empezar por La Libertad
-          </Link>
-          <Link to="/docs/api" className="btn-ghost">
-            Conectar desde un agente IA
-          </Link>
+    <div className="relative overflow-hidden">
+      {/* Hero banner (marca) */}
+      <section className="relative border-b border-line">
+        <img
+          src="/hero-banner.png"
+          alt="RASTRO convierte señales dispersas en inteligencia clara para decidir mejor. Cada señal deja un rastro. Nosotros lo hacemos visible."
+          className="w-full h-auto max-h-[min(520px,70vh)] object-cover object-center"
+          width={1920}
+          height={520}
+          fetchPriority="high"
+        />
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-950 via-ink-950/80 to-transparent px-6 pb-8 pt-16">
+          <div className="max-w-5xl mx-auto flex flex-wrap gap-3">
+            <Link to="/gore/la-libertad/ficha" className="btn-primary">
+              Empezar por La Libertad
+            </Link>
+            <Link to="/docs/api" className="btn-ghost">
+              Conectar desde un agente IA
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* Acerca de */}
-      <section className="relative max-w-5xl mx-auto px-6 pb-16">
-        <div className="card">
-          <h2 className="text-fg font-semibold text-lg">Acerca de</h2>
-          <p className="text-fg-soft mt-3 leading-relaxed">
-            Tres lectores (GORE, prensa de datos, auditoría), 14 APIs de solo lectura y un servidor MCP con 82
-            tools. Cada cifra lleva fuente, corte y cobertura; lo que falta se declara vacío, no se rellena con
-            suposiciones.
-          </p>
-        </div>
+      <section className="relative max-w-5xl mx-auto px-6 py-16">
+        <p className="text-xs tracking-widest text-accent font-mono">RASTRO · ALPHA</p>
+        <p className="mt-4 text-fg-soft text-lg max-w-3xl leading-relaxed">
+          Plataforma de trazabilidad sobre datos abiertos del Estado peruano — accesible desde el navegador y desde
+          agentes IA vía MCP. Cada cifra lleva fuente, corte y cobertura; lo que falta se declara vacío, no se rellena
+          con suposiciones.
+        </p>
       </section>
 
       {/* Lectores */}
@@ -71,31 +65,28 @@ export function Home() {
         <div className="card border-accent/30">
           <div className="flex items-center gap-3 flex-wrap">
             <p className="text-xs text-accent font-mono">PARA AGENTES IA</p>
-            <span className="text-xs text-muted">MCP · 82 tools · stdio</span>
+            <span className="text-xs text-muted">MCP · 82 tools · stdio · local</span>
           </div>
-          <h2 className="text-fg font-semibold text-lg mt-2">
-            Una sola query. Ochenta y dos tools a tu disposición.
-          </h2>
+          <h2 className="text-fg font-semibold text-lg mt-2">Una sola query. Ochenta y dos tools a tu disposición.</h2>
           <p className="text-fg-soft mt-3">
             Rastro expone un servidor MCP (Model Context Protocol) con 82 herramientas de solo lectura. Compatible con
-            Claude Code, Claude Desktop, Cursor, Windsurf, Cline y Continue.dev. Tu agente encadena los tools, razona
-            sobre los resultados y entrega respuestas con citas verificables — todo desde un único prompt.
+            Claude Code, Claude Desktop, Cursor, Windsurf, Cline y Continue.dev. Las APIs corren en localhost; el MCP las
+            agrega para tu agente.
           </p>
 
           <div className="mt-5 grid md:grid-cols-2 gap-4">
             <div>
-              <p className="text-xs text-muted font-mono mb-2">Setup (Claude Code)</p>
+              <p className="text-xs text-muted font-mono mb-2">Setup (Cursor / Claude Code)</p>
               <pre className="text-xs bg-ink-950 border border-line rounded-md p-3 overflow-x-auto text-fg-soft">
-                <code>{`# Una línea
-claude mcp add rastro \\
-  -- node /ruta/al/repo/mcp-server/dist/index.js
+                <code>{`# 1. Stack local
+bash scripts/dev-local.sh
 
-# O vía .mcp.json en el repo
+# 2. MCP en ~/.cursor/mcp.json
 {
   "mcpServers": {
     "rastro": {
       "command": "node",
-      "args": ["mcp-server/dist/index.js"]
+      "args": ["<repo>/mcp-server/dist/index.js"]
     }
   }
 }`}</code>
@@ -113,8 +104,8 @@ concentración. Cita cada RUC y cada OCID."`}</code>
               <p className="text-xs text-muted mt-2">
                 El agente invoca <code className="text-fg">proveedores_sancionados_sanciones</code>,{" "}
                 <code className="text-fg">compras_publicas_suppliers</code>,{" "}
-                <code className="text-fg">compras_publicas_supplier_by_id</code> y los encadena — sin que tú
-                toques la terminal.
+                <code className="text-fg">compras_publicas_supplier_by_id</code> y los encadena — sin que tú toques la
+                terminal.
               </p>
             </div>
           </div>

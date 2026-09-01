@@ -14,7 +14,7 @@ export function Layout() {
       <header className="border-b border-line bg-ink-900/70 backdrop-blur sticky top-0 z-20">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between gap-4">
           <NavLink to="/" className="flex items-center gap-3">
-            <span className="pulse-dot" aria-hidden />
+            <img src="/rastro-logo.png" alt="" className="h-8 w-8 rounded-sm" width={32} height={32} />
             <span className="font-mono text-sm tracking-widest text-fg">Rastro</span>
             <span className="text-xs text-muted hidden sm:inline">/ Trazabilidad de la inversión pública</span>
           </NavLink>

@@ -1,0 +1,2 @@
+# PowerShell scripts: ASCII only (Windows encoding breaks Unicode dashes)
+*.ps1 text eol=crlf

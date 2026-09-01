@@ -58,7 +58,12 @@ export function DataFreshnessBar() {
         });
       } catch (err) {
         if (cancelled) return;
-        const message = err instanceof AppUnavailableError ? err.message : (err as Error).message;
+        const message =
+          err instanceof AppUnavailableError
+            ? err.kind === "network" || err.kind === "timeout"
+              ? APIS_NOT_PUBLISHED_MESSAGE
+              : err.message
+            : (err as Error).message;
         setState({ status: "unavailable", message });
       }
     })();
