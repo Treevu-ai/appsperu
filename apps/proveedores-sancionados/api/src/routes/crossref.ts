@@ -14,19 +14,42 @@ const CrossrefQuerySchema = z.object({
   soloInhabilitados: z.enum(["true", "false"]).optional(),
 });
 
-const RUC_PREFIX = "PE-RUC-";
+/**
+ * `awards.supplier_id` usa `PE-RUC-<11 dígitos>`; `minor_contracts.winning_
+ * supplier_id` (contratos menores vía SEACE) usa `seace:ruc:<11 dígitos>` —
+ * ambos formatos se aceptan (CX-01, ver docs/conectores.md).
+ */
+const RUC_PREFIXES = ["PE-RUC-", "seace:ruc:"] as const;
 function extractRuc(supplierId: string): string | null {
-  if (!supplierId.startsWith(RUC_PREFIX)) return null;
-  const ruc = supplierId.slice(RUC_PREFIX.length);
-  return /^\d{11}$/.test(ruc) ? ruc : null;
+  for (const prefix of RUC_PREFIXES) {
+    if (supplierId.startsWith(prefix)) {
+      const ruc = supplierId.slice(prefix.length);
+      return /^\d{11}$/.test(ruc) ? ruc : null;
+    }
+  }
+  return null;
 }
+
+type ContractRow = {
+  origen: "awards" | "minor_contracts";
+  ocid: string | null;
+  awardId: string | null;
+  supplierId: string | null;
+  supplierName: string | null;
+  buyerName: string | null;
+  valorMonto: number | null;
+  valorMoneda: string | null;
+  fecha: string | Date | null;
+};
 
 /**
  * Cruce proveedor <-> Tribunal de Contrataciones, por RUC exacto (extraído
- * de `supplier_id` de compras-publicas, mismo patrón que
- * identidad-fiscal/crossref.ts). El estado de la fuente no basta para
- * calificar una adjudicación histórica: el cruce conserva por separado el
- * periodo de inhabilitación, la fecha de adjudicación y la fecha de extracción.
+ * de `supplier_id`/`winning_supplier_id` de compras-publicas, mismo patrón
+ * que identidad-fiscal/crossref.ts). El estado de la fuente no basta para
+ * calificar una contratación histórica: el cruce conserva por separado el
+ * periodo de inhabilitación, la fecha de la contratación y la fecha de
+ * extracción. Cubre tanto adjudicaciones OCDS (`awards`) como contratos
+ * menores (`minor_contracts`, campo `origen` distingue cada fila — CX-01).
  */
 crossrefRouter.get("/", asyncHandler(async (req, res) => {
   const parsed = parseQuery(CrossrefQuerySchema, req.query, res);
@@ -34,16 +57,56 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
   const wantedDepartamento = parsed.departamento?.toUpperCase().trim() ?? "LA LIBERTAD";
   const soloInhabilitados = parsed.soloInhabilitados === "true";
 
-  const { rows: awardRows } = await comprasPool.query(
-    `SELECT ocid, award_id, supplier_id, supplier_name, buyer_name, valor_monto, valor_moneda, fecha
-     FROM awards WHERE departamento = $1`,
-    [wantedDepartamento]
-  );
+  const [{ rows: awardRows }, { rows: minorContractRows }] = await Promise.all([
+    comprasPool.query(
+      `SELECT ocid, award_id, supplier_id, supplier_name, buyer_name, valor_monto, valor_moneda, fecha
+       FROM awards WHERE departamento = $1`,
+      [wantedDepartamento]
+    ),
+    comprasPool.query(
+      `SELECT c.contracting_id, c.ocid, c.award_id, c.winning_supplier_id AS supplier_id,
+              s.legal_name AS supplier_name, m.official_name AS buyer_name,
+              c.awarded_amount AS valor_monto, c.award_date AS fecha
+       FROM minor_contracts c
+       LEFT JOIN supplier_profiles s ON s.supplier_id = c.winning_supplier_id
+       LEFT JOIN municipalities m ON m.municipality_id = c.municipality_id
+       WHERE c.winning_supplier_id IS NOT NULL AND (m.department = $1 OR c.execution_department = $1)`,
+      [wantedDepartamento]
+    ),
+  ]);
+
+  const contractRows: ContractRow[] = [
+    ...awardRows.map((row): ContractRow => ({
+      origen: "awards",
+      ocid: row.ocid,
+      awardId: row.award_id,
+      supplierId: row.supplier_id,
+      supplierName: row.supplier_name,
+      buyerName: row.buyer_name,
+      valorMonto: row.valor_monto === null ? null : Number(row.valor_monto),
+      valorMoneda: row.valor_moneda,
+      fecha: row.fecha,
+    })),
+    // minor_contracts no registra moneda — se deja null en vez de asumir
+    // soles, para no inventar un dato que la fuente no persiste.
+    ...minorContractRows.map((row): ContractRow => ({
+      origen: "minor_contracts",
+      ocid: row.ocid,
+      awardId: row.award_id,
+      supplierId: row.supplier_id,
+      supplierName: row.supplier_name,
+      buyerName: row.buyer_name,
+      valorMonto: row.valor_monto === null ? null : Number(row.valor_monto),
+      valorMoneda: null,
+      fecha: row.fecha,
+    })),
+  ];
 
   const rucBySupplierId = new Map<string, string>();
-  for (const row of awardRows) {
-    const ruc = extractRuc(row.supplier_id as string);
-    if (ruc) rucBySupplierId.set(row.supplier_id as string, ruc);
+  for (const row of contractRows) {
+    if (!row.supplierId) continue;
+    const ruc = extractRuc(row.supplierId);
+    if (ruc) rucBySupplierId.set(row.supplierId, ruc);
   }
   const rucs = [...new Set(rucBySupplierId.values())];
 
@@ -82,9 +145,9 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
     }
   }
 
-  const resultados = awardRows.map((row) => {
-    const supplierId = row.supplier_id as string;
-    const ruc = rucBySupplierId.get(supplierId) ?? null;
+  const resultados = contractRows.map((row) => {
+    const supplierId = row.supplierId;
+    const ruc = supplierId ? rucBySupplierId.get(supplierId) ?? null : null;
     const inhabilitaciones = ruc ? inhabByRuc.get(ruc) ?? [] : [];
     const tieneInhabilitacionVigente = inhabilitaciones.some((i) => (i.estado ?? "").toUpperCase() === "VIGENTE");
     const inhabilitadoEnFechaAdjudicacion = consolidarEstadoTemporal(
@@ -98,13 +161,14 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
     }, null);
 
     return {
+      origen: row.origen,
       ocid: row.ocid,
-      awardId: row.award_id,
+      awardId: row.awardId,
       supplierId,
-      supplierName: row.supplier_name,
-      buyerName: row.buyer_name,
-      valorMonto: row.valor_monto === null ? null : Number(row.valor_monto),
-      valorMoneda: row.valor_moneda,
+      supplierName: row.supplierName,
+      buyerName: row.buyerName,
+      valorMonto: row.valorMonto,
+      valorMoneda: row.valorMoneda,
       fecha: row.fecha,
       rucValido: ruc !== null,
       fechaAdjudicacion: row.fecha,
