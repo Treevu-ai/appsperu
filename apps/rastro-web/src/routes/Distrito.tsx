@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { getInfobrasPublicWorks, type PublicWork, type PublicWorksResponse } from "../lib/api-client.js";
 import { AppUnavailableError } from "../lib/types.js";
 import { CoverageBadge } from "../components/CoverageBadge.js";
@@ -63,6 +63,11 @@ export function Distrito() {
       <p className="text-fg-soft mt-2 max-w-3xl">
         INFOBRAS (Contraloría) para el departamento al que pertenece este distrito. Sin coordenadas: INFOBRAS no las
         publica.
+      </p>
+      <p className="mt-3">
+        <Link to={`/distrito/${ubigeo}/integridad`} className="text-accent text-sm underline-offset-2 hover:underline">
+          Ver integridad de infraestructura →
+        </Link>
       </p>
 
       {loading ? <p className="text-muted mt-6">Consultando API…</p> : null}

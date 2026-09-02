@@ -1,0 +1,23 @@
+{
+  "130101": {
+    "departamento": "LA LIBERTAD",
+    "items": [
+      { "codigoInfobras": "INF-001", "descripcion": "Mejoramiento de pista Av. España", "entidad": "MUNICIPALIDAD PROVINCIAL DE TRUJILLO", "departamento": "LA LIBERTAD", "provincia": "TRUJILLO", "distrito": "TRUJILLO", "estado": "EN EJECUCION", "paralizada": false, "avanceFisicoPct": 62.5 },
+      { "codigoInfobras": "INF-002", "descripcion": "Construcción de posta de salud El Porvenir", "entidad": "GOBIERNO REGIONAL LA LIBERTAD", "departamento": "LA LIBERTAD", "provincia": "TRUJILLO", "distrito": "EL PORVENIR", "estado": "PARALIZADA", "paralizada": true }
+    ],
+    "resumen": { "total": 2, "paralizadasPct": 50.0, "conAvanceFisicoPct": 50.0 },
+    "cobertura": "PARCIAL",
+    "matcher": "exacto-departamento",
+    "corte": "2026-08-20"
+  },
+  "060101": {
+    "departamento": "CAJAMARCA",
+    "items": [
+      { "codigoInfobras": "INF-101", "descripcion": "Rehabilitación de canal de riego Namora", "entidad": "MUNICIPALIDAD PROVINCIAL DE CAJAMARCA", "departamento": "CAJAMARCA", "provincia": "CAJAMARCA", "distrito": "NAMORA", "estado": "CULMINADA", "paralizada": false, "avanceFisicoPct": 100 }
+    ],
+    "resumen": { "total": 1, "paralizadasPct": 0, "conAvanceFisicoPct": 100 },
+    "cobertura": "PARCIAL",
+    "matcher": "exacto-departamento",
+    "corte": "2026-08-20"
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "generated_at": "2026-09-02T02:58:36.612558+00:00",
+  "ckan_base": "https://www.datosabiertos.gob.pe",
+  "total_datasets": 999,
+  "resources_checked": 1655,
+  "live_pct": 76.9,
+  "dead_count": 18,
+  "top_orgs": [
+    {
+      "title": "Sin clasificar",
+      "count": 929
+    },
+    {
+      "title": "Ministerio de Salud",
+      "count": 18
+    },
+    {
+      "title": "Ministerio de Energía y Minas",
+      "count": 16
+    },
+    {
+      "title": "MEF · Portal de Transparencia",
+      "count": 14
+    },
+    {
+      "title": "Superintendencia Nacional de los Registros Públicos",
+      "count": 14
+    },
+    {
+      "title": "Ministerio de Relaciones Exteriores",
+      "count": 8
+    }
+  ],
+  "top_formats": [
+    {
+      "format": "XLSX",
+      "count": 807
+    },
+    {
+      "format": "CSV",
+      "count": 434
+    },
+    {
+      "format": "XLB",
+      "count": 176
+    },
+    {
+      "format": "PDF",
+      "count": 108
+    },
+    {
+      "format": "EXCEL",
+      "count": 26
+    },
+    {
+      "format": "?",
+      "count": 26
+    },
+    {
+      "format": "ZIP",
+      "count": 14
+    },
+    {
+      "format": "DATA",
+      "count": 14
+    },
+    {
+      "format": "APPLICATION/VND",
+      "count": 12
+    },
+    {
+      "format": ".CSV",
+      "count": 8
+    }
+  ]
+}

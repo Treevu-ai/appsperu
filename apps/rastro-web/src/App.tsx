@@ -1,8 +1,11 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout.js";
 import { Buscar } from "./routes/Buscar.js";
+import { Catalogo } from "./routes/Catalogo.js";
 import { Distrito } from "./routes/Distrito.js";
+import { DistritoIntegridad } from "./routes/DistritoIntegridad.js";
 import { DocsApi } from "./routes/DocsApi.js";
+import { DocsIntegridad } from "./routes/DocsIntegridad.js";
 import { Estado } from "./routes/Estado.js";
 import { LaLibertadLayout } from "./routes/gore/LaLibertadLayout.js";
 import { LaLibertadFicha } from "./routes/gore/LaLibertadFicha.js";
@@ -10,6 +13,7 @@ import { LaLibertadComparativo } from "./routes/gore/LaLibertadComparativo.js";
 import { LaLibertadBenchmark } from "./routes/gore/LaLibertadBenchmark.js";
 import { Home } from "./routes/Home.js";
 import { Proveedor } from "./routes/Proveedor.js";
+import { Proveedores } from "./routes/prensa/Proveedores.js";
 
 export default function App() {
   return (
@@ -23,10 +27,14 @@ export default function App() {
           <Route path="benchmark" element={<LaLibertadBenchmark />} />
         </Route>
         <Route path="proveedor/:ruc" element={<Proveedor />} />
+        <Route path="prensa/proveedores" element={<Proveedores />} />
         <Route path="distrito/:ubigeo" element={<Distrito />} />
+        <Route path="distrito/:ubigeo/integridad" element={<DistritoIntegridad />} />
         <Route path="estado" element={<Estado />} />
         <Route path="docs/api" element={<DocsApi />} />
+        <Route path="docs/integridad" element={<DocsIntegridad />} />
         <Route path="buscar" element={<Buscar />} />
+        <Route path="catalogo" element={<Catalogo />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
