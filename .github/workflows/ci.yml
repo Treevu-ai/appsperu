@@ -48,11 +48,18 @@ jobs:
         # package-lock.json — `npm ci` debe correr desde la raíz para que
         # resuelva contra el lockfile del workspace. El resto sigue exactamente
         # igual que antes (npm ci local, sin tocar).
+        #
+        # `packages/entity-matcher` se consume vía workspace symlink, pero npm
+        # ci no lo compila: solo enlaza el paquete, no corre su script `build`.
+        # Sin dist/, `tsc --noEmit` de las 3 apps consumidoras falla con
+        # "Cannot find module '@appsperu/entity-matcher' or its corresponding
+        # type declarations" (visto en CI real). Se compila explícitamente
+        # después del ci del workspace.
         run: |
           if [ -f "package-lock.json" ]; then
             npm ci
           else
-            (cd "$GITHUB_WORKSPACE" && npm ci)
+            (cd "$GITHUB_WORKSPACE" && npm ci && npm run build --workspace=packages/entity-matcher)
           fi
       - run: npx tsc --noEmit
       - run: npm test --if-present
