@@ -1,11 +1,18 @@
-# Follow the Sol
+# appsperu — monorepo de Rastro
+
+> **RASTRO** convierte señales dispersas en inteligencia clara para decidir mejor.
+> *Cada señal deja un rastro. Nosotros lo hacemos visible.*
 
 Repo: https://github.com/Treevu-ai/appsperu
 
-Apps standalone de datos abiertos del Estado peruano (presupuesto, contrataciones,
-inversiones, obras públicas) que se cruzan entre sí por claves compartidas o matching
-difuso de nombres de entidad. Cada app tiene su propio Postgres y API Express (API-only,
-sin frontends web).
+Monorepo con 14 apps backend (APIs Express + Postgres por app) que exponen datos abiertos
+del Estado peruano (presupuesto, contrataciones, inversiones, obras públicas) cruzados por
+claves compartidas o matching difuso de nombres de entidad. La capa de lectura pública para
+humanos y agentes IA es **Rastro** (`apps/rastro-web/`, publicada en `rastro.pages.dev`); el
+servidor MCP (`mcp-server/`) expone las 14 APIs como tools de solo lectura para Claude Code,
+Claude Desktop, Cursor, Windsurf, Cline y Continue.dev.
+
+Rastro es una plataforma de inteligencia que ayuda a equipos y organizaciones a encontrar, conectar y entender las señales que importan. Transformamos información dispersa en contexto accionable, con foco en trazabilidad, claridad y decisiones más seguras. Porque detrás de cada cambio, oportunidad o riesgo hay un rastro, y verlo a tiempo cambia lo que viene después.
 
 ## Apps
 
@@ -37,11 +44,16 @@ npm run dev
 `salud-institucional/api` no tiene Postgres propio — solo `.env` con las connection strings
 de las otras bases y `npm run dev`.
 
-## Agente MCP
+## Servidor MCP (Model Context Protocol)
 
-[`mcp-server/`](mcp-server/) expone las 12 APIs como tools de solo lectura para un agente Claude
-vía MCP (transporte stdio). Requiere que las apps ya estén corriendo — ver
-[`mcp-server/README.md`](mcp-server/README.md).
+[`mcp-server/`](mcp-server/) expone las 14 APIs como **82 tools de solo lectura** para
+agentes IA vía MCP (transporte stdio). Compatible con Claude Code, Claude Desktop,
+Cursor, Windsurf, Cline y Continue.dev. Una vez conectado, el agente encadena los
+tools, razona sobre los resultados y entrega respuestas con citas verificables.
+Requiere que las apps ya estén corriendo — ver [`mcp-server/README.md`](mcp-server/README.md).
+
+Para conectar Rastro desde un agente: ver [`apps/rastro-web/DEPLOY.md`](apps/rastro-web/DEPLOY.md)
+y la página pública `/docs/api` en [rastro.pages.dev/docs/api](https://rastro.pages.dev/docs/api).
 
 ## Documentación
 
@@ -68,10 +80,10 @@ npm run servicios:cuidados -- --tipo ALIMENTACION
 
 Las entidades nacionales se consultan solo por gasto dirigido al departamento
 (`META_DEPARTAMENTO`); las regionales, por la unidad ejecutora con sede en La
-Libertad. CUI, obra y compra requieren una clave oficial exacta: ALSOL muestra
+Libertad. CUI, obra y compra requieren una clave oficial exacta: Rastro muestra
 el vacío de vínculo cuando no la tiene.
 
-`servicios:cuidados` es el registro terminal de infraestructura y alimentación: CUI→obra únicamente por igualdad exacta y proveedor→cumplimiento únicamente por RUC documentado. Cuando no existe lote, entrega o RUC oficial, ALSOL muestra el vacío en vez de inferirlo.
+`servicios:cuidados` es el registro terminal de infraestructura y alimentación: CUI→obra únicamente por igualdad exacta y proveedor→cumplimiento únicamente por RUC documentado. Cuando no existe lote, entrega o RUC oficial, Rastro muestra el vacío en vez de inferirlo.
 
 ## Ingesta completa La Libertad
 

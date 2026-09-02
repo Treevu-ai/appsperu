@@ -1,0 +1,23 @@
+# Dependencias y build artifacts (cualquier app del monorepo)
+node_modules/
+.next/
+dist/
+dist-ssr/
+coverage/
+*.tsbuildinfo
+
+# Env locales (cada app declara los suyos si necesita excepciones)
+.env
+.env.local
+
+# Logs y artefactos operativos
+logs/
+*.log
+
+# Automatización / debug de navegador
+.playwright-cli/
+.wrangler/
+
+# OS / editor
+.DS_Store
+*.sw?
