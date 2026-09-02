@@ -65,7 +65,7 @@ Cada sprint deja una **puerta de salida verificable**: si la puerta no se cumple
 
 | ID | Objetivo | Criterios de aceptación (resumen) | Dep. | P | Esf. | Estado |
 |---|---|---|---|---|---|---|
-| CX-05 | Evaluar consolidación de `entity_crosswalk` (compras-publicas, infobras, identidad-fiscal) | Documento de evaluación costo/beneficio; si se consolida, ADR de interfaz del servicio compartido antes de tocar código; si no, razón documentada | — | P2 | M | 🟡 Evaluado, recomienda consolidar, diferido (ADR-0017) |
+| CX-05 | Evaluar consolidación de `entity_crosswalk` (compras-publicas, infobras, identidad-fiscal) | Documento de evaluación costo/beneficio; si se consolida, ADR de interfaz del servicio compartido antes de tocar código; si no, razón documentada | — | P2 | M | ✅ Hecho — evaluado y luego implementado en la misma sesión (ADR-0017): `packages/entity-matcher`, workspace acotado a 3 apps |
 
 **Puerta de salida del Sprint 3**: decisión documentada sobre consolidación, con o sin implementación según lo que la evaluación concluya. Este sprint no tiene fecha comprometida y puede diferirse indefinidamente sin bloquear los sprints 1 y 2.
 

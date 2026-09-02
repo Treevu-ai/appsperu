@@ -7,12 +7,15 @@
 **Regla transversal:** todo campo de cruce nuevo distingue su origen; ningún endpoint existente cambia de forma incompatible sin verificar consumidores; `docs/conectores.md` se actualiza en el mismo PR.
 **Estimación:** XS ≤ medio día · S ≤ 1 día · M 2–3 días · L 4–6 días (esfuerzo relativo, no calendario).
 
-> **Estado real (2026-09-02)**: los 6 tickets están cerrados. CX-01, CX-02, CX-03 y CX-06
-> implementados en código con tests en verde (compras-publicas 90/90, identidad-fiscal 9/9,
-> proveedores-sancionados 16/16, radar-ejecucion 68/68). CX-04 y CX-05 se evaluaron y quedaron
-> deliberadamente sin implementar, con la decisión documentada en [ADR-0016](adr/0016-automatizacion-conectores-nucleo-evaluacion.md)
-> y [ADR-0017](adr/0017-consolidacion-entity-crosswalk-evaluacion.md) respectivamente — ambos
-> con recomendación explícita para una futura iteración, no un "pendiente" abierto sin resolución.
+> **Estado real (2026-09-02, actualizado)**: los 6 tickets están cerrados. CX-01, CX-02, CX-03,
+> CX-05 y CX-06 implementados en código con tests en verde (compras-publicas 90/90,
+> identidad-fiscal 9/9, infobras 82/82, proveedores-sancionados 16/16, radar-ejecucion 68/68,
+> entity-matcher 7/7). CX-04 se evaluó y quedó deliberadamente sin implementar
+> ([ADR-0016](adr/0016-automatizacion-conectores-nucleo-evaluacion.md), con su paso 1 —
+> endpoint de "última ingesta exitosa" — sí implementado). CX-05 se evaluó primero como
+> diferido y se retomó e implementó en la misma sesión
+> ([ADR-0017](adr/0017-consolidacion-entity-crosswalk-evaluacion.md)): `packages/entity-matcher`
+> consolidado, workspace de npm acotado a 3 apps.
 
 ---
 
