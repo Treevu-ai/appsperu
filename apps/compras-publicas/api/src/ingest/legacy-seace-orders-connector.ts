@@ -7,7 +7,7 @@ import { pool } from "../db/pool.js";
 import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
 import { normalizeContractObject } from "../minor-contracts/normalize-object.js";
 import { MINOR_CONTRACT_LIMIT_2026, MINOR_CONTRACT_NORMALIZER_VERSION } from "../minor-contracts/types.js";
-import { classifyContractingEntity } from "./oece-minor-contracts-connector.js";
+import { classifyContractingEntity } from "./seace-public-minor-contracts-connector.js";
 
 const LEGACY_BASE_URL = "https://prod2.seace.gob.pe/seacebus-uiwd-pub/buscadorPublico/ongei/buscadorPublicoOCOS.xhtml";
 const LEGACY_SOURCE = "OECE SEACE órdenes históricas (interfaz pública observada)";
