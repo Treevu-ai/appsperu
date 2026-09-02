@@ -22,6 +22,19 @@ Doce apps standalone con API propia; todas son API-only (sin frontend web), salv
 - **Auditoría de código vs. backlog**: `docs/TICKETS_Rastro_Capa_Lectura_v1.md` y `docs/BACKLOG_Rastro_Capa_Lectura_No_Tecnicos_v1.md` describían un plan pre-build (Sprints 11-14) que nunca se actualizó contra lo que realmente se construyó. Se contrastó ticket por ticket contra `apps/rastro-web/src`: de los 20 tickets AL3-*, **6 hechos, 9 parciales, 5 pendientes**. Huecos más relevantes: 8 de las 14 apps backend no tienen función de datos en `api-client.ts` (solo health-check genérico); sin suite E2E (Playwright) pese a que el CI la asume; búsqueda libre en `/buscar` explícitamente no implementada; sin ranking de proveedores (`/prensa/proveedores`) ni integridad de infraestructura (`/distrito/:ubigeo/integridad`); sin rate limit; sin reporte de smoke test firmado. Detalle ticket por ticket en la tabla "Estado real" al inicio de `docs/TICKETS_Rastro_Capa_Lectura_v1.md`.
 - El pendiente #7 de abajo (`CLOUDFLARE_DEPLOY_HOOK_URL`) sigue sin resolverse — no forma parte de esta sesión.
 
+## Corrección — pendiente #7 (`CLOUDFLARE_DEPLOY_HOOK_URL`) ya estaba resuelto (2026-09-02)
+
+Al retomar este pendiente se encontró que estaba desactualizado: los secrets `CLOUDFLARE_API_TOKEN`
+y `CLOUDFLARE_ACCOUNT_ID` **ya están configurados** en GitHub → Settings → Secrets and variables →
+Actions (agregados en algún momento después del 2026-08-31, sin que se actualizara esta bitácora).
+El paso "Deploy a Cloudflare Pages (wrangler)" de `rastro-web-deploy.yml` (opción A, preferida sobre
+el Deploy Hook) corre exitosamente desde entonces — verificado contra el historial real de
+`gh run list --workflow=rastro-web-deploy.yml`: última falla 2026-08-31 (antes de que se agregaran
+los secrets), 16 corridas exitosas seguidas después, incluyendo `schedule` (cron semanal) y
+`workflow_dispatch`. `CLOUDFLARE_DEPLOY_HOOK_URL` (opción B, fallback) sigue sin existir pero ya no
+hace falta — el workflow nunca llega a ese paso mientras el token de wrangler siga funcionando.
+Pendiente #7 se marca resuelto.
+
 ## Rename ALSOL → Rastro completado + alta de `rastro-web` (2026-08-29)
 
 - **Rename de marca cerrado en `docs/`**: 7 archivos con "ALSOL" en el nombre renombrados a "Rastro" (`git mv`, historial preservado) y 79 menciones sueltas del nombre de producto reemplazadas en 34 archivos (PRDs, backlogs, memos regionales, reportes, data-contracts). `alsol-landing.html` → `rastro-landing.html`. PR #38.
@@ -320,4 +333,4 @@ avance (S/2,242.1M devengado / S/4,558.8M PIM), Gobiernos Locales 39.9%
 4. ~~Ingestas parciales acotadas a La Libertad~~ — **mitigado (2026-08-27)**: defaults de `.env.example` y `DEFAULT_TERRITORIAL_SCOPE` apuntan solo a `LA LIBERTAD`; scripts `ingest:libertad` por app y orquestador `scripts/ingest-la-libertad-completo.sh` para cobertura verificada.
 5. ~~Migración a Next 16 + React 19~~ — **N/A**: frontends web eliminados; el proyecto es API-only.
 6. ~~BCRP comercio exterior~~ — **hecho (2026-08-27)**: app `bcrp-comercio-exterior` (API 4011) ingiere series nacionales `PN38714BM`–`PN38723BM`; sin desagregado departamental (`RD38*` sigue congelado en origen).
-7. **Secret `CLOUDFLARE_DEPLOY_HOOK_URL` sin crear** — `rastro-web-deploy.yml` (mergeado en PR #39) falla explícitamente en cada push/cron hasta que exista. Crear en Cloudflare → Pages → proyecto `rastro` → Settings → Builds → Deploy hooks, y cargarlo en GitHub → Settings → Secrets and variables → Actions. Detalle de por qué no se automatizó vía API en la sección de arriba (2026-08-29).
+7. ~~Secret `CLOUDFLARE_DEPLOY_HOOK_URL` sin crear~~ — **resuelto de otra forma (verificado 2026-09-02)**: nunca se creó el Deploy Hook, pero `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` sí se configuraron en algún punto, y el paso de `wrangler pages deploy` (preferido sobre el hook) corre en verde desde 2026-08-31. Ver sección "Corrección — pendiente #7" arriba.
