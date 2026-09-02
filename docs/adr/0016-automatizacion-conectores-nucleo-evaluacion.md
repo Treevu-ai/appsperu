@@ -77,9 +77,13 @@ local del desarrollador). Las opciones reales quedan reducidas a:
 
 Si se decide automatizar más adelante, el orden de prioridad recomendado es:
 
-1. Exponer un endpoint de "última ingesta exitosa" por conector núcleo (fecha, filas
-   aceptadas/rechazadas, batch id) — bajo costo, alto valor: hace visible el problema de
-   frescura sin automatizar nada todavía.
+1. ✅ **Hecho (2026-09-02)**. Endpoint de "última ingesta exitosa" por conector núcleo:
+   `GET /api/meta/sources` en `radar-ejecucion` (extendido con `batchId` y
+   `registrosRechazados` vía `budget_execution_rejected`) y `GET /api/meta/freshness` en
+   `compras-publicas` (extendido con `latestBatchId` y `rejectedInLatestBatch` — `null`
+   para `seace_contratos_menores`, que no persiste rechazos por lote, a diferencia de
+   `oece_ocds` vía `awards_rejected`). No se crearon endpoints nuevos donde ya existía uno
+   equivalente — se extendieron los dos ya existentes en vez de duplicar.
 2. Evaluar migrar la base de datos de al menos `radar-ejecucion` y `compras-publicas` (las dos
    con más cruces dependientes) a un hosting alcanzable desde internet, como parte de una
    decisión de infraestructura más amplia — no como efecto secundario de "automatizar 3
