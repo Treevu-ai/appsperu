@@ -1,4 +1,8 @@
 import { Link } from "react-router-dom";
+import { ElProblema } from "../components/home/ElProblema.js";
+import { ComoFunciona } from "../components/home/ComoFunciona.js";
+import { Capacidades } from "../components/home/Capacidades.js";
+import { ParaQuien } from "../components/home/ParaQuien.js";
 
 export function Home() {
   return (
@@ -8,17 +12,23 @@ export function Home() {
         <img
           src="/hero-banner.png"
           alt="RASTRO convierte señales dispersas en inteligencia clara para decidir mejor. Cada señal deja un rastro. Nosotros lo hacemos visible."
-          className="w-full h-auto max-h-[min(520px,70vh)] object-cover object-center"
+          className="w-full h-auto sm:max-h-[min(520px,70vh)] object-cover object-center"
           width={1920}
           height={520}
           fetchPriority="high"
         />
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-950 via-ink-950/80 to-transparent px-6 pb-8 pt-16">
-          <div className="max-w-5xl mx-auto flex flex-wrap gap-3">
-            <Link to="/gore/la-libertad/ficha" className="btn-primary">
+        <div className="bg-ink-950 sm:bg-transparent sm:absolute sm:inset-x-0 sm:bottom-0 sm:bg-gradient-to-t sm:from-ink-950 sm:via-ink-950/80 sm:to-transparent px-4 sm:px-6 pb-6 sm:pb-8 pt-4 sm:pt-16">
+          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:flex-wrap gap-3">
+            <Link
+              to="/gore/la-libertad/ficha"
+              className="btn-primary w-full sm:w-auto justify-center"
+            >
               Empezar por La Libertad
             </Link>
-            <Link to="/docs/api" className="btn-ghost">
+            <Link
+              to="/docs/api"
+              className="btn-ghost w-full sm:w-auto justify-center"
+            >
               Conectar desde un agente IA
             </Link>
           </div>
@@ -34,6 +44,12 @@ export function Home() {
           con suposiciones.
         </p>
       </section>
+
+      {/* 4 secciones de profundidad (migradas de rastro-landing.html) */}
+      <ElProblema />
+      <ComoFunciona />
+      <Capacidades />
+      <ParaQuien />
 
       {/* Lectores */}
       <section className="relative max-w-5xl mx-auto px-6 pb-16 grid md:grid-cols-3 gap-4">
@@ -74,10 +90,10 @@ export function Home() {
             agrega para tu agente.
           </p>
 
-          <div className="mt-5 grid md:grid-cols-2 gap-4">
+          <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-xs text-muted font-mono mb-2">Setup (Cursor / Claude Code)</p>
-              <pre className="text-xs bg-ink-950 border border-line rounded-md p-3 overflow-x-auto text-fg-soft">
+              <pre className="text-[10px] sm:text-xs bg-ink-950 border border-line rounded-md p-3 overflow-x-auto text-fg-soft whitespace-pre-wrap break-words sm:whitespace-pre">
                 <code>{`# 1. Stack local
 bash scripts/dev-local.sh
 
