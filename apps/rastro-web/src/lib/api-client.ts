@@ -317,33 +317,87 @@ export function getProveedoresSancionadosPorRuc(ruc: string, options?: RequestOp
   return requestJson<SancionesResponse>("proveedores-sancionados", `/api/sanciones/${encodeURIComponent(ruc)}`, options);
 }
 
-/** infobras_public_works — obras de un departamento. */
+/**
+ * infobras_public_works — obras de un departamento, con señales derivadas
+ * (Cost Drift, Gap físico-financiero).
+ *
+ * Nota (2026-09-02): el tipo declarado acá antes no coincidía con la
+ * respuesta real de `apps/infobras/api/src/routes/public-works.ts`
+ * (`withSignals()`) — nunca se había verificado contra el código fuente.
+ * Divergencias reales: `resultados` no `items`; `nombreObra` no
+ * `descripcion`; `entidadNombre` no `entidad`; `estadoEjecucion` no
+ * `estado`; `existeParalizacion` no `paralizada`; `avanceFisicoRealPct` no
+ * `avanceFisicoPct`; y el endpoint no devuelve `cobertura`/`matcher`/`corte`
+ * ni `resumen` a nivel de respuesta (eso vive en `GET
+ * /api/public-works/resumen`, un endpoint aparte). Corregido para reflejar
+ * el shape real — ver `NO_APLICA` en el uso de este tipo en
+ * `routes/Distrito.tsx`.
+ */
 export interface PublicWork {
   codigoInfobras: string;
-  descripcion: string;
-  cuit?: string;
-  entidad: string;
+  codigoEntidad: string;
+  entidadNombre: string;
+  nombreObra: string;
+  modalidadEjecucion: string | null;
+  naturalezaObra: string | null;
+  estadoEjecucion: string;
+  nivelGobierno: string | null;
+  sectorEntidad: string | null;
+  cui: string | null;
   departamento: string;
-  provincia?: string;
-  distrito?: string;
-  estado: string;
-  paralizada: boolean;
-  avanceFisicoPct?: number;
-  ejecucionFinancieraPct?: number;
-  montoViable?: number;
-  costoActualizado?: number;
+  provincia: string | null;
+  distrito: string | null;
+  montoViable: number | null;
+  costoActualizado: number | null;
+  avanceFisicoProgPct: number | null;
+  avanceFisicoRealPct: number | null;
+  ejecucionFinancieraPct: number | null;
+  existeParalizacion: boolean;
+  causalParalizacion: string | null;
+  fechaParalizacion: string | null;
+  diasParalizado: number | null;
+  costDriftPct: number | null;
+  gapFisicoFinanciero: number | null;
+  fuente: { dataset: string; extraidoEl: string };
 }
 export interface PublicWorksResponse {
-  items: PublicWork[];
-  resumen?: { total: number; paralizadasPct: number; conAvanceFisicoPct: number };
-  cobertura: "COMPLETA" | "PARCIAL" | "BLOQUEADA";
-  matcher: string;
-  corte: string;
+  resultados: PublicWork[];
 }
 export function getInfobrasPublicWorks(params: { departamento?: string; estado?: string; conParalizacion?: boolean }, options?: RequestOptions) {
   return requestJson<PublicWorksResponse>("infobras", "/api/public-works", {
     ...options,
     query: { departamento: params.departamento, estado: params.estado, conParalizacion: params.conParalizacion },
+  });
+}
+
+/**
+ * infobras_crossref_ejecucion — crosswalk INFOBRAS↔radar-ejecucion por
+ * nombre de entidad (matcher difuso, con niveles de confianza), con
+ * devengado y obras/obras paralizadas por entidad ya cruzada.
+ */
+export interface InfobrasCrossrefEjecucionRow {
+  ejecucionEntityCode: string;
+  ejecucionNombre: string;
+  infobrasCodigoEntidad: string;
+  infobrasEntidadNombre: string;
+  confidence: "confirmada" | "candidata";
+  score: number;
+  devengado: number;
+  coberturaTemporal: { cortesUsados: string[]; estado: "PARCIAL" } | null;
+  obras: number;
+  obrasParalizadas: number;
+  computedAt: string;
+}
+export interface InfobrasCrossrefEjecucionResponse {
+  resultados: InfobrasCrossrefEjecucionRow[];
+}
+export function getInfobrasCrossrefEjecucion(
+  params: { confidence?: "confirmada" | "candidata" },
+  options?: RequestOptions,
+) {
+  return requestJson<InfobrasCrossrefEjecucionResponse>("infobras", "/api/crossref/ejecucion", {
+    ...options,
+    query: { confidence: params.confidence },
   });
 }
 

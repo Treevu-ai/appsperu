@@ -73,9 +73,23 @@ export function Distrito() {
 
   const obrasDelDistrito = useMemo(() => {
     if (!data) return [];
-    if (!distritoNombre) return data.items;
-    return data.items.filter((w) => w.distrito?.toUpperCase() === distritoNombre.toUpperCase());
+    if (!distritoNombre) return data.resultados;
+    return data.resultados.filter((w) => w.distrito?.toUpperCase() === distritoNombre.toUpperCase());
   }, [data, distritoNombre]);
+
+  // El endpoint no trae un resumen embebido (a diferencia de otras APIs del
+  // proyecto) — se computa acá desde las mismas filas ya fetcheadas, sin una
+  // segunda llamada a GET /api/public-works/resumen.
+  const resumenObras = useMemo(() => {
+    const total = obrasDelDistrito.length;
+    if (total === 0) return null;
+    const paralizadas = obrasDelDistrito.filter((w) => w.existeParalizacion).length;
+    const conAvance = obrasDelDistrito.filter((w) => w.avanceFisicoRealPct != null).length;
+    return {
+      paralizadasPct: Math.round((paralizadas / total) * 1000) / 10,
+      conAvanceFisicoPct: Math.round((conAvance / total) * 1000) / 10,
+    };
+  }, [obrasDelDistrito]);
 
   const activosDelDistrito = useMemo(() => {
     if (!assets) return [];
@@ -115,9 +129,12 @@ export function Distrito() {
           </>
         )}
       </p>
-      <p className="mt-3">
+      <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
         <Link to={`/distrito/${ubigeo}/integridad`} className="text-accent text-sm underline-offset-2 hover:underline">
           Ver integridad de infraestructura →
+        </Link>
+        <Link to="/auditoria/entidades-infobras" className="text-accent text-sm underline-offset-2 hover:underline">
+          Ver entidades cruzadas MEF↔INFOBRAS →
         </Link>
       </p>
 
@@ -132,31 +149,21 @@ export function Distrito() {
             <h2 className="text-fg font-semibold">
               {obrasDelDistrito.length} obras{distritoNombre ? " en el distrito" : " en el departamento"}
             </h2>
-            <CoverageBadge cobertura={data.cobertura} />
-            <span className="text-xs text-muted">corte: {data.corte}</span>
+            <CoverageBadge cobertura="NO_APLICA" />
           </div>
-          {data.resumen ? (
+          <p className="text-xs text-muted mt-1">
+            El endpoint no declara fecha de corte, matcher ni cobertura para esta consulta.
+          </p>
+          {resumenObras ? (
             <p className="text-xs text-muted mt-1">
               Paralizadas:{" "}
               <NumberWithMetadata
-                data={metaNumber(
-                  data.resumen.paralizadasPct,
-                  "infobras / infobras_public_works",
-                  data.corte,
-                  data.cobertura,
-                  data.matcher,
-                )}
+                data={metaNumber(resumenObras.paralizadasPct, "infobras / infobras_public_works", "sin corte declarado por la fuente", "NO_APLICA")}
                 format={(n) => `${n.toFixed(1)}%`}
               />{" "}
-              · Con avance físico:{" "}
+              · Con avance físico reportado:{" "}
               <NumberWithMetadata
-                data={metaNumber(
-                  data.resumen.conAvanceFisicoPct,
-                  "infobras / infobras_public_works",
-                  data.corte,
-                  data.cobertura,
-                  data.matcher,
-                )}
+                data={metaNumber(resumenObras.conAvanceFisicoPct, "infobras / infobras_public_works", "sin corte declarado por la fuente", "NO_APLICA")}
                 format={(n) => `${n.toFixed(1)}%`}
               />
             </p>
@@ -166,36 +173,55 @@ export function Distrito() {
             <thead className="text-xs text-muted text-left">
               <tr>
                 <th className="py-2 pr-3">Código</th>
-                <th className="py-2 pr-3">Descripción</th>
+                <th className="py-2 pr-3">Obra</th>
                 <th className="py-2 pr-3">Entidad</th>
                 <th className="py-2 pr-3">Estado</th>
                 <th className="py-2 pr-3 text-right">Avance físico</th>
+                <th className="py-2 pr-3 text-right">Cost Drift</th>
+                <th className="py-2 pr-3 text-right">Gap físico-financiero</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line-soft">
               {obrasDelDistrito.slice(0, 50).map((w: PublicWork) => (
                 <tr key={w.codigoInfobras}>
                   <td className="py-2 pr-3 mono-num text-fg-soft">{w.codigoInfobras}</td>
-                  <td className="py-2 pr-3 text-fg">{w.descripcion}</td>
-                  <td className="py-2 pr-3 text-fg-soft">{w.entidad}</td>
+                  <td className="py-2 pr-3 text-fg">{w.nombreObra}</td>
+                  <td className="py-2 pr-3 text-fg-soft">{w.entidadNombre}</td>
                   <td className="py-2 pr-3">
-                    {w.paralizada ? (
-                      <span className="text-danger">PARALIZADA</span>
+                    {w.existeParalizacion ? (
+                      <span className="text-danger" title={w.causalParalizacion ?? undefined}>
+                        PARALIZADA
+                      </span>
                     ) : (
-                      <span className="text-fg-soft">{w.estado}</span>
+                      <span className="text-fg-soft">{w.estadoEjecucion}</span>
                     )}
                   </td>
                   <td className="py-2 pr-3 text-right text-fg">
-                    {w.avanceFisicoPct != null ? (
+                    {w.avanceFisicoRealPct != null ? (
                       <NumberWithMetadata
-                        data={metaNumber(
-                          w.avanceFisicoPct,
-                          "infobras / infobras_public_works",
-                          data.corte,
-                          data.cobertura,
-                          data.matcher,
-                        )}
+                        data={metaNumber(w.avanceFisicoRealPct, "infobras / infobras_public_works", "sin corte declarado por la fuente", "NO_APLICA")}
                         format={(n) => `${n.toFixed(1)}%`}
+                      />
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="py-2 pr-3 text-right text-fg" title="(Costo actualizado − Monto viable) / Monto viable">
+                    {w.costDriftPct != null ? (
+                      <NumberWithMetadata
+                        data={metaNumber(w.costDriftPct, "infobras / infobras_public_works (signals.costDriftPct)", "sin corte declarado por la fuente", "NO_APLICA")}
+                        format={(n) => `${n > 0 ? "+" : ""}${n.toFixed(1)}%`}
+                        className={w.costDriftPct > 0 ? "text-warn" : undefined}
+                      />
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="py-2 pr-3 text-right text-fg" title="Avance físico real − Ejecución financiera. No implica causalidad.">
+                    {w.gapFisicoFinanciero != null ? (
+                      <NumberWithMetadata
+                        data={metaNumber(w.gapFisicoFinanciero, "infobras / infobras_public_works (signals.gapFisicoFinanciero)", "sin corte declarado por la fuente", "NO_APLICA")}
+                        format={(n) => `${n > 0 ? "+" : ""}${n.toFixed(1)} pp`}
                       />
                     ) : (
                       "—"

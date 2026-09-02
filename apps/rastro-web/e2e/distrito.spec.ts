@@ -16,10 +16,10 @@ const UBIGEOS = Object.keys(distritos) as (keyof typeof distritos)[];
 for (const ubigeo of UBIGEOS) {
   test(`distrito ${ubigeo}: obras y paralización = JSON de la API`, async ({ page }) => {
     const fixture = distritos[ubigeo];
-    const expected = fixture.items.filter((w) => w.distrito === fixture.distrito);
+    const expected = fixture.resultados.filter((w) => w.distrito === fixture.distrito);
 
     await page.route("**/infobras/api/public-works**", async (route) => {
-      await route.fulfill({ json: { items: fixture.items, resumen: fixture.resumen, cobertura: fixture.cobertura, matcher: fixture.matcher, corte: fixture.corte } });
+      await route.fulfill({ json: { resultados: fixture.resultados } });
     });
     await page.route("**/ceplan-geo/api/territories**", async (route) => {
       await route.fulfill({ json: { ubigeo, departamento: fixture.departamento, provincia: null, distrito: fixture.distrito, geometry: null } });
@@ -32,18 +32,21 @@ for (const ubigeo of UBIGEOS) {
 
     await expect(page.getByText(`${expected.length} obras`)).toBeVisible();
     for (const work of expected) {
-      await expect(page.getByText(work.descripcion)).toBeVisible();
-      if (work.paralizada) {
+      await expect(page.getByText(work.nombreObra)).toBeVisible();
+      if (work.existeParalizacion) {
         // exact:true para no matchear el resumen ("Paralizadas: 50.0% · ...")
         // — el chip real es un <span> cuyo texto es exactamente "PARALIZADA".
         await expect(page.getByText("PARALIZADA", { exact: true })).toBeVisible();
       }
+      if (work.costDriftPct != null) {
+        const sign = work.costDriftPct > 0 ? "+" : "";
+        await expect(page.getByText(`${sign}${work.costDriftPct.toFixed(1)}%`, { exact: true })).toBeVisible();
+      }
     }
     // La obra que NO pertenece al distrito exacto debe quedar excluida.
-    const excluded = fixture.items.filter((w) => w.distrito !== fixture.distrito);
+    const excluded = fixture.resultados.filter((w) => w.distrito !== fixture.distrito);
     for (const work of excluded) {
-      await expect(page.getByText(work.descripcion)).not.toBeVisible();
+      await expect(page.getByText(work.nombreObra)).not.toBeVisible();
     }
-    await expect(page.getByText(fixture.cobertura, { exact: true }).first()).toBeVisible();
   });
 }
