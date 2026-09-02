@@ -2,7 +2,8 @@
 # Levanta los contenedores Postgres de las 14 apps (Docker).
 # Requiere red Docker externa appsperu_shared (radar-ejecucion la crea).
 #
-# Uso (VPS): bash scripts/start-all-postgres.sh
+# Uso (VPS, todas):      bash scripts/start-all-postgres.sh
+# Uso (subset, local):   bash scripts/start-all-postgres.sh radar-ejecucion infobras
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -12,7 +13,7 @@ if ! docker network inspect appsperu_shared >/dev/null 2>&1; then
   docker network create appsperu_shared
 fi
 
-APPS=(
+ALL_APPS=(
   radar-ejecucion
   compras-publicas
   radar-inversiones
@@ -27,6 +28,12 @@ APPS=(
   inversion-privada
   bcrp-la-libertad
 )
+
+if [ "$#" -gt 0 ]; then
+  APPS=("$@")
+else
+  APPS=("${ALL_APPS[@]}")
+fi
 
 for app in "${APPS[@]}"; do
   compose="${ROOT}/apps/${app}/api/docker-compose.yml"

@@ -104,9 +104,25 @@ Reinicia Cursor. Verás **82 tools** de solo lectura.
 |--------|---------|
 | Solo Postgres | `bash scripts/dev-local.sh --postgres` |
 | Solo APIs | `bash scripts/dev-local.sh --apis` |
+| Solo un subset (RAM limitada) | `bash scripts/dev-local.sh --only "radar-ejecucion,infobras"` |
 | Health local | `bash scripts/dev-local.sh --check` |
 | Logs PM2 | `pm2 logs` |
 | Parar APIs | `pm2 delete all` |
+
+## RAM limitada (laptop, no VPS)
+
+Las 14 APIs + 13 Postgres están pensadas para el VPS. En una laptop con poca RAM libre:
+
+1. **Limita el VM de WSL2/Docker Desktop** — crea `C:\Users\<tú>\.wslconfig`:
+   ```ini
+   [wsl2]
+   memory=4GB
+   processors=4
+   swap=2GB
+   ```
+   Reinicia WSL después (`wsl --shutdown` en PowerShell, luego reabre Docker Desktop). Sin esto, Docker Desktop puede crecer sin techo y comerse toda la RAM libre.
+2. **Levanta solo lo que necesitas**, no las 14: `bash scripts/dev-local.sh --only "radar-ejecucion,infobras"` levanta Postgres + API únicamente para esas apps (vía `docker compose` y `pm2 --only` filtrados). Los slugs válidos están en `infra/api-proxy/apps.tsv`.
+3. Para bajar lo que no uses: `pm2 delete <slug>` (APIs) y `docker compose -f apps/<app>/api/docker-compose.yml down` (Postgres de esa app).
 
 ## Frontend vs producción
 
