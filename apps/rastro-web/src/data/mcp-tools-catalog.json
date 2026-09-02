@@ -157,7 +157,9 @@
     "pathParams": [
       "ruc"
     ],
-    "queryParams": [],
+    "queryParams": [
+      "periodo"
+    ],
     "sinScheduler": true
   },
   {
@@ -166,7 +168,10 @@
     "description": "Control de integridad de la cadena lote-RUC-colegio-entrega. Devuelve BLOQUEADO_POR_EVIDENCIA cuando faltan claves o actas; no convierte esos vacíos en un indicador de incumplimiento. Con estricto=true usa HTTP 409 para impedir automatizaciones que requieran la cadena completa. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/servicios-cuidados/alimentacion/integridad",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "periodo",
+      "estricto"
+    ],
     "sinScheduler": true
   },
   {
@@ -175,7 +180,10 @@
     "description": "Cola de evidencia faltante para trazabilidad alimentaria: RUC, padrón de colegios, actas o viabilidad de fuente. Es una prioridad de revisión humana, no una lista de observados. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/servicios-cuidados/alimentacion/evidencia-pendiente",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "periodo",
+      "estado"
+    ],
     "sinScheduler": true
   },
   {
@@ -233,7 +241,10 @@
     "description": "Activos de infraestructura materializados para La Libertad: CUI/obra cuando existe, y evidencia separada de cierre, operador, mantenimiento, disponibilidad y servicio. Avance físico, presupuesto o inauguración no se presentan como operación. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/infraestructura/activos",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "departamento",
+      "sector"
+    ],
     "sinScheduler": true
   },
   {
@@ -266,7 +277,9 @@
     "pathParams": [
       "assetId"
     ],
-    "queryParams": [],
+    "queryParams": [
+      "anio"
+    ],
     "sinScheduler": true
   },
   {
@@ -275,7 +288,11 @@
     "description": "Control de integridad de infraestructura: verifica qué activos tienen cierre, operador, mantenimiento, disponibilidad e indicador. Con estricto=true devuelve 409 si no existe evidencia mínima para presentarlos como infraestructura que funciona. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/infraestructura/integridad",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "departamento",
+      "sector",
+      "estricto"
+    ],
     "sinScheduler": true
   },
   {
@@ -284,7 +301,9 @@
     "description": "Cola de evidencia faltante por activo: recepción, operador, mantenimiento o disponibilidad. Es una prioridad de revisión, no una lista de infraestructura inoperativa. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/infraestructura/evidencia-pendiente",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "estado"
+    ],
     "sinScheduler": true
   },
   {
@@ -329,7 +348,9 @@
     "description": "Proveedores del Estado agregados por adjudicaciones, entidades distintas y valor total, con índice de concentración de mercado. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/suppliers",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "departamento"
+    ],
     "sinScheduler": true
   },
   {
@@ -349,7 +370,9 @@
     "description": "Cruce compras-publicas <-> radar-ejecucion por nombre de entidad (matcher difuso, persistido en entity_crosswalk) — trae devengado y compras por entidad ya cruzada. `confidence` filtra confirmada/candidata.",
     "pathTemplate": "/api/crossref",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "confidence"
+    ],
     "sinScheduler": false
   },
   {
@@ -383,7 +406,9 @@
     "description": "Cruce radar-inversiones <-> radar-ejecucion por SEC_EJEC (clave exacta, sin matching difuso) — inversiones de un departamento junto con el devengado presupuestal de la misma entidad. Default: LA LIBERTAD.",
     "pathTemplate": "/api/crossref",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "departamento"
+    ],
     "sinScheduler": false
   },
   {
@@ -405,7 +430,9 @@
     "description": "Resumen agregado: total de obras, % con paralización, % con avance físico reportado.",
     "pathTemplate": "/api/public-works/resumen",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "departamento"
+    ],
     "sinScheduler": false
   },
   {
@@ -425,7 +452,20 @@
     "description": "Cruce infobras <-> radar-inversiones por CUI (clave exacta) — obras de un departamento junto con su inversión asociada. Default: LA LIBERTAD.",
     "pathTemplate": "/api/crossref",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "departamento"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "infobras_crossref_ejecucion",
+    "app": "infobras",
+    "description": "Cruce infobras <-> radar-ejecucion por nombre de entidad (matcher difuso, persistido en entity_crosswalk, recalculable con `npm run crossref:build`) — trae devengado, obras y obras paralizadas por entidad ya cruzada. `confidence` filtra confirmada/candidata.",
+    "pathTemplate": "/api/crossref/ejecucion",
+    "pathParams": [],
+    "queryParams": [
+      "confidence"
+    ],
     "sinScheduler": false
   },
   {
@@ -491,7 +531,9 @@
     "description": "Cruce ceplan-estrategico <-> ceplan-geo por departamento piloto ALSOL (5 regiones). Adjunta CUMP02/CUMP03 nacionales (GN/GR) con contexto territorial (distritos, infraestructura). Matcher: departamento_prefijo_ubigeo. Cobertura PARCIAL — no implica desempeño estratégico regional.",
     "pathTemplate": "/api/crossref/territorial",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "departamento"
+    ],
     "sinScheduler": false
   },
   {
@@ -557,7 +599,9 @@
     "description": "Agregados territoriales por departamento piloto ALSOL (5 regiones): conteo de distritos e infraestructura dentro del polígono departamental. Solo LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO.",
     "pathTemplate": "/api/territories/summary",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "departamento"
+    ],
     "sinScheduler": false
   },
   {
@@ -601,7 +645,9 @@
     "description": "Cruce ceplan-geo <-> radar-inversiones: enriquece inversiones con territorio CEPLAN e infra cercana. Matcher territorial por nombre (la API de inversiones no expone UBIGEO). Requiere radar-inversiones corriendo. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/crossref/inversiones",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "departamento"
+    ],
     "sinScheduler": true
   },
   {
@@ -610,7 +656,9 @@
     "description": "Cruce ceplan-geo <-> infobras: enriquece obras con territorio CEPLAN sin usar coordenadas (INFOBRAS no las publica). Requiere infobras corriendo. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/crossref/obras",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "departamento"
+    ],
     "sinScheduler": true
   },
   {
@@ -619,7 +667,9 @@
     "description": "Cruce ceplan-geo <-> radar-ejecucion por UBIGEO: ejecución por sede (ubigeo) y gasto nacional dirigido (metaDepartamento) en secciones separadas, con infraestructura cercana. No sumar ambos ámbitos. Requiere radar-ejecucion. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/crossref/ejecucion",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "ubigeo"
+    ],
     "sinScheduler": true
   },
   {
@@ -691,7 +741,9 @@
     "description": "Cruce identidad-fiscal <-> radar-ejecucion por nombre de entidad (matcher difuso, confirmada/candidata) — resuelve el RUC de cada gobierno/municipalidad para chequear su propio estatus tributario. Default: LA LIBERTAD.",
     "pathTemplate": "/api/crossref/entidades",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "departamento"
+    ],
     "sinScheduler": false
   },
   {
@@ -700,7 +752,9 @@
     "description": "Inhabilitaciones y multas del Tribunal de Contrataciones para un RUC específico (requerido). 'Vigente hoy' no equivale a 'vigente al momento de la adjudicación' — revisar fechas `desde`/`hasta` de cada registro antes de concluir algo sobre un contrato pasado. Cobertura nacional completa (~17.9K filas). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/sanciones",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "ruc"
+    ],
     "sinScheduler": true
   },
   {

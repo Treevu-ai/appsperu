@@ -87,10 +87,13 @@ function extractPathParams(block) {
 }
 
 function extractQueryParams(block) {
-  const m = block.match(/\n {4}querySchema:\s*(\{[\s\S]*?\n {4}\}|\{\})/);
+  // querySchema es siempre el último campo del ToolSpec — capturar todo lo
+  // que sigue basta, sin depender de si el objeto está en una sola línea
+  // (ej. `{ confidence: z.enum([...]).optional() }`) o multilínea con
+  // indentación de 6 espacios. Ambos formatos aparecen en catalog.ts.
+  const m = block.match(/\n {4}querySchema:\s*([\s\S]*)/);
   if (!m) return [];
-  // Solo claves de primer nivel dentro del objeto: 6 espacios de indentación.
-  return [...m[1].matchAll(/\n {6}(\w+):\s*z\./g)].map((mm) => mm[1]);
+  return [...m[1].matchAll(/(\w+):\s*z\./g)].map((mm) => mm[1]);
 }
 
 const tools = blocks.map((block) => {

@@ -478,6 +478,17 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: [],
     querySchema: { departamento: z.string().min(1).optional() },
   },
+  {
+    name: "infobras_crossref_ejecucion",
+    app: "infobras",
+    description:
+      "Cruce infobras <-> radar-ejecucion por nombre de entidad (matcher difuso, persistido en " +
+      "entity_crosswalk, recalculable con `npm run crossref:build`) — trae devengado, obras y obras " +
+      "paralizadas por entidad ya cruzada. `confidence` filtra confirmada/candidata.",
+    pathTemplate: "/api/crossref/ejecucion",
+    pathParams: [],
+    querySchema: { confidence: z.enum(["confirmada", "candidata"]).optional() },
+  },
 
   // ---- ceplan-estrategico (ObservaPerú/CEPLAN) ----
   {
