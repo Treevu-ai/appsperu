@@ -124,6 +124,18 @@ Las 14 APIs + 13 Postgres están pensadas para el VPS. En una laptop con poca RA
 2. **Levanta solo lo que necesitas**, no las 14: `bash scripts/dev-local.sh --only "radar-ejecucion,infobras"` levanta Postgres + API únicamente para esas apps (vía `docker compose` y `pm2 --only` filtrados). Los slugs válidos están en `infra/api-proxy/apps.tsv`.
 3. Para bajar lo que no uses: `pm2 delete <slug>` (APIs) y `docker compose -f apps/<app>/api/docker-compose.yml down` (Postgres de esa app).
 
+### Volumen Docker externo faltante (primera vez)
+
+`radar-ejecucion`, `ceplan-geo`, `actividad-agraria` y `seguridad-ciudadana` declaran su volumen de Postgres como `external: true` en su `docker-compose.yml` — Docker no lo autocrea. Si `docker compose up` falla con `external volume "..." not found`, créalo a mano una vez (el nombre exacto está en el `docker-compose.yml` de esa app, bajo `volumes:`):
+
+```bash
+docker volume create api_radar_pgdata   # ejemplo para radar-ejecucion
+```
+
+### PM2 en Windows (nativo, no WSL)
+
+`infra/api-proxy/ecosystem.config.cjs` usa `interpreter: "none"` para spawnear `npm`/`npx` directo — en Windows eso falla con `spawn EINVAL` porque son scripts `.cmd`, no ejecutables, y Node no puede correrlos sin shell (ni referenciando la extensión). El archivo ya detecta `process.platform === "win32"` y envuelve el comando en `cmd /c` en ese caso; en Linux (VPS) no cambia nada. Si ves `EINVAL` al levantar APIs con PM2 en Windows, confirma que estás en una versión del repo con este fix.
+
 ## Frontend vs producción
 
 - **Local:** `apps/rastro-web/.env` con URLs `http://localhost:400*`
