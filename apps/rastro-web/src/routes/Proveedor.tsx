@@ -10,6 +10,7 @@ import {
 import { AppUnavailableError } from "../lib/types.js";
 import { CoverageBadge } from "../components/CoverageBadge.js";
 import { NumberWithMetadata, metaNumber } from "../components/NumberWithMetadata.js";
+import { Modal } from "../components/Modal.js";
 
 interface SupplierMatch {
   ruc: string;
@@ -28,6 +29,7 @@ export function Proveedor() {
   const [adjudicaciones, setAdjudicaciones] = useState<SupplierMatch | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [citeModalOpen, setCiteModalOpen] = useState(false);
 
   useEffect(() => {
     if (!valid) {
@@ -97,6 +99,13 @@ export function Proveedor() {
         Identidad SUNAT, contrataciones públicas y sanciones del Tribunal. La ausencia de un dato se declara como
         vacío, no como conclusión.
       </p>
+      <button
+        type="button"
+        onClick={() => setCiteModalOpen(true)}
+        className="text-xs text-accent underline-offset-2 hover:underline"
+      >
+        Citar Rastro →
+      </button>
 
       {loading ? <p className="text-muted">Consultando 3 APIs en paralelo…</p> : null}
 
@@ -210,6 +219,29 @@ export function Proveedor() {
           </p>
         </section>
       ) : null}
+
+      <Modal open={citeModalOpen} onClose={() => setCiteModalOpen(false)} title="Citar Rastro">
+        <p className="text-sm text-fg-soft">
+          Copia el bloque de citación. Si alguna sección de esta página está vacía, esa ausencia también forma parte
+          de la cita — no la omitas.
+        </p>
+        <pre className="mt-3 text-xs bg-ink-950 border border-line rounded-md p-3 overflow-x-auto text-fg-soft whitespace-pre-wrap">
+          <code>
+            {`Rastro v0.1.0 · identidad-fiscal / identidad_fiscal_contribuyente_by_ruc · corte ${
+              identidad?.corte ?? "sin corte declarado por la fuente"
+            } · cobertura ${identidad?.cobertura ?? "NO_APLICA"} · ${
+              typeof window !== "undefined" ? window.location.href : `https://rastro.fyi/proveedor/${ruc}`
+            }`}
+          </code>
+        </pre>
+        <p className="text-xs text-muted mt-3">
+          Ver{" "}
+          <a href="/citar-rastro.md" className="text-accent underline-offset-2 hover:underline">
+            guía completa de citación
+          </a>{" "}
+          — incluye qué NO se puede concluir de estos datos.
+        </p>
+      </Modal>
     </div>
   );
 }

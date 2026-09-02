@@ -1,6 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getInfobrasPublicWorks, type PublicWork, type PublicWorksResponse } from "../lib/api-client.js";
+import {
+  getCeplanGeoTerritory,
+  getInfobrasPublicWorks,
+  getRadarEjecucionInfrastructureAssets,
+  type InfrastructureAssetsResponse,
+  type PublicWork,
+  type PublicWorksResponse,
+  type Territory,
+} from "../lib/api-client.js";
 import { AppUnavailableError } from "../lib/types.js";
 import { CoverageBadge } from "../components/CoverageBadge.js";
 import { NumberWithMetadata, metaNumber } from "../components/NumberWithMetadata.js";
@@ -10,6 +18,8 @@ export function Distrito() {
   const valid = /^\d{6}$/.test(ubigeo);
 
   const [data, setData] = useState<PublicWorksResponse | null>(null);
+  const [territorio, setTerritorio] = useState<Territory | null>(null);
+  const [assets, setAssets] = useState<InfrastructureAssetsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -24,15 +34,28 @@ export function Distrito() {
     setError(null);
     (async () => {
       try {
-        // Por ahora el endpoint de infobras filtra por departamento. Mapeamos
-        // el UBIGEO (6 dígitos) → prefijo departamental (2 dígitos) → nombre.
+        // Por ahora infobras_public_works y radar_ejecucion_infrastructure_assets
+        // solo filtran por departamento en el backend (no por distrito — ver
+        // AL3-09 en docs/TICKETS_Rastro_Capa_Lectura_v1.md). Resolvemos el
+        // distrito exacto vía ceplan_geo_territories (que sí conoce el UBIGEO
+        // completo) y filtramos el resultado en el cliente contra ese nombre.
         const deptoPrefix = ubigeo.slice(0, 2);
         const deptoNombre = UBIGEO_DEPARTAMENTO[deptoPrefix] ?? null;
         if (!deptoNombre) {
           throw new Error(`Prefijo departamental ${deptoPrefix} no reconocido.`);
         }
-        const res = await getInfobrasPublicWorks({ departamento: deptoNombre });
-        if (!cancelled) setData(res);
+        const [territorioRes, worksRes, assetsRes] = await Promise.allSettled([
+          getCeplanGeoTerritory({ ubigeo }),
+          getInfobrasPublicWorks({ departamento: deptoNombre }),
+          getRadarEjecucionInfrastructureAssets({ departamento: deptoNombre }),
+        ]);
+        if (cancelled) return;
+        if (territorioRes.status === "fulfilled") setTerritorio(territorioRes.value);
+        if (worksRes.status === "fulfilled") setData(worksRes.value);
+        if (assetsRes.status === "fulfilled") setAssets(assetsRes.value);
+        if (worksRes.status === "rejected" && assetsRes.status === "rejected") {
+          throw worksRes.reason;
+        }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof AppUnavailableError ? err.message : (err as Error).message);
@@ -45,6 +68,20 @@ export function Distrito() {
       cancelled = true;
     };
   }, [ubigeo, valid]);
+
+  const distritoNombre = territorio?.distrito ?? null;
+
+  const obrasDelDistrito = useMemo(() => {
+    if (!data) return [];
+    if (!distritoNombre) return data.items;
+    return data.items.filter((w) => w.distrito?.toUpperCase() === distritoNombre.toUpperCase());
+  }, [data, distritoNombre]);
+
+  const activosDelDistrito = useMemo(() => {
+    if (!assets) return [];
+    if (!distritoNombre) return assets.resultados;
+    return assets.resultados.filter((a) => a.territorio.distrito?.toUpperCase() === distritoNombre.toUpperCase());
+  }, [assets, distritoNombre]);
 
   if (!valid) {
     return (
@@ -59,10 +96,24 @@ export function Distrito() {
   return (
     <div className="max-w-5xl mx-auto px-6 py-12">
       <p className="text-xs text-muted font-mono">LECTOR AUDITORÍA · UBIGEO {ubigeo}</p>
-      <h1 className="font-serif text-3xl text-fg mt-2">Obras y activos (alcance departamental)</h1>
+      <h1 className="font-serif text-3xl text-fg mt-2">
+        {distritoNombre ? `Obras y activos — ${distritoNombre}` : "Obras y activos (alcance departamental)"}
+      </h1>
       <p className="text-fg-soft mt-2 max-w-3xl">
-        INFOBRAS (Contraloría) para el departamento al que pertenece este distrito. Sin coordenadas: INFOBRAS no las
-        publica.
+        {distritoNombre ? (
+          <>
+            INFOBRAS y radar-ejecucion traen el universo del departamento; esta vista lo filtra a las filas cuyo
+            campo <code className="text-fg-soft">distrito</code> coincide exactamente con{" "}
+            <strong className="text-fg">{distritoNombre}</strong> (resuelto desde el UBIGEO vía ceplan-geo). Sin
+            coordenadas: INFOBRAS no las publica.
+          </>
+        ) : (
+          <>
+            No se pudo resolver el distrito exacto para este UBIGEO (ceplan-geo no disponible o territorio no
+            encontrado) — se muestra el universo completo del departamento sin filtrar. Sin coordenadas: INFOBRAS no
+            las publica.
+          </>
+        )}
       </p>
       <p className="mt-3">
         <Link to={`/distrito/${ubigeo}/integridad`} className="text-accent text-sm underline-offset-2 hover:underline">
@@ -78,7 +129,9 @@ export function Distrito() {
       {!loading && data ? (
         <div className="mt-8 card overflow-x-auto">
           <div className="flex items-center gap-3">
-            <h2 className="text-fg font-semibold">{data.items.length} obras</h2>
+            <h2 className="text-fg font-semibold">
+              {obrasDelDistrito.length} obras{distritoNombre ? " en el distrito" : " en el departamento"}
+            </h2>
             <CoverageBadge cobertura={data.cobertura} />
             <span className="text-xs text-muted">corte: {data.corte}</span>
           </div>
@@ -120,7 +173,7 @@ export function Distrito() {
               </tr>
             </thead>
             <tbody className="divide-y divide-line-soft">
-              {data.items.slice(0, 50).map((w: PublicWork) => (
+              {obrasDelDistrito.slice(0, 50).map((w: PublicWork) => (
                 <tr key={w.codigoInfobras}>
                   <td className="py-2 pr-3 mono-num text-fg-soft">{w.codigoInfobras}</td>
                   <td className="py-2 pr-3 text-fg">{w.descripcion}</td>
@@ -152,8 +205,51 @@ export function Distrito() {
               ))}
             </tbody>
           </table>
-          {data.items.length > 50 ? (
-            <p className="text-xs text-muted mt-3">Mostrando primeras 50 de {data.items.length} obras.</p>
+          {obrasDelDistrito.length > 50 ? (
+            <p className="text-xs text-muted mt-3">Mostrando primeras 50 de {obrasDelDistrito.length} obras.</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {!loading && assets ? (
+        <div className="mt-8 card overflow-x-auto">
+          <div className="flex items-center gap-3">
+            <h2 className="text-fg font-semibold">
+              {activosDelDistrito.length} activos de infraestructura{distritoNombre ? " en el distrito" : " en el departamento"}
+            </h2>
+          </div>
+          <p className="text-xs text-muted mt-1">{assets.cautela}</p>
+
+          {activosDelDistrito.length === 0 ? (
+            <p className="text-fg-soft text-sm mt-4">Sin activos materializados para este alcance.</p>
+          ) : (
+            <table className="mt-6 w-full text-sm">
+              <thead className="text-xs text-muted text-left">
+                <tr>
+                  <th className="py-2 pr-3">Activo</th>
+                  <th className="py-2 pr-3">Familia</th>
+                  <th className="py-2 pr-3">CUI</th>
+                  <th className="py-2 pr-3">Cierre</th>
+                  <th className="py-2 pr-3">Operador</th>
+                  <th className="py-2 pr-3">Mantenimiento</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line-soft">
+                {activosDelDistrito.slice(0, 50).map((a) => (
+                  <tr key={a.id}>
+                    <td className="py-2 pr-3 text-fg">{a.activo}</td>
+                    <td className="py-2 pr-3 text-fg-soft">{a.familia}</td>
+                    <td className="py-2 pr-3 mono-num text-fg-soft">{a.identidad.cui ?? "—"}</td>
+                    <td className="py-2 pr-3 text-xs text-fg-soft">{a.etapas.cierre}</td>
+                    <td className="py-2 pr-3 text-xs text-fg-soft">{a.etapas.operador}</td>
+                    <td className="py-2 pr-3 text-xs text-fg-soft">{a.etapas.mantenimiento}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {activosDelDistrito.length > 50 ? (
+            <p className="text-xs text-muted mt-3">Mostrando primeros 50 de {activosDelDistrito.length} activos.</p>
           ) : null}
         </div>
       ) : null}

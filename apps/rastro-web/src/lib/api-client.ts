@@ -385,6 +385,314 @@ export function getRadarEjecucionInfrastructureIntegrity(
   });
 }
 
+/**
+ * radar_ejecucion_infrastructure_assets — activos de infraestructura
+ * materializados para un departamento (CUI/obra cuando existe, evidencia de
+ * cierre/operador/mantenimiento/disponibilidad/servicio por separado).
+ * Igual que infobras_public_works, solo filtra por departamento en el
+ * backend — el filtro por distrito exacto se hace en el cliente (AL3-09).
+ */
+export interface InfrastructureAsset {
+  id: string;
+  familia: string;
+  activo: string;
+  territorio: { departamento: string | null; provincia: string | null; distrito: string | null };
+  identidad: { cui: string | null; codigoInfobras: string | null; codigoSectorial: string | null; estado: string };
+  etapas: {
+    cierre: string;
+    operador: string;
+    mantenimiento: string;
+    disponibilidad: string;
+    servicio: string;
+  };
+  obraInfoBras: unknown;
+  fuente: unknown;
+  fechaObservada: string | null;
+  limitacion: string | null;
+}
+export interface InfrastructureAssetsResponse {
+  departamento: string;
+  sector: string | null;
+  resultados: InfrastructureAsset[];
+  cautela: string;
+}
+export function getRadarEjecucionInfrastructureAssets(
+  params: { departamento?: string; sector?: string },
+  options?: RequestOptions,
+) {
+  return requestJson<InfrastructureAssetsResponse>("radar-ejecucion", "/api/infraestructura/activos", {
+    ...options,
+    query: { departamento: params.departamento, sector: params.sector },
+  });
+}
+
+/**
+ * radar_inversiones_investments — cartera de inversión pública (Invierte.pe).
+ * Sin fuente/cobertura/matcher/corte en la respuesta — mismo caso que
+ * `compras_publicas_suppliers` (AL3-08): el backend no los declara para
+ * este endpoint. Usar `NO_APLICA` en el sitio de uso, no inventar valores.
+ */
+export interface Investment {
+  cui: string;
+  codigoSnip: string | null;
+  nombre: string;
+  secEjec: string | null;
+  nombreUep: string | null;
+  entidad: string;
+  sector: string | null;
+  nivel: string | null;
+  estado: string;
+  situacion: string | null;
+  departamento: string | null;
+  provincia: string | null;
+  distrito: string | null;
+  montoViable: number | null;
+  costoActualizado: number | null;
+  funcion: string | null;
+  tipoInversion: string | null;
+  fechaRegistro: string | null;
+  fechaViabilidad: string | null;
+  fetchedAt: string;
+}
+export interface InvestmentsResponse {
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+  resultados: Investment[];
+}
+export function getRadarInversionesInvestments(
+  params: { departamento?: string; estado?: string; situacion?: string; funcion?: string },
+  options?: RequestOptions,
+) {
+  return requestJson<InvestmentsResponse>("radar-inversiones", "/api/investments", {
+    ...options,
+    query: params,
+  });
+}
+
+/** ceplan_estrategico_indicators — indicadores agregados por nivel de gobierno (sin modelo per-entidad). */
+export interface CeplanIndicador {
+  indicatorCode: string;
+  indicatorName: string;
+  serieId: string;
+  serieLabel: string;
+  nivelGobierno: string;
+  value: number;
+  measurementDate: string;
+  unitOfMeasure: string | null;
+  frequency: string | null;
+  fuente: { dataset: string };
+}
+export interface CeplanIndicadoresResponse {
+  resultados: CeplanIndicador[];
+}
+export function getCeplanEstrategicoIndicators(
+  params: { indicatorCode?: string; nivelGobierno?: string },
+  options?: RequestOptions,
+) {
+  return requestJson<CeplanIndicadoresResponse>("ceplan-estrategico", "/api/indicators", {
+    ...options,
+    query: params,
+  });
+}
+
+/**
+ * ceplan_geo_territories — territorio oficial por UBIGEO o por tríada
+ * departamento/provincia/distrito. A diferencia del resto, este endpoint
+ * devuelve UN territorio (no una lista) cuando el filtro matchea, y 404 si
+ * no. Se usa para resolver distrito exacto desde un UBIGEO (AL3-09).
+ */
+export interface Territory {
+  ubigeo: string;
+  departamento: string;
+  provincia: string | null;
+  distrito: string | null;
+  geometry: unknown;
+  matchStatus?: string;
+}
+export function getCeplanGeoTerritory(
+  params: { ubigeo?: string; departamento?: string; provincia?: string; distrito?: string },
+  options?: RequestOptions,
+) {
+  return requestJson<Territory>("ceplan-geo", "/api/territories", {
+    ...options,
+    query: params,
+  });
+}
+
+/** salud_institucional_score — score compuesto 0-100 por entidad, calculado en vivo. */
+export interface ComponentScore {
+  valor: number | null;
+  disponible: boolean;
+}
+export interface EntityScore {
+  entityCode: string;
+  nombre: string;
+  scoreCompuesto: number | null;
+  componentesUsados: number;
+  componentes: {
+    ejecucion: ComponentScore;
+    obrasNoParalizadas: ComponentScore;
+    inversionesSinSobrecosto: ComponentScore;
+    comprasNoConcentradas: ComponentScore;
+    saludTributariaProveedores: ComponentScore;
+  };
+}
+export interface SaludInstitucionalScoreResponse {
+  departamento: string;
+  anioFiscal?: number;
+  resultados: EntityScore[];
+}
+export function getSaludInstitucionalScore(
+  params: { departamento?: string; anio?: string },
+  options?: RequestOptions,
+) {
+  return requestJson<SaludInstitucionalScoreResponse>("salud-institucional", "/api/score", {
+    ...options,
+    query: params,
+  });
+}
+
+/**
+ * actividad_agraria_wage — jornal agrícola regional (MIDAGRI). Los 3
+ * endpoints "regional-monthly" (wage/tractor-rental/yunta-rental) devuelven
+ * las filas de SQL tal cual (sin remapear a camelCase) — `valor_soles` es
+ * el nombre real de la columna, no un error de tipeo.
+ */
+export interface RegionalMonthlyRow {
+  departamento: string;
+  anio: number;
+  mes: number;
+  valor_soles: number | null;
+}
+export interface RegionalMonthlyResponse {
+  resultados: RegionalMonthlyRow[];
+}
+export function getActividadAgrariaWage(
+  params: { departamento?: string; anio?: string },
+  options?: RequestOptions,
+) {
+  return requestJson<RegionalMonthlyResponse>("actividad-agraria", "/api/wage", {
+    ...options,
+    query: params,
+  });
+}
+
+/** seguridad_ciudadana_denuncias — denuncias policiales agregadas (SIDPOL). */
+export interface DenunciaRow {
+  departamento: string;
+  provincia: string;
+  distrito: string | null;
+  ubigeo: string | null;
+  anio: number;
+  mes: number;
+  modalidad: string;
+  cantidad: number;
+}
+export interface DenunciasResponse {
+  resultados: DenunciaRow[];
+}
+export function getSeguridadCiudadanaDenuncias(
+  params: { departamento?: string; provincia?: string; anio?: string; modalidad?: string },
+  options?: RequestOptions,
+) {
+  return requestJson<DenunciasResponse>("seguridad-ciudadana", "/api/denuncias", {
+    ...options,
+    query: params,
+  });
+}
+
+/** bcrp_trade — comercio exterior agregado nacional (BCRP), sin desagregación territorial. */
+export interface TradeRow {
+  series_code: string;
+  series_key: string;
+  series_title: string;
+  category: string | null;
+  period_year: number;
+  period_month: number;
+  value_usd_millions: number | null;
+}
+export interface TradeResponse {
+  resultados: TradeRow[];
+  cobertura: string;
+  isPartial: boolean;
+}
+export function getBcrpComercioExteriorTrade(
+  params: { series?: string; anio?: string; desde?: string; hasta?: string },
+  options?: RequestOptions,
+) {
+  return requestJson<TradeResponse>("bcrp-comercio-exterior", "/api/trade", {
+    ...options,
+    query: params,
+  });
+}
+
+/** inversion_privada_projects — cartera APP/PA de PROINVERSIÓN (VERTIX). */
+export interface InversionPrivadaProject {
+  vertixId: number;
+  slug: string | null;
+  tipoProyecto: string;
+  nombre: string;
+  estado: string | null;
+  fase: string | null;
+  titular: string | null;
+  sector: string | null;
+  cartera: string | null;
+  modalidad: string | null;
+  modalidadContractual: string | null;
+  montoInversionSigv: number | null;
+  montoProyecto: string | null;
+  greenBrownfield: string | null;
+  departamentos: string[] | null;
+  urlThumb: string | null;
+  fuente: { dataset: string; extraidoEl: string };
+}
+export interface InversionPrivadaProjectsResponse {
+  resultados: InversionPrivadaProject[];
+  cobertura: string;
+  isPartial: boolean;
+  recordsTotalFuente: number | null;
+  extraidoEl: string | null;
+}
+export function getInversionPrivadaProjects(
+  params: { departamento?: string; sector?: string; tipo?: "APP" | "PA"; titular?: string; fase?: string },
+  options?: RequestOptions,
+) {
+  return requestJson<InversionPrivadaProjectsResponse>("inversion-privada", "/api/projects", {
+    ...options,
+    query: params,
+  });
+}
+
+/**
+ * bcrp_la_libertad_indicadores — Síntesis de Actividad Económica de La
+ * Libertad (BCRP Sucursal Trujillo). Ingesta MANUAL (sin scraping
+ * automático, ver ADR-0014) — cobertura parcial de anexos (1,2,3,5,6,8,10;
+ * 4,7,9 no se ingieren por ambigüedad de formato en el PDF fuente).
+ */
+export interface BcrpLaLibertadIndicador {
+  anexoNumero: number;
+  seccion: string | null;
+  indicador: string;
+  periodoAnio: number;
+  periodoMes: number;
+  valor: number | null;
+  fuente: { dataset: string; reportePeriod: string | null };
+}
+export interface BcrpLaLibertadIndicadoresResponse {
+  resultados: BcrpLaLibertadIndicador[];
+}
+export function getBcrpLaLibertadIndicadores(
+  params: { anexo?: number; indicador?: string; anio?: number; mes?: number },
+  options?: RequestOptions,
+) {
+  return requestJson<BcrpLaLibertadIndicadoresResponse>("bcrp-la-libertad", "/api/indicadores", {
+    ...options,
+    query: params,
+  });
+}
+
 /** health-check genérico (un endpoint por app). */
 export function getAppHealth(appKey: AppKey, options?: RequestOptions): Promise<{ status: string }> {
   return requestJson<{ status: string }>(appKey, "/health", options);

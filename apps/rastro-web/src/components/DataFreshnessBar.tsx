@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { AppUnavailableError, type Cobertura, type WithMetadata } from "../lib/types.js";
 import { apisPublishedForBrowser, APIS_NOT_PUBLISHED_MESSAGE } from "../lib/api-config.js";
 import { getRadarEjecucionMetaSources, type MetaSource } from "../lib/api-client.js";
+import { Modal } from "./Modal.js";
+import { NumberWithMetadata, metaNumber } from "./NumberWithMetadata.js";
 
 type FreshnessState =
   | { status: "loading" }
   | { status: "unavailable"; message: string }
-  | { status: "ok"; latest: WithMetadata<MetaSource> | null };
+  | { status: "ok"; latest: WithMetadata<MetaSource> | null; items: MetaSource[] };
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -26,6 +28,7 @@ function colorForAge(daysOld: number, cobertura: Cobertura): "green" | "amber" |
 
 export function DataFreshnessBar() {
   const [state, setState] = useState<FreshnessState>({ status: "loading" });
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     if (!apisPublishedForBrowser()) {
@@ -39,7 +42,7 @@ export function DataFreshnessBar() {
         if (cancelled) return;
         const items = data.items ?? [];
         if (items.length === 0) {
-          setState({ status: "ok", latest: null });
+          setState({ status: "ok", latest: null, items: [] });
           return;
         }
         const sorted = [...items].sort((a, b) => Date.parse(b.runAt) - Date.parse(a.runAt));
@@ -55,6 +58,7 @@ export function DataFreshnessBar() {
             matcher: "runAt (ordenamiento temporal)",
             restriccion: "Ingesta manual, sin scheduler.",
           },
+          items: sorted,
         });
       } catch (err) {
         if (cancelled) return;
@@ -111,9 +115,13 @@ export function DataFreshnessBar() {
   return (
     <div className="border-t border-line-soft bg-ink-900/40">
       <div className="mx-auto max-w-6xl px-6 py-2 text-xs flex items-center gap-3 flex-wrap">
-        <span className={`px-2 py-0.5 rounded border ${colorClass}`}>
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          className={`px-2 py-0.5 rounded border ${colorClass} hover:brightness-110 cursor-pointer`}
+        >
           radar-ejecucion · última corrida: {state.latest.corte}
-        </span>
+        </button>
         <span className="text-muted">
           · cobertura: <span className="text-fg-soft">{state.latest.cobertura}</span>
         </span>
@@ -121,7 +129,44 @@ export function DataFreshnessBar() {
           · matcher: <span className="text-fg-soft">{state.latest.matcher}</span>
         </span>
         <span className="text-muted hidden md:inline">· {state.latest.restriccion}</span>
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          className="text-accent underline-offset-2 hover:underline"
+        >
+          ver todas las fuentes →
+        </button>
       </div>
+
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="radar_ejecucion_meta_sources — lotes de ingesta">
+        {state.items.length === 0 ? (
+          <p className="text-sm text-muted">Sin corridas registradas todavía.</p>
+        ) : (
+          <ul className="space-y-3 max-h-96 overflow-y-auto text-sm">
+            {state.items.map((item, i) => (
+              <li key={i} className="border-b border-line-soft pb-2 last:border-b-0">
+                <p className="text-fg">
+                  {item.runAt} ·{" "}
+                  <NumberWithMetadata
+                    data={metaNumber(
+                      item.records,
+                      "radar-ejecucion / radar_ejecucion_meta_sources",
+                      item.runAt,
+                      item.cobertura ?? "PARCIAL",
+                    )}
+                  />{" "}
+                  registros
+                </p>
+                <p className="text-xs text-muted mt-1">
+                  cobertura: {item.cobertura ?? "PARCIAL"}
+                  {item.fuente ? ` · fuente: ${item.fuente}` : ""}
+                  {item.checksum ? ` · checksum: ${item.checksum.slice(0, 12)}…` : ""}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Modal>
     </div>
   );
 }

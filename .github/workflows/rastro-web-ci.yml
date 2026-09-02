@@ -93,22 +93,31 @@ jobs:
     env:
       # webServer de playwright.config.ts corre `npm run build && npm run
       # preview`; el build necesita las 14 vars igual que el job de arriba.
-      # Los valores no importan: e2e/*.spec.ts intercepta cada fetch con
-      # page.route, nunca llega a resolver estos hosts.
-      VITE_API_BASE_URL_RADAR_EJECUCION: https://radar-ejecucion.example.test
-      VITE_API_BASE_URL_COMPRAS_PUBLICAS: https://compras-publicas.example.test
-      VITE_API_BASE_URL_RADAR_INVERSIONES: https://radar-inversiones.example.test
-      VITE_API_BASE_URL_INFOBRAS: https://infobras.example.test
-      VITE_API_BASE_URL_CEPLAN_ESTRATEGICO: https://ceplan-estrategico.example.test
-      VITE_API_BASE_URL_CEPLAN_GEO: https://ceplan-geo.example.test
-      VITE_API_BASE_URL_IDENTIDAD_FISCAL: https://identidad-fiscal.example.test
-      VITE_API_BASE_URL_SALUD_INSTITUCIONAL: https://salud-institucional.example.test
-      VITE_API_BASE_URL_PROVEEDORES_SANCIONADOS: https://proveedores-sancionados.example.test
-      VITE_API_BASE_URL_ACTIVIDAD_AGRARIA: https://actividad-agraria.example.test
-      VITE_API_BASE_URL_SEGURIDAD_CIUDADANA: https://seguridad-ciudadana.example.test
-      VITE_API_BASE_URL_BCRP_COMERCIO_EXTERIOR: https://bcrp-comercio-exterior.example.test
-      VITE_API_BASE_URL_INVERSION_PRIVADA: https://inversion-privada.example.test
-      VITE_API_BASE_URL_BCRP_LA_LIBERTAD: https://bcrp-la-libertad.example.test
+      #
+      # IMPORTANTE: el path de cada URL (el segmento después del host) debe
+      # coincidir con el nombre de app que usan los `page.route("**/<app>/api/...")`
+      # de e2e/*.spec.ts — igual que en producción, donde api.rastro.pe enruta
+      # por path (`https://api.rastro.pe/infobras`, ver .env.production), no
+      # por subdominio. Un host por app (ej. https://infobras.example.test)
+      # rompe el match: "infobras.example.test/api/x" no contiene el substring
+      # literal "/infobras/api/x" que el glob busca, la request no se
+      # intercepta, sale a un DNS inexistente y el test hace timeout — se
+      # confirmó así en CI (10/10 fallando) tras asumir por error que "los
+      # valores no importan porque page.route intercepta todo".
+      VITE_API_BASE_URL_RADAR_EJECUCION: https://api.example.test/radar-ejecucion
+      VITE_API_BASE_URL_COMPRAS_PUBLICAS: https://api.example.test/compras-publicas
+      VITE_API_BASE_URL_RADAR_INVERSIONES: https://api.example.test/radar-inversiones
+      VITE_API_BASE_URL_INFOBRAS: https://api.example.test/infobras
+      VITE_API_BASE_URL_CEPLAN_ESTRATEGICO: https://api.example.test/ceplan-estrategico
+      VITE_API_BASE_URL_CEPLAN_GEO: https://api.example.test/ceplan-geo
+      VITE_API_BASE_URL_IDENTIDAD_FISCAL: https://api.example.test/identidad-fiscal
+      VITE_API_BASE_URL_SALUD_INSTITUCIONAL: https://api.example.test/salud-institucional
+      VITE_API_BASE_URL_PROVEEDORES_SANCIONADOS: https://api.example.test/proveedores-sancionados
+      VITE_API_BASE_URL_ACTIVIDAD_AGRARIA: https://api.example.test/actividad-agraria
+      VITE_API_BASE_URL_SEGURIDAD_CIUDADANA: https://api.example.test/seguridad-ciudadana
+      VITE_API_BASE_URL_BCRP_COMERCIO_EXTERIOR: https://api.example.test/bcrp-comercio-exterior
+      VITE_API_BASE_URL_INVERSION_PRIVADA: https://api.example.test/inversion-privada
+      VITE_API_BASE_URL_BCRP_LA_LIBERTAD: https://api.example.test/bcrp-la-libertad
     steps:
       - uses: actions/checkout@v4
 

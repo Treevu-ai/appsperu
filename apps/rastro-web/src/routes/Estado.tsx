@@ -10,10 +10,13 @@ interface AppState {
   detail?: string;
 }
 
+const REFRESH_INTERVAL_MS = 60_000;
+
 export function Estado() {
   const [states, setStates] = useState<AppState[]>(() =>
     (Object.keys(APP_CATALOG) as AppKey[]).map((k) => ({ appKey: k, status: "loading" })),
   );
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   // AL3-17: métrica pública de rate limit, servida por la Pages Function
   // functions/api/rate-limit-stats.ts (no una de las 14 APIs de appsperu).
   const [count429, setCount429] = useState<number | null>(null);
@@ -37,7 +40,8 @@ export function Estado() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+
+    async function checkAll() {
       const updates: AppState[] = [];
       await Promise.all(
         (Object.keys(APP_CATALOG) as AppKey[]).map(async (k) => {
@@ -53,10 +57,17 @@ export function Estado() {
         // Orden estable por appKey para que el re-render no baile.
         updates.sort((a, b) => a.appKey.localeCompare(b.appKey));
         setStates(updates);
+        setLastRefresh(new Date());
       }
-    })();
+    }
+
+    checkAll();
+    // AL3-12: refresh automático cada 60s, sin caché (getAppHealth ya usa
+    // cache: 'no-store'). El intervalo se limpia al desmontar la página.
+    const intervalId = setInterval(checkAll, REFRESH_INTERVAL_MS);
     return () => {
       cancelled = true;
+      clearInterval(intervalId);
     };
   }, []);
 
@@ -68,7 +79,8 @@ export function Estado() {
       <p className="text-xs text-muted font-mono">ESTADO DEL PRODUCTO</p>
       <h1 className="font-serif text-3xl text-fg mt-2">14 APIs en vivo</h1>
       <p className="text-fg-soft mt-2">
-        Health-check independiente por app. Refresh manual al recargar la página.
+        Health-check independiente por app. Refresh automático cada 60 s, sin caché.
+        {lastRefresh ? ` Última actualización: ${lastRefresh.toLocaleTimeString("es-PE")}.` : ""}
       </p>
 
       <div className="mt-6 flex gap-3 text-sm">

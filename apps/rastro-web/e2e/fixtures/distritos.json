@@ -1,6 +1,7 @@
 {
   "130101": {
     "departamento": "LA LIBERTAD",
+    "distrito": "TRUJILLO",
     "items": [
       { "codigoInfobras": "INF-001", "descripcion": "Mejoramiento de pista Av. España", "entidad": "MUNICIPALIDAD PROVINCIAL DE TRUJILLO", "departamento": "LA LIBERTAD", "provincia": "TRUJILLO", "distrito": "TRUJILLO", "estado": "EN EJECUCION", "paralizada": false, "avanceFisicoPct": 62.5 },
       { "codigoInfobras": "INF-002", "descripcion": "Construcción de posta de salud El Porvenir", "entidad": "GOBIERNO REGIONAL LA LIBERTAD", "departamento": "LA LIBERTAD", "provincia": "TRUJILLO", "distrito": "EL PORVENIR", "estado": "PARALIZADA", "paralizada": true }
@@ -12,6 +13,7 @@
   },
   "060101": {
     "departamento": "CAJAMARCA",
+    "distrito": "NAMORA",
     "items": [
       { "codigoInfobras": "INF-101", "descripcion": "Rehabilitación de canal de riego Namora", "entidad": "MUNICIPALIDAD PROVINCIAL DE CAJAMARCA", "departamento": "CAJAMARCA", "provincia": "CAJAMARCA", "distrito": "NAMORA", "estado": "CULMINADA", "paralizada": false, "avanceFisicoPct": 100 }
     ],
