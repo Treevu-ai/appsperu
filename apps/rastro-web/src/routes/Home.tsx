@@ -18,6 +18,10 @@ export function Home() {
           fetchPriority="high"
         />
         <div className="bg-ink-950 sm:bg-transparent sm:absolute sm:inset-x-0 sm:bottom-0 sm:bg-gradient-to-t sm:from-ink-950 sm:via-ink-950/80 sm:to-transparent px-4 sm:px-6 pb-6 sm:pb-8 pt-4 sm:pt-16">
+          <p className="max-w-5xl mx-auto mb-4 text-fg-soft text-sm sm:text-base">
+            Cada señal deja un rastro. Nosotros lo hacemos{" "}
+            <span className="text-accent bg-accent/15 px-1.5 py-0.5 rounded">visible</span>.
+          </p>
           <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:flex-wrap gap-3">
             <Link
               to="/gore/la-libertad/ficha"
