@@ -22,7 +22,7 @@ pages_build_output_dir = "./dist"
 # bindings) que además del wrangler.toml requiere Cloudflare Pages Git deploy.
 [[kv_namespaces]]
 binding = "RATE_LIMIT"
-id = "REEMPLAZAR_CON_EL_ID_DEL_NAMESPACE_KV"
+id = "da7766279cc54ba5817e338b76eb3ef1"
 
 # Variables de entorno NO se ponen aquí. Se configuran en el dashboard
 # de Cloudflare Pages bajo Settings → Environment variables.
