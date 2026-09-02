@@ -1,0 +1,11 @@
+{
+  "name": "appsperu",
+  "private": true,
+  "description": "Monorepo raíz — SOLO declara el workspace acotado del ADR-0017 (consolidación de matchers de entidad). Las 14 apps siguen siendo proyectos npm independientes con su propio package-lock.json y CI; ninguna otra se agregó a `workspaces` a propósito, para no ampliar el alcance de este cambio (ver docs/adr/0017-consolidacion-entity-crosswalk-evaluacion.md).",
+  "workspaces": [
+    "packages/*",
+    "apps/compras-publicas/api",
+    "apps/infobras/api",
+    "apps/identidad-fiscal/api"
+  ]
+}

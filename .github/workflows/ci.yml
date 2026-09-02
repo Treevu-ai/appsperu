@@ -34,8 +34,26 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: ${{ matrix.package }}/package-lock.json
-      - run: npm ci
+          # Casi todas las apps tienen su propio package-lock.json (instalación
+          # standalone, sin cambios). apps/compras-publicas/api, apps/infobras/api
+          # y apps/identidad-fiscal/api son la excepción (ADR-0017, workspace de
+          # npm acotado a esas 3 + packages/entity-matcher) — su lockfile vive
+          # en la raíz del repo. Se listan ambos paths; hashFiles usa el que
+          # exista para cada matrix entry, sin fallar si el otro no matchea.
+          cache-dependency-path: |
+            ${{ matrix.package }}/package-lock.json
+            package-lock.json
+      - name: Install dependencies
+        # Las 3 apps del workspace (ver comentario arriba) no tienen su propio
+        # package-lock.json — `npm ci` debe correr desde la raíz para que
+        # resuelva contra el lockfile del workspace. El resto sigue exactamente
+        # igual que antes (npm ci local, sin tocar).
+        run: |
+          if [ -f "package-lock.json" ]; then
+            npm ci
+          else
+            (cd "$GITHUB_WORKSPACE" && npm ci)
+          fi
       - run: npx tsc --noEmit
       - run: npm test --if-present
       - run: npm run build --if-present

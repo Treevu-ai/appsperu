@@ -1,9 +1,12 @@
 # ADR-0017: Consolidación de los matchers difusos de entidad — evaluación (CX-05)
 
-- Estado: Evaluado — recomienda consolidar, sin implementación en esta iteración.
+- Estado: **Implementado (2026-09-02, misma sesión)**. Evaluado primero como "sin implementación
+  en esta iteración"; el usuario pidió retomarlo y se ejecutó el plan completo (pasos 1-4 de
+  "Recomendación para una futura iteración").
 - Fecha: 2026-09-02
-- Ámbito: `apps/compras-publicas/api/src/crossref/match.ts`, `apps/infobras/api/src/crossref/match.ts`,
-  `apps/identidad-fiscal/api/src/crossref/match.ts`.
+- Ámbito: `packages/entity-matcher/` (nuevo), `package.json` raíz (nuevo, workspace acotado),
+  `apps/compras-publicas/api/src/crossref/match.ts`, `apps/infobras/api/src/crossref/match.ts`,
+  `apps/identidad-fiscal/api/src/crossref/match.ts`, `.github/workflows/ci.yml`.
 - Origen: [`docs/PRD_Confiabilidad_Conectores_y_Cruces_v1.md`](../PRD_Confiabilidad_Conectores_y_Cruces_v1.md)
   §5 CX-05.
 
@@ -65,33 +68,51 @@ lo que cambia es solo dónde vive.
 
 ## Decisión
 
-**Se recomienda consolidar, pero no se implementa en esta iteración.** El análisis muestra que
-el costo de mantener 3 copias no es hipotético (ya generó una divergencia de documentación
-real), y `packages/http-client` ya establece el patrón de paquete compartido en este monorepo —
-extender ese patrón a un matcher de entidades es coherente con la arquitectura existente, no una
-excepción nueva.
+**Se recomendó consolidar. Al retomar el ADR en la misma sesión, se implementó completo.**
 
-Se difiere la implementación porque: (1) es P2 en el backlog de origen, sin fecha comprometida;
-(2) el algoritmo actual funciona correctamente en las 3 apps — esto es deuda técnica de
-mantenibilidad, no un bug activo que esté produciendo resultados incorrectos hoy; (3) requiere
-decidir primero el mecanismo de paquete compartido (workspace npm a nivel raíz vs. `file:`
-dependency vs. otro), que es una decisión de arquitectura del monorepo más amplia que el propio
-matcher, y no debe tomarse como efecto secundario de este ticket.
+**Corrección sobre el análisis original**: la sección anterior de este ADR afirmaba que
+`packages/http-client` "ya establece el patrón de paquete compartido en este monorepo". Al
+verificar antes de tocar la raíz del repo, resultó ser **falso** — `packages/http-client` es un
+archivo huérfano (`src/index.ts`, sin `package.json`, sin `tsconfig.json`, sin ninguna app que lo
+importe). No había ningún precedente real de paquete compartido en el monorepo; la decisión de
+abajo se tomó sabiendo eso, no asumiendo un patrón que no existía.
 
-## Recomendación para una futura iteración
+## Implementación (2026-09-02)
 
-1. Decidir el mecanismo de paquete compartido a nivel de monorepo (probablemente npm workspaces
-   a nivel raíz, dado que no existe ninguno hoy — pero esa decisión afecta más que solo este
-   matcher, amerita su propio ADR).
-2. Extraer `packages/entity-matcher` con el algoritmo genérico (`normalize`, `coreTokens`,
-   `jaccard`, `matchEntities<A, B>` parametrizado por los shapes de entrada/salida en vez de
-   hardcodear `MefEntityInput`/`OeceEntityInput` por app).
-3. Migrar las 3 apps una por una, verificando que cada suite de tests existente
-   (`match.test.ts`) siga pasando con el mismo resultado antes/después — el algoritmo no debe
-   cambiar de comportamiento en la migración, solo de ubicación.
-4. Corregir el comentario desactualizado de `compras-publicas/match.ts` (línea sobre "2 tokens
-   compartidos") como parte de esa migración, ya que el paquete consolidado tendría un solo
-   comentario en vez de tres potencialmente inconsistentes.
+1. ✅ **Mecanismo decidido: npm workspaces, acotado a solo lo necesario.** `package.json` en la
+   raíz del repo con `"workspaces": ["packages/*", "apps/compras-publicas/api",
+   "apps/infobras/api", "apps/identidad-fiscal/api"]` — las otras 11 apps del monorepo **no**
+   se agregaron (decisión explícita del usuario, para minimizar el blast radius de un cambio de
+   tooling a nivel monorepo). `packages/http-client` sigue huérfano — fuera de alcance de este
+   ADR, no se resucitó de paso.
+2. ✅ `packages/entity-matcher/` (con `package.json`, `tsconfig.json`, `vitest.config.ts`) expone
+   `matchEntities<A, B>(as, bs)` genérico sobre `{ id, nombre }`, con `normalize`/`coreTokens`/
+   `jaccard`/`STOPWORDS`/`ENTITY_TYPE_WORDS`/`CANDIDATE_MIN_SCORE` movidos verbatim desde la
+   copia de `compras-publicas` (la primera, origen de las otras dos). 7 tests propios,
+   incluyendo la regresión Chilia/Agallpampa.
+3. ✅ Las 3 apps migradas a adaptadores delgados que llaman a `matchEntitiesGeneric` y traducen
+   sus shapes de dominio — **sin cambiar su API pública** (mismo nombre de función, mismos
+   campos de entrada/salida), así que ningún caller (`routes/crossref.ts` de cada app) se tocó.
+   `identidad-fiscal/match.ts` requirió cuidado extra: su orden de argumentos originales tenía
+   padrón como lado pre-normalizado y MEF como lado iterado (al revés que los otros dos) —
+   preservado explícitamente en el adaptador con un comentario, porque invertirlo cambiaría el
+   desempate en casos de score empatado, no solo la forma del código.
+4. ✅ Se corrigió el comentario desactualizado de `compras-publicas/match.ts` (decía ">= 2 tokens
+   compartidos", el código real usa ">= 1 token distintivo") — ya no aplica por separado, quedó
+   consolidado en el comentario único de `packages/entity-matcher/src/index.ts`.
+
+**Verificado**: `tsc --noEmit`, suite de tests completa y `npm run build` en las 3 apps, corridos
+desde una instalación limpia (`rm -rf node_modules` en las 3 apps + raíz, reinstalación desde
+cero) — compras-publicas 90/90, infobras 82/82, identidad-fiscal 9/9, entity-matcher 7/7. Una
+app **no** incluida en el workspace (`radar-ejecucion`) se verificó sin cambios de comportamiento.
+
+**Efecto colateral real, ya resuelto**: los `package-lock.json` propios de las 3 apps quedaron
+obsoletos al agregar la dependencia nueva (`npm ci` local hubiera fallado por lockfile
+desincronizado) — se eliminaron esos 3 archivos (ahora los gestiona el lockfile raíz del
+workspace) y se actualizó `.github/workflows/ci.yml`: el paso de instalación detecta si la app
+tiene su propio `package-lock.json` (las 11 apps + mcp-server no tocados, instalación sin
+cambios) o no (las 3 apps del workspace, instala desde la raíz del repo). El resto de los pasos
+de CI (typecheck, test, build) no cambiaron.
 
 ## Referencias
 
