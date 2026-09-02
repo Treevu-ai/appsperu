@@ -10,7 +10,10 @@ name: Rastro Web Deploy
 #   B) Deploy Hook (CLOUDFLARE_DEPLOY_HOOK_URL) — pide a Cloudflare que rebuildee desde Git.
 #   C) Push a master — la GitHub App de Cloudflare Pages rebuildea sola (si está conectada).
 #
-# El CI completo (typecheck + lint:meta + test + build) corre ANTES del deploy.
+# El CI completo (typecheck + lint:meta + test + build + e2e) corre ANTES del
+# deploy — si la suite E2E (Playwright, "JSON de API = JSON renderizado")
+# falla, el job entero falla y ningún paso de deploy se ejecuta. Cierra
+# AL3-18 ("Build pipeline corre tests E2E antes de promover a producción").
 
 on:
   push:
@@ -75,10 +78,42 @@ jobs:
           VITE_API_BASE_URL_INVERSION_PRIVADA: http://localhost:4012
           VITE_API_BASE_URL_BCRP_LA_LIBERTAD: http://localhost:4013
 
+      - name: Install Playwright browser (Chromium only)
+        run: npm run e2e:install
+
+      - name: E2E suite (gate antes de deploy)
+        # Corre ANTES del build de producción a propósito: el webServer de
+        # playwright.config.ts hace su propio `npm run build && npm run
+        # preview` con las URLs falsas de abajo — si esto corriera después
+        # del "Build" de más abajo, pisaría el dist/ real (con
+        # .env.production) justo antes del deploy.
+        run: npm run e2e
+        env:
+          # Path-based, un solo host — igual que .env.production
+          # (https://api.rastro.pe/<app>) y que los page.route("**/<app>/api/...")
+          # de e2e/*.spec.ts. Un host por app rompe el match del glob y hace
+          # que el fetch real salga a un DNS inexistente (bug real, encontrado
+          # y corregido 2026-09-02 en rastro-web-ci.yml — ver ese archivo).
+          VITE_API_BASE_URL_RADAR_EJECUCION: https://api.example.test/radar-ejecucion
+          VITE_API_BASE_URL_COMPRAS_PUBLICAS: https://api.example.test/compras-publicas
+          VITE_API_BASE_URL_RADAR_INVERSIONES: https://api.example.test/radar-inversiones
+          VITE_API_BASE_URL_INFOBRAS: https://api.example.test/infobras
+          VITE_API_BASE_URL_CEPLAN_ESTRATEGICO: https://api.example.test/ceplan-estrategico
+          VITE_API_BASE_URL_CEPLAN_GEO: https://api.example.test/ceplan-geo
+          VITE_API_BASE_URL_IDENTIDAD_FISCAL: https://api.example.test/identidad-fiscal
+          VITE_API_BASE_URL_SALUD_INSTITUCIONAL: https://api.example.test/salud-institucional
+          VITE_API_BASE_URL_PROVEEDORES_SANCIONADOS: https://api.example.test/proveedores-sancionados
+          VITE_API_BASE_URL_ACTIVIDAD_AGRARIA: https://api.example.test/actividad-agraria
+          VITE_API_BASE_URL_SEGURIDAD_CIUDADANA: https://api.example.test/seguridad-ciudadana
+          VITE_API_BASE_URL_BCRP_COMERCIO_EXTERIOR: https://api.example.test/bcrp-comercio-exterior
+          VITE_API_BASE_URL_INVERSION_PRIVADA: https://api.example.test/inversion-privada
+          VITE_API_BASE_URL_BCRP_LA_LIBERTAD: https://api.example.test/bcrp-la-libertad
+
       - name: Build
         run: npm run build
         # URLs públicas vienen de apps/rastro-web/.env.production (api.rastro.pe).
-        # Los tests arriba siguen usando localhost vía env explícito.
+        # Corre DESPUÉS del gate de E2E a propósito — ver comentario arriba.
+        # Este es el dist/ real que sube el paso de deploy.
 
       - name: Verificar artefactos de Pages (_redirects, _headers)
         run: |

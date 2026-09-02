@@ -32,11 +32,11 @@ Este documento describía un plan (Sprints 11-14) escrito **antes** de que `apps
 | AL3-15 | ✅ Hecho | `/docs/api` generada en build-time: `scripts/generate-mcp-catalog.mjs` parsea `mcp-server/src/catalog.ts` y escribe `src/data/mcp-tools-catalog.json` (corre antes de `dev`/`build`/`typecheck`/`test`, no es una copia manual). Buscador por nombre/descripción y tooltip con el texto completo de `SIN_SCHEDULER` por fila. Reemplaza a `check-mcp-tools-sync.mjs` (eliminado — ya no puede haber desincronía si la fuente es siempre `catalog.ts`). |
 | AL3-16 | ✅ Hecho | `public/citar-rastro.md` con las 4 secciones + link en el footer de cada página. |
 | AL3-17 | ✅ Hecho | Rate limit vía Cloudflare KV (`functions/lib/rate-limit.ts`), 30 req/min en `/api/search`. Métrica pública `429Count24h` en `/estado` vía `/api/rate-limit-stats`. |
-| AL3-18 | 🟡 Parcial | Deploy real en Cloudflare Pages (proyecto `rastro`, alias `rastro-5zm.pages.dev`) + custom domain `rastro.fyi` (ver `DEPLOY.md`). El gate de E2E preview→producción sigue sin existir (la suite E2E corre en CI, pero no está enlazada al pipeline de promoción de Cloudflare Pages) — único punto real pendiente de este ticket. |
+| AL3-18 | ✅ Hecho | Deploy real en Cloudflare Pages (proyecto `rastro`, alias `rastro-5zm.pages.dev`) + custom domain `rastro.fyi` (ver `DEPLOY.md`). `rastro-web-deploy.yml` corre la suite E2E completa (`npm run e2e`, gate) ANTES del build de producción — si falla, el job entero falla y ningún paso de deploy se ejecuta. |
 | AL3-19 | ✅ Hecho | `.github/workflows/rastro-web-ci.yml` con jobs `ci` (`typecheck` + `lint:meta` + `test` + `build`) y `e2e` (Playwright). |
 | AL3-20 | ✅ Hecho | `docs/validacion-smoke-rastro-web-v1.md` con capturas + JSON + texto renderizado de los 3 lectores + `/estado` + `/buscar`. |
 
-**Resumen:** 19 hechos, 1 parcial (de 20). Único pendiente real: el gate de E2E preview→producción en el pipeline de Cloudflare Pages (parte de AL3-18) — la suite E2E existe y corre en CI, pero no bloquea la promoción a producción todavía.
+**Resumen:** 20 hechos, 0 parciales, 0 pendientes (de 20). AL3-18 cerrado 2026-09-02: `rastro-web-deploy.yml` ahora ejecuta la suite E2E (Playwright) antes del build de producción y del deploy — si el E2E falla, no se despliega. El E2E corre primero a propósito (con URLs de prueba) para no pisar el `dist/` real que sí usa `.env.production` y que sube el paso de deploy.
 
 ---
 
