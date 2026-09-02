@@ -30,3 +30,9 @@ dist-ssr
 *.sln
 *.sw?
 tsconfig.app.tsbuildinfo
+
+# Artefactos locales de auditoría / runners (no se versionan)
+.audit/
+.audit.deleted-*/
+.playwright-cli/
+.wrangler/
