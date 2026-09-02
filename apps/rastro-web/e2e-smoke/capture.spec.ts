@@ -51,7 +51,7 @@ test("captura proveedor x3", async ({ page }) => {
 test("captura distrito x2", async ({ page }) => {
   for (const [ubigeo, fixture] of Object.entries(distritos)) {
     await page.route("**/infobras/api/public-works**", (route) =>
-      route.fulfill({ json: { items: fixture.items, resumen: fixture.resumen, cobertura: fixture.cobertura, matcher: fixture.matcher, corte: fixture.corte } }),
+      route.fulfill({ json: { resultados: fixture.resultados } }),
     );
     await capture(page, `distrito-${ubigeo}`, `/distrito/${ubigeo}`);
     await page.unroute("**/infobras/api/public-works**");

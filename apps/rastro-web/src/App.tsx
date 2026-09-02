@@ -4,6 +4,7 @@ import { Buscar } from "./routes/Buscar.js";
 import { Catalogo } from "./routes/Catalogo.js";
 import { Distrito } from "./routes/Distrito.js";
 import { DistritoIntegridad } from "./routes/DistritoIntegridad.js";
+import { EntidadesInfobras } from "./routes/auditoria/EntidadesInfobras.js";
 import { DocsApi } from "./routes/DocsApi.js";
 import { DocsIntegridad } from "./routes/DocsIntegridad.js";
 import { Estado } from "./routes/Estado.js";
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="prensa/proveedores" element={<Proveedores />} />
         <Route path="distrito/:ubigeo" element={<Distrito />} />
         <Route path="distrito/:ubigeo/integridad" element={<DistritoIntegridad />} />
+        <Route path="auditoria/entidades-infobras" element={<EntidadesInfobras />} />
         <Route path="estado" element={<Estado />} />
         <Route path="docs/api" element={<DocsApi />} />
         <Route path="docs/integridad" element={<DocsIntegridad />} />

@@ -99,12 +99,11 @@ describe("api-client — caminos de error tipados", () => {
     ).rejects.toBeInstanceOf(AppUnavailableError);
   });
 
-  it("infobras devuelve obras con metadata de cobertura", async () => {
+  it("infobras devuelve obras con señales derivadas (Cost Drift, Gap físico-financiero)", async () => {
     const data = await getInfobrasPublicWorks({ departamento: "LA LIBERTAD" });
-    expect(data.cobertura).toMatch(/^(COMPLETA|PARCIAL|BLOQUEADA)$/);
-    expect(data.corte).toBeTruthy();
-    expect(data.matcher).toBeTruthy();
-    expect(data.items[0]).toHaveProperty("codigoInfobras");
+    expect(data.resultados[0]).toHaveProperty("codigoInfobras");
+    expect(data.resultados[0]).toHaveProperty("costDriftPct");
+    expect(data.resultados[0]).toHaveProperty("gapFisicoFinanciero");
   });
 
   it("sector comparativo devuelve resultados y limitation literal", async () => {
