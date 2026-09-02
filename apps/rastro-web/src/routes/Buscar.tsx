@@ -2,9 +2,67 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { APP_CATALOG } from "../lib/types.js";
 
+interface SearchResultado {
+  tipo: "inversion" | "ruc" | "obra";
+  identificador: string;
+  descripcion: string;
+  puntaje: number;
+  fuente: string;
+}
+
+interface SearchResponse {
+  q: string;
+  departamentoAlcance: string;
+  resultados: SearchResultado[];
+  fuentesNoDisponibles: string[];
+  limitacion: string;
+}
+
+const TIPO_LABEL: Record<SearchResultado["tipo"], string> = {
+  inversion: "Inversión",
+  ruc: "RUC",
+  obra: "Obra",
+};
+
+function resultHref(r: SearchResultado): string | null {
+  if (r.tipo === "ruc") return `/proveedor/${r.identificador}`;
+  return null; // inversión y obra no tienen ficha propia en rastro-web todavía.
+}
+
 export function Buscar() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<SearchResponse | null>(null);
+
+  async function runFreeTextSearch(text: string) {
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(text)}`, {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+      if (res.status === 429) {
+        const retryAfter = res.headers.get("Retry-After");
+        setError(`Demasiadas búsquedas. Intenta de nuevo en ${retryAfter ?? "unos"} segundos.`);
+        return;
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        setError(body?.error ?? `Error HTTP ${res.status} en /api/search.`);
+        return;
+      }
+      const body = (await res.json()) as SearchResponse;
+      setResult(body);
+    } catch {
+      setError("No se pudo conectar a /api/search. Si estás en desarrollo local, corre `npm run dev:local` (Pages Functions requieren wrangler pages dev, no vite dev).");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,19 +76,20 @@ export function Buscar() {
       navigate(`/distrito/${trimmed}`);
       return;
     }
-    // En Sprint 12+ se conectará al endpoint /api/search unificado.
-    // Por ahora, mensaje honesto.
-    setQ("");
-    alert("Búsqueda libre aún no implementada. Pega un RUC (11 dígitos) o un UBIGEO (6 dígitos).");
+    if (trimmed.length < 3) {
+      setError("Escribe al menos 3 caracteres para buscar por texto.");
+      return;
+    }
+    void runFreeTextSearch(trimmed);
   }
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-12">
       <p className="text-xs text-muted font-mono">BÚSQUEDA</p>
-      <h1 className="font-serif text-3xl text-fg mt-2">RUC, CUI, código INFOBRAS, UBIGEO</h1>
+      <h1 className="font-serif text-3xl text-fg mt-2">RUC, CUI, código INFOBRAS, UBIGEO o texto</h1>
       <p className="text-fg-soft mt-2">
-        Pega un identificador oficial. La búsqueda libre por texto se habilitará en Sprint 12 cuando exista el
-        endpoint <code className="text-fg mono-num">/api/search</code>.
+        Pega un identificador oficial (RUC de 11 dígitos, UBIGEO de 6 dígitos) o escribe un nombre — la búsqueda de
+        texto consulta identidad-fiscal, radar-inversiones e infobras, acotada a LA LIBERTAD para las dos últimas.
       </p>
 
       <form onSubmit={onSubmit} className="mt-8 flex gap-3">
@@ -38,13 +97,63 @@ export function Buscar() {
           type="text"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="RUC (11 dígitos) o UBIGEO (6 dígitos)"
+          placeholder="RUC, UBIGEO, o nombre de proveedor/proyecto/obra"
           className="flex-1 bg-ink-900 border border-line rounded-md px-4 py-3 text-fg mono-num"
         />
-        <button type="submit" className="btn-primary">
-          Buscar
+        <button type="submit" className="btn-primary" disabled={loading}>
+          {loading ? "Buscando…" : "Buscar"}
         </button>
       </form>
+
+      {error ? <p className="text-danger mt-4 text-sm">{error}</p> : null}
+
+      {result ? (
+        <div className="mt-8">
+          {result.fuentesNoDisponibles.length > 0 ? (
+            <p className="text-warn text-xs mb-3">{result.fuentesNoDisponibles.join(" · ")}</p>
+          ) : null}
+
+          {result.resultados.length === 0 ? (
+            <p className="text-fg-soft">
+              Sin resultados para "{result.q}" (alcance de búsqueda por texto: {result.departamentoAlcance}).
+            </p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="text-xs text-muted text-left">
+                <tr>
+                  <th className="py-2 pr-3">Tipo</th>
+                  <th className="py-2 pr-3">Identificador</th>
+                  <th className="py-2 pr-3">Descripción</th>
+                  <th className="py-2 pr-3">Fuente</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line-soft">
+                {result.resultados.slice(0, 50).map((r) => {
+                  const href = resultHref(r);
+                  return (
+                    <tr key={`${r.tipo}-${r.identificador}`}>
+                      <td className="py-2 pr-3 text-fg-soft">{TIPO_LABEL[r.tipo]}</td>
+                      <td className="py-2 pr-3 mono-num text-fg">
+                        {href ? (
+                          <a href={href} className="text-accent underline-offset-2 hover:underline">
+                            {r.identificador}
+                          </a>
+                        ) : (
+                          r.identificador
+                        )}
+                      </td>
+                      <td className="py-2 pr-3 text-fg">{r.descripcion}</td>
+                      <td className="py-2 pr-3 text-xs text-muted">{r.fuente}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+
+          <p className="text-xs text-muted mt-4">{result.limitacion}</p>
+        </div>
+      ) : null}
 
       <section className="mt-12">
         <h2 className="text-fg font-semibold">Apps detrás de esta UI</h2>

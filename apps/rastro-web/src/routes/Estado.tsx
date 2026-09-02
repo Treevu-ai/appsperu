@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { APP_CATALOG, type AppKey } from "../lib/types.js";
 import { formatApiErrorForUi } from "../lib/api-config.js";
 import { getAppHealth } from "../lib/api-client.js";
+import { NumberWithMetadata, metaNumber } from "../components/NumberWithMetadata.js";
 
 interface AppState {
   appKey: AppKey;
@@ -13,6 +14,26 @@ export function Estado() {
   const [states, setStates] = useState<AppState[]>(() =>
     (Object.keys(APP_CATALOG) as AppKey[]).map((k) => ({ appKey: k, status: "loading" })),
   );
+  // AL3-17: métrica pública de rate limit, servida por la Pages Function
+  // functions/api/rate-limit-stats.ts (no una de las 14 APIs de appsperu).
+  const [count429, setCount429] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/rate-limit-stats", { cache: "no-store" });
+        if (!res.ok) return;
+        const body = (await res.json()) as { count429Last24h: number };
+        if (!cancelled) setCount429(body.count429Last24h);
+      } catch {
+        // Sin dato de rate limit no es un error de producto — se omite en silencio.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,6 +75,18 @@ export function Estado() {
         <span className="text-accent">{upCount} arriba</span>
         <span className="text-muted">·</span>
         <span className="text-danger">{downCount} caídas</span>
+        {count429 !== null ? (
+          <>
+            <span className="text-muted">·</span>
+            <span className="text-muted">
+              429Count24h:{" "}
+              <NumberWithMetadata
+                data={metaNumber(count429, "rastro-web / functions/api/rate-limit-stats", "en vivo", "NO_APLICA")}
+                className="text-fg-soft"
+              />
+            </span>
+          </>
+        ) : null}
       </div>
 
       <table className="mt-8 w-full text-sm">

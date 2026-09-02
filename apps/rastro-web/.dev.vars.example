@@ -1,0 +1,10 @@
+# Variables de entorno para `wrangler pages dev dist` (Cloudflare Pages
+# Functions en local — ver DEPLOY.md §6). Copia a `.dev.vars` (gitignorado)
+# y completa con las URLs locales de las APIs que consume functions/api/search.ts.
+#
+# El binding KV (RATE_LIMIT) NO va acá — wrangler lo simula automáticamente
+# en local a partir de wrangler.toml, sin necesitar credenciales reales.
+
+VITE_API_BASE_URL_IDENTIDAD_FISCAL=http://localhost:4006
+VITE_API_BASE_URL_RADAR_INVERSIONES=http://localhost:4002
+VITE_API_BASE_URL_INFOBRAS=http://localhost:4003

@@ -13,6 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint:meta": "node scripts/lint-meta.mjs",
+    "e2e": "playwright test",
+    "e2e:install": "playwright install --with-deps chromium",
     "ci": "npm run typecheck && npm run lint:meta && npm run test && npm run build"
   },
   "dependencies": {
@@ -21,9 +23,11 @@
     "react-router-dom": "^7.9.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.1.16",
     "@testing-library/jest-dom": "^6.9.0",
     "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.7",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",

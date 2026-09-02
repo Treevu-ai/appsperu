@@ -46,12 +46,26 @@ export default defineConfig(({ mode }) => {
       sourcemap: true,
     },
     test: {
+      // Default "node" — tests/api-client.test.ts depende del AbortController/
+      // fetch nativos de Node para clasificar timeout vs. network (probado:
+      // cambiar el entorno global a "jsdom" hace que ese test falle, porque
+      // el fetch/AbortController de jsdom no lanza el mismo DOMException).
+      // Los tests de componentes (@testing-library/react, necesitan DOM)
+      // usan un override por archivo: `// @vitest-environment jsdom` como
+      // primera línea del archivo — ver src/components/catalog/__tests__/ y
+      // src/routes/__tests__/Catalogo.test.tsx. `jsdom` ya era devDependency
+      // sin usar hasta ahora (nunca había un test que renderizara un
+      // componente).
       environment: "node",
       globals: true,
       setupFiles: ["./src/test/setup.ts"],
       css: false,
       pool: "threads",
       testTimeout: 15_000,
+      // e2e/*.spec.ts son tests de Playwright (AL3-14), no de Vitest — sin
+      // esto, Vitest los recoge por el glob por defecto (*.spec.ts) y falla
+      // al intentar importar `test`/`expect` de @playwright/test.
+      exclude: ["**/node_modules/**", "**/dist/**", "e2e/**", "e2e-smoke/**"],
     },
   };
 });

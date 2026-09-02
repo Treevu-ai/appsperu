@@ -40,8 +40,21 @@ function envBaseUrl(appKey: AppKey): string {
   return value.replace(/\/+$/, "");
 }
 
+/**
+ * Bug real encontrado por AL3-14 (suite E2E, 2026-09-02): `new URL(path, base)`
+ * con un `path` que empieza en "/" IGNORA el path de `base` y resuelve contra
+ * el origin — ej. `new URL("/api/x", "https://api.rastro.pe/infobras/")` da
+ * `https://api.rastro.pe/api/x`, perdiendo `/infobras`. No se notaba en local
+ * (los 14 puertos no tienen path propio) ni en producción hoy
+ * (`VITE_PUBLIC_APIS_LIVE=false` bloquea las llamadas antes de intentarlas),
+ * pero rompería TODAS las llamadas en cuanto `api.rastro.pe` (proxy nginx por
+ * path) se publique. Fix: resolver `path` como RELATIVO (sin "/" inicial)
+ * contra una `base` que siempre termina en "/".
+ */
 function buildUrl(base: string, path: string, query?: RequestOptions["query"]): string {
-  const url = new URL(path.startsWith("/") ? path : `/${path}`, `${base}/`);
+  const normalizedBase = base.endsWith("/") ? base : `${base}/`;
+  const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
+  const url = new URL(normalizedPath, normalizedBase);
   if (query) {
     for (const [k, v] of Object.entries(query)) {
       if (v === undefined || v === null) continue;
@@ -238,21 +251,26 @@ export function getRadarEjecucionBenchmark(
   );
 }
 
-/** compras_publicas_suppliers — concentración por departamento. */
+/**
+ * compras_publicas_suppliers — concentración por departamento.
+ *
+ * Nota (AL3-08, 2026-09-02): el shape declarado acá antes no coincidía con
+ * la respuesta real de `apps/compras-publicas/api/src/routes/suppliers.ts`
+ * (campo `items` vs. `resultados`, `razonSocial`/`ruc` inexistentes en el
+ * backend, y sin `cobertura`/`matcher`/`corte` — el endpoint no los
+ * devuelve). Corregido para reflejar la respuesta real; ver `NO_APLICA` en
+ * el uso de este tipo en `routes/prensa/Proveedores.tsx`.
+ */
 export interface Supplier {
   supplierId: string;
-  ruc?: string;
-  razonSocial: string;
+  supplierName: string;
   valorTotal: number;
   adjudicaciones: number;
   entidadesDistintas: number;
 }
 export interface SuppliersResponse {
-  items: Supplier[];
+  resultados: Supplier[];
   concentracion: { cr3: number; cr5: number; hhi: number; proveedoresConsiderados: number };
-  cobertura: "COMPLETA" | "PARCIAL" | "BLOQUEADA";
-  matcher: string;
-  corte: string;
 }
 export function getComprasPublicasSuppliers(params: { departamento?: string }, options?: RequestOptions) {
   return requestJson<SuppliersResponse>("compras-publicas", "/api/suppliers", {
@@ -326,6 +344,44 @@ export function getInfobrasPublicWorks(params: { departamento?: string; estado?:
   return requestJson<PublicWorksResponse>("infobras", "/api/public-works", {
     ...options,
     query: { departamento: params.departamento, estado: params.estado, conParalizacion: params.conParalizacion },
+  });
+}
+
+/**
+ * radar_ejecucion_infrastructure_integrity — cadena documental mínima por
+ * departamento (`apps/radar-ejecucion/api/src/routes/infrastructure.ts`,
+ * `GET /api/infraestructura/integridad`). El endpoint filtra por
+ * `departamento` + `sector` opcional — no por distrito/UBIGEO (la fuente no
+ * lo soporta); ver AL3-10 en docs/TICKETS_Rastro_Capa_Lectura_v1.md.
+ */
+export interface InfrastructureIntegrityResponse {
+  departamento: string;
+  sector: string | null;
+  estado: "CADENA_MINIMA_DOCUMENTADA" | "BLOQUEADO_POR_EVIDENCIA";
+  controles: {
+    activos: number;
+    conCierre: number;
+    conOperador: number;
+    conMantenimiento: number;
+    conDisponibilidad: number;
+    conIndicadorServicio: number;
+    familiasMaterializadas: number;
+    pendientesRevision: number;
+  };
+  bloqueo: string | null;
+  cautela: string;
+}
+export function getRadarEjecucionInfrastructureIntegrity(
+  params: { departamento?: string; sector?: string; estricto?: boolean },
+  options?: RequestOptions,
+) {
+  return requestJson<InfrastructureIntegrityResponse>("radar-ejecucion", "/api/infraestructura/integridad", {
+    ...options,
+    query: {
+      departamento: params.departamento,
+      sector: params.sector,
+      estricto: params.estricto,
+    },
   });
 }
 

@@ -13,13 +13,10 @@ import { NumberWithMetadata, metaNumber } from "../components/NumberWithMetadata
 
 interface SupplierMatch {
   ruc: string;
-  razonSocial: string;
+  supplierName: string;
   valorTotal: number;
   adjudicaciones: number;
   hhiSubconjunto: number;
-  cobertura: "COMPLETA" | "PARCIAL" | "BLOQUEADA";
-  matcher: string;
-  corte: string;
 }
 
 export function Proveedor() {
@@ -46,28 +43,26 @@ export function Proveedor() {
         const [identidadRes, sancionesRes, supRes] = await Promise.allSettled([
           getIdentidadFiscalContribuyente(ruc),
           getProveedoresSancionadosPorRuc(ruc),
-          // OJO: el endpoint actual filtra por departamento. Para el perfil
-          // individual, en Sprint 12 lo reemplazaremos por
-          // `getComprasPublicasSupplierById(ruc)` cuando exista
-          // coincidencia RUC↔supplier_id. Mientras tanto, consultamos
-          // proveedores del departamento de domicilio.
+          // OJO: el endpoint no acepta filtro por RUC ni por supplier_id —
+          // trae todos los proveedores (nacional, sin acotar por
+          // departamento) y se busca acá el que matchea. `awards.supplier_id`
+          // usa el formato `PE-RUC-<ruc>` (confirmado en
+          // identidad-fiscal/src/routes/crossref.ts) — no hay campo `ruc`
+          // separado en la respuesta de este endpoint.
           getComprasPublicasSuppliers({}),
         ]);
         if (cancelled) return;
         if (identidadRes.status === "fulfilled") setIdentidad(identidadRes.value);
         if (sancionesRes.status === "fulfilled") setSanciones(sancionesRes.value);
         if (supRes.status === "fulfilled") {
-          const found = supRes.value.items.find((s) => s.ruc === ruc);
+          const found = supRes.value.resultados.find((s) => s.supplierId === `PE-RUC-${ruc}`);
           if (found) {
             setAdjudicaciones({
-              ruc: found.ruc ?? ruc,
-              razonSocial: found.razonSocial,
+              ruc,
+              supplierName: found.supplierName,
               valorTotal: found.valorTotal,
               adjudicaciones: found.adjudicaciones,
               hhiSubconjunto: supRes.value.concentracion.hhi,
-              cobertura: supRes.value.cobertura,
-              matcher: supRes.value.matcher,
-              corte: supRes.value.corte,
             });
           }
         }
@@ -166,7 +161,7 @@ export function Proveedor() {
         <section className="card">
           <div className="flex items-center gap-3">
             <h2 className="text-fg font-semibold">Contrataciones</h2>
-            <CoverageBadge cobertura={adjudicaciones.cobertura} />
+            <CoverageBadge cobertura="NO_APLICA" />
           </div>
           <dl className="mt-4 grid sm:grid-cols-2 gap-3 text-sm">
             <div>
@@ -177,9 +172,8 @@ export function Proveedor() {
                   data={metaNumber(
                     adjudicaciones.valorTotal,
                     "compras-publicas / compras_publicas_suppliers",
-                    adjudicaciones.corte,
-                    adjudicaciones.cobertura,
-                    adjudicaciones.matcher,
+                    "sin corte declarado por la fuente",
+                    "NO_APLICA",
                   )}
                 />
               </dd>
@@ -191,9 +185,8 @@ export function Proveedor() {
                   data={metaNumber(
                     adjudicaciones.adjudicaciones,
                     "compras-publicas / compras_publicas_suppliers",
-                    adjudicaciones.corte,
-                    adjudicaciones.cobertura,
-                    adjudicaciones.matcher,
+                    "sin corte declarado por la fuente",
+                    "NO_APLICA",
                   )}
                 />
               </dd>
@@ -205,16 +198,15 @@ export function Proveedor() {
                   data={metaNumber(
                     adjudicaciones.hhiSubconjunto,
                     "compras-publicas / compras_publicas_suppliers",
-                    adjudicaciones.corte,
-                    adjudicaciones.cobertura,
-                    adjudicaciones.matcher,
+                    "sin corte declarado por la fuente",
+                    "NO_APLICA",
                   )}
                 />
               </dd>
             </div>
           </dl>
           <p className="text-xs text-muted mt-3">
-            matcher: {adjudicaciones.matcher} · corte: {adjudicaciones.corte}
+            {adjudicaciones.supplierName} · el endpoint no declara fecha de corte ni matcher para esta consulta.
           </p>
         </section>
       ) : null}

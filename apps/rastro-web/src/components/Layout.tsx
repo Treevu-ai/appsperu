@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { DataFreshnessBar } from "./DataFreshnessBar.js";
 
-const NAV = [{ to: "/buscar", label: "Buscar" }];
+const NAV = [
+  { to: "/buscar", label: "Buscar" },
+  { to: "/prensa/proveedores", label: "Proveedores" },
+  { to: "/catalogo", label: "Catálogo" },
+];
 
 const FOOTER_LINKS = [
   { to: "/estado", label: "Estado" },
