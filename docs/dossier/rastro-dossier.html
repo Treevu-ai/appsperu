@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="es-PE">
+<head>
+<meta charset="UTF-8">
+<title>Rastro — Dossier regional La Libertad 2026</title>
+<style>
+  /* === @page + universal print color fidelity ============================ */
+  @page { size: A4 portrait; margin: 0; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Outfit", "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    color: #1d1d1f; background: #fff;
+    font-size: 10.5pt; line-height: 1.46;
+    -webkit-font-smoothing: antialiased;
+  }
+  code, .mono { font-family: "JetBrains Mono", "SF Mono", "Menlo", monospace; }
+
+  /* === Page primitive =================================================== */
+  .page { width: 210mm; min-height: 297mm; padding: 18mm 18mm 15mm; page-break-after: always; position: relative; box-sizing: border-box; }
+  .page:last-child { page-break-after: auto; }
+  .page-num { position: absolute; bottom: 10mm; right: 18mm; font-size: 8.5pt; color: #86868b; letter-spacing: 0.08em; }
+  .running-head { position: absolute; top: 10mm; left: 18mm; right: 18mm; display: flex; justify-content: space-between; font-size: 8.5pt; color: #86868b; letter-spacing: 0.08em; }
+  .running-head .brand { color: #e4002b; font-weight: 600; }
+
+  /* === Cover (full-bleed hero) ========================================== */
+  .cover {
+    width: 210mm; height: 297mm;
+    background:
+      radial-gradient(ellipse 60% 50% at 85% 15%, rgba(228,0,43,0.20), transparent 60%),
+      radial-gradient(ellipse 80% 60% at 20% 100%, rgba(228,0,43,0.10), transparent 70%),
+      linear-gradient(180deg, #0a0e14 0%, #161b22 60%, #1c2128 100%);
+    color: #fff; padding: 30mm 22mm; position: relative; overflow: hidden;
+    page-break-after: always;
+  }
+  .cover::before {
+    content: ""; position: absolute; top: -120px; right: -120px;
+    width: 480px; height: 480px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(228,0,43,0.18), transparent 70%);
+  }
+  .cover-mark {
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 8px 18px; border: 1px solid rgba(228,0,43,0.6);
+    border-radius: 4px; font-family: "JetBrains Mono", monospace;
+    font-size: 11pt; letter-spacing: 0.18em; color: #e4002b;
+    background: rgba(228,0,43,0.06);
+  }
+  .cover-mark img { width: 20px; height: 20px; border-radius: 4px; display: block; }
+  .cover h1 {
+    font-size: 56pt; font-weight: 700; margin: 30px 0 16px; line-height: 1.0;
+    letter-spacing: -2px; position: relative; z-index: 2;
+  }
+  .cover h1 .accent { color: #e4002b; font-weight: 700; }
+  .cover h2 {
+    font-size: 22pt; font-weight: 400; margin: 0 0 32px; line-height: 1.25;
+    opacity: 0.92; position: relative; z-index: 2; max-width: 145mm;
+  }
+  .cover-lede {
+    font-size: 13pt; line-height: 1.65; max-width: 150mm; opacity: 0.78;
+    position: relative; z-index: 2; border-left: 3px solid #e4002b;
+    padding-left: 14px; margin-top: 18px;
+  }
+  .cover-meta {
+    position: absolute; bottom: 30mm; left: 22mm; right: 22mm;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    z-index: 2;
+  }
+  .cover-meta .stack { display: flex; flex-direction: column; gap: 4px; }
+  .cover-meta .label { font-family: "JetBrains Mono", monospace; font-size: 9pt; opacity: 0.5; letter-spacing: 0.12em; text-transform: uppercase; }
+  .cover-meta .value { font-size: 11pt; opacity: 0.92; }
+  .cover-tagline {
+    position: absolute; top: 30mm; right: 22mm; z-index: 2;
+    text-align: right; font-family: "JetBrains Mono", monospace;
+    font-size: 9pt; opacity: 0.5; letter-spacing: 0.12em; line-height: 1.7;
+  }
+  .cover-tagline strong { color: #e4002b; opacity: 1; }
+
+  /* === TOC table (print-stable) ========================================== */
+  table.toc-table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 0; }
+  table.toc-table tr.grp td { font-family: "JetBrains Mono", monospace; font-size: 8.5pt; color: #86868b; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 0 3px; border-top: 1px solid #0a0e14; border-bottom: none; }
+  table.toc-table tr.item td { padding: 5px 0; border-bottom: 1px solid #e5e5ea; vertical-align: top; }
+  table.toc-table td.n { font-family: "JetBrains Mono", monospace; color: #e4002b; font-size: 8.5pt; letter-spacing: 0.06em; width: 28px; }
+  table.toc-table td a { color: #1d1d1f; text-decoration: none; }
+  table.toc-table td.p { font-family: "JetBrains Mono", monospace; color: #86868b; font-size: 9pt; text-align: right; width: 24px; }
+
+  /* === Section header ================================================== */
+  .eyebrow { font-family: "JetBrains Mono", monospace; font-size: 9pt; color: #e4002b; letter-spacing: 0.16em; text-transform: uppercase; margin: 0 0 6px; }
+  h2.section { font-size: 24pt; font-weight: 700; line-height: 1.18; letter-spacing: -0.5px; margin: 0 0 14px; color: #0a0e14; }
+  h2.section .num { color: #e4002b; margin-right: 14px; font-weight: 700; }
+  h3.sub { font-size: 13pt; font-weight: 600; margin: 13px 0 5px; color: #0a0e14; letter-spacing: -0.1px; }
+  p { margin: 0 0 8px; }
+  p.lead { font-size: 12pt; line-height: 1.5; color: #424245; border-left: 3px solid #e4002b; padding-left: 14px; margin: 0 0 12px; }
+  ul, ol { margin: 0 0 12px; padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  strong { font-weight: 600; color: #0a0e14; }
+
+  /* === KPI grid ========================================================= */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0 10px; page-break-inside: avoid; }
+  .kpi {
+    border: 1px solid #e5e5ea; border-radius: 8px; padding: 14px 12px;
+    background: #fff; position: relative; overflow: hidden;
+  }
+  .kpi::before { content: ""; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: #e4002b; }
+  .kpi .v { font-family: "JetBrains Mono", monospace; font-size: 22pt; font-weight: 600; color: #0a0e14; line-height: 1; letter-spacing: -1px; }
+  .kpi .v .small { font-size: 11pt; color: #6e6e73; font-weight: 500; letter-spacing: 0; margin-left: 2px; }
+  .kpi .k { font-size: 9pt; color: #6e6e73; margin-top: 6px; line-height: 1.4; }
+
+  /* === Big number callout ============================================== */
+  .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; page-break-inside: avoid; }
+  .stat { border-top: 2px solid #e4002b; padding: 6px 0 2px; }
+  .stat .n { font-family: "JetBrains Mono", monospace; font-size: 32pt; font-weight: 600; color: #0a0e14; line-height: 1; letter-spacing: -1px; }
+  .stat .n .sub { font-size: 14pt; color: #6e6e73; font-weight: 500; }
+  .stat .l { font-size: 10pt; color: #424245; margin-top: 4px; line-height: 1.35; }
+  .stat .src { font-family: "JetBrains Mono", monospace; font-size: 8pt; color: #86868b; margin-top: 4px; }
+
+  /* === Chart card ======================================================= */
+  .chart-card { background: #f5f5f7; border: 1px solid #e5e5ea; border-radius: 10px; padding: 12px 16px 10px; margin: 10px 0; page-break-inside: avoid; }
+  .chart-card h4 { font-size: 11pt; font-weight: 600; margin: 0 0 4px; color: #0a0e14; }
+  .chart-card .sub { font-size: 9pt; color: #6e6e73; margin: 0 0 10px; }
+  .chart-wrap { position: relative; min-height: 140px; padding: 2px 0; }
+  .chart-wrap.tall { min-height: 108px; }
+  .bar-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; font-size: 8.5pt; }
+  .bar-row .lbl { width: 78px; flex: 0 0 auto; color: #1d1d1f; }
+  .bar-row .val { width: 36px; flex: 0 0 auto; font-family: "JetBrains Mono", monospace; color: #1d1d1f; text-align: right; }
+  .bar-row .track { flex: 1; height: 12px; background: #f5f5f7; border-radius: 2px; overflow: hidden; }
+  .bar-row .fill { height: 100%; background: #e4002b; }
+  .api-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin: 6px 0 0; }
+  .api-pill { background: #e4002b; color: #fff; padding: 5px 3px; border-radius: 3px; font-family: "JetBrains Mono", monospace; font-size: 7.5pt; text-align: center; line-height: 1.2; }
+  .chart-card .src { font-family: "JetBrains Mono", monospace; font-size: 7.5pt; color: #86868b; margin-top: 6px; text-align: right; }
+
+  /* === Insight callout (yellow) ======================================== */
+  .insight { background: #fff8e1; border-left: 4px solid #f59e0b; border-radius: 4px; padding: 8px 14px; margin: 8px 0; page-break-inside: avoid; }
+  .insight .label { font-family: "JetBrains Mono", monospace; font-size: 8.5pt; color: #b45309; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 3px; }
+  .insight p { margin: 0; color: #78350f; }
+
+  /* === Risk callout (dark red) ========================================== */
+  .risk { background: linear-gradient(180deg, #1c2128 0%, #161b22 100%); color: #e6edf3; border-radius: 8px; padding: 12px 16px; margin: 10px 0; page-break-inside: avoid; }
+  .risk .label { font-family: "JetBrains Mono", monospace; font-size: 8.5pt; color: #f87171; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 5px; }
+  .risk p { color: #c9d1d9; margin-bottom: 5px; }
+  .risk p:last-child { margin-bottom: 0; }
+  .risk strong { color: #fff; }
+
+  /* === Conclusion block (dark) ========================================= */
+  .conclusion { background: #0a0e14; color: #e6edf3; border-radius: 10px; padding: 22px 24px; margin: 18px 0; page-break-inside: avoid; }
+  .conclusion h3 { color: #fff; font-size: 16pt; margin: 0 0 12px; }
+  .conclusion p { color: #c9d1d9; }
+
+  /* === Pill table ======================================================= */
+  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 8px 0; page-break-inside: avoid; }
+  thead th { text-align: left; padding: 8px 10px; background: #f5f5f7; font-weight: 600; font-size: 9pt; color: #424245; border-bottom: 1.5px solid #0a0e14; text-transform: uppercase; letter-spacing: 0.06em; }
+  tbody td { padding: 8px 10px; border-bottom: 1px solid #e5e5ea; vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num { font-family: "JetBrains Mono", monospace; text-align: right; white-space: nowrap; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 8pt; font-weight: 600; letter-spacing: 0.04em; }
+  .pill.bad { background: #fee2e2; color: #991b1b; }
+  .pill.warn { background: #fef3c7; color: #92400e; }
+  .pill.ok { background: #dcfce7; color: #166534; }
+
+  /* === Timeline (3 phases) ============================================= */
+  .timeline { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; margin: 14px 0; page-break-inside: avoid; }
+  .phase { padding: 16px 16px; border-top: 3px solid #e4002b; background: #fff; border-right: 1px solid #e5e5ea; }
+  .phase:last-child { border-right: none; }
+  .phase .when { font-family: "JetBrains Mono", monospace; font-size: 9pt; color: #e4002b; letter-spacing: 0.1em; }
+  .phase h4 { font-size: 13pt; margin: 6px 0 8px; color: #0a0e14; }
+  .phase ul { margin: 0; padding-left: 16px; font-size: 9.5pt; }
+  .phase li { margin-bottom: 3px; color: #424245; }
+
+  /* === Two-column compare ============================================== */
+  .vs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; page-break-inside: avoid; }
+  .vs-card { border: 1px solid #e5e5ea; border-radius: 8px; padding: 14px 16px; background: #fafafa; }
+  .vs-card.bad { border-left: 3px solid #f59e0b; }
+  .vs-card.good { border-left: 3px solid #e4002b; }
+  .vs-card h5 { font-size: 11pt; margin: 0 0 6px; color: #0a0e14; }
+  .vs-card p { font-size: 9.5pt; color: #424245; margin: 0; line-height: 1.55; }
+
+  /* === Source citation ================================================== */
+  .src-line { font-family: "JetBrains Mono", monospace; font-size: 8pt; color: #86868b; margin-top: 4px; }
+
+  /* === Footer-meta ===================================================== */
+  .footer-meta { margin-top: 16px; padding-top: 8px; border-top: 1px solid #e5e5ea; display: flex; justify-content: space-between; font-family: "JetBrains Mono", monospace; font-size: 8pt; color: #86868b; }
+</style>
+</head>
+<body>
+
+<!-- ============================== COVER ============================== -->
+<section class="cover" id="cover">
+  <div class="cover-mark">
+    <img src="data:image/png;base64,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" alt="Rastro" />
+    RASTRO
+  </div>
+  <div class="cover-tagline">
+    DOSSIER DE PROPUESTA<br>
+    REGIONAL · LA LIBERTAD<br>
+    <strong>2026</strong>
+  </div>
+  <h1>Trazabilidad <span class="accent">real</span><br>de la inversión<br>pública.</h1>
+  <h2>Una plataforma de transparencia verificable para el Gobierno Regional de La Libertad.</h2>
+  <p class="cover-lede">
+    Convertir cada sol de inversión pública de La Libertad en información visible para el ciudadano, en tiempo real, con corte y fuente verificables. Lo que el Estado peruano ya publica — 14 fuentes oficiales, 7 portales — puesto a disposición del vecino, del periodista, del auditor, en menos de 1 minuto.
+  </p>
+  <div class="cover-meta">
+    <div class="stack">
+      <div class="label">Producto</div>
+      <div class="value">Rastro v0.1.0 · MCP 82 tools</div>
+    </div>
+    <div class="stack" style="text-align: right;">
+      <div class="label">Ámbito</div>
+      <div class="value">La Libertad (13) · 83 distritos</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== TOC ============================== -->
+<section class="page" id="toc">
+  <div class="running-head">
+    <span class="brand">RASTRO</span>
+    <span>DOSSIER · LA LIBERTAD 2026</span>
+  </div>
+  <p class="eyebrow" style="margin-bottom: 4px;">Contenido</p>
+  <h2 class="section" style="font-size: 18pt; margin-bottom: 14px;">Tabla de contenidos.</h2>
+  <table class="toc-table">
+    <colgroup>
+      <col style="width: 28px;" />
+      <col style="width: auto;" />
+      <col style="width: 24px;" />
+    </colgroup>
+    <tbody>
+      <tr class="grp"><td colspan="3">Bloque I — El problema</td></tr>
+      <tr class="item"><td class="n">01</td><td><a href="#sec-1"><b>La fotografía del problema</b> — La Libertad pierde 97 de cada 100 soles antes de liquidar</a></td><td class="p">03</td></tr>
+      <tr class="item"><td class="n">02</td><td><a href="#sec-2"><b>Por qué las soluciones tradicionales no funcionaron</b> — SEACE, INFOBRAS y los portales opacos</a></td><td class="p">04</td></tr>
+      <tr class="grp"><td colspan="3">Bloque II — La propuesta</td></tr>
+      <tr class="item"><td class="n">03</td><td><a href="#sec-3"><b>Qué es Rastro</b> — 14 APIs, 82 tools, 3 lectores</a></td><td class="p">06</td></tr>
+      <tr class="item"><td class="n">04</td><td><a href="#sec-4"><b>Los tres lectores como compromiso político</b> — GORE, prensa, auditoría, ciudadano</a></td><td class="p">08</td></tr>
+      <tr class="grp"><td colspan="3">Bloque III — Implementación</td></tr>
+      <tr class="item"><td class="n">05</td><td><a href="#sec-5"><b>Plan de implementación</b> — 100 días · 18 meses · 4 años</a></td><td class="p">10</td></tr>
+      <tr class="item"><td class="n">06</td><td><a href="#sec-6"><b>Métricas de éxito</b> — Solo métricas verificables por el ciudadano</a></td><td class="p">11</td></tr>
+      <tr class="item"><td class="n">07</td><td><a href="#sec-7"><b>Riesgos y objeciones</b> — Lo que NO va a funcionar</a></td><td class="p">12</td></tr>
+      <tr class="grp"><td colspan="3">Bloque IV — Cierre</td></tr>
+      <tr class="item"><td class="n">08</td><td><a href="#sec-8"><b>Anexos y referencias</b> — Datos, fuentes, comparativa regional</a></td><td class="p">13</td></tr>
+    </tbody>
+  </table>
+  <div class="page-num">02</div>
+</section>
+
+<!-- ============================== SECCIÓN 01 ============================== -->
+<section class="page" id="sec-1">
+  <div class="running-head">
+    <span class="brand">RASTRO</span>
+    <span>01 — EL PROBLEMA</span>
+  </div>
+  <p class="eyebrow">Bloque I — El problema</p>
+  <h2 class="section"><span class="num">01</span>La fotografía del problema.</h2>
+  <p class="lead">
+    De cada 100 soles que La Libertad recibe para inversión pública, solo 3 centavos llegan a una obra liquidada y en operación. Los otros 97 se pierden en un camino que nadie puede ver. Esto no es un problema de discurso, es un dato verificable.
+  </p>
+
+  <h3 class="sub">El embudo de la inversión pública (marco nacional de referencia)</h3>
+  <div class="chart-card avoid-break">
+    <h4>Del presupuesto asignado a la obra liquidada</h4>
+    <p class="sub">Cada etapa del ciclo de inversión pierde una fracción del valor original. Las cifras nacionales ilustran el problema; las de La Libertad, abajo, lo confirman en el territorio.</p>
+    <div class="chart-wrap tall">
+      <div class="bar-row"><span class="lbl">100% · Asignado</span><span class="val">100%</span><div class="track"><div class="fill" style="width: 100%;"></div></div></div>
+      <div class="bar-row"><span class="lbl">72% · Expediente</span><span class="val">72%</span><div class="track"><div class="fill" style="width: 72%;"></div></div></div>
+      <div class="bar-row"><span class="lbl">48% · Ejecución</span><span class="val">48%</span><div class="track"><div class="fill" style="width: 48%;"></div></div></div>
+      <div class="bar-row"><span class="lbl">18% · A tiempo</span><span class="val">18%</span><div class="track"><div class="fill" style="width: 18%;"></div></div></div>
+      <div class="bar-row"><span class="lbl">3% · Liquidado</span><span class="val">3%</span><div class="track"><div class="fill" style="width: 3%;"></div></div></div>
+    </div>
+    <p class="src">Fuente: marco nacional referencial. Cifras de La Libertad específicas en la sección 04.</p>
+  </div>
+
+  <h3 class="sub">Cuatro números de La Libertad que cualquier candidato puede citar</h3>
+  <p>Estas son las cifras verificadas al 2026-08-28, con fuente y corte. No son estimaciones, son datos del Estado peruano cruzados por Rastro.</p>
+
+  <div class="stat-row">
+    <div class="stat">
+      <div class="n">S/ 7.3<span class="sub"> mil M</span></div>
+      <div class="l">Presupuesto de inversión pública de La Libertad asignado en 2026 (PIM, Gobiernos Regionales + Gobiernos Locales).</div>
+      <div class="src">fuente: MEF (radar-ejecucion)</div>
+    </div>
+    <div class="stat">
+      <div class="n">252</div>
+      <div class="l">Obras públicas paralizadas en La Libertad, de un total de 10,134 trazadas por INFOBRAS. Una de cada 40.</div>
+      <div class="src">fuente: INFOBRAS (Contraloría)</div>
+    </div>
+    <div class="stat">
+      <div class="n">49<span class="sub">%</span></div>
+      <div class="l">Avance de ejecución presupuestal del Gobierno Regional de La Libertad a julio de 2026. Diez puntos detrás del calendario.</div>
+      <div class="src">fuente: MEF (radar-ejecucion)</div>
+    </div>
+    <div class="stat">
+      <div class="n">+22.8<span class="sub">%</span></div>
+      <div class="l">Sobrecosto agregado en La Libertad. S/ 10,500 millones por encima del monto viable. Suma de 7,998 proyectos Invierte.pe analizados.</div>
+      <div class="src">fuente: Invierte.pe (radar-inversiones)</div>
+    </div>
+  </div>
+
+  <div class="insight">
+    <p class="label">Cifra ancla para el discurso</p>
+    <p><strong>1 obra de AGRO RURAL en La Libertad lleva 2,312 días paralizada — más de 6 años.</strong> Es un caso real, no un ejemplo. Está en la base de INFOBRAS. Cualquier periodista puede verificarlo en menos de 2 minutos con Rastro.</p>
+  </div>
+
+  <div class="footer-meta">
+    <span>RASTRO · DOSSIER LA LIBERTAD 2026</span>
+    <span>03</span>
+  </div>
+</section>
+
+<!-- ============================== SECCIÓN 02 ============================== -->
+<section class="page" id="sec-2">
+  <div class="running-head">
+    <span class="brand">RASTRO</span>
+    <span>02 — POR QUÉ LAS SOLUCIONES TRADICIONALES NO FUNCIONARON</span>
+  </div>
+  <p class="eyebrow">Bloque I — El problema</p>
+  <h2 class="section"><span class="num">02</span>Por qué las soluciones tradicionales no funcionaron.</h2>
+  <p class="lead">
+    No es que falten datos. El Estado peruano publica 14 fuentes oficiales de inversión pública. Lo que falta es una capa que las conecte, las traduzca y las ponga a disposición del ciudadano que no es funcionario.
+  </p>
+
+  <div class="vs">
+    <div class="vs-card bad">
+      <h5>Lo que existe hoy</h5>
+      <p>SEACE, INFOBRAS, MEF Consulta Amigable, Invierte.pe, OECE, SUNAT, RNP, CEPLAN, MIDAGRI, BCRP. Existen, son públicos y tienen datos. Pero requieren login, navegación hostil, descarga de CSV, saber qué preguntar y dónde buscar.</p>
+    </div>
+    <div class="vs-card good">
+      <h5>Lo que se propone con Rastro</h5>
+      <p>Una sola pantalla. Una sola pregunta en lenguaje natural o criterio de filtro. Una sola respuesta con corte, fuente y cobertura explícitos. Sin login. Sin descarga. Sin pedirte el correo.</p>
+    </div>
+  </div>
+
+  <h3 class="sub">Por qué los comités de transparencia tradicionales no alcanzan</h3>
+  <p>Tres décadas de Mesas de Diálogo, Comisiones de Transparencia, Veedurías Ciudadanas y Observatorios Ciudadanos han producido un patrón repetido: institucionalizan la opacidad con rituales. Sesionan cuatro veces al año, redactan informes, no publican datos vinculantes y se archivan al cambio de gestión.</p>
+
+  <h3 class="sub">Por qué un dashboard ejecutivo tampoco es la respuesta</h3>
+  <p>Los dashboards para alcalde o gobernador que se han implementado en la región se parecen todos: KPIs seleccionados por el área de prensa, sin trazabilidad hacia la fuente, sin réplica del vecino, sin datos auditables. Brillan en campaña. Se abandonan a los 6 meses. Rastro no es un dashboard: es la <strong>infraestructura de datos</strong> sobre la que cualquier dashboard puede montarse — y el vecino puede verificarlo.</p>
+
+  <div class="insight">
+    <p class="label">Lo que cambia con Rastro</p>
+    <p>El periodismo local (OjoPúblico, IDL-Reporteros, Convoca, prensa regional) puede cruzar <em>proveedores sancionados</em> con <em>contratos vigentes</em> en una hora. Lo que antes requería un mes y un abogado. Y el vecino de La Esperanza puede entrar a la plataforma y ver, de su distrito, las obras, los montos, los plazos, el avance.</p>
+  </div>
+
+  <div class="footer-meta">
+    <span>RASTRO · DOSSIER LA LIBERTAD 2026</span>
+    <span>05</span>
+  </div>
+</section>
+
+<!-- ============================== SECCIÓN 03 ============================== -->
+<section class="page" id="sec-3">
+  <div class="running-head">
+    <span class="brand">RASTRO</span>
+    <span>03 — QUÉ ES RASTRO</span>
+  </div>
+  <p class="eyebrow">Bloque II — La propuesta</p>
+  <h2 class="section"><span class="num">03</span>Qué es Rastro.</h2>
+  <p class="lead">
+    Una plataforma que conecta los sistemas donde el Estado peruano publica datos de inversión pública y los pone en una sola pantalla, en tiempo real, con la firma del Estado en cada número. No reemplazamos a la Contraloría ni a la OCI. Les damos una herramienta para hacer su trabajo en 5 minutos lo que antes tomaba 5 meses.
+  </p>
+
+  <h3 class="sub">Anatomía de la plataforma</h3>
+  <p>Rastro opera en tres capas que el ciudadano nunca ve pero que son la base de la confianza.</p>
+
+  <div class="chart-card avoid-break">
+    <h4>Las 14 fuentes oficiales que Rastro conecta</h4>
+    <p class="sub">Una sola API por cada sistema público de datos, normalizada con catálogo único de proyectos, componentes, metas y partidas.</p>
+    <div class="chart-wrap">
+      <div class="api-grid">
+        <div class="api-pill">MEF</div>
+        <div class="api-pill">Invierte.pe</div>
+        <div class="api-pill">INFOBRAS</div>
+        <div class="api-pill">OECE</div>
+        <div class="api-pill">SUNAT</div>
+        <div class="api-pill">RNP</div>
+        <div class="api-pill">CEPLAN</div>
+        <div class="api-pill">MIDAGRI</div>
+        <div class="api-pill">BCRP</div>
+        <div class="api-pill">PROINVERSIÓN</div>
+        <div class="api-pill">MININTER</div>
+        <div class="api-pill">OEFA</div>
+        <div class="api-pill">DGPMI</div>
+        <div class="api-pill">MIDIS</div>
+      </div>
+    </div>
+    <p class="src">Fuentes: MEF, Invierte.pe, OECE (SEACE), INFOBRAS (Contraloría), CEPLAN, SUNAT (RUC), RNP, MIDAGRI, BCRP, PROINVERSIÓN, MEF-DGPMI, MIDIS, MININTER (SIDPOL), OEFA. Una por cada fuente.</p>
+  </div>
+
+  <h3 class="sub">Lo que se entrega al ciudadano, en una sola capa</h3>
+  <p>Tres lectores diferenciados, construidos sobre la misma base de URLs y la misma semántica de respuesta: <strong>matcher</strong>, <strong>cobertura</strong>, <strong>corte</strong>, <strong>dependencias</strong>. Disciplina común: "vacío de evidencia, no conclusión". Si un dato no existe, Rastro lo declara vacío. Nunca rellena con suposiciones.</p>
+
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="v">14</div>
+      <div class="k">APIs activas sobre 7 portales oficiales del Estado peruano. Catálogo único, semántica de respuesta común.</div>
+    </div>
+    <div class="kpi">
+      <div class="v">82</div>
+      <div class="k">Tools MCP para agentes de IA. Un agente externo (Claude, Cursor, Windsurf) consulta Rastro como un colega más.</div>
+    </div>
+    <div class="kpi">
+      <div class="v">3</div>
+      <div class="k">Lectores diferenciados para tres tipos de usuario real. Mismo dato, distinta utilidad. Misma trazabilidad.</div>
+    </div>
+    <div class="kpi">
+      <div class="v">0</div>
+      <div class="k">Datos sintéticos, inferidos o suposiciones. Si Rastro no sabe, dice "no consta". Disciplina de honestidad epistémica.</div>
+    </div>
+  </div>
+
+  <h3 class="sub">Por qué no se hace con un dashboard más</h3>
+  <p>Porque un dashboard es una capa de presentación: alguien decide qué métricas se ven y qué se oculta. Rastro es la capa de datos: nadie decide qué se ve, se ve todo lo que el Estado publica, en el mismo formato crudo, y cada consumidor — la OCI, el periodista, el vecino — arma su propia lectura.</p>
+
+  <div class="footer-meta">
+    <span>RASTRO · DOSSIER LA LIBERTAD 2026</span>
+    <span>06</span>
+  </div>
+</section>
+
+<!-- ============================== SECCIÓN 04 ============================== -->
+<section class="page" id="sec-4">
+  <div class="running-head">
+    <span class="brand">RASTRO</span>
+    <span>04 — LOS TRES LECTORES</span>
+  </div>
+  <p class="eyebrow">Bloque II — La propuesta</p>
+  <h2 class="section"><span class="num">04</span>Los tres lectores como compromiso político.</h2>
+  <p class="lead">
+    Cada lector se traduce en un compromiso ciudadano verificable, no en una promesa. Si no se cumple, el ciudadano lo ve; el periodista lo publica; la OCI lo demanda.
+  </p>
+
+  <h3 class="sub">Lector GORE — para el gerente de obras, con control real</h3>
+  <p>El gerente regional y su equipo de planeamiento acceden a una sola pantalla con toda la cartera activa de La Libertad: 1,612 proyectos en ejecución, su avance físico vs. avance financiero, semáforo rojo cuando una obra se atrasa 30 días, integración con el presupuesto modificado y el devengado por cada entidad. Sin consolidar Excels.</p>
+
+  <h3 class="sub">Lector Prensa — para el periodismo de datos local</h3>
+  <p>Cualquier medio de comunicación local, sin costo, sin login, puede cruzar proveedores sancionados con contratos vigentes del GORE, comparar concursos entre municipios, identificar concentración de mercado, dar seguimiento a observaciones del OCI. Lo que antes requería 1 mes y un abogado, ahora se hace en 1 hora con un RUC y un click.</p>
+
+  <h3 class="sub">Lector Ciudadano — para el vecino de La Esperanza, del Porongo, de Otuzco</h3>
+  <p>El ciudadano entra a la plataforma desde el celular, busca su distrito, y ve las obras de su jurisdicción: foto, monto, plazo, entidad responsable, estado de avance. Si una obra se atrasó, ve cuándo se atrasó y por qué. Si está paralizada, ve la causal. Sin pedir nada, sin registrase, sin formularios.</p>
+
+  <table>
+    <thead>
+      <tr><th>Lector</th><th>Pregunta que responde</th><th>URL</th><th>Acceso</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>GORE La Libertad</strong></td>
+        <td>¿Cómo vamos vs la cohorte? ¿Dónde está el vacío?</td>
+        <td class="num">/gore/la-libertad</td>
+        <td><span class="pill ok">Servidor público</span></td>
+      </tr>
+      <tr>
+        <td><strong>Prensa de datos</strong></td>
+        <td>¿Cuál es el proveedor X? ¿Cuánto contrató? ¿Fue sancionado?</td>
+        <td class="num">/proveedor/{ruc}</td>
+        <td><span class="pill ok">Público</span></td>
+      </tr>
+      <tr>
+        <td><strong>Auditoría / OCI</strong></td>
+        <td>¿Qué obras hay en este distrito? ¿Tienen cierre, operador, mantenimiento?</td>
+        <td class="num">/distrito/{ubigeo}</td>
+        <td><span class="pill ok">Público</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="insight">
+    <p class="label">El cuarto usuario que ya no necesita login</p>
+    <p>Un periodista, un vecino, un candidato a la oposición, un postor que perdió un concurso, un abogado de un proveedor, un fiscal anticorrupción, un estudiante de contabilidad, un profesor de secundaria que prepara su clase de civismo. Todos pueden usar Rastro sin pedir permiso a nadie.</p>
+  </div>
+
+  <div class="footer-meta">
+    <span>RASTRO · DOSSIER LA LIBERTAD 2026</span>
+    <span>08</span>
+  </div>
+</section>
+
+<!-- ============================== SECCIÓN 05 ============================== -->
+<section class="page" id="sec-5">
+  <div class="running-head">
+    <span class="brand">RASTRO</span>
+    <span>05 — PLAN DE IMPLEMENTACIÓN</span>
+  </div>
+  <p class="eyebrow">Bloque III — Implementación</p>
+  <h2 class="section"><span class="num">05</span>Plan de implementación.</h2>
+  <p class="lead">
+    Tres horizontes. Cada uno con hitos verificables. Cada candidato a esta propuesta debe firmar su compromiso con estos hitos, no con un deseo.
+  </p>
+
+  <div class="timeline">
+    <div class="phase">
+      <div class="when">100 DÍAS</div>
+      <h4>Adopción inmediata</h4>
+      <ul>
+        <li>Decreto regional que adopta Rastro como plataforma oficial de transparencia</li>
+        <li>Conexión operativa de las 14 APIs al portal regional</li>
+        <li>Primer reporte público automatizado: "100 días de inversión pública en La Libertad"</li>
+        <li>Capacitación a 30 periodistas y 5 asociaciones civiles locales</li>
+      </ul>
+    </div>
+    <div class="phase">
+      <div class="when">18 MESES</div>
+      <h4>Madurez institucional</h4>
+      <ul>
+        <li>Ley Regional de Trazabilidad de la Inversión Pública de La Libertad</li>
+        <li>Integración con el sistema de contrataciones del Gobierno Regional</li>
+        <li>Auditoría externa de la calidad de los datos por la Contraloría</li>
+        <li>Lanzamiento del Visor Territorial (mapa de obras por distrito y provincia)</li>
+      </ul>
+    </div>
+    <div class="phase">
+      <div class="when">4 AÑOS</div>
+      <h4>Legado y réplica</h4>
+      <ul>
+        <li>La Libertad como referente nacional de transparencia en inversión pública</li>
+        <li>Alianza con 3 regiones para que repliquen el modelo</li>
+        <li>Base de datos pública de obras completa 2026–2030 con todos los CUIs trazados</li>
+        <li>Evaluación independiente del impacto en indicadores de gestión pública regional</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 class="sub">Lo que se necesita del primer día</h3>
+  <p>No es una decisión de millones. Es una decisión política. Tres cosas concretas para arrancar:</p>
+  <ol>
+    <li>Una <strong>Subgerencia de Transparencia e Innovación Pública</strong> con 4 personas a tiempo completo: 1 coordinador técnico, 1 enlace con OCI, 1 enlace con la prensa local, 1 analista de datos.</li>
+    <li>Un <strong>convenio marco con Treevú (operador de Rastro)</strong> para licenciar la plataforma a costo marginal durante los primeros 18 meses. Después, decisión soberana de continuar, internalizar o licitar.</li>
+    <li>Un <strong>Consejo Asesor Civil</strong> de 7 personas: 2 periodistas, 2 académicos, 2 representantes de gremios empresariales, 1 representante de organizaciones de base. Reuniones trimestrales, actas públicas, voto vinculante sobre cambios al alcance.</li>
+  </ol>
+
+  <div class="conclusion">
+    <h3>El compromiso de campaña</h3>
+    <p>En 100 días, la plataforma pública funcionando con 14 fuentes oficiales conectadas y la primera auditoría independiente de calidad de datos. En 18 meses, una Ley Regional votada en el Consejo que el próximo gobernador no pueda derogar sin costo político. En 4 años, La Libertad como la región más transparente del Perú, con datos que lo demuestren, y un modelo que otras regiones quieran copiar.</p>
+  </div>
+
+  <div class="footer-meta">
+    <span>RASTRO · DOSSIER LA LIBERTAD 2026</span>
+    <span>10</span>
+  </div>
+</section>
+
+<!-- ============================== SECCIÓN 06 ============================== -->
+<section class="page" id="sec-6">
+  <div class="running-head">
+    <span class="brand">RASTRO</span>
+    <span>06 — MÉTRICAS DE ÉXITO</span>
+  </div>
+  <p class="eyebrow">Bloque III — Implementación</p>
+  <h2 class="section"><span class="num">06</span>Métricas de éxito.</h2>
+  <p class="lead">
+    Solo métricas que el ciudadano puede verificar él mismo. Sin ranking, sin reconocimiento internacional, sin métricas vanidosas.
+  </p>
+
+  <h3 class="sub">Las cinco métricas que se publican mensualmente</h3>
+  <table>
+    <thead>
+      <tr><th>#</th><th>Métrica</th><th>Meta a 12 meses</th><th>Cómo se mide</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="num">1</td>
+        <td>% de obras con información pública en menos de 30 días desde su inicio</td>
+        <td class="num">95%</td>
+        <td>El vecino entra a la plataforma, busca su distrito, ve el dato.</td>
+      </tr>
+      <tr>
+        <td class="num">2</td>
+        <td>% de expedientes técnicos verificables con firma digital</td>
+        <td class="num">80%</td>
+        <td>La OCI descarga el expediente, verifica la firma contra RENIEC/Sunarp.</td>
+      </tr>
+      <tr>
+        <td class="num">3</td>
+        <td>Tiempo promedio de respuesta a pedido de información pública</td>
+        <td class="num">7 días</td>
+        <td>Cualquier periodista presenta un pedido, mide el reloj.</td>
+      </tr>
+      <tr>
+        <td class="num">4</td>
+        <td># de notas de prensa locales usando datos de Rastro</td>
+        <td class="num">200 / año</td>
+        <td>Clipping mensual por el equipo de comunicación del GORE.</td>
+      </tr>
+      <tr>
+        <td class="num">5</td>
+        <td># de observaciones ciudadanas a través de la plataforma</td>
+        <td class="num">1,000 / año</td>
+        <td>Log del sistema. La observación no necesita resolverse, necesita registrarse.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub">Lo que NO se mete como métrica</h3>
+  <p>"Top en ranking nacional de transparencia", "reconocimiento internacional", "premio X", "líderes en Y". Esas métricas las eligen terceros según criterios que no controlamos. Y son atacables.</p>
+
+  <div class="insight">
+    <p class="label">La métrica que más importa y no está en la tabla</p>
+    <p><strong>El porcentaje de población adulta de La Libertad que sabe que la plataforma existe.</strong> Si después de 12 meses de Rastro operando, el 60% de la población de La Libertad sabe que puede entrar y preguntar, ganamos. Si solo lo sabe el 5%, perdimos — aunque la plataforma técnicamente sea perfecta. Por eso la métrica 4 (notas de prensa) importa tanto como la técnica: sin prensa usando los datos, no hay público.</p>
+  </div>
+
+  <div class="footer-meta">
+    <span>RASTRO · DOSSIER LA LIBERTAD 2026</span>
+    <span>11</span>
+  </div>
+</section>
+
+<!-- ============================== SECCIÓN 07 ============================== -->
+<section class="page" id="sec-7">
+  <div class="running-head">
+    <span class="brand">RASTRO</span>
+    <span>07 — RIESGOS Y OBJECIONES</span>
+  </div>
+  <p class="eyebrow">Bloque III — Implementación</p>
+  <h2 class="section"><span class="num">07</span>Riesgos y objeciones.</h2>
+  <p class="lead">
+    Esta sección existe porque un dossier sin riesgos reconocidos no es creíble. Si el periodista que entrevista al candidato pregunta "¿qué puede salir mal?" y no hay respuesta, se acabó la confianza. Las cinco cosas que pueden fallar, en orden de probabilidad.
+  </p>
+
+  <div class="risk">
+    <p class="label">Riesgo 1 — Sostenibilidad política</p>
+    <p>Si la próxima gestión abandona la plataforma, muere en 6 meses. La infraestructura técnica es durable, la decisión política no lo es. <strong>Mitigación:</strong> Ley Regional de Trazabilidad (compromiso de 18 meses) + Consejo Asesor Civil con voto vinculante sobre el alcance. La plataforma sobrevive a quien la creó.</p>
+  </div>
+
+  <div class="risk">
+    <p class="label">Riesgo 2 — Personal sin formar</p>
+    <p>Rastro sin personal capacitado en el GORE es una plataforma muerta. La sostenibilidad depende de 4-5 personas formadas, no del software. <strong>Mitigación:</strong> Plan de formación continua (12 horas/año por persona), rotación protegida los primeros 24 meses, manuales abiertos en GitHub para que el conocimiento no salga con la gente.</p>
+  </div>
+
+  <div class="risk">
+    <p class="label">Riesgo 3 — OCI no usa la herramienta</p>
+    <p>Rastro no sustituye a la OCI. Si el contralor no usa la herramienta, no sirve. <strong>Mitigación:</strong> incluir a la OCI desde la semana 1 en el diseño de los flujos. No es un proyecto de transparencia "para la OCI", es un proyecto con la OCI.</p>
+  </div>
+
+  <div class="risk">
+    <p class="label">Riesgo 4 — Datos incompletos del Estado</p>
+    <p>Los datos que vemos son del Estado, no de Rastro. Si el Estado no publica un dato, Rastro tampoco lo tiene. La ausencia no es corrupción, es vacío de evidencia — y eso hay que comunicarlo bien al ciudadano. <strong>Mitigación:</strong> UI clara cuando un dato no existe ("sin información pública disponible" + link al canal oficial donde sí podría estar). Nunca rellenar con suposiciones.</p>
+  </div>
+
+  <div class="risk">
+    <p class="label">Riesgo 5 — El primer año va a ser feo</p>
+    <p>Las interfaces se llenan de errores, los datos están incompletos, hay municipios que no reportan. La expectativa pública debe ser calibrada. <strong>Mitigación:</strong> un canal de YouTube / TikTok mensual "Mes X de Rastro: lo que aprendimos" que muestre el proceso, no solo los resultados. La honestidad sobre el proceso es más persuasiva que el resultado escondido.</p>
+  </div>
+
+  <div class="footer-meta">
+    <span>RASTRO · DOSSIER LA LIBERTAD 2026</span>
+    <span>12</span>
+  </div>
+</section>
+
+<!-- ============================== SECCIÓN 08 ============================== -->
+<section class="page" id="sec-8">
+  <div class="running-head">
+    <span class="brand">RASTRO</span>
+    <span>08 — ANEXOS Y REFERENCIAS</span>
+  </div>
+  <p class="eyebrow">Bloque IV — Cierre</p>
+  <h2 class="section"><span class="num">08</span>Anexos y referencias.</h2>
+
+  <h3 class="sub">Anexo A — Top 5 de peor ejecución municipal en La Libertad (jul 2026)</h3>
+  <table>
+    <thead>
+      <tr><th>Entidad</th><th>Provincia</th><th>PIM</th><th>Devengado</th><th class="num">Avance</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Municipalidad Distrital de Ucuncha</td><td>Bolívar</td><td class="num">S/ 7.0M</td><td class="num">S/ 0.4M</td><td><span class="pill bad">6.3%</span></td></tr>
+      <tr><td>Municipalidad Distrital de Longotea</td><td>Bolívar</td><td class="num">S/ 17.7M</td><td class="num">S/ 1.8M</td><td><span class="pill bad">10.0%</span></td></tr>
+      <tr><td>Municipalidad Distrital de Uchumarca</td><td>Bolívar</td><td class="num">S/ 6.4M</td><td class="num">S/ 0.8M</td><td><span class="pill bad">11.8%</span></td></tr>
+      <tr><td>Municipalidad Distrital de Santiago de Challas</td><td>Pataz</td><td class="num">S/ 11.1M</td><td class="num">S/ 1.5M</td><td><span class="pill bad">13.1%</span></td></tr>
+      <tr><td>Municipalidad Distrital de Lucma</td><td>Gran Chimú</td><td class="num">S/ 16.8M</td><td class="num">S/ 2.5M</td><td><span class="pill bad">14.8%</span></td></tr>
+    </tbody>
+  </table>
+  <p class="src-line">Fuente: MEF (radar-ejecucion) — julio 2026, 84 municipalidades distritales de La Libertad.</p>
+
+  <h3 class="sub">Anexo B — Distribución de inversión pública por función (Invierte.pe, jul 2026)</h3>
+  <table>
+    <thead>
+      <tr><th>Función</th><th class="num">Proyectos</th><th class="num">Costo actualizado (S/ M)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Transporte</td><td class="num">2,074</td><td class="num">13,694</td></tr>
+      <tr><td>Salud</td><td class="num">740</td><td class="num">9,656</td></tr>
+      <tr><td>Saneamiento</td><td class="num">1,109</td><td class="num">8,246</td></tr>
+      <tr><td>Educación</td><td class="num">1,219</td><td class="num">7,384</td></tr>
+      <tr><td>Orden público y seguridad</td><td class="num">135</td><td class="num">4,040</td></tr>
+      <tr><td>Otras 12 funciones</td><td class="num">2,721</td><td class="num">13,400</td></tr>
+      <tr style="background: #f5f5f7;"><td><strong>Total La Libertad</strong></td><td class="num"><strong>7,998</strong></td><td class="num"><strong>56,420</strong></td></tr>
+    </tbody>
+  </table>
+  <p class="src-line">Fuente: Invierte.pe (radar-inversiones) — universo completo 7,998 proyectos, corte 2026-08-28.</p>
+
+  <h3 class="sub">Anexo C — Causales de paralización en La Libertad (INFOBRAS, top 5)</h3>
+  <table>
+    <thead>
+      <tr><th class="num">#</th><th>Causal</th><th class="num">Obras</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="num">1</td><td>Otras causales</td><td class="num">73</td></tr>
+      <tr><td class="num">2</td><td>Incumplimiento de contrato</td><td class="num">31</td></tr>
+      <tr><td class="num">3</td><td>Incumplimiento del pago de valorizaciones</td><td class="num">25</td></tr>
+      <tr><td class="num">4</td><td>Sin causal registrada</td><td class="num">23</td></tr>
+      <tr><td class="num">5</td><td>Conflictos sociales</td><td class="num">20</td></tr>
+    </tbody>
+  </table>
+  <p class="src-line">Fuente: INFOBRAS (Contraloría) — 252 obras paralizadas en La Libertad, 10,134 trazadas.</p>
+
+  <h3 class="sub">Anexo D — Referencias técnicas del proyecto</h3>
+  <ul>
+    <li>PRD — Rastro Capa de Lectura para No-Técnicos (<code>docs/PRD_Rastro_Capa_Lectura_No_Tecnicos_v1.md</code>)</li>
+    <li>Estado del proyecto (<code>docs/ESTADO.md</code>) — actualizado 2026-08-31</li>
+    <li>MATRIZ de cobertura territorial (<code>docs/matriz-cobertura-5-regiones-2026-08.md</code>)</li>
+    <li>MEMO La Libertad inversión pública + privada (<code>docs/MEMO_LA_LIBERTAD_INVERSION_PUBLICA_PRIVADA_2026-08-28.md</code>)</li>
+    <li>Análisis La Libertad: brechas y competitividad (<code>docs/analisis-la-libertad-2026-08.md</code>)</li>
+    <li>Catálogo de los 82 tools MCP (<code>mcp-server/src/catalog.ts</code>)</li>
+  </ul>
+
+  <div class="conclusion" style="margin-top: 20px;">
+    <h3>La propuesta, en una línea</h3>
+    <p>Hacer visible lo que el Estado peruano ya publica, en una sola pantalla, sin pedir permiso a nadie, con la firma del Estado en cada número, y con un plan de 4 años que sobreviva al próximo cambio de gestión. La Libertad primero; las otras 25 regiones después, con un modelo replicable y abierto.</p>
+  </div>
+
+  <div class="footer-meta">
+    <span>RASTRO · DOSSIER LA LIBERTAD 2026</span>
+    <span>13</span>
+  </div>
+</section>
+
+</body>
+</html>
