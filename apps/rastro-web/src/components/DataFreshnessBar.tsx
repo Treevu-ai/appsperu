@@ -4,11 +4,19 @@ import { apisPublishedForBrowser, APIS_NOT_PUBLISHED_MESSAGE } from "../lib/api-
 import { getRadarEjecucionMetaSources, type MetaSource } from "../lib/api-client.js";
 import { Modal } from "./Modal.js";
 import { NumberWithMetadata, metaNumber } from "./NumberWithMetadata.js";
+import snapshot from "../data/snapshot.json" with { type: "json" };
 
 type FreshnessState =
   | { status: "loading" }
   | { status: "unavailable"; message: string }
+  | { status: "snapshot"; corte: string }
   | { status: "ok"; latest: WithMetadata<MetaSource> | null; items: MetaSource[] };
+
+function formatCorteFecha(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+}
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -32,7 +40,11 @@ export function DataFreshnessBar() {
 
   useEffect(() => {
     if (!apisPublishedForBrowser()) {
-      setState({ status: "unavailable", message: APIS_NOT_PUBLISHED_MESSAGE });
+      if (snapshot.corte) {
+        setState({ status: "snapshot", corte: snapshot.corte });
+      } else {
+        setState({ status: "unavailable", message: APIS_NOT_PUBLISHED_MESSAGE });
+      }
       return;
     }
     let cancelled = false;
@@ -80,6 +92,17 @@ export function DataFreshnessBar() {
     return (
       <div className="border-t border-line-soft bg-ink-900/40">
         <div className="mx-auto max-w-6xl px-6 py-2 text-xs text-muted">Consultando frescura de las APIs…</div>
+      </div>
+    );
+  }
+
+  if (state.status === "snapshot") {
+    return (
+      <div className="border-t border-line-soft bg-ink-900/40">
+        <div className="mx-auto max-w-6xl px-6 py-2 text-xs text-fg-soft flex items-center gap-2">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent" />
+          Datos al {formatCorteFecha(state.corte)} — corte semanal, no en vivo.
+        </div>
       </div>
     );
   }

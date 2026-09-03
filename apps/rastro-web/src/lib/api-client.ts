@@ -13,7 +13,9 @@
  */
 
 import { AppUnavailableError, type AppKey, APP_CATALOG } from "./types.js";
-import { apisPublishedForBrowser, APIS_NOT_PUBLISHED_MESSAGE } from "./api-config.js";
+import { apisPublishedForBrowser } from "./api-config.js";
+import { snapshotKey } from "./snapshot-key.js";
+import snapshot from "../data/snapshot.json" with { type: "json" };
 
 export interface RequestOptions {
   /** Query params ya encoded como Record<string,string>. */
@@ -64,9 +66,30 @@ function buildUrl(base: string, path: string, query?: RequestOptions["query"]): 
   return url.toString();
 }
 
+/**
+ * Cuando las APIs no están publicadas (producción hoy), en vez de fallar de
+ * una, busca la respuesta en el snapshot semanal bundleado (ver docs del
+ * "corte" — src/data/snapshot.json, generado por
+ * scripts/export-snapshot.mjs). Solo cubre el espacio finito de consultas
+ * de las vistas de dashboard; RUC/texto libre (Proveedor, Buscar) no están
+ * en el snapshot y siguen devolviendo "no disponible".
+ */
+function readSnapshot<T>(appKey: AppKey, path: string, query?: RequestOptions["query"]): T | undefined {
+  const key = snapshotKey(appKey, path, query);
+  const entries = snapshot.entries as Record<string, unknown>;
+  return key in entries ? (entries[key] as T) : undefined;
+}
+
 async function requestJson<T>(appKey: AppKey, path: string, options: RequestOptions = {}): Promise<T> {
   if (!apisPublishedForBrowser()) {
-    throw new AppUnavailableError(appKey, path, "network", APIS_NOT_PUBLISHED_MESSAGE);
+    const snapshotted = readSnapshot<T>(appKey, path, options.query);
+    if (snapshotted !== undefined) return snapshotted;
+    throw new AppUnavailableError(
+      appKey,
+      path,
+      "snapshot_miss",
+      "Esta consulta específica no forma parte del corte semanal publicado.",
+    );
   }
   const base = envBaseUrl(appKey);
   const url = buildUrl(base, path, options.query);

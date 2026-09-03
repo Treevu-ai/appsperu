@@ -6,6 +6,7 @@
   "description": "Rastro convierte señales dispersas en inteligencia clara para decidir mejor. Capa de lectura para humanos + servidor MCP para agentes IA, sobre las 14 APIs de appsperu.",
   "scripts": {
     "generate:mcp-catalog": "node scripts/generate-mcp-catalog.mjs",
+    "export:snapshot": "node scripts/export-snapshot.mjs",
     "dev": "npm run generate:mcp-catalog && vite",
     "dev:local": "node scripts/ensure-env.mjs && npm run generate:mcp-catalog && vite --host",
     "build": "npm run generate:mcp-catalog && tsc -b && vite build",
