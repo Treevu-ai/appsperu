@@ -99,8 +99,10 @@ semanas desactualizado. Estado real al 2026-09-02:
 | Resolución de identidad avanzada (crosswalk por nombre, con confianza) | ✅ Hecho — `entity_crosswalk`, `GET /api/crossref/ejecucion` (ver sección 4 actualizada) |
 | MCP tools sobre lo anterior | ✅ Hecho — 5 tools (`infobras_public_works`, `_resumen`, `_by_codigo`, `crossref`, `crossref_ejecucion`); el último se agregó recién en PR #60 |
 | Frontend dedicado (`apps/infobras/web`) | ❌ Nunca se construyó — no existe en el repo |
-| Dashboard consolidado mostrando las señales | ❌ Pendiente — `rastro-web` (`/distrito/:ubigeo`) consume datos de INFOBRAS pero no expone Cost Drift, Gap físico-financiero ni el crosswalk de confianza en la UI |
+| Dashboard consolidado mostrando las señales | ✅ Hecho (PR #63, 2026-09-02) — `/distrito/:ubigeo` expone Cost Drift y Gap físico-financiero; `/auditoria/entidades-infobras` (nueva ruta) expone el crosswalk con filtro por nivel de confianza |
 
-**Pendiente real que queda del PRD original**: solo el dashboard visual. Todo lo demás
-(el backend completo: señales, cruces, MCP) está hecho, probado y documentado en
-`docs/data-contracts/infobras-obras-publicas.md`.
+**Pendiente real que queda del PRD original**: ninguno de fondo. El backend completo
+(señales, cruces, MCP) y el dashboard consolidado en `rastro-web` están hechos, probados y
+documentados en `docs/data-contracts/infobras-obras-publicas.md` y `docs/ESTADO.md`. Solo
+queda sin construir el frontend dedicado standalone (`apps/infobras/web`), que nunca fue
+parte del alcance real del proyecto — `rastro-web` es el único frontend.
