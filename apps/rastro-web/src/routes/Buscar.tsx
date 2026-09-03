@@ -86,10 +86,10 @@ export function Buscar() {
   return (
     <div className="max-w-3xl mx-auto px-6 py-12">
       <p className="text-xs text-muted font-mono">BÚSQUEDA</p>
-      <h1 className="font-serif text-3xl text-fg mt-2">RUC, CUI, código INFOBRAS, UBIGEO o texto</h1>
+      <h1 className="font-serif text-3xl text-fg mt-2">Busca un proveedor, un distrito o una obra</h1>
       <p className="text-fg-soft mt-2">
-        Pega un identificador oficial (RUC de 11 dígitos, UBIGEO de 6 dígitos) o escribe un nombre — la búsqueda de
-        texto consulta identidad-fiscal, radar-inversiones e infobras, acotada a LA LIBERTAD para las dos últimas.
+        Pega un RUC (11 dígitos) o un código UBIGEO (6 dígitos) si ya lo tienes, o simplemente escribe un nombre —
+        buscamos entre proveedores, proyectos de inversión y obras públicas de La Libertad.
       </p>
 
       <form onSubmit={onSubmit} className="mt-8 flex gap-3">
@@ -158,12 +158,14 @@ export function Buscar() {
       ) : null}
 
       <section className="mt-12">
-        <h2 className="text-fg font-semibold">Apps detrás de esta UI</h2>
+        <h2 className="text-fg font-semibold">Fuentes que consulta esta búsqueda</h2>
         <ul className="mt-3 grid sm:grid-cols-2 gap-2 text-sm">
           {Object.entries(APP_CATALOG).map(([k, m]) => (
             <li key={k} className="flex items-center justify-between text-fg-soft">
               <span>{m.label}</span>
-              <span className="mono-num text-muted text-xs">:{m.port}</span>
+              {import.meta.env.DEV ? (
+                <span className="mono-num text-muted text-xs">:{m.port}</span>
+              ) : null}
             </li>
           ))}
         </ul>
