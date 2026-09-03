@@ -36,7 +36,7 @@ Log "Seguimiento semanal territorial - $Departamento"
 Log "Repo: $repoRoot"
 
 # 1. Traer ultimos cambios (no falla el resto si el pull falla, ej. sin red)
-Run-Step 'git pull' $repoRoot { git pull origin cursor/alsol-ingest-5-regiones-f938 }
+Run-Step 'git pull' $repoRoot { git pull origin master }
 
 # 2. Asegurar contenedores de las 3 fuentes que evolucionan durante el anio fiscal
 $dbApps = @('radar-ejecucion', 'infobras', 'radar-inversiones')
