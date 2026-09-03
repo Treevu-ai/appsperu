@@ -34,6 +34,7 @@ const SEARCH_DEPARTAMENTO = "LA LIBERTAD";
 const RATE_LIMIT_PER_MINUTE = 30;
 
 import { checkRateLimit, clientIp, recordRateLimitExceeded } from "../lib/rate-limit.js";
+import searchIndex from "../../src/data/search-index.json" with { type: "json" };
 
 type SearchResultado = {
   tipo: "inversion" | "ruc" | "obra";
@@ -42,6 +43,28 @@ type SearchResultado = {
   puntaje: number;
   fuente: string;
 };
+
+/**
+ * Corte semanal (ver export-snapshot.mjs): cuando una de las 3 fuentes en
+ * vivo no responde, en vez de devolver 0 resultados para esa fuente se
+ * busca en el índice bundleado (mismo formato, misma lógica de score que
+ * el resto de este archivo). Cubre el universo de proveedores/obras/
+ * inversiones ya conocido por Rastro — no el padrón completo de SUNAT.
+ */
+type SearchIndexItem = { tipo: SearchResultado["tipo"]; identificador: string; descripcion: string; fuente: string };
+
+function searchIndexOffline(tipo: SearchResultado["tipo"], q: string): SearchResultado[] {
+  const isRuc = tipo === "ruc" && /^\d{11}$/.test(q);
+  const items = searchIndex.items as SearchIndexItem[];
+  return items
+    .filter((item) => item.tipo === tipo)
+    .map((item) => ({
+      ...item,
+      puntaje: isRuc ? (item.identificador === q ? 100 : 0) : score(q, item.descripcion),
+    }))
+    .filter((item) => item.puntaje > 0)
+    .sort((a, b) => b.puntaje - a.puntaje);
+}
 
 function score(q: string, text: string): number {
   const qn = q.trim().toUpperCase();
@@ -62,68 +85,83 @@ async function fetchWithTimeout(url: string, timeoutMs = TIMEOUT_MS): Promise<Re
   }
 }
 
-async function searchContribuyentes(baseUrl: string | undefined, q: string): Promise<{ items: SearchResultado[]; disponible: boolean }> {
-  if (!baseUrl) return { items: [], disponible: false };
-  try {
-    const isRuc = /^\d{11}$/.test(q);
-    const url = isRuc
-      ? `${baseUrl}/api/contribuyentes/${encodeURIComponent(q)}`
-      : `${baseUrl}/api/contribuyentes?razonSocial=${encodeURIComponent(q)}`;
-    const res = await fetchWithTimeout(url);
-    if (!res.ok) return { items: [], disponible: res.status !== 404 };
-    const body = (await res.json()) as
-      | { ruc: string; razonSocial: string }
-      | { resultados: { ruc: string; razonSocial: string }[] };
-    const rows = "resultados" in body ? body.resultados : [body];
-    return {
-      disponible: true,
-      items: rows.map((r) => ({
-        tipo: "ruc" as const,
-        identificador: r.ruc,
-        descripcion: r.razonSocial,
-        puntaje: isRuc ? 100 : score(q, r.razonSocial),
-        fuente: "identidad-fiscal / contribuyentes",
-      })),
-    };
-  } catch {
-    return { items: [], disponible: false };
+type SourceResult = { items: SearchResultado[]; disponible: boolean; usedIndex: boolean };
+
+async function searchContribuyentes(baseUrl: string | undefined, q: string): Promise<SourceResult> {
+  if (baseUrl) {
+    try {
+      const isRuc = /^\d{11}$/.test(q);
+      const url = isRuc
+        ? `${baseUrl}/api/contribuyentes/${encodeURIComponent(q)}`
+        : `${baseUrl}/api/contribuyentes?razonSocial=${encodeURIComponent(q)}`;
+      const res = await fetchWithTimeout(url);
+      if (res.ok) {
+        const body = (await res.json()) as
+          | { ruc: string; razonSocial: string }
+          | { resultados: { ruc: string; razonSocial: string }[] };
+        const rows = "resultados" in body ? body.resultados : [body];
+        return {
+          disponible: true,
+          usedIndex: false,
+          items: rows.map((r) => ({
+            tipo: "ruc" as const,
+            identificador: r.ruc,
+            descripcion: r.razonSocial,
+            puntaje: isRuc ? 100 : score(q, r.razonSocial),
+            fuente: "identidad-fiscal / contribuyentes",
+          })),
+        };
+      }
+      if (res.status === 404) return { items: [], disponible: true, usedIndex: false };
+    } catch {
+      // sigue al fallback del corte semanal
+    }
   }
+  return { items: searchIndexOffline("ruc", q), disponible: false, usedIndex: true };
 }
 
-async function searchInvestments(baseUrl: string | undefined, q: string): Promise<{ items: SearchResultado[]; disponible: boolean }> {
-  if (!baseUrl) return { items: [], disponible: false };
-  try {
-    const url = `${baseUrl}/api/investments?departamento=${encodeURIComponent(SEARCH_DEPARTAMENTO)}&limit=2000`;
-    const res = await fetchWithTimeout(url);
-    if (!res.ok) return { items: [], disponible: false };
-    const body = (await res.json()) as { resultados: { cui: string; nombre: string }[] };
-    return {
-      disponible: true,
-      items: body.resultados
-        .map((r) => ({ tipo: "inversion" as const, identificador: r.cui, descripcion: r.nombre, puntaje: score(q, r.nombre), fuente: "radar-inversiones / investments" }))
-        .filter((r) => r.puntaje > 0),
-    };
-  } catch {
-    return { items: [], disponible: false };
+async function searchInvestments(baseUrl: string | undefined, q: string): Promise<SourceResult> {
+  if (baseUrl) {
+    try {
+      const url = `${baseUrl}/api/investments?departamento=${encodeURIComponent(SEARCH_DEPARTAMENTO)}&limit=2000`;
+      const res = await fetchWithTimeout(url);
+      if (res.ok) {
+        const body = (await res.json()) as { resultados: { cui: string; nombre: string }[] };
+        return {
+          disponible: true,
+          usedIndex: false,
+          items: body.resultados
+            .map((r) => ({ tipo: "inversion" as const, identificador: r.cui, descripcion: r.nombre, puntaje: score(q, r.nombre), fuente: "radar-inversiones / investments" }))
+            .filter((r) => r.puntaje > 0),
+        };
+      }
+    } catch {
+      // sigue al fallback del corte semanal
+    }
   }
+  return { items: searchIndexOffline("inversion", q), disponible: false, usedIndex: true };
 }
 
-async function searchPublicWorks(baseUrl: string | undefined, q: string): Promise<{ items: SearchResultado[]; disponible: boolean }> {
-  if (!baseUrl) return { items: [], disponible: false };
-  try {
-    const url = `${baseUrl}/api/public-works?departamento=${encodeURIComponent(SEARCH_DEPARTAMENTO)}`;
-    const res = await fetchWithTimeout(url);
-    if (!res.ok) return { items: [], disponible: false };
-    const body = (await res.json()) as { resultados: { codigoInfobras: string; nombreObra: string }[] };
-    return {
-      disponible: true,
-      items: body.resultados
-        .map((r) => ({ tipo: "obra" as const, identificador: r.codigoInfobras, descripcion: r.nombreObra, puntaje: score(q, r.nombreObra), fuente: "infobras / public-works" }))
-        .filter((r) => r.puntaje > 0),
-    };
-  } catch {
-    return { items: [], disponible: false };
+async function searchPublicWorks(baseUrl: string | undefined, q: string): Promise<SourceResult> {
+  if (baseUrl) {
+    try {
+      const url = `${baseUrl}/api/public-works?departamento=${encodeURIComponent(SEARCH_DEPARTAMENTO)}`;
+      const res = await fetchWithTimeout(url);
+      if (res.ok) {
+        const body = (await res.json()) as { resultados: { codigoInfobras: string; nombreObra: string }[] };
+        return {
+          disponible: true,
+          usedIndex: false,
+          items: body.resultados
+            .map((r) => ({ tipo: "obra" as const, identificador: r.codigoInfobras, descripcion: r.nombreObra, puntaje: score(q, r.nombreObra), fuente: "infobras / public-works" }))
+            .filter((r) => r.puntaje > 0),
+        };
+      }
+    } catch {
+      // sigue al fallback del corte semanal
+    }
   }
+  return { items: searchIndexOffline("obra", q), disponible: false, usedIndex: true };
 }
 
 export const onRequestGet: PagesFunctionHandler = async (context) => {
@@ -156,15 +194,22 @@ export const onRequestGet: PagesFunctionHandler = async (context) => {
     (a, b) => b.puntaje - a.puntaje,
   );
 
+  // "no disponible" es solo cuando no hay datos en vivo NI en el corte
+  // semanal. Si se usó el índice bundleado, hay resultados (aunque puedan
+  // ser 0 para esta búsqueda puntual) — eso se refleja en corteUsado, no acá.
   const fuentesNoDisponibles: string[] = [];
-  if (!contribuyentes.disponible) fuentesNoDisponibles.push("identidad-fiscal");
-  if (!investments.disponible) fuentesNoDisponibles.push("radar-inversiones");
-  if (!publicWorks.disponible) fuentesNoDisponibles.push("infobras");
+  if (!contribuyentes.disponible && !contribuyentes.usedIndex) fuentesNoDisponibles.push("identidad-fiscal");
+  if (!investments.disponible && !investments.usedIndex) fuentesNoDisponibles.push("radar-inversiones");
+  if (!publicWorks.disponible && !publicWorks.usedIndex) fuentesNoDisponibles.push("infobras");
+
+  const usedIndex = contribuyentes.usedIndex || investments.usedIndex || publicWorks.usedIndex;
+  const corteUsado = usedIndex ? searchIndex.corte : null;
 
   return Response.json({
     q,
     departamentoAlcance: SEARCH_DEPARTAMENTO,
     resultados,
+    corteUsado,
     fuentesNoDisponibles: fuentesNoDisponibles.map((f) => `fuente ${f} no disponible en este momento`),
     limitacion:
       "Solo identidad-fiscal soporta búsqueda de texto libre real. radar-inversiones e infobras se filtran en el borde (edge), acotados a LA LIBERTAD.",

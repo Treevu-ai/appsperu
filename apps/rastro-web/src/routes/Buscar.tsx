@@ -14,6 +14,7 @@ interface SearchResponse {
   q: string;
   departamentoAlcance: string;
   resultados: SearchResultado[];
+  corteUsado: string | null;
   fuentesNoDisponibles: string[];
   limitacion: string;
 }
@@ -23,6 +24,12 @@ const TIPO_LABEL: Record<SearchResultado["tipo"], string> = {
   ruc: "RUC",
   obra: "Obra",
 };
+
+function formatCorteFecha(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+}
 
 function resultHref(r: SearchResultado): string | null {
   if (r.tipo === "ruc") return `/proveedor/${r.identificador}`;
@@ -109,6 +116,11 @@ export function Buscar() {
 
       {result ? (
         <div className="mt-8">
+          {result.corteUsado ? (
+            <p className="text-fg-soft text-xs mb-3">
+              Algunos resultados son del corte semanal ({formatCorteFecha(result.corteUsado)}), no en vivo.
+            </p>
+          ) : null}
           {result.fuentesNoDisponibles.length > 0 ? (
             <p className="text-warn text-xs mb-3">{result.fuentesNoDisponibles.join(" · ")}</p>
           ) : null}
