@@ -119,6 +119,20 @@ contra inhabilitaciones vigentes — ambos reutilizan el mismo `extractRuc()` so
 | **Alcance territorial** | Configurable por departamento (`departamentos` en las opciones); cobertura real declarada por corrida en `territorial_coverage`. |
 | **Cruces** | Escribe en el mismo modelo canónico (`minor_contracts`, `municipalities`, `supplier_profiles`) que `legacy-seace-orders-connector.ts` — ambos alimentan `winning_supplier_id` en formato `seace:ruc:<11 dígitos>`. [`identidad-fiscal`](#identidad-fiscal) y [`proveedores-sancionados`](#proveedores-sancionados) cruzan contra `minor_contracts` desde 2026-09-02 (CX-01), con el mismo patrón que ya usaban contra `awards`. |
 
+<a id="compras-publicas-conformacion"></a>
+### `perfilprov-conformacion-connector.ts` — Conformación societaria (OSCE)
+
+| | |
+|---|---|
+| **Descripción** | Trae, por RUC, los accionistas/socios reales, representantes legales y órganos de administración de un proveedor del Estado — nombre, documento de identidad y % de participación accionaria. Es la primera fuente del catálogo que da identidad de dueños reales, no solo razón social. |
+| **Qué hace** | Para un RUC: (1) busca en el índice de proveedores para resolver su `codProv` interno, (2) pide la ficha `/resumen` (que trae `datosSunat` + `conformacion` en una sola respuesta) y hace upsert en `supplier_conformacion` (socios/representantes/órganos) y `supplier_conformacion_lookup` (estado agregado por RUC, incluye `tiene_socios` para no reconsultar RUCs ya sabidos vacíos). |
+| **Cómo lo hace** | **API JSON pública no documentada**, sin auth ni captcha, descubierta inspeccionando el bundle Angular de la SPA "Buscador de Proveedores del Estado" de OSCE (`apps.osce.gob.pe/perfilprov-ui`) — verificada en vivo el 2026-09-03. 300ms de cortesía entre RUCs. |
+| **Frecuencia** | Manual (`npm run ingest:conformacion [DEPARTAMENTO]`). Sin filtro de departamento recorre todos los RUCs de 11 dígitos ya vistos en `supplier_profiles`/`awards`; con departamento, solo los de esa región. |
+| **Fuente de datos** | `eap.oece.gob.pe/perfilprov-bus/1.0` (búsqueda) y `eap.oece.gob.pe/ficha-proveedor-cns/1.0` (ficha) — backend real de OSCE, no RNP (el portal legado `rnp.gob.pe` migró su contenido informativo a gob.pe y ya no es la fuente operativa de este dato). |
+| **Alcance territorial** | Ninguno propio — opera por RUC individual; el script de corrida masiva lo acota vía `awards.departamento` / distrito de `minor_contracts`. |
+| **Limitación conocida** | El campo `socios` viene vacío para proveedores tipo "CONTRATOS COLABORACION EMPRESARIAL" (consorcios) — no tienen accionistas en el sentido societario que expone este endpoint. Verificado con 3 consorcios de muestra; funciona bien para personas jurídicas regulares (S.A.C., S.R.L., E.I.R.L.). Corrida sobre los 1,446 RUCs de La Libertad (2026-09-03): 475 con socios reales (32.9%), 967 vacíos, 4 sin datos. |
+| **Cruces** | Se consulta por `ruc`, la misma clave que usan [`identidad-fiscal`](#identidad-fiscal) y [`proveedores-sancionados`](#proveedores-sancionados) — permite, en el futuro, encadenar identidad fiscal → dueños reales → sanciones sin un cruce nuevo. |
+
 ---
 
 <a id="radar-inversiones"></a>
@@ -399,6 +413,7 @@ OCDS); esos resultados devuelven `valorMoneda: null` en vez de asumir soles.
 | `oece-records-connector.ts` | compras-publicas | OECE OCDS `/records` | API REST JSON paginada | Manual | Parcial |
 | `legacy-seace-orders-connector.ts` | compras-publicas | SEACE buscador histórico (legado, JSF) | Scraping con ViewState/sesión | Manual | Parcial (por catálogo de entidades, La Libertad) |
 | `seace-public-minor-contracts-connector.ts` | compras-publicas | SEACE buscador público moderno | API JSON interna no documentada | Manual | Parcial por defecto (100/depto); completa con `--full` |
+| `perfilprov-conformacion-connector.ts` | compras-publicas | OSCE Buscador de Proveedores del Estado | API JSON interna no documentada | Manual | Por RUC ya conocido; vacío para consorcios |
 | `invierte-connector.ts` | radar-inversiones | MEF Invierte.pe | Descarga CSV vía HTTP Range | Manual | Parcial (por bytes) |
 | `infobras-connector.ts` | infobras | Contraloría INFOBRAS | Descarga XLSX completa | Manual | Completa (snapshot nacional) |
 | `observa-connector.ts` | ceplan-estrategico | ObservaPerú/CEPLAN | Descarga JSON estático | Manual | Completa (agregado por nivel de gobierno) |
