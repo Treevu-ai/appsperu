@@ -101,12 +101,13 @@ export function Estado() {
         ) : null}
       </div>
 
-      <table className="mt-8 w-full text-sm">
+      <div className="mt-8 overflow-x-auto">
+      <table className="w-full text-sm min-w-[640px]">
         <thead className="text-xs text-muted text-left">
           <tr>
-            <th className="py-2 pr-3">App</th>
-            <th className="py-2 pr-3">Puerto</th>
-            <th className="py-2 pr-3">Estado</th>
+            <th className="py-2 pr-3 whitespace-nowrap">App</th>
+            <th className="py-2 pr-3 whitespace-nowrap">Puerto</th>
+            <th className="py-2 pr-3 whitespace-nowrap">Estado</th>
             <th className="py-2 pr-3">Detalle</th>
           </tr>
         </thead>
@@ -117,17 +118,18 @@ export function Estado() {
               s.status === "up" ? "text-accent" : s.status === "down" ? "text-danger" : "text-muted";
             return (
               <tr key={s.appKey}>
-                <td className="py-2 pr-3 text-fg">{meta.label}</td>
-                <td className="py-2 pr-3 mono-num text-fg-soft">{meta.port}</td>
-                <td className={`py-2 pr-3 font-mono ${color}`}>
+                <td className="py-2 pr-3 text-fg whitespace-nowrap">{meta.label}</td>
+                <td className="py-2 pr-3 mono-num text-fg-soft whitespace-nowrap">{meta.port}</td>
+                <td className={`py-2 pr-3 font-mono whitespace-nowrap ${color}`}>
                   {s.status === "loading" ? "…" : s.status.toUpperCase()}
                 </td>
-                <td className="py-2 pr-3 text-fg-soft text-xs">{s.detail ?? ""}</td>
+                <td className="py-2 pr-3 text-fg-soft text-xs max-w-xs truncate" title={s.detail ?? ""}>{s.detail ?? ""}</td>
               </tr>
             );
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

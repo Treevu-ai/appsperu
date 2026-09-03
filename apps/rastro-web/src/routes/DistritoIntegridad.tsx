@@ -125,13 +125,14 @@ export function DistritoIntegridad() {
 
           {data.bloqueo ? <p className="text-danger text-sm mt-3">{data.bloqueo}</p> : null}
 
-          <table className="mt-6 w-full text-sm">
+          <div className="mt-6 overflow-x-auto">
+          <table className="w-full text-sm min-w-[480px]">
             <thead className="text-xs text-muted text-left">
               <tr>
-                <th className="py-2 pr-3">Control</th>
-                <th className="py-2 pr-3 text-right">Con evidencia</th>
-                <th className="py-2 pr-3 text-right">Total activos</th>
-                <th className="py-2 pr-3 text-right">Falta</th>
+                <th className="py-2 pr-3 whitespace-nowrap">Control</th>
+                <th className="py-2 pr-3 text-right whitespace-nowrap">Con evidencia</th>
+                <th className="py-2 pr-3 text-right whitespace-nowrap">Total activos</th>
+                <th className="py-2 pr-3 text-right whitespace-nowrap">Falta</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line-soft">
@@ -142,10 +143,10 @@ export function DistritoIntegridad() {
                   const falta = total - conEvidencia;
                   return (
                     <tr key={key}>
-                      <td className="py-2 pr-3 text-fg">{CONTROL_LABELS[key]}</td>
-                      <td className="py-2 pr-3 text-right mono-num text-fg">{conEvidencia}</td>
-                      <td className="py-2 pr-3 text-right mono-num text-fg-soft">{total}</td>
-                      <td className={`py-2 pr-3 text-right mono-num ${falta > 0 ? "text-danger" : "text-fg-soft"}`}>
+                      <td className="py-2 pr-3 text-fg whitespace-nowrap">{CONTROL_LABELS[key]}</td>
+                      <td className="py-2 pr-3 text-right mono-num text-fg whitespace-nowrap">{conEvidencia}</td>
+                      <td className="py-2 pr-3 text-right mono-num text-fg-soft whitespace-nowrap">{total}</td>
+                      <td className={`py-2 pr-3 text-right mono-num whitespace-nowrap ${falta > 0 ? "text-danger" : "text-fg-soft"}`}>
                         {falta}
                       </td>
                     </tr>
@@ -154,6 +155,7 @@ export function DistritoIntegridad() {
               )}
             </tbody>
           </table>
+          </div>
 
           <p className="text-xs text-muted mt-4">
             Activos materializados: {data.controles.activos} · Familias: {data.controles.familiasMaterializadas} ·

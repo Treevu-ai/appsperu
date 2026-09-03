@@ -26,7 +26,7 @@ Diagnóstico: `bash scripts/diagnose-web.sh`
 
 ## Requisitos
 
-- Docker (Postgres de las 13 apps con BD)
+- Docker (Postgres de las 14 apps con BD)
 - Node.js 22+
 - PM2 (`npm i -g pm2`) — lo instala `dev-local.sh` si falta
 
@@ -96,7 +96,7 @@ bash scripts/dev-local.sh --mcp
 
 Copia `.mcp.json.example` a la raíz del repo como `.mcp.json` (Claude Code) o pégalo en `~/.cursor/mcp.json` (Cursor) ajustando la ruta absoluta a `mcp-server/dist/index.js`.
 
-Reinicia Cursor. Verás **82 tools** de solo lectura.
+Reinicia Cursor. Verás **83 tools** de solo lectura.
 
 ## Comandos útiles
 
@@ -104,9 +104,37 @@ Reinicia Cursor. Verás **82 tools** de solo lectura.
 |--------|---------|
 | Solo Postgres | `bash scripts/dev-local.sh --postgres` |
 | Solo APIs | `bash scripts/dev-local.sh --apis` |
+| Solo un subset (RAM limitada) | `bash scripts/dev-local.sh --only "radar-ejecucion,infobras"` |
 | Health local | `bash scripts/dev-local.sh --check` |
 | Logs PM2 | `pm2 logs` |
 | Parar APIs | `pm2 delete all` |
+
+## RAM limitada (laptop, no VPS)
+
+Las 14 APIs + 13 Postgres están pensadas para el VPS. En una laptop con poca RAM libre:
+
+1. **Limita el VM de WSL2/Docker Desktop** — crea `C:\Users\<tú>\.wslconfig`:
+   ```ini
+   [wsl2]
+   memory=4GB
+   processors=4
+   swap=2GB
+   ```
+   Reinicia WSL después (`wsl --shutdown` en PowerShell, luego reabre Docker Desktop). Sin esto, Docker Desktop puede crecer sin techo y comerse toda la RAM libre.
+2. **Levanta solo lo que necesitas**, no las 14: `bash scripts/dev-local.sh --only "radar-ejecucion,infobras"` levanta Postgres + API únicamente para esas apps (vía `docker compose` y `pm2 --only` filtrados). Los slugs válidos están en `infra/api-proxy/apps.tsv`.
+3. Para bajar lo que no uses: `pm2 delete <slug>` (APIs) y `docker compose -f apps/<app>/api/docker-compose.yml down` (Postgres de esa app).
+
+### Volumen Docker externo faltante (primera vez)
+
+`radar-ejecucion`, `ceplan-geo`, `actividad-agraria` y `seguridad-ciudadana` declaran su volumen de Postgres como `external: true` en su `docker-compose.yml` — Docker no lo autocrea. Si `docker compose up` falla con `external volume "..." not found`, créalo a mano una vez (el nombre exacto está en el `docker-compose.yml` de esa app, bajo `volumes:`):
+
+```bash
+docker volume create api_radar_pgdata   # ejemplo para radar-ejecucion
+```
+
+### PM2 en Windows (nativo, no WSL)
+
+`infra/api-proxy/ecosystem.config.cjs` usa `interpreter: "none"` para spawnear `npm`/`npx` directo — en Windows eso falla con `spawn EINVAL` porque son scripts `.cmd`, no ejecutables, y Node no puede correrlos sin shell (ni referenciando la extensión). El archivo ya detecta `process.platform === "win32"` y envuelve el comando en `cmd /c` en ese caso; en Linux (VPS) no cambia nada. Si ves `EINVAL` al levantar APIs con PM2 en Windows, confirma que estás en una versión del repo con este fix.
 
 ## Frontend vs producción
 

@@ -13,15 +13,15 @@ type Fila = {
 const FILAS: Fila[] = [
   {
     pct: "100%",
-    label: "Presupuesto asignado (PIA + PIM)",
-    value: "S/ 54.8 mil M",
+    label: "Plata aprobada para proyectos",
+    value: "S/ 54.8 mil millones",
     barClass: "bg-accent/85",
     textClass: "text-white",
     valueClass: "text-muted-soft",
   },
   {
     pct: "72%",
-    label: "Expediente técnico aprobado",
+    label: "Proyecto aprobado y listo para construirse",
     value: "Demora 11 meses prom.",
     barClass: "bg-accent/70",
     textClass: "text-white",
@@ -29,7 +29,7 @@ const FILAS: Fila[] = [
   },
   {
     pct: "48%",
-    label: "Ejecución iniciada en plazo",
+    label: "Obra empezada a tiempo",
     value: "+ 34% con adicionales",
     barClass: "bg-accent/50",
     textClass: "text-white",
@@ -37,7 +37,7 @@ const FILAS: Fila[] = [
   },
   {
     pct: "18%",
-    label: "Culminado a tiempo y dentro del costo",
+    label: "Obra terminada a tiempo y sin sobrecosto",
     value: "Sobrecosto + 67% en los que se retrasan",
     barClass: "bg-accent/30",
     textClass: "text-fg",
@@ -45,8 +45,8 @@ const FILAS: Fila[] = [
   },
   {
     pct: "3%",
-    label: "Liquidado y en operación",
-    value: "82% de obras cerradas sin liquidación formal",
+    label: "Obra entregada y en uso",
+    value: "82% de obras cerradas sin cierre formal",
     barClass: "bg-accent/15 border border-accent/30",
     textClass: "text-fg",
     valueClass: "text-muted-soft",
@@ -61,10 +61,10 @@ type Stat = {
 };
 
 const STATS: Stat[] = [
-  { value: "S/ 7.3", suffix: "mil M", suffixClass: "text-muted text-base", caption: "Presupuesto PIM La Libertad, jul 2026 — fuente: MEF" },
+  { value: "S/ 7.3", suffix: "mil millones", suffixClass: "text-muted text-base", caption: "Presupuesto modificado (PIM) de La Libertad, jul 2026 — fuente: MEF" },
   { value: "252", caption: "Obras paralizadas en La Libertad (de 10,134) — fuente: INFOBRAS" },
-  { value: "49%", caption: "Avance Gobiernos Regionales La Libertad, jul 2026 — fuente: MEF" },
-  { value: "+22.8%", caption: "Sobrecosto agregado en La Libertad (S/ 10.5 mil M) — fuente: Invierte.pe" },
+  { value: "49%", caption: "Avance de gasto de los Gobiernos Regionales de La Libertad, jul 2026 — fuente: MEF" },
+  { value: "+22.8%", caption: "Sobrecosto agregado en La Libertad (S/ 10.5 mil millones) — fuente: Invierte.pe" },
 ];
 
 export function ElProblema() {
@@ -80,15 +80,15 @@ export function ElProblema() {
             La inversión pública se pierde en el camino.
           </h2>
           <p className="mt-4 text-fg-soft leading-relaxed text-sm">
-            Miles de proyectos, cientos de miles de millones de soles, y casi cero visibilidad operativa
-            entre el momento en que un expediente se aprueba y el último sol ejecutado.
+            Perú aprueba miles de proyectos con presupuesto público cada año. Pero de cada 100 soles aprobados,
+            muy pocos terminan siendo una obra que la gente realmente usa.
           </p>
         </div>
 
         {/* Columna derecha: funnel + stats */}
         <div className="md:col-span-8">
           <div className="rounded-2xl border border-line bg-ink-900/60 p-5 md:p-7">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-4">
               <p className="text-xs font-mono text-muted uppercase tracking-[0.18em]">
                 Embudo de fuga
               </p>
@@ -107,7 +107,7 @@ export function ElProblema() {
                     {f.pct}
                   </div>
                   <div
-                    className={`col-span-9 md:col-span-7 h-9 md:h-12 rounded-md ${f.barClass} flex items-center px-3 md:px-4 font-medium ${f.textClass} truncate`}
+                    className={`col-span-9 md:col-span-7 min-h-9 md:min-h-12 rounded-md ${f.barClass} flex items-center px-3 md:px-4 py-1.5 font-medium leading-tight ${f.textClass}`}
                   >
                     {f.label}
                   </div>

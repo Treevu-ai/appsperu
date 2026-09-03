@@ -3,7 +3,7 @@
 > Rastro convierte señales dispersas en inteligencia clara para decidir mejor.
 > Cada señal deja un rastro. Nosotros lo hacemos visible.
 
-Rastro es una plataforma de trazabilidad sobre datos abiertos del Estado peruano: 3 lectores, 14 APIs y 82 tools MCP de solo lectura.
+Rastro es una plataforma de trazabilidad sobre datos abiertos del Estado peruano: 3 lectores, 14 APIs y 83 tools MCP de solo lectura.
 
 ## URLs públicas
 
@@ -19,7 +19,7 @@ Rastro es una plataforma de trazabilidad sobre datos abiertos del Estado peruano
 
 ## Para agentes IA (MCP)
 
-Rastro expone un servidor MCP (Model Context Protocol) con **82 tools de solo lectura** sobre inversión pública peruana. Compatible con:
+Rastro expone un servidor MCP (Model Context Protocol) con **83 tools de solo lectura** sobre inversión pública peruana. Compatible con:
 
 - Claude Code (`claude mcp add rastro -- node /ruta/al/repo/mcp-server/dist/index.js`)
 - Claude Desktop (`claude_desktop_config.json`)
@@ -49,7 +49,7 @@ Y devuelve una tabla con citas (RUC, OCID, fuente, corte) sin que el usuario hay
 - Convierte señales dispersas (presupuesto, contrataciones, inversiones, obras, sanciones, etc.) en una vista con citas verificables.
 - Muestra cifras con metadatos: fuente (app + tool MCP), corte (fecha del dato), cobertura (COMPLETA / PARCIAL / BLOQUEADA / NO_APLICA), matcher (cómo se vinculó).
 - Sirve 3 lectores: GORE (ficha, comparativo, benchmark de sectores), Prensa (perfil de proveedor), Auditoría (obras y activos por distrito).
-- Expone los 82 tools MCP en `/docs/api` para que agentes IA los orquesten.
+- Expone los 83 tools MCP en `/docs/api` para que agentes IA los orquesten.
 - Muestra el estado de las 14 APIs en `/estado`.
 
 ## Lo que Rastro NO hace

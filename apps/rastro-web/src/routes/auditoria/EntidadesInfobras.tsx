@@ -84,29 +84,29 @@ export function EntidadesInfobras() {
           {resultados.length === 0 ? (
             <p className="text-fg-soft text-sm mt-4">Sin entidades cruzadas para este filtro.</p>
           ) : (
-            <table className="mt-6 w-full text-sm">
+            <table className="mt-6 w-full text-sm min-w-[760px]">
               <thead className="text-xs text-muted text-left">
                 <tr>
                   <th className="py-2 pr-3">Entidad (MEF)</th>
                   <th className="py-2 pr-3">Entidad (INFOBRAS)</th>
-                  <th className="py-2 pr-3">Confianza</th>
-                  <th className="py-2 pr-3 text-right">Devengado</th>
-                  <th className="py-2 pr-3 text-right">Obras</th>
-                  <th className="py-2 pr-3 text-right">Paralizadas</th>
+                  <th className="py-2 pr-3 whitespace-nowrap">Confianza</th>
+                  <th className="py-2 pr-3 text-right whitespace-nowrap">Devengado</th>
+                  <th className="py-2 pr-3 text-right whitespace-nowrap">Obras</th>
+                  <th className="py-2 pr-3 text-right whitespace-nowrap">Paralizadas</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line-soft">
                 {resultados.map((r) => (
                   <tr key={`${r.ejecucionEntityCode}-${r.infobrasCodigoEntidad}`}>
-                    <td className="py-2 pr-3 text-fg">{r.ejecucionNombre}</td>
-                    <td className="py-2 pr-3 text-fg-soft">{r.infobrasEntidadNombre}</td>
-                    <td className="py-2 pr-3">
+                    <td className="py-2 pr-3 text-fg max-w-xs truncate" title={r.ejecucionNombre}>{r.ejecucionNombre}</td>
+                    <td className="py-2 pr-3 text-fg-soft max-w-xs truncate" title={r.infobrasEntidadNombre}>{r.infobrasEntidadNombre}</td>
+                    <td className="py-2 pr-3 whitespace-nowrap">
                       <CoverageBadge
                         cobertura={r.confidence === "confirmada" ? "COMPLETA" : "PARCIAL"}
                         label={r.confidence}
                       />
                     </td>
-                    <td className="py-2 pr-3 text-right text-fg">
+                    <td className="py-2 pr-3 text-right text-fg whitespace-nowrap">
                       S/{" "}
                       <NumberWithMetadata
                         data={metaNumber(
@@ -117,8 +117,8 @@ export function EntidadesInfobras() {
                         )}
                       />
                     </td>
-                    <td className="py-2 pr-3 text-right text-fg-soft">{r.obras}</td>
-                    <td className="py-2 pr-3 text-right">
+                    <td className="py-2 pr-3 text-right text-fg-soft whitespace-nowrap">{r.obras}</td>
+                    <td className="py-2 pr-3 text-right whitespace-nowrap">
                       {r.obrasParalizadas > 0 ? (
                         <span className="text-danger">{r.obrasParalizadas}</span>
                       ) : (

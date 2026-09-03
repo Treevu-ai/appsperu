@@ -10,46 +10,47 @@ type Lente = {
 
 const LENTES: Lente[] = [
   {
-    code: "GOB-001 · Gobierno regional y municipal",
+    code: "Gobierno regional y municipal",
     primario: true,
-    titulo: "El gerente de obras, con control real.",
+    titulo: "El presupuesto de tu sector, claro y comparable.",
     bajada:
-      "Visibilidad sobre toda la cartera bajo su responsabilidad. Detección de cuellos de botella antes de que se traduzcan en adicionales, ampliaciones de plazo o noticias.",
+      "Cuánto se aprobó, cuánto se gastó y cómo va cada sector, comparado con otros sectores y con regiones parecidas — todo con la fecha exacta del dato.",
     bullets: [
-      "Tablero de cartera por fase, costo y tiempo",
-      "Alertas configurables por tipo de riesgo",
-      "Exportación directa a MEF y consejo regional",
+      "Cuánto se aprobó y cuánto se ha gastado, por sector",
+      "Comparación entre sectores, con la misma regla para todos",
+      "Cómo está una entidad frente a otras parecidas",
     ],
   },
   {
-    code: "SOC-002 · Ciudadanos y prensa",
+    code: "Ciudadanos y prensa",
     titulo: "Vigilancia accesible, sin pedir información.",
     bajada:
-      "Una vista pública del avance de cada obra en su distrito, con foto, monto y plazo. La transparencia como defecto, no como excepción.",
+      "Busca cualquier proveedor del Estado por su RUC y mira quién es, si tiene sanciones y con quién ha contratado — sin registrarte, sin formularios.",
     bullets: [
-      "Mapa de obras por distrito",
-      "Línea de tiempo con evidencia pública",
-      "Compatible con la Ley 27806",
+      "Ficha de cualquier proveedor: quién es, sanciones, contratos",
+      "Ranking de proveedores que más contratos ganan",
+      "Búsqueda libre por RUC, nombre de obra o de proveedor",
     ],
   },
   {
-    code: "AUD-003 · Auditores y OCI",
+    code: "Auditores y OCI",
     titulo: "Trazabilidad lista para informe.",
     bajada:
-      "Cruce automático entre lo planificado, lo certificado y lo ejecutado. La Contraloría pasa de reaccionar a prevenir.",
+      "Obras por distrito con sus alertas de costo y avance, qué tan documentada está cada una, y el cruce entre presupuesto y obra física con su nivel de confianza a la vista.",
     bullets: [
-      "Reportes de auditoría pre-armados",
-      "Detección de patrones de riesgo",
+      "Obras por distrito con alertas de sobrecosto y retraso",
+      "Qué tan completa está la documentación de cada obra",
+      "Cruce entre presupuesto y obra física, con su confiabilidad",
     ],
   },
   {
-    code: "CON-004 · Próximamente",
+    code: "Próximamente · Contratistas y supervisores",
     titulo: "Para contratistas y supervisores.",
     bajada:
-      "Expediente digital firmado, valorizaciones con hash encadenado y notificaciones de hitos. Esta lente está en construcción — todavía no hay lector público.",
+      "Vista de expediente y avances de pago por proveedor. Esta vista está en construcción — todavía no está disponible para el público.",
     bullets: [
       "En construcción",
-      "Sin ETA pública",
+      "Sin fecha pública todavía",
       "Si lo necesitas, abre un issue en github.com/Treevu-ai/appsperu",
     ],
   },
@@ -63,11 +64,11 @@ export function ParaQuien() {
           04 — Para quién
         </p>
         <h2 className="text-fg font-semibold text-2xl md:text-3xl leading-tight tracking-tight">
-          Un mismo proyecto, cuatro lentes diferentes.
+          La misma información, vista según lo que tú necesitas.
         </h2>
         <p className="mt-4 text-fg-soft leading-relaxed text-sm md:text-base">
-          El dato es el mismo. Lo que cambia es la pregunta. Rastro entrega a cada actor la vista
-          que necesita — sin login, sin formularios, sin pedirte el correo.
+          El dato es el mismo para todos. Lo que cambia es la pregunta que quieres responder. Rastro te
+          muestra la vista que te sirve — sin registrarte, sin formularios, sin pedirte el correo.
         </p>
       </div>
 

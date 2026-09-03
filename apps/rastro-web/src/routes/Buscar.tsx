@@ -118,13 +118,14 @@ export function Buscar() {
               Sin resultados para "{result.q}" (alcance de búsqueda por texto: {result.departamentoAlcance}).
             </p>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[680px]">
               <thead className="text-xs text-muted text-left">
                 <tr>
-                  <th className="py-2 pr-3">Tipo</th>
-                  <th className="py-2 pr-3">Identificador</th>
+                  <th className="py-2 pr-3 whitespace-nowrap">Tipo</th>
+                  <th className="py-2 pr-3 whitespace-nowrap">Identificador</th>
                   <th className="py-2 pr-3">Descripción</th>
-                  <th className="py-2 pr-3">Fuente</th>
+                  <th className="py-2 pr-3 whitespace-nowrap">Fuente</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line-soft">
@@ -132,8 +133,8 @@ export function Buscar() {
                   const href = resultHref(r);
                   return (
                     <tr key={`${r.tipo}-${r.identificador}`}>
-                      <td className="py-2 pr-3 text-fg-soft">{TIPO_LABEL[r.tipo]}</td>
-                      <td className="py-2 pr-3 mono-num text-fg">
+                      <td className="py-2 pr-3 text-fg-soft whitespace-nowrap">{TIPO_LABEL[r.tipo]}</td>
+                      <td className="py-2 pr-3 mono-num text-fg whitespace-nowrap">
                         {href ? (
                           <a href={href} className="text-accent underline-offset-2 hover:underline">
                             {r.identificador}
@@ -142,13 +143,14 @@ export function Buscar() {
                           r.identificador
                         )}
                       </td>
-                      <td className="py-2 pr-3 text-fg">{r.descripcion}</td>
-                      <td className="py-2 pr-3 text-xs text-muted">{r.fuente}</td>
+                      <td className="py-2 pr-3 text-fg max-w-sm truncate" title={r.descripcion}>{r.descripcion}</td>
+                      <td className="py-2 pr-3 text-xs text-muted whitespace-nowrap">{r.fuente}</td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+            </div>
           )}
 
           <p className="text-xs text-muted mt-4">{result.limitacion}</p>

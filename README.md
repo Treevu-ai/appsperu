@@ -8,7 +8,7 @@ Repo: https://github.com/Treevu-ai/appsperu
 Monorepo con 14 apps backend (APIs Express + Postgres por app) que exponen datos abiertos
 del Estado peruano (presupuesto, contrataciones, inversiones, obras públicas) cruzados por
 claves compartidas o matching difuso de nombres de entidad. La capa de lectura pública para
-humanos y agentes IA es **Rastro** (`apps/rastro-web/`, publicada en `rastro.pages.dev`); el
+humanos y agentes IA es **Rastro** (`apps/rastro-web/`, publicada en `rastro.fyi`); el
 servidor MCP (`mcp-server/`) expone las 14 APIs como tools de solo lectura para Claude Code,
 Claude Desktop, Cursor, Windsurf, Cline y Continue.dev.
 
@@ -30,6 +30,8 @@ Rastro es una plataforma de inteligencia que ayuda a equipos y organizaciones a 
 | `actividad-agraria` | Series MIDAGRI regionales (jornal, tractor, yunta) | 4009 |
 | `seguridad-ciudadana` | Denuncias policiales SIDPOL (MININTER) | 4010 |
 | `bcrp-comercio-exterior` | Comercio exterior agregado nacional (BCRP) | 4011 |
+| `inversion-privada` | Cartera APP/PA + Obras por Impuestos (PROINVERSIÓN/VERTIX) | 4012 |
+| `bcrp-la-libertad` | Síntesis de actividad económica de La Libertad (BCRP Trujillo) | 4013 |
 
 ## Levantar una app
 
@@ -46,14 +48,14 @@ de las otras bases y `npm run dev`.
 
 ## Servidor MCP (Model Context Protocol)
 
-[`mcp-server/`](mcp-server/) expone las 14 APIs como **82 tools de solo lectura** para
+[`mcp-server/`](mcp-server/) expone las 14 APIs como **83 tools de solo lectura** para
 agentes IA vía MCP (transporte stdio). Compatible con Claude Code, Claude Desktop,
 Cursor, Windsurf, Cline y Continue.dev. Una vez conectado, el agente encadena los
 tools, razona sobre los resultados y entrega respuestas con citas verificables.
 Requiere que las apps ya estén corriendo — ver [`mcp-server/README.md`](mcp-server/README.md).
 
 Para conectar Rastro desde un agente: ver [`apps/rastro-web/DEPLOY.md`](apps/rastro-web/DEPLOY.md)
-y la página pública `/docs/api` en [rastro.pages.dev/docs/api](https://rastro.pages.dev/docs/api).
+y la página pública `/docs/api` en [rastro.fyi/docs/api](https://rastro.fyi/docs/api).
 
 ## Documentación
 

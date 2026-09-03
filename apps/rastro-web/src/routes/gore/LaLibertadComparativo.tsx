@@ -127,16 +127,16 @@ export function LaLibertadComparativo() {
               ejecución regional por sede; no genera score ni suma ambos universos como si fueran uno solo.
             </p>
 
-            <table className="mt-4 w-full text-sm">
+            <table className="mt-4 w-full text-sm min-w-[760px]">
               <thead className="text-xs text-muted text-left">
                 <tr>
-                  <th className="py-2 pr-3">Sector</th>
+                  <th className="py-2 pr-3 whitespace-nowrap">Sector</th>
                   <th className="py-2 pr-3">Entidad</th>
-                  <th className="py-2 pr-3">Alcance</th>
-                  <th className="py-2 pr-3 text-right">PIA</th>
-                  <th className="py-2 pr-3 text-right">PIM</th>
-                  <th className="py-2 pr-3 text-right">Devengado</th>
-                  <th className="py-2 pr-3">Cobertura</th>
+                  <th className="py-2 pr-3 whitespace-nowrap">Alcance</th>
+                  <th className="py-2 pr-3 text-right whitespace-nowrap">PIA</th>
+                  <th className="py-2 pr-3 text-right whitespace-nowrap">PIM</th>
+                  <th className="py-2 pr-3 text-right whitespace-nowrap">Devengado</th>
+                  <th className="py-2 pr-3 whitespace-nowrap">Cobertura</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line-soft">
@@ -146,29 +146,29 @@ export function LaLibertadComparativo() {
                   const corteRow = row.cobertura.fechaCorteParticion ?? `${data.anio}-12-31`;
                   return (
                     <tr key={`${row.sectorId}-${row.entityCode}`}>
-                      <td className="py-2 pr-3 text-fg">{row.sector}</td>
-                      <td className="py-2 pr-3 text-fg-soft">{row.entidad}</td>
-                      <td className="py-2 pr-3 text-fg-soft text-xs">{row.alcance}</td>
-                      <td className="py-2 pr-3 text-right text-fg">
+                      <td className="py-2 pr-3 text-fg whitespace-nowrap">{row.sector}</td>
+                      <td className="py-2 pr-3 text-fg-soft max-w-xs truncate" title={row.entidad}>{row.entidad}</td>
+                      <td className="py-2 pr-3 text-fg-soft text-xs whitespace-nowrap">{row.alcance}</td>
+                      <td className="py-2 pr-3 text-right text-fg whitespace-nowrap">
                         <NumberWithMetadata
                           data={metaNumber(row.pia, fuenteRow, corteRow, cob, "sector_entity_registry")}
                           format={(n) => n.toLocaleString("es-PE")}
                           suffix=""
                         />
                       </td>
-                      <td className="py-2 pr-3 text-right text-fg">
+                      <td className="py-2 pr-3 text-right text-fg whitespace-nowrap">
                         <NumberWithMetadata
                           data={metaNumber(row.pim, fuenteRow, corteRow, cob, "sector_entity_registry")}
                           format={(n) => n.toLocaleString("es-PE")}
                         />
                       </td>
-                      <td className="py-2 pr-3 text-right text-accent">
+                      <td className="py-2 pr-3 text-right text-accent whitespace-nowrap">
                         <NumberWithMetadata
                           data={metaNumber(row.devengado, fuenteRow, corteRow, cob, "sector_entity_registry")}
                           format={(n) => n.toLocaleString("es-PE")}
                         />
                       </td>
-                      <td className="py-2 pr-3">
+                      <td className="py-2 pr-3 whitespace-nowrap">
                         <CoverageBadge cobertura={cob} />
                       </td>
                     </tr>
