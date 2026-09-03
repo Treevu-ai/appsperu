@@ -1,0 +1,33 @@
+# Build any appsperu API from monorepo root context.
+ARG APP_DIR=radar-ejecucion
+
+FROM node:22-alpine AS build
+WORKDIR /repo
+ARG APP_DIR
+COPY apps/${APP_DIR}/api/package.json apps/${APP_DIR}/api/package-lock.json ./apps/${APP_DIR}/api/
+RUN npm --prefix apps/${APP_DIR}/api ci
+COPY apps/${APP_DIR}/api ./apps/${APP_DIR}/api
+# Solo corre "build" si el package.json de esta app declara ese script — no
+# todas lo tienen (algunas corren directo con tsx, ver infra/api-proxy/apps.tsv).
+# Si lo declara y falla, el build de la imagen falla (no se enmascara con
+# `|| true`): un TS roto no debe degradar en silencio a correr via tsx en
+# producción, que es justo lo que pasaba antes.
+RUN if grep -q '"build"[[:space:]]*:' "apps/${APP_DIR}/api/package.json"; then \
+      npm --prefix "apps/${APP_DIR}/api" run build; \
+    else \
+      echo "apps/${APP_DIR}/api no declara script build — corre via tsx"; \
+    fi
+
+FROM node:22-alpine
+WORKDIR /app
+ARG APP_DIR
+ENV NODE_ENV=production
+ENV PORT=8080
+COPY --from=build /repo/apps/${APP_DIR}/api/package.json /repo/apps/${APP_DIR}/api/package-lock.json ./
+RUN npm ci
+COPY --from=build /repo/apps/${APP_DIR}/api ./
+RUN test -f dist/index.js || npm install tsx
+COPY infra/fly/docker-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+EXPOSE 8080
+ENTRYPOINT ["/entrypoint.sh"]

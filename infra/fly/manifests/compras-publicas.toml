@@ -1,0 +1,33 @@
+# Generado por scripts/fly-generate-configs.sh
+# Deploy desde raíz: fly deploy . --config infra/fly/manifests/compras-publicas.toml
+app = "rastro-api-compras-publicas"
+primary_region = "gru"
+
+[build]
+  dockerfile = "../Dockerfile.api"
+  [build.args]
+    APP_DIR = "compras-publicas"
+
+[env]
+  PORT = "8080"
+  WEB_ORIGIN = "https://www.rastro.fyi,https://rastro.fyi,https://rastro-5zm.pages.dev"
+
+[http_service]
+  internal_port = 8080
+  force_https = false
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "10s"
+    grace_period = "120s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
