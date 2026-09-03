@@ -7,8 +7,8 @@ type Cap = {
 };
 
 const NUCLEO: Cap = {
-  titulo: "Monitoreo en tiempo real, multi-fuente",
-  desc: "Ingesta regular desde MEF, Invierte.pe, OECE, INFOBRAS, CEPLAN, SUNAT, RNP, MIDAGRI y BCRP. Cada corrida se refleja en el header de página con su fecha y cobertura.",
+  titulo: "10 fuentes oficiales, un solo lugar",
+  desc: "Juntamos presupuesto (MEF), inversión pública (Invierte.pe), contrataciones (OECE/RNP), obras (INFOBRAS), planeamiento (CEPLAN), identidad fiscal (SUNAT), agro (MIDAGRI), economía (BCRP), seguridad (MININTER) e inversión privada (PROINVERSIÓN). Actualizamos a mano, en tandas — cada página muestra la fecha exacta de su último corte.",
   icon: (
     <svg className="w-6 h-6 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
@@ -18,8 +18,8 @@ const NUCLEO: Cap = {
 
 const SECUNDARIAS: Cap[] = [
   {
-    titulo: "Cadena de evidencia",
-    desc: "Hash encadenado por hito. Cualquier modificación deja rastro verificable.",
+    titulo: "Nunca un número sin explicación",
+    desc: "De dónde salió, qué tan completo está y de cuándo es. Si falta un dato, lo decimos vacío — no lo rellenamos.",
     icon: (
       <svg className="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -27,8 +27,8 @@ const SECUNDARIAS: Cap[] = [
     ),
   },
   {
-    titulo: "Alertas tempranas",
-    desc: "Cronograma, sobrecosto, paralización. Con corte y cobertura explícitos, sin inferencia causal.",
+    titulo: "Alertas sobre las obras",
+    desc: "Te avisamos cuando una obra cuesta más de lo planeado, avanza más lento de lo prometido o está paralizada — con la fecha exacta del dato, sin adivinar el porqué.",
     icon: (
       <svg className="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
@@ -37,8 +37,8 @@ const SECUNDARIAS: Cap[] = [
     ),
   },
   {
-    titulo: "Dashboards por actor",
-    desc: "Tres lectores: GORE, prensa, auditoría. La misma verdad, distinta utilidad.",
+    titulo: "Una vista para cada tipo de usuario",
+    desc: "Gobierno regional, prensa y ciudadanía, auditores. El mismo dato, mostrado como cada uno lo necesita.",
     icon: (
       <svg className="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -48,8 +48,8 @@ const SECUNDARIAS: Cap[] = [
     ),
   },
   {
-    titulo: "Reportes automáticos",
-    desc: "Documentación abierta de los 82 tools en /docs/api. Cada endpoint declara fuente, matcher, cobertura y restricción.",
+    titulo: "Abierto para quien quiera consultarlo",
+    desc: "Todo el detalle técnico está documentado y disponible en /docs/api, sin pedir permiso ni credenciales.",
     icon: (
       <svg className="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M9 2v6h6V2" />
@@ -67,11 +67,11 @@ export function Capacidades() {
           03 — Capacidades
         </p>
         <h2 className="text-fg font-semibold text-2xl md:text-3xl leading-tight tracking-tight">
-          Construido para los actores reales del sistema.
+          Hecho para la gente que de verdad necesita esta información.
         </h2>
         <p className="mt-4 text-fg-soft leading-relaxed text-sm md:text-base">
-          No es un dashboard más. Es la infraestructura de transparencia sobre la que se monta la próxima
-          década de inversión pública en Latinoamérica.
+          No es un tablero más. Empezamos por La Libertad, probando bien el proceso completo, antes de
+          extenderlo a otras regiones.
         </p>
       </div>
 

@@ -204,7 +204,7 @@ Cloudflare Pages sirve los archivos `public/` directamente en la raíz. No requi
 - `public/robots.txt` — permite indexar todo y declara el `Sitemap:`.
 - `public/sitemap.xml` — incluye las rutas públicas.
 - `public/llms.txt` — descripción del sitio para LLM crawlers (ChatGPT, Perplexity, Claude).
-- `index.html` — JSON-LD con `Organization`, `WebSite` y `SoftwareApplication` (este último para que AI crawlers descubran el MCP server con sus 82 tools).
+- `index.html` — JSON-LD con `Organization`, `WebSite` y `SoftwareApplication` (este último para que AI crawlers descubran el MCP server con sus 83 tools).
 - `index.html` — `<link rel="canonical">` apunta a `https://rastro.fyi/`.
 
 ---

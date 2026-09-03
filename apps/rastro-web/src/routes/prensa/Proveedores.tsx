@@ -112,26 +112,26 @@ export function Proveedores() {
             </span>
           </div>
 
-          <table className="mt-6 w-full text-sm">
+          <table className="mt-6 w-full text-sm min-w-[760px]">
             <thead className="text-xs text-muted text-left">
               <tr>
                 <th className="py-2 pr-3">Proveedor</th>
-                <th className="py-2 pr-3">Supplier ID</th>
-                <th className="py-2 pr-3 text-right">Valor total (S/)</th>
-                <th className="py-2 pr-3 text-right">% participación</th>
-                <th className="py-2 pr-3 text-right">Adjudicaciones</th>
-                <th className="py-2 pr-3 text-right">Entidades distintas</th>
+                <th className="py-2 pr-3 whitespace-nowrap">Supplier ID</th>
+                <th className="py-2 pr-3 text-right whitespace-nowrap">Valor total (S/)</th>
+                <th className="py-2 pr-3 text-right whitespace-nowrap">% participación</th>
+                <th className="py-2 pr-3 text-right whitespace-nowrap">Adjudicaciones</th>
+                <th className="py-2 pr-3 text-right whitespace-nowrap">Entidades distintas</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line-soft">
               {data.resultados.slice(0, 50).map((s) => (
                 <tr key={s.supplierId}>
-                  <td className="py-2 pr-3 text-fg">{s.supplierName}</td>
-                  <td className="py-2 pr-3 mono-num text-fg-soft text-xs">{s.supplierId}</td>
-                  <td className="py-2 pr-3 text-right text-fg">
+                  <td className="py-2 pr-3 text-fg max-w-xs truncate" title={s.supplierName}>{s.supplierName}</td>
+                  <td className="py-2 pr-3 mono-num text-fg-soft text-xs whitespace-nowrap">{s.supplierId}</td>
+                  <td className="py-2 pr-3 text-right text-fg whitespace-nowrap">
                     <NumberWithMetadata data={metaNumber(s.valorTotal, FUENTE, SIN_CORTE, "NO_APLICA")} />
                   </td>
-                  <td className="py-2 pr-3 text-right text-fg">
+                  <td className="py-2 pr-3 text-right text-fg whitespace-nowrap">
                     <NumberWithMetadata
                       data={metaNumber(
                         totalValor > 0 ? (s.valorTotal / totalValor) * 100 : 0,
@@ -142,10 +142,10 @@ export function Proveedores() {
                       format={(n) => `${n.toFixed(1)}%`}
                     />
                   </td>
-                  <td className="py-2 pr-3 text-right text-fg">
+                  <td className="py-2 pr-3 text-right text-fg whitespace-nowrap">
                     <NumberWithMetadata data={metaNumber(s.adjudicaciones, FUENTE, SIN_CORTE, "NO_APLICA")} />
                   </td>
-                  <td className="py-2 pr-3 text-right text-fg">
+                  <td className="py-2 pr-3 text-right text-fg whitespace-nowrap">
                     <NumberWithMetadata data={metaNumber(s.entidadesDistintas, FUENTE, SIN_CORTE, "NO_APLICA")} />
                   </td>
                 </tr>

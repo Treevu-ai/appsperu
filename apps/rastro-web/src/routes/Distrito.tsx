@@ -169,25 +169,25 @@ export function Distrito() {
             </p>
           ) : null}
 
-          <table className="mt-6 w-full text-sm">
+          <table className="mt-6 w-full text-sm min-w-[880px]">
             <thead className="text-xs text-muted text-left">
               <tr>
-                <th className="py-2 pr-3">Código</th>
+                <th className="py-2 pr-3 whitespace-nowrap">Código</th>
                 <th className="py-2 pr-3">Obra</th>
                 <th className="py-2 pr-3">Entidad</th>
-                <th className="py-2 pr-3">Estado</th>
-                <th className="py-2 pr-3 text-right">Avance físico</th>
-                <th className="py-2 pr-3 text-right">Cost Drift</th>
-                <th className="py-2 pr-3 text-right">Gap físico-financiero</th>
+                <th className="py-2 pr-3 whitespace-nowrap">Estado</th>
+                <th className="py-2 pr-3 text-right whitespace-nowrap">Avance físico</th>
+                <th className="py-2 pr-3 text-right whitespace-nowrap">Cost Drift</th>
+                <th className="py-2 pr-3 text-right whitespace-nowrap">Gap físico-financiero</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line-soft">
               {obrasDelDistrito.slice(0, 50).map((w: PublicWork) => (
                 <tr key={w.codigoInfobras}>
-                  <td className="py-2 pr-3 mono-num text-fg-soft">{w.codigoInfobras}</td>
-                  <td className="py-2 pr-3 text-fg">{w.nombreObra}</td>
-                  <td className="py-2 pr-3 text-fg-soft">{w.entidadNombre}</td>
-                  <td className="py-2 pr-3">
+                  <td className="py-2 pr-3 mono-num text-fg-soft whitespace-nowrap">{w.codigoInfobras}</td>
+                  <td className="py-2 pr-3 text-fg max-w-xs truncate" title={w.nombreObra}>{w.nombreObra}</td>
+                  <td className="py-2 pr-3 text-fg-soft max-w-xs truncate" title={w.entidadNombre}>{w.entidadNombre}</td>
+                  <td className="py-2 pr-3 whitespace-nowrap">
                     {w.existeParalizacion ? (
                       <span className="text-danger" title={w.causalParalizacion ?? undefined}>
                         PARALIZADA
@@ -249,26 +249,26 @@ export function Distrito() {
           {activosDelDistrito.length === 0 ? (
             <p className="text-fg-soft text-sm mt-4">Sin activos materializados para este alcance.</p>
           ) : (
-            <table className="mt-6 w-full text-sm">
+            <table className="mt-6 w-full text-sm min-w-[720px]">
               <thead className="text-xs text-muted text-left">
                 <tr>
                   <th className="py-2 pr-3">Activo</th>
-                  <th className="py-2 pr-3">Familia</th>
-                  <th className="py-2 pr-3">CUI</th>
-                  <th className="py-2 pr-3">Cierre</th>
-                  <th className="py-2 pr-3">Operador</th>
-                  <th className="py-2 pr-3">Mantenimiento</th>
+                  <th className="py-2 pr-3 whitespace-nowrap">Familia</th>
+                  <th className="py-2 pr-3 whitespace-nowrap">CUI</th>
+                  <th className="py-2 pr-3 whitespace-nowrap">Cierre</th>
+                  <th className="py-2 pr-3 whitespace-nowrap">Operador</th>
+                  <th className="py-2 pr-3 whitespace-nowrap">Mantenimiento</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line-soft">
                 {activosDelDistrito.slice(0, 50).map((a) => (
                   <tr key={a.id}>
-                    <td className="py-2 pr-3 text-fg">{a.activo}</td>
-                    <td className="py-2 pr-3 text-fg-soft">{a.familia}</td>
-                    <td className="py-2 pr-3 mono-num text-fg-soft">{a.identidad.cui ?? "—"}</td>
-                    <td className="py-2 pr-3 text-xs text-fg-soft">{a.etapas.cierre}</td>
-                    <td className="py-2 pr-3 text-xs text-fg-soft">{a.etapas.operador}</td>
-                    <td className="py-2 pr-3 text-xs text-fg-soft">{a.etapas.mantenimiento}</td>
+                    <td className="py-2 pr-3 text-fg max-w-xs truncate" title={a.activo}>{a.activo}</td>
+                    <td className="py-2 pr-3 text-fg-soft whitespace-nowrap">{a.familia}</td>
+                    <td className="py-2 pr-3 mono-num text-fg-soft whitespace-nowrap">{a.identidad.cui ?? "—"}</td>
+                    <td className="py-2 pr-3 text-xs text-fg-soft whitespace-nowrap">{a.etapas.cierre}</td>
+                    <td className="py-2 pr-3 text-xs text-fg-soft whitespace-nowrap">{a.etapas.operador}</td>
+                    <td className="py-2 pr-3 text-xs text-fg-soft whitespace-nowrap">{a.etapas.mantenimiento}</td>
                   </tr>
                 ))}
               </tbody>

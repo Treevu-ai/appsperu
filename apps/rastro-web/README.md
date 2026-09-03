@@ -7,11 +7,11 @@
 
 Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tiempo cambia lo que viene después.
 
-Esta web app (Vite + React Router 7 SPA) consume las **14 APIs de appsperu** y expone **82 tools MCP** para que agentes IA (Claude Code, Claude Desktop, Cursor, Windsurf, Cline, Continue.dev) encadenen consultas complejas con una sola query.
+Esta web app (Vite + React Router 7 SPA) consume las **14 APIs de appsperu** y expone **83 tools MCP** para que agentes IA (Claude Code, Claude Desktop, Cursor, Windsurf, Cline, Continue.dev) encadenen consultas complejas con una sola query.
 
 - **URL producción:** https://rastro.fyi/
 - **Stack:** Vite 8 + React 19 + TypeScript 6 + React Router 7 + Tailwind v4
-- **MCP:** 82 tools de solo lectura, transporte stdio
+- **MCP:** 83 tools de solo lectura, transporte stdio
 - **Hosting:** Cloudflare Pages (proyecto `rastro`)
 
 ## Estructura
@@ -54,7 +54,7 @@ apps/rastro-web/
 │   │   └── DocsApi.tsx
 │   ├── lib/
 │   │   ├── types.ts          # WithMetadata, AppKey, APP_CATALOG
-│   │   └── api-client.ts     # 14 funciones tipadas, MSW-friendly
+│   │   └── api-client.ts     # 1+ función tipada por app (21 hoy), MSW-friendly
 │   ├── mocks/
 │   │   └── handlers.ts       # respuestas para tests
 │   └── test/
@@ -99,7 +99,7 @@ npm run ci               # todo lo anterior en orden
 
 - PRD: [`docs/PRD_Rastro_Capa_Lectura_No_Tecnicos_v1.md`](../../docs/PRD_Rastro_Capa_Lectura_No_Tecnicos_v1.md)
 - Tickets: [`docs/TICKETS_Rastro_Capa_Lectura_v1.md`](../../docs/TICKETS_Rastro_Capa_Lectura_v1.md)
-- Backlog: [`docs/BACKLOG_Rastro_Capa_Lectura_v1.md`](../../docs/BACKLOG_Rastro_Lectura_v1.md)
+- Backlog: [`docs/BACKLOG_Rastro_Capa_Lectura_No_Tecnicos_v1.md`](../../docs/BACKLOG_Rastro_Capa_Lectura_No_Tecnicos_v1.md)
 - Estado: [`docs/ESTADO.md`](../../docs/ESTADO.md)
 - Conectores: [`docs/conectores.md`](../../docs/conectores.md)
 - Brand: Rastro. URL público: `rastro.fyi`.

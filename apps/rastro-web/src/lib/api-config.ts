@@ -22,7 +22,7 @@ export function apisPublishedForBrowser(): boolean {
 }
 
 export const APIS_NOT_PUBLISHED_MESSAGE =
-  "Datos en vivo no están en la web pública. Usa el servidor MCP local (82 tools) o levanta las APIs en tu máquina con scripts/dev-local.sh.";
+  "Datos en vivo no están en la web pública. Usa el servidor MCP local (83 tools) o levanta las APIs en tu máquina con scripts/dev-local.sh.";
 
 export function formatApiErrorForUi(err: unknown): string {
   if (!apisPublishedForBrowser()) return APIS_NOT_PUBLISHED_MESSAGE;
