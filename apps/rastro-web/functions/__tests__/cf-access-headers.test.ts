@@ -12,7 +12,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const REAL_FETCH = global.fetch;
+const REAL_FETCH = globalThis.fetch;
 
 function inMemoryKv(): KVNamespace {
   const store = new Map<string, string>();
@@ -31,7 +31,7 @@ function inMemoryKv(): KVNamespace {
  *  cada llamada para inspección en el test. */
 function mockFetchWithRecorder(): { lastHeaders: Record<string, string>[] } {
   const state: { lastHeaders: Record<string, string>[] } = { lastHeaders: [] };
-  global.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+  globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input.toString();
     const headers = (init?.headers ?? {}) as Record<string, string>;
     state.lastHeaders.push(headers);
@@ -52,7 +52,7 @@ function mockFetchWithRecorder(): { lastHeaders: Record<string, string>[] } {
   return state;
 }
 
-function makeContext(q: string, env: Partial<PagesEnv> = {}): PagesEventContext {
+function makeContext(q: string, env: Partial<PagesEnv> & Record<string, string> = {}): PagesEventContext {
   return {
     request: new Request(`https://rastro.fyi/api/search?q=${encodeURIComponent(q)}`),
     env: { RATE_LIMIT: inMemoryKv(), ...env } as PagesEnv,
@@ -66,7 +66,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  global.fetch = REAL_FETCH;
+  globalThis.fetch = REAL_FETCH;
   vi.restoreAllMocks();
 });
 
@@ -127,5 +127,26 @@ describe("GET /api/search — Cloudflare Access (Service Token) headers", () => 
       expect(headers["CF-Access-Client-Id"]).toBeUndefined();
       expect(headers["CF-Access-Client-Secret"]).toBeUndefined();
     }
+  });
+
+  it("NO envía los headers ni la request si baseUrl no es exactamente https://api.rastro.pe, aunque los secrets estén configurados", async () => {
+    const recorder = mockFetchWithRecorder();
+    const { onRequestGet } = await import("../api/search.js");
+    const ctx = makeContext("demo", {
+      // Origin parecido pero no exacto — typo o config a medias.
+      VITE_API_BASE_URL_IDENTIDAD_FISCAL: "https://api.rastro.pe.evil.example/identidad-fiscal",
+      CF_ACCESS_CLIENT_ID: "test-client-id-abc.access",
+      CF_ACCESS_CLIENT_SECRET: "test-client-secret-xyz",
+    }) as unknown as PagesEventContext;
+    const res = await onRequestGet(ctx as unknown as Parameters<typeof onRequestGet>[0]);
+
+    // fetchWithTimeout tira antes de llamar a fetch() para ese origin —
+    // ninguna llamada a esa fuente debió registrar headers con el secret.
+    for (const headers of recorder.lastHeaders) {
+      expect(headers["CF-Access-Client-Id"]).toBeUndefined();
+      expect(headers["CF-Access-Client-Secret"]).toBeUndefined();
+    }
+    // La búsqueda igual responde (cae al índice bundleado para esa fuente).
+    expect(res.status).toBe(200);
   });
 });
