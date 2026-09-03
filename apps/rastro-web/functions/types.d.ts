@@ -17,6 +17,22 @@ interface KVNamespace {
 
 interface PagesEnv {
   RATE_LIMIT: KVNamespace;
+  /**
+   * Cloudflare Access Service Token — Client ID.
+   * Header saliente: `CF-Access-Client-Id`.
+   * Solo presente en producción (Cloudflare Pages → Settings → Environment
+   * variables). Ver `docs/API_ACCESS_PROTECTION.md` para crear el Service
+   * Token en Cloudflare Access. Opcional en dev: si está ausente, la
+   * Function sigue funcionando contra `localhost` o cae al `search-index`
+   * bundleado.
+   */
+  CF_ACCESS_CLIENT_ID?: string;
+  /**
+   * Cloudflare Access Service Token — Client Secret.
+   * Header saliente: `CF-Access-Client-Secret`. Mismo origen y caveat
+   * que `CF_ACCESS_CLIENT_ID`.
+   */
+  CF_ACCESS_CLIENT_SECRET?: string;
 }
 
 interface PagesEventContext<Env = PagesEnv> {

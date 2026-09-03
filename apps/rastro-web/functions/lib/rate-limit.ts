@@ -80,7 +80,17 @@ export async function count429Last24h(kv: KVNamespace, nowMs: number = Date.now(
   return total;
 }
 
-/** Extrae la IP del cliente desde los headers que pone Cloudflare. */
+/**
+ * Extrae la IP del cliente desde los headers que pone Cloudflare.
+ * `X-Forwarded-For` puede traer una lista "cliente, proxy1, proxy2" cuando
+ * hay más de un hop — se toma el primer valor (el cliente real), no el
+ * header completo, que colapsaría a una sola "IP" compartida por todos los
+ * clientes detrás del mismo proxy y rompería el rate limit por IP.
+ */
 export function clientIp(request: Request): string {
-  return request.headers.get("CF-Connecting-IP") ?? request.headers.get("X-Forwarded-For") ?? "unknown";
+  const cfIp = request.headers.get("CF-Connecting-IP");
+  if (cfIp) return cfIp;
+  const forwarded = request.headers.get("X-Forwarded-For");
+  if (forwarded) return forwarded.split(",")[0].trim();
+  return "unknown";
 }

@@ -4,6 +4,13 @@
 #
 # El binding KV (RATE_LIMIT) NO va acá — wrangler lo simula automáticamente
 # en local a partir de wrangler.toml, sin necesitar credenciales reales.
+#
+# CF-Access Service Token (ver docs/API_ACCESS_PROTECTION.md). Solo se
+# requieren si `wrangler pages dev` hace de proxy contra api.rastro.pe en
+# staging/preview contra producción. Para dev local con las APIs en
+# localhost, déjalos vacíos — la Function los ignora si están ausentes.
+CF_ACCESS_CLIENT_ID=
+CF_ACCESS_CLIENT_SECRET=
 
 VITE_API_BASE_URL_IDENTIDAD_FISCAL=http://localhost:4006
 VITE_API_BASE_URL_RADAR_INVERSIONES=http://localhost:4002

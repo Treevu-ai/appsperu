@@ -1,19 +1,23 @@
 #!/usr/bin/env bash
-# Levanta las 14 APIs con PM2 en el VPS.
+# Levanta las APIs con PM2.
 #
-# Uso (en el VPS, desde /opt/appsperu):
+# Uso (en el VPS, desde /opt/appsperu, las 14):
 #   bash scripts/start-all-apis.sh
 #   bash scripts/start-all-apis.sh --build   # npm ci + build antes de arrancar
+#
+# Uso (local, subset — restricciones de memoria):
+#   ONLY="radar-ejecucion,infobras" bash scripts/start-all-apis.sh
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export APPSPERU_ROOT="${APPSPERU_ROOT:-$ROOT}"
 export WEB_ORIGIN="${WEB_ORIGIN:-https://www.rastro.fyi,https://rastro.fyi,https://rastro-5zm.pages.dev}"
+ONLY="${ONLY:-}"
 
 BUILD=0
-if [ "${1:-}" = "--build" ]; then
-  BUILD=1
-fi
+for arg in "$@"; do
+  [ "$arg" = "--build" ] && BUILD=1
+done
 
 if ! command -v pm2 >/dev/null 2>&1; then
   echo "==> Instalando PM2..."
@@ -25,6 +29,9 @@ if [ "$BUILD" -eq 1 ]; then
   while IFS=$'\t' read -r slug port app_dir start_cmd; do
     [[ "$slug" =~ ^# ]] && continue
     [[ -z "$slug" ]] && continue
+    if [ -n "$ONLY" ] && [[ ",${ONLY}," != *",${slug},"* ]]; then
+      continue
+    fi
     api_dir="${APPSPERU_ROOT}/apps/${app_dir}/api"
     echo "   → ${app_dir}"
     (cd "$api_dir" && npm ci --silent)
@@ -35,7 +42,11 @@ if [ "$BUILD" -eq 1 ]; then
 fi
 
 echo "==> Arrancando/reiniciando PM2..."
-pm2 startOrReload "${ROOT}/infra/api-proxy/ecosystem.config.cjs" --update-env
+if [ -n "$ONLY" ]; then
+  pm2 startOrReload "${ROOT}/infra/api-proxy/ecosystem.config.cjs" --update-env --only "$ONLY"
+else
+  pm2 startOrReload "${ROOT}/infra/api-proxy/ecosystem.config.cjs" --update-env
+fi
 pm2 save
 
 echo ""

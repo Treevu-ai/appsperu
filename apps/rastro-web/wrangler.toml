@@ -26,7 +26,13 @@ id = "da7766279cc54ba5817e338b76eb3ef1"
 
 # Variables de entorno NO se ponen aquí. Se configuran en el dashboard
 # de Cloudflare Pages bajo Settings → Environment variables.
-# Ver DEPLOY.md para la lista de las 14 variables VITE_API_BASE_URL_*.
+# - VITE_API_BASE_URL_* (3 usadas por la Function /api/search —
+#   identidad-fiscal, radar-inversiones, infobras).
+# - CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET — Cloudflare Access
+#   Service Token. La Function /api/search los envía como headers
+#   `CF-Access-Client-Id` / `CF-Access-Client-Secret` a las APIs en vivo
+#   (api.rastro.pe). Sin esos tokens, Cloudflare Access bloquea la
+#   request con 403. Ver docs/API_ACCESS_PROTECTION.md.
 
 # Headers HTTP personalizados (Cache-Control, Security, etc.)
 # Aplican a todo el sitio. Se pueden sobreescribir por ruta si se necesita.

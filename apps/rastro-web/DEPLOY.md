@@ -34,6 +34,7 @@ Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tie
 1. Cuenta Cloudflare con acceso al proyecto `rastro`.
 2. Repositorio `Treevu-ai/appsperu` con la carpeta `apps/rastro-web/`.
 3. Las 14 APIs accesibles vía proxy en el VPS (`https://api.rastro.pe/<app>`). Runbook: **`docs/API_PROXY_DEPLOY.md`**.
+4. (Opcional pero recomendado) `api.rastro.pe` protegido con Cloudflare Access — ver **`docs/API_ACCESS_PROTECTION.md`**. Sin este paso, las 14 APIs están abiertas a internet (cualquiera puede descubrirlas por el certificado SSL).
 
 ```bash
 # En el VPS (149.104.66.100)

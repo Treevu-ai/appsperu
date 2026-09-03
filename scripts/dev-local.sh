@@ -8,6 +8,9 @@
 #   bash scripts/dev-local.sh --mcp        # build MCP (stdio, para Cursor)
 #   bash scripts/dev-local.sh --web        # solo frontend Vite
 #   bash scripts/dev-local.sh --check      # health check local
+#   bash scripts/dev-local.sh --only "radar-ejecucion,infobras"
+#                                           # solo ese subset (postgres + apis) —
+#                                           # para RAM limitada, no levantes las 14
 # Compatible con Git Bash en Windows (sin pipefail — CRLF rompe "set -o pipefail")
 set -eu
 
@@ -37,7 +40,8 @@ ensure_api_envs() {
 
 start_postgres() {
   need_docker
-  bash "${ROOT}/scripts/start-all-postgres.sh"
+  # $@: slugs a levantar; vacío = todas
+  bash "${ROOT}/scripts/start-all-postgres.sh" "$@"
   ensure_api_envs
 }
 
@@ -49,6 +53,17 @@ start_apis() {
   export APPSPERU_ROOT="$ROOT"
   export WEB_ORIGIN="http://localhost:5173,http://127.0.0.1:5173"
   bash "${ROOT}/scripts/start-all-apis.sh" --build
+}
+
+start_only() {
+  local only="$1"
+  [ -n "$only" ] || { echo "ERROR: --only requiere una lista, ej. --only \"radar-ejecucion,infobras\"" >&2; exit 1; }
+  # bash 3 (macOS/Git Bash) no tiene mapfile — split manual por coma
+  local slugs=()
+  local IFS=','
+  read -ra slugs <<< "$only"
+  start_postgres "${slugs[@]}"
+  ONLY="$only" start_apis
 }
 
 build_mcp() {
@@ -84,6 +99,7 @@ case "$MODE" in
   --mcp) build_mcp ;;
   --web) start_web ;;
   --check) health_check ;;
+  --only) start_only "${2:-}" ;;
   all|"")
     start_postgres
     start_apis
@@ -95,7 +111,7 @@ case "$MODE" in
     health_check
     ;;
   *)
-    echo "Uso: bash scripts/dev-local.sh [--postgres|--apis|--mcp|--web|--check]" >&2
+    echo "Uso: bash scripts/dev-local.sh [--postgres|--apis|--mcp|--web|--check|--only \"a,b\"]" >&2
     exit 1
     ;;
 esac

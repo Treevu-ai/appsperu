@@ -6,6 +6,12 @@ const WEB_ORIGIN =
   process.env.WEB_ORIGIN ??
   "https://www.rastro.fyi,https://rastro.fyi,https://rastro-5zm.pages.dev";
 const ROOT = process.env.APPSPERU_ROOT ?? "/opt/appsperu";
+// interpreter:"none" hace que PM2 haga spawn() directo del binario, sin shell.
+// npm/npx son scripts .cmd en Windows, y Node no puede spawnear un .cmd sin
+// shell:true (falla con EINVAL) — ni siquiera referenciando la extensión
+// explícita. Fix: en Windows, envolver el comando en `cmd /c ...`, que sí es
+// un .exe real. En Linux (VPS) esto es un no-op (usa el binario tal cual).
+const IS_WIN = process.platform === "win32";
 
 /** @type {Array<{slug:string,port:number,dir:string,cmd:string[]}>} */
 const APPS = [
@@ -29,8 +35,8 @@ module.exports = {
   apps: APPS.map(({ slug, port, dir, cmd }) => ({
     name: slug,
     cwd: `${ROOT}/apps/${dir}/api`,
-    script: cmd[0],
-    args: cmd.slice(1).join(" "),
+    script: IS_WIN ? "cmd" : cmd[0],
+    args: IS_WIN ? `/c ${cmd.join(" ")}` : cmd.slice(1).join(" "),
     interpreter: "none",
     env: {
       PORT: String(port),

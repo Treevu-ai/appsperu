@@ -33,6 +33,21 @@ const MIN_QUERY_LENGTH = 3;
 const SEARCH_DEPARTAMENTO = "LA LIBERTAD";
 const RATE_LIMIT_PER_MINUTE = 30;
 
+/**
+ * Único origin al que es seguro adjuntar el Service Token de Cloudflare
+ * Access. Si `VITE_API_BASE_URL_*` alguna vez apuntara a otro host (typo,
+ * ambiente mal configurado, o una respuesta 3xx que el runtime siguiera
+ * automáticamente hacia otro origin), los headers `CF-Access-Client-*` NO
+ * deben viajar ahí — son credenciales, no datos de request genéricos.
+ * `fetch()` en el runtime de Pages Functions sigue redirects por defecto
+ * (`redirect: "follow"`), así que la validación de origin por sí sola no
+ * cubre una redirección post-conexión; por eso además se fuerza
+ * `redirect: "manual"` en `fetchWithTimeout` cuando hay Access headers de
+ * por medio — cualquier 3xx se trata como fallo (cae al índice bundleado)
+ * en vez de reenviar credenciales a un destino no verificado.
+ */
+const ACCESS_PROTECTED_ORIGIN = "https://api.rastro.pe";
+
 import { checkRateLimit, clientIp, recordRateLimitExceeded } from "../lib/rate-limit.js";
 import searchIndex from "../../src/data/search-index.json" with { type: "json" };
 
@@ -75,44 +90,98 @@ function score(q: string, text: string): number {
   return 0;
 }
 
-async function fetchWithTimeout(url: string, timeoutMs = TIMEOUT_MS): Promise<Response> {
+/**
+ * Trae `url` con timeout y, si hay Access headers, valida que el origin sea
+ * exactamente `ACCESS_PROTECTED_ORIGIN` antes de adjuntarlos — nunca manda
+ * credenciales a un host que no sea ese, y fuerza `redirect: "manual"` en
+ * ese caso para que un 3xx no las reenvíe a otro destino sin verificar.
+ *
+ * El `AbortController` se mantiene vivo hasta `done()`, que el llamador
+ * invoca recién después de leer el body — si se limpiara apenas `fetch()`
+ * resuelve (como en la versión anterior), una lectura de body colgada
+ * podría superar `timeoutMs` sin abortar.
+ */
+async function fetchWithTimeout(
+  url: string,
+  timeoutMs = TIMEOUT_MS,
+  extraHeaders: Record<string, string> = {},
+): Promise<{ response: Response; done: () => void }> {
+  const hasAccessHeaders = Object.keys(extraHeaders).length > 0;
+  if (hasAccessHeaders && !url.startsWith(`${ACCESS_PROTECTED_ORIGIN}/`)) {
+    throw new Error(`Rechazado: no se envían credenciales de Access a un origin distinto de ${ACCESS_PROTECTED_ORIGIN}`);
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { headers: { Accept: "application/json" }, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
+  const response = await fetch(url, {
+    headers: { Accept: "application/json", ...extraHeaders },
+    signal: controller.signal,
+    ...(hasAccessHeaders ? { redirect: "manual" as const } : {}),
+  });
+  return { response, done: () => clearTimeout(timer) };
+}
+
+/**
+ * Construye los headers de Cloudflare Access (Service Token) que la Function
+ * envía a las 3 APIs de origen (`identidad-fiscal`, `radar-inversiones`,
+ * `infobras`). Vacío si no hay tokens configurados — la Function sigue
+ * funcionando en local contra `localhost` sin Access en el camino, y en
+ * producción si por alguna razón faltaran, Cloudflare Access devolverá 403
+ * y la Function caerá al fallback del `search-index` bundleado (mismo
+ * comportamiento que hoy cuando la API está caída).
+ *
+ * Razonamiento: NO fallamos "fuerte" si faltan los tokens en producción.
+ * El snapshot semanal cubre la búsqueda aunque las APIs en vivo no
+ * respondan. Romper la búsqueda por un secret faltante es peor UX que
+ * degradar al corte bundleado — el usuario sigue obteniendo resultados,
+ * solo del corte en vez de en vivo.
+ */
+function cfAccessHeaders(env: PagesEnv): Record<string, string> {
+  if (env.CF_ACCESS_CLIENT_ID && env.CF_ACCESS_CLIENT_SECRET) {
+    return {
+      "CF-Access-Client-Id": env.CF_ACCESS_CLIENT_ID,
+      "CF-Access-Client-Secret": env.CF_ACCESS_CLIENT_SECRET,
+    };
   }
+  return {};
 }
 
 type SourceResult = { items: SearchResultado[]; disponible: boolean; usedIndex: boolean };
 
-async function searchContribuyentes(baseUrl: string | undefined, q: string): Promise<SourceResult> {
+async function searchContribuyentes(
+  baseUrl: string | undefined,
+  q: string,
+  accessHeaders: Record<string, string>,
+): Promise<SourceResult> {
   if (baseUrl) {
     try {
       const isRuc = /^\d{11}$/.test(q);
       const url = isRuc
         ? `${baseUrl}/api/contribuyentes/${encodeURIComponent(q)}`
         : `${baseUrl}/api/contribuyentes?razonSocial=${encodeURIComponent(q)}`;
-      const res = await fetchWithTimeout(url);
-      if (res.ok) {
-        const body = (await res.json()) as
-          | { ruc: string; razonSocial: string }
-          | { resultados: { ruc: string; razonSocial: string }[] };
-        const rows = "resultados" in body ? body.resultados : [body];
-        return {
-          disponible: true,
-          usedIndex: false,
-          items: rows.map((r) => ({
-            tipo: "ruc" as const,
-            identificador: r.ruc,
-            descripcion: r.razonSocial,
-            puntaje: isRuc ? 100 : score(q, r.razonSocial),
-            fuente: "identidad-fiscal / contribuyentes",
-          })),
-        };
+      const { response: res, done } = await fetchWithTimeout(url, TIMEOUT_MS, accessHeaders);
+      try {
+        if (res.ok) {
+          const body = (await res.json()) as
+            | { ruc: string; razonSocial: string }
+            | { resultados: { ruc: string; razonSocial: string }[] };
+          const rows = "resultados" in body ? body.resultados : [body];
+          return {
+            disponible: true,
+            usedIndex: false,
+            items: rows.map((r) => ({
+              tipo: "ruc" as const,
+              identificador: r.ruc,
+              descripcion: r.razonSocial,
+              puntaje: isRuc ? 100 : score(q, r.razonSocial),
+              fuente: "identidad-fiscal / contribuyentes",
+            })),
+          };
+        }
+        if (res.status === 404) return { items: [], disponible: true, usedIndex: false };
+      } finally {
+        done();
       }
-      if (res.status === 404) return { items: [], disponible: true, usedIndex: false };
     } catch {
       // sigue al fallback del corte semanal
     }
@@ -120,20 +189,28 @@ async function searchContribuyentes(baseUrl: string | undefined, q: string): Pro
   return { items: searchIndexOffline("ruc", q), disponible: false, usedIndex: true };
 }
 
-async function searchInvestments(baseUrl: string | undefined, q: string): Promise<SourceResult> {
+async function searchInvestments(
+  baseUrl: string | undefined,
+  q: string,
+  accessHeaders: Record<string, string>,
+): Promise<SourceResult> {
   if (baseUrl) {
     try {
       const url = `${baseUrl}/api/investments?departamento=${encodeURIComponent(SEARCH_DEPARTAMENTO)}&limit=2000`;
-      const res = await fetchWithTimeout(url);
-      if (res.ok) {
-        const body = (await res.json()) as { resultados: { cui: string; nombre: string }[] };
-        return {
-          disponible: true,
-          usedIndex: false,
-          items: body.resultados
-            .map((r) => ({ tipo: "inversion" as const, identificador: r.cui, descripcion: r.nombre, puntaje: score(q, r.nombre), fuente: "radar-inversiones / investments" }))
-            .filter((r) => r.puntaje > 0),
-        };
+      const { response: res, done } = await fetchWithTimeout(url, TIMEOUT_MS, accessHeaders);
+      try {
+        if (res.ok) {
+          const body = (await res.json()) as { resultados: { cui: string; nombre: string }[] };
+          return {
+            disponible: true,
+            usedIndex: false,
+            items: body.resultados
+              .map((r) => ({ tipo: "inversion" as const, identificador: r.cui, descripcion: r.nombre, puntaje: score(q, r.nombre), fuente: "radar-inversiones / investments" }))
+              .filter((r) => r.puntaje > 0),
+          };
+        }
+      } finally {
+        done();
       }
     } catch {
       // sigue al fallback del corte semanal
@@ -142,20 +219,28 @@ async function searchInvestments(baseUrl: string | undefined, q: string): Promis
   return { items: searchIndexOffline("inversion", q), disponible: false, usedIndex: true };
 }
 
-async function searchPublicWorks(baseUrl: string | undefined, q: string): Promise<SourceResult> {
+async function searchPublicWorks(
+  baseUrl: string | undefined,
+  q: string,
+  accessHeaders: Record<string, string>,
+): Promise<SourceResult> {
   if (baseUrl) {
     try {
       const url = `${baseUrl}/api/public-works?departamento=${encodeURIComponent(SEARCH_DEPARTAMENTO)}`;
-      const res = await fetchWithTimeout(url);
-      if (res.ok) {
-        const body = (await res.json()) as { resultados: { codigoInfobras: string; nombreObra: string }[] };
-        return {
-          disponible: true,
-          usedIndex: false,
-          items: body.resultados
-            .map((r) => ({ tipo: "obra" as const, identificador: r.codigoInfobras, descripcion: r.nombreObra, puntaje: score(q, r.nombreObra), fuente: "infobras / public-works" }))
-            .filter((r) => r.puntaje > 0),
-        };
+      const { response: res, done } = await fetchWithTimeout(url, TIMEOUT_MS, accessHeaders);
+      try {
+        if (res.ok) {
+          const body = (await res.json()) as { resultados: { codigoInfobras: string; nombreObra: string }[] };
+          return {
+            disponible: true,
+            usedIndex: false,
+            items: body.resultados
+              .map((r) => ({ tipo: "obra" as const, identificador: r.codigoInfobras, descripcion: r.nombreObra, puntaje: score(q, r.nombreObra), fuente: "infobras / public-works" }))
+              .filter((r) => r.puntaje > 0),
+          };
+        }
+      } finally {
+        done();
       }
     } catch {
       // sigue al fallback del corte semanal
@@ -184,10 +269,11 @@ export const onRequestGet: PagesFunctionHandler = async (context) => {
   }
 
   const env2 = env as unknown as Record<string, string | undefined>;
+  const accessHeaders = cfAccessHeaders(env);
   const [contribuyentes, investments, publicWorks] = await Promise.all([
-    searchContribuyentes(env2.VITE_API_BASE_URL_IDENTIDAD_FISCAL, q),
-    searchInvestments(env2.VITE_API_BASE_URL_RADAR_INVERSIONES, q),
-    searchPublicWorks(env2.VITE_API_BASE_URL_INFOBRAS, q),
+    searchContribuyentes(env2.VITE_API_BASE_URL_IDENTIDAD_FISCAL, q, accessHeaders),
+    searchInvestments(env2.VITE_API_BASE_URL_RADAR_INVERSIONES, q, accessHeaders),
+    searchPublicWorks(env2.VITE_API_BASE_URL_INFOBRAS, q, accessHeaders),
   ]);
 
   const resultados = [...contribuyentes.items, ...investments.items, ...publicWorks.items].sort(
