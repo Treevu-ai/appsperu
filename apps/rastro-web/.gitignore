@@ -18,6 +18,8 @@ dist-ssr
 !.env.example
 !.env.production
 !.env.production.cloudflare
+.dev.vars
+!.dev.vars.example
 
 # Editor directories and files
 .vscode/*
@@ -36,3 +38,6 @@ tsconfig.app.tsbuildinfo
 .audit.deleted-*/
 .playwright-cli/
 .wrangler/
+playwright-report/
+test-results/
+e2e-results.json

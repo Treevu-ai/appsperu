@@ -33,6 +33,21 @@ const MIN_QUERY_LENGTH = 3;
 const SEARCH_DEPARTAMENTO = "LA LIBERTAD";
 const RATE_LIMIT_PER_MINUTE = 30;
 
+/**
+ * Único origin al que es seguro adjuntar el Service Token de Cloudflare
+ * Access. Si `VITE_API_BASE_URL_*` alguna vez apuntara a otro host (typo,
+ * ambiente mal configurado, o una respuesta 3xx que el runtime siguiera
+ * automáticamente hacia otro origin), los headers `CF-Access-Client-*` NO
+ * deben viajar ahí — son credenciales, no datos de request genéricos.
+ * `fetch()` en el runtime de Pages Functions sigue redirects por defecto
+ * (`redirect: "follow"`), así que la validación de origin por sí sola no
+ * cubre una redirección post-conexión; por eso además se fuerza
+ * `redirect: "manual"` en `fetchWithTimeout` cuando hay Access headers de
+ * por medio — cualquier 3xx se trata como fallo (cae al índice bundleado)
+ * en vez de reenviar credenciales a un destino no verificado.
+ */
+const ACCESS_PROTECTED_ORIGIN = "https://api.rastro.pe";
+
 import { checkRateLimit, clientIp, recordRateLimitExceeded } from "../lib/rate-limit.js";
 import searchIndex from "../../src/data/search-index.json" with { type: "json" };
 
@@ -75,21 +90,35 @@ function score(q: string, text: string): number {
   return 0;
 }
 
+/**
+ * Trae `url` con timeout y, si hay Access headers, valida que el origin sea
+ * exactamente `ACCESS_PROTECTED_ORIGIN` antes de adjuntarlos — nunca manda
+ * credenciales a un host que no sea ese, y fuerza `redirect: "manual"` en
+ * ese caso para que un 3xx no las reenvíe a otro destino sin verificar.
+ *
+ * El `AbortController` se mantiene vivo hasta `done()`, que el llamador
+ * invoca recién después de leer el body — si se limpiara apenas `fetch()`
+ * resuelve (como en la versión anterior), una lectura de body colgada
+ * podría superar `timeoutMs` sin abortar.
+ */
 async function fetchWithTimeout(
   url: string,
   timeoutMs = TIMEOUT_MS,
   extraHeaders: Record<string, string> = {},
-): Promise<Response> {
+): Promise<{ response: Response; done: () => void }> {
+  const hasAccessHeaders = Object.keys(extraHeaders).length > 0;
+  if (hasAccessHeaders && !url.startsWith(`${ACCESS_PROTECTED_ORIGIN}/`)) {
+    throw new Error(`Rechazado: no se envían credenciales de Access a un origin distinto de ${ACCESS_PROTECTED_ORIGIN}`);
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, {
-      headers: { Accept: "application/json", ...extraHeaders },
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timer);
-  }
+  const response = await fetch(url, {
+    headers: { Accept: "application/json", ...extraHeaders },
+    signal: controller.signal,
+    ...(hasAccessHeaders ? { redirect: "manual" as const } : {}),
+  });
+  return { response, done: () => clearTimeout(timer) };
 }
 
 /**
@@ -130,25 +159,29 @@ async function searchContribuyentes(
       const url = isRuc
         ? `${baseUrl}/api/contribuyentes/${encodeURIComponent(q)}`
         : `${baseUrl}/api/contribuyentes?razonSocial=${encodeURIComponent(q)}`;
-      const res = await fetchWithTimeout(url, TIMEOUT_MS, accessHeaders);
-      if (res.ok) {
-        const body = (await res.json()) as
-          | { ruc: string; razonSocial: string }
-          | { resultados: { ruc: string; razonSocial: string }[] };
-        const rows = "resultados" in body ? body.resultados : [body];
-        return {
-          disponible: true,
-          usedIndex: false,
-          items: rows.map((r) => ({
-            tipo: "ruc" as const,
-            identificador: r.ruc,
-            descripcion: r.razonSocial,
-            puntaje: isRuc ? 100 : score(q, r.razonSocial),
-            fuente: "identidad-fiscal / contribuyentes",
-          })),
-        };
+      const { response: res, done } = await fetchWithTimeout(url, TIMEOUT_MS, accessHeaders);
+      try {
+        if (res.ok) {
+          const body = (await res.json()) as
+            | { ruc: string; razonSocial: string }
+            | { resultados: { ruc: string; razonSocial: string }[] };
+          const rows = "resultados" in body ? body.resultados : [body];
+          return {
+            disponible: true,
+            usedIndex: false,
+            items: rows.map((r) => ({
+              tipo: "ruc" as const,
+              identificador: r.ruc,
+              descripcion: r.razonSocial,
+              puntaje: isRuc ? 100 : score(q, r.razonSocial),
+              fuente: "identidad-fiscal / contribuyentes",
+            })),
+          };
+        }
+        if (res.status === 404) return { items: [], disponible: true, usedIndex: false };
+      } finally {
+        done();
       }
-      if (res.status === 404) return { items: [], disponible: true, usedIndex: false };
     } catch {
       // sigue al fallback del corte semanal
     }
@@ -164,16 +197,20 @@ async function searchInvestments(
   if (baseUrl) {
     try {
       const url = `${baseUrl}/api/investments?departamento=${encodeURIComponent(SEARCH_DEPARTAMENTO)}&limit=2000`;
-      const res = await fetchWithTimeout(url, TIMEOUT_MS, accessHeaders);
-      if (res.ok) {
-        const body = (await res.json()) as { resultados: { cui: string; nombre: string }[] };
-        return {
-          disponible: true,
-          usedIndex: false,
-          items: body.resultados
-            .map((r) => ({ tipo: "inversion" as const, identificador: r.cui, descripcion: r.nombre, puntaje: score(q, r.nombre), fuente: "radar-inversiones / investments" }))
-            .filter((r) => r.puntaje > 0),
-        };
+      const { response: res, done } = await fetchWithTimeout(url, TIMEOUT_MS, accessHeaders);
+      try {
+        if (res.ok) {
+          const body = (await res.json()) as { resultados: { cui: string; nombre: string }[] };
+          return {
+            disponible: true,
+            usedIndex: false,
+            items: body.resultados
+              .map((r) => ({ tipo: "inversion" as const, identificador: r.cui, descripcion: r.nombre, puntaje: score(q, r.nombre), fuente: "radar-inversiones / investments" }))
+              .filter((r) => r.puntaje > 0),
+          };
+        }
+      } finally {
+        done();
       }
     } catch {
       // sigue al fallback del corte semanal
@@ -190,16 +227,20 @@ async function searchPublicWorks(
   if (baseUrl) {
     try {
       const url = `${baseUrl}/api/public-works?departamento=${encodeURIComponent(SEARCH_DEPARTAMENTO)}`;
-      const res = await fetchWithTimeout(url, TIMEOUT_MS, accessHeaders);
-      if (res.ok) {
-        const body = (await res.json()) as { resultados: { codigoInfobras: string; nombreObra: string }[] };
-        return {
-          disponible: true,
-          usedIndex: false,
-          items: body.resultados
-            .map((r) => ({ tipo: "obra" as const, identificador: r.codigoInfobras, descripcion: r.nombreObra, puntaje: score(q, r.nombreObra), fuente: "infobras / public-works" }))
-            .filter((r) => r.puntaje > 0),
-        };
+      const { response: res, done } = await fetchWithTimeout(url, TIMEOUT_MS, accessHeaders);
+      try {
+        if (res.ok) {
+          const body = (await res.json()) as { resultados: { codigoInfobras: string; nombreObra: string }[] };
+          return {
+            disponible: true,
+            usedIndex: false,
+            items: body.resultados
+              .map((r) => ({ tipo: "obra" as const, identificador: r.codigoInfobras, descripcion: r.nombreObra, puntaje: score(q, r.nombreObra), fuente: "infobras / public-works" }))
+              .filter((r) => r.puntaje > 0),
+          };
+        }
+      } finally {
+        done();
       }
     } catch {
       // sigue al fallback del corte semanal

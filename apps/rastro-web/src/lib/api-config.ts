@@ -22,11 +22,14 @@ export function apisPublishedForBrowser(): boolean {
 }
 
 export const APIS_NOT_PUBLISHED_MESSAGE =
-  "Datos en vivo no están en la web pública. Usa el servidor MCP local (82 tools) o levanta las APIs en tu máquina con scripts/dev-local.sh.";
+  "Esta vista necesita datos en vivo, que por ahora no están disponibles en la web pública. (¿Desarrollador? El servidor MCP local o scripts/dev-local.sh sí los tienen — ver /docs/api.)";
 
 export function formatApiErrorForUi(err: unknown): string {
   if (!apisPublishedForBrowser()) return APIS_NOT_PUBLISHED_MESSAGE;
   if (err instanceof AppUnavailableError) {
+    if (err.kind === "snapshot_miss") {
+      return "Esta consulta específica no forma parte del corte semanal publicado.";
+    }
     if (err.kind === "network" || err.kind === "timeout") {
       return "api.rastro.pe no responde. Los datos en vivo están disponibles via MCP local (ver /docs/api).";
     }

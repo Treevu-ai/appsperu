@@ -28,7 +28,7 @@ export interface WithMetadata<T> {
 }
 
 /** Estado de error tipado que el api-client puede devolver. */
-export type ApiErrorKind = "timeout" | "network" | "http_4xx" | "http_5xx" | "invalid_json";
+export type ApiErrorKind = "timeout" | "network" | "http_4xx" | "http_5xx" | "invalid_json" | "snapshot_miss";
 
 export class AppUnavailableError extends Error {
   readonly kind: ApiErrorKind;

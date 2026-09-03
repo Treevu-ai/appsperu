@@ -12,6 +12,18 @@ name = "rastro"
 compatibility_date = "2025-09-01"
 pages_build_output_dir = "./dist"
 
+# AL3-17/AL3-11 — KV usado por functions/api/search.ts y
+# functions/api/rate-limit-stats.ts (rate limit por IP + contador de 429).
+# El namespace se crea una sola vez con:
+#   npx wrangler kv namespace create RATE_LIMIT
+# y el `id` que devuelva reemplaza el placeholder de abajo. Ver
+# apps/rastro-web/DEPLOY.md §5 para el paso a paso completo, incluido el
+# binding en el dashboard de Pages (Settings → Functions → KV namespace
+# bindings) que además del wrangler.toml requiere Cloudflare Pages Git deploy.
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "da7766279cc54ba5817e338b76eb3ef1"
+
 # Variables de entorno NO se ponen aquí. Se configuran en el dashboard
 # de Cloudflare Pages bajo Settings → Environment variables.
 # - VITE_API_BASE_URL_* (3 usadas por la Function /api/search —

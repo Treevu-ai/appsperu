@@ -1,0 +1,21 @@
+{
+  "name": "@appsperu/entity-matcher",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Matcher difuso de nombres de entidad, consolidado de 3 copias (ADR-0017). Sin ID compartido entre fuentes: normaliza, tokeniza y empareja por similitud Jaccard con umbral de confianza.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.3",
+    "vitest": "^4.1.10"
+  }
+}

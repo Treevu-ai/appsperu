@@ -10,16 +10,15 @@ import {
 import { AppUnavailableError } from "../lib/types.js";
 import { CoverageBadge } from "../components/CoverageBadge.js";
 import { NumberWithMetadata, metaNumber } from "../components/NumberWithMetadata.js";
+import { Modal } from "../components/Modal.js";
+import { formatApiErrorForUi } from "../lib/api-config.js";
 
 interface SupplierMatch {
   ruc: string;
-  razonSocial: string;
+  supplierName: string;
   valorTotal: number;
   adjudicaciones: number;
   hhiSubconjunto: number;
-  cobertura: "COMPLETA" | "PARCIAL" | "BLOQUEADA";
-  matcher: string;
-  corte: string;
 }
 
 export function Proveedor() {
@@ -31,6 +30,7 @@ export function Proveedor() {
   const [adjudicaciones, setAdjudicaciones] = useState<SupplierMatch | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [citeModalOpen, setCiteModalOpen] = useState(false);
 
   useEffect(() => {
     if (!valid) {
@@ -46,30 +46,38 @@ export function Proveedor() {
         const [identidadRes, sancionesRes, supRes] = await Promise.allSettled([
           getIdentidadFiscalContribuyente(ruc),
           getProveedoresSancionadosPorRuc(ruc),
-          // OJO: el endpoint actual filtra por departamento. Para el perfil
-          // individual, en Sprint 12 lo reemplazaremos por
-          // `getComprasPublicasSupplierById(ruc)` cuando exista
-          // coincidencia RUC↔supplier_id. Mientras tanto, consultamos
-          // proveedores del departamento de domicilio.
+          // OJO: el endpoint no acepta filtro por RUC ni por supplier_id —
+          // trae todos los proveedores (nacional, sin acotar por
+          // departamento) y se busca acá el que matchea. `awards.supplier_id`
+          // usa el formato `PE-RUC-<ruc>` (confirmado en
+          // identidad-fiscal/src/routes/crossref.ts) — no hay campo `ruc`
+          // separado en la respuesta de este endpoint.
           getComprasPublicasSuppliers({}),
         ]);
         if (cancelled) return;
         if (identidadRes.status === "fulfilled") setIdentidad(identidadRes.value);
         if (sancionesRes.status === "fulfilled") setSanciones(sancionesRes.value);
         if (supRes.status === "fulfilled") {
-          const found = supRes.value.items.find((s) => s.ruc === ruc);
+          const found = supRes.value.resultados.find((s) => s.supplierId === `PE-RUC-${ruc}`);
           if (found) {
             setAdjudicaciones({
-              ruc: found.ruc ?? ruc,
-              razonSocial: found.razonSocial,
+              ruc,
+              supplierName: found.supplierName,
               valorTotal: found.valorTotal,
               adjudicaciones: found.adjudicaciones,
               hhiSubconjunto: supRes.value.concentracion.hhi,
-              cobertura: supRes.value.cobertura,
-              matcher: supRes.value.matcher,
-              corte: supRes.value.corte,
             });
           }
+        }
+        // Promise.allSettled nunca rechaza — si las 3 llamadas fallaron, hay que
+        // avisarlo explícitamente en vez de dejar la página en blanco (bug real:
+        // sin esto, un RUC válido con APIs caídas no mostraba ningún mensaje).
+        const allRejected =
+          identidadRes.status === "rejected" &&
+          sancionesRes.status === "rejected" &&
+          supRes.status === "rejected";
+        if (allRejected) {
+          setError(formatApiErrorForUi(identidadRes.reason));
         }
       } catch (err) {
         if (!cancelled) {
@@ -102,8 +110,22 @@ export function Proveedor() {
         Identidad SUNAT, contrataciones públicas y sanciones del Tribunal. La ausencia de un dato se declara como
         vacío, no como conclusión.
       </p>
+      <button
+        type="button"
+        onClick={() => setCiteModalOpen(true)}
+        className="text-xs text-accent underline-offset-2 hover:underline"
+      >
+        Citar Rastro →
+      </button>
 
       {loading ? <p className="text-muted">Consultando 3 APIs en paralelo…</p> : null}
+
+      {!loading && error && !identidad && !sanciones && !adjudicaciones ? (
+        <div className="card border-danger/30">
+          <p className="text-danger text-sm">No se pudo obtener información de este proveedor.</p>
+          <p className="text-fg-soft text-xs mt-2">{error}</p>
+        </div>
+      ) : null}
 
       {!loading && identidad ? (
         <section className="card">
@@ -166,7 +188,7 @@ export function Proveedor() {
         <section className="card">
           <div className="flex items-center gap-3">
             <h2 className="text-fg font-semibold">Contrataciones</h2>
-            <CoverageBadge cobertura={adjudicaciones.cobertura} />
+            <CoverageBadge cobertura="NO_APLICA" />
           </div>
           <dl className="mt-4 grid sm:grid-cols-2 gap-3 text-sm">
             <div>
@@ -177,9 +199,8 @@ export function Proveedor() {
                   data={metaNumber(
                     adjudicaciones.valorTotal,
                     "compras-publicas / compras_publicas_suppliers",
-                    adjudicaciones.corte,
-                    adjudicaciones.cobertura,
-                    adjudicaciones.matcher,
+                    "sin corte declarado por la fuente",
+                    "NO_APLICA",
                   )}
                 />
               </dd>
@@ -191,9 +212,8 @@ export function Proveedor() {
                   data={metaNumber(
                     adjudicaciones.adjudicaciones,
                     "compras-publicas / compras_publicas_suppliers",
-                    adjudicaciones.corte,
-                    adjudicaciones.cobertura,
-                    adjudicaciones.matcher,
+                    "sin corte declarado por la fuente",
+                    "NO_APLICA",
                   )}
                 />
               </dd>
@@ -205,19 +225,41 @@ export function Proveedor() {
                   data={metaNumber(
                     adjudicaciones.hhiSubconjunto,
                     "compras-publicas / compras_publicas_suppliers",
-                    adjudicaciones.corte,
-                    adjudicaciones.cobertura,
-                    adjudicaciones.matcher,
+                    "sin corte declarado por la fuente",
+                    "NO_APLICA",
                   )}
                 />
               </dd>
             </div>
           </dl>
           <p className="text-xs text-muted mt-3">
-            matcher: {adjudicaciones.matcher} · corte: {adjudicaciones.corte}
+            {adjudicaciones.supplierName} · el endpoint no declara fecha de corte ni matcher para esta consulta.
           </p>
         </section>
       ) : null}
+
+      <Modal open={citeModalOpen} onClose={() => setCiteModalOpen(false)} title="Citar Rastro">
+        <p className="text-sm text-fg-soft">
+          Copia el bloque de citación. Si alguna sección de esta página está vacía, esa ausencia también forma parte
+          de la cita — no la omitas.
+        </p>
+        <pre className="mt-3 text-xs bg-ink-950 border border-line rounded-md p-3 overflow-x-auto text-fg-soft whitespace-pre-wrap">
+          <code>
+            {`Rastro v0.1.0 · identidad-fiscal / identidad_fiscal_contribuyente_by_ruc · corte ${
+              identidad?.corte ?? "sin corte declarado por la fuente"
+            } · cobertura ${identidad?.cobertura ?? "NO_APLICA"} · ${
+              typeof window !== "undefined" ? window.location.href : `https://rastro.fyi/proveedor/${ruc}`
+            }`}
+          </code>
+        </pre>
+        <p className="text-xs text-muted mt-3">
+          Ver{" "}
+          <a href="/citar-rastro.md" className="text-accent underline-offset-2 hover:underline">
+            guía completa de citación
+          </a>{" "}
+          — incluye qué NO se puede concluir de estos datos.
+        </p>
+      </Modal>
     </div>
   );
 }

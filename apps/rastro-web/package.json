@@ -5,14 +5,18 @@
   "type": "module",
   "description": "Rastro convierte señales dispersas en inteligencia clara para decidir mejor. Capa de lectura para humanos + servidor MCP para agentes IA, sobre las 14 APIs de appsperu.",
   "scripts": {
-    "dev": "vite",
-    "dev:local": "node scripts/ensure-env.mjs && vite --host",
-    "build": "node scripts/check-mcp-tools-sync.mjs && tsc -b && vite build",
+    "generate:mcp-catalog": "node scripts/generate-mcp-catalog.mjs",
+    "export:snapshot": "node scripts/export-snapshot.mjs",
+    "dev": "npm run generate:mcp-catalog && vite",
+    "dev:local": "node scripts/ensure-env.mjs && npm run generate:mcp-catalog && vite --host",
+    "build": "npm run generate:mcp-catalog && tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit",
-    "test": "vitest run",
+    "typecheck": "npm run generate:mcp-catalog && tsc -b --noEmit",
+    "test": "npm run generate:mcp-catalog && vitest run",
     "test:watch": "vitest",
     "lint:meta": "node scripts/lint-meta.mjs",
+    "e2e": "playwright test",
+    "e2e:install": "playwright install --with-deps chromium",
     "ci": "npm run typecheck && npm run lint:meta && npm run test && npm run build"
   },
   "dependencies": {
@@ -21,9 +25,11 @@
     "react-router-dom": "^7.9.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.1.16",
     "@testing-library/jest-dom": "^6.9.0",
     "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.7",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",

@@ -1,31 +1,47 @@
 @import "tailwindcss";
 
 /*
- * Tokens visuales coherentes con rastro-landing.html.
- * Mismo lenguaje oscuro + acento verde esmeralda.
+ * Tokens visuales — sistema de diseño de DESIGN.md (generado con
+ * `npx getdesign@latest add cursor`, inspirado en el marketing site de
+ * Cursor): canvas crema cálido, tinta casi negra, acento único naranja,
+ * profundidad solo con hairlines (sin sombras), tipografía editorial a
+ * peso 400. Decisión explícita de Ricardo (2026-09-02): aplicar el tema
+ * EXACTO de DESIGN.md, no una adaptación a los colores previos de Rastro
+ * (tema oscuro + rojo/esmeralda) — el logo rojo actual queda desentonando
+ * a propósito, recolorearlo es un trabajo de asset gráfico aparte.
+ *
+ * Se mantienen los MISMOS nombres de token que antes (--color-ink-900,
+ * --color-fg, --color-accent, etc.) para que los ~30 archivos de
+ * rutas/componentes existentes se re-tematicen solos sin editarse — todo
+ * el color de la app pasa por estas clases de Tailwind, verificado sin
+ * hex/rgba hardcodeados fuera de este archivo.
  */
 @theme {
-  --color-ink-950: #0a0e14;
-  --color-ink-900: #0d1117;
-  --color-ink-850: #11161e;
-  --color-ink-800: #161b22;
-  --color-ink-700: #1c2128;
-  --color-ink-600: #21262d;
-  --color-line: #21262d;
-  --color-line-soft: #1c2128;
-  --color-muted: #7d8590;
-  --color-muted-soft: #545d68;
-  --color-fg: #e6edf3;
-  --color-fg-soft: #b1bac4;
-  --color-accent: #e4002b;
-  --color-accent-soft: #b8001f;
-  --color-accent-deep: #4a0010;
-  --color-warn: #f59e0b;
-  --color-danger: #f43f5e;
+  --color-ink-950: #f7f7f4; /* canvas — fondo html/body */
+  --color-ink-900: #ffffff; /* surface-card — fondo de .card, header */
+  --color-ink-850: #fafaf7; /* canvas-soft */
+  --color-ink-800: #e6e5e0; /* surface-strong — hover de nav, badges */
+  --color-ink-700: #cfcdc4; /* hairline-strong */
+  --color-ink-600: #cfcdc4; /* hairline-strong */
+  --color-line: #e6e5e0; /* hairline */
+  --color-line-soft: #efeee8; /* hairline-soft */
+  --color-muted: #807d72; /* muted */
+  --color-muted-soft: #a09c92; /* muted-soft */
+  --color-fg: #26251e; /* ink — texto principal */
+  --color-fg-soft: #5a5852; /* body — texto secundario */
+  --color-accent: #f54e00; /* primary — Cursor Orange */
+  --color-accent-soft: #d04200; /* primary-active — press/hover */
+  --color-accent-deep: #26251e; /* ink — usos oscuros de acento (ej. inversión de pricing-tier) */
+  --color-warn: #b45309; /* ámbar propio, DESIGN.md no define uno — AA sobre crema */
+  --color-danger: #cf2d56; /* semantic-error */
 
-  --font-sans: "Outfit", "system-ui", "sans-serif";
+  --font-sans: "Inter", "system-ui", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: "JetBrains Mono", "monospace";
-  --font-serif: "DM Serif Display", "serif";
+  /* DESIGN.md no tiene familia serif — los headings son CursorGothic/Inter
+     a peso 400 con tracking negativo (voz editorial), no un serif. Se
+     repunta al mismo stack sans en vez de renombrar `font-serif` en los
+     ~20 archivos que ya lo usan para h1/h2. */
+  --font-serif: "Inter", "system-ui", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 html,
@@ -46,40 +62,45 @@ body {
 }
 
 .grid-bg {
+  /* Líneas sutiles color hairline en vez de blanco — sobre el canvas claro
+     nuevo, rgba(255,255,255,...) sería invisible (era pensado para un
+     fondo oscuro). */
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    linear-gradient(rgba(38, 37, 30, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(38, 37, 30, 0.04) 1px, transparent 1px);
   background-size: 64px 64px;
 }
 
 .radial-glow {
+  /* Mismo mecanismo, ahora en el acento naranja nuevo en vez del rojo viejo. */
   background:
-    radial-gradient(60% 50% at 20% 0%, rgba(228, 0, 43, 0.12) 0%, transparent 60%),
-    radial-gradient(50% 40% at 85% 10%, rgba(228, 0, 43, 0.06) 0%, transparent 60%);
+    radial-gradient(60% 50% at 20% 0%, rgba(245, 78, 0, 0.08) 0%, transparent 60%),
+    radial-gradient(50% 40% at 85% 10%, rgba(245, 78, 0, 0.04) 0%, transparent 60%);
 }
 
 .btn-primary {
   background: var(--color-accent);
   color: #fff;
-  font-weight: 600;
-  padding: 12px 20px;
-  border-radius: 10px;
+  font-weight: 500;
+  padding: 10px 18px;
+  border-radius: 8px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   transition: all 0.2s ease;
 }
 .btn-primary:hover {
-  background: #ff1a47;
+  /* Sin box-shadow: DESIGN.md "Don't add drop shadows" — la profundidad es
+     solo hairlines + contraste tinta-sobre-crema. */
+  background: var(--color-accent-soft);
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px -8px rgba(228, 0, 43, 0.45);
 }
 
 .btn-ghost {
   color: var(--color-fg);
-  padding: 12px 20px;
-  border-radius: 10px;
-  border: 1px solid #30363d;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--color-line);
   background: transparent;
   transition: all 0.2s ease;
   display: inline-flex;
@@ -115,7 +136,9 @@ body {
   position: absolute;
   inset: -4px;
   border-radius: 9999px;
-  background: rgba(16, 185, 129, 0.4);
+  /* Antes rgba verde suelto que no coincidía con ningún acento del theme
+     — ahora sigue al acento real. */
+  background: color-mix(in srgb, var(--color-accent) 40%, transparent);
   animation: pulse 1.8s ease-out infinite;
 }
 @keyframes pulse {

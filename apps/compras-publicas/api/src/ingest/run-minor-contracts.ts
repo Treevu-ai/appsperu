@@ -1,5 +1,5 @@
 import { pool } from "../db/pool.js";
-import { DEFAULT_TERRITORIAL_SCOPE, ingestSeacePublicMinorContracts, normalizeSeaceDepartmentScope } from "./oece-minor-contracts-connector.js";
+import { DEFAULT_TERRITORIAL_SCOPE, ingestSeacePublicMinorContracts, normalizeSeaceDepartmentScope } from "./seace-public-minor-contracts-connector.js";
 
 const fullRun = process.argv.includes("--full");
 const maxContracts = fullRun ? 0 : (process.env.MINOR_CONTRACT_MAX_CONTRACTS ? Number(process.env.MINOR_CONTRACT_MAX_CONTRACTS) : undefined);

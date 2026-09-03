@@ -74,6 +74,77 @@ async function fetchRange(url: string, start: number, end: number, attempts = 4)
   throw lastError;
 }
 
+/**
+ * CX-02 (docs/adr/0015-mef-connector-offsets-manuales-decision.md): señal de
+ * monitoreo mínima antes de confiar en los offsets manuales de este archivo.
+ * Pide un solo byte (`Range: bytes=0-0`) y lee `Content-Range: bytes 0-0/<total>`
+ * para conocer el tamaño total sin descargarlo — si el MEF cambió el archivo
+ * de tamaño respecto al último escaneo confirmado, los offsets
+ * (`SECTION_OFFSETS_LA_LIBERTAD`, `SECTION_NIVEL_MES_BOUNDS`,
+ * `NACIONAL_MES_START_BYTE`) pueden estar apuntando a datos equivocados.
+ */
+export async function fetchMefFileTotalBytes(filename: string, attempts = 4): Promise<number> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const res = await fetch(`${FILES_BASE_URL}/${filename}`, { headers: { Range: "bytes=0-0" } });
+      if (!res.ok && res.status !== 206) {
+        throw new Error(`MEF devolvió ${res.status} al pedir el tamaño de ${filename}`);
+      }
+      const contentRange = res.headers.get("content-range");
+      const total = contentRange ? Number(contentRange.split("/")[1]) : NaN;
+      if (!Number.isFinite(total) || total <= 0) {
+        throw new Error(`MEF no devolvió un Content-Range legible para ${filename} (recibido: "${contentRange}")`);
+      }
+      // Drenar el body de la respuesta parcial para no dejar la conexión colgada.
+      await res.text();
+      return total;
+    } catch (err) {
+      lastError = err;
+      if (attempt < attempts) await new Promise((r) => setTimeout(r, 2000 * 2 ** (attempt - 1)));
+    }
+  }
+  throw lastError;
+}
+
+const MEF_FILE_SIZE_TOLERANCE_RATIO = 0.02; // 2% — el archivo crece mes a mes dentro del año fiscal; no es un tamaño fijo
+
+/**
+ * Compara el tamaño real del archivo contra `expectedBytes` (el tamaño
+ * confirmado la última vez que se calibraron los offsets manuales). Si la
+ * diferencia excede la tolerancia, falla fuerte por defecto — mismo
+ * principio que ya aplica el resto de este conector ("falla fuerte, no en
+ * silencio", ver comentario de `SECTION_OFFSETS_LA_LIBERTAD` arriba).
+ * `MEF_ALLOW_SIZE_DRIFT=true` degrada el error a advertencia para corridas
+ * donde ya se sabe que el archivo cambió (ej. justo después de recalibrar
+ * los offsets) sin bloquear la ingesta.
+ */
+export async function assertMefFileSizeWithinTolerance(filename: string, expectedBytes: number): Promise<number> {
+  const observedBytes = await fetchMefFileTotalBytes(filename);
+  const drift = Math.abs(observedBytes - expectedBytes) / expectedBytes;
+  if (drift > MEF_FILE_SIZE_TOLERANCE_RATIO) {
+    const message =
+      `El archivo ${filename} pesa ${observedBytes.toLocaleString("es-PE")} bytes, ` +
+      `${(drift * 100).toFixed(1)}% distinto de los ${expectedBytes.toLocaleString("es-PE")} bytes ` +
+      `con los que se calibraron los offsets manuales (SECTION_OFFSETS_LA_LIBERTAD, ` +
+      `SECTION_NIVEL_MES_BOUNDS, NACIONAL_MES_START_BYTE). Los offsets pueden estar apuntando a ` +
+      `datos equivocados — volver a escanear el archivo antes de confiar en esta corrida ` +
+      `(ver docs/adr/0015-mef-connector-offsets-manuales-decision.md). ` +
+      `Define MEF_ALLOW_SIZE_DRIFT=true para degradar esto a advertencia si ya recalibraste los offsets.`;
+    if (process.env.MEF_ALLOW_SIZE_DRIFT === "true") {
+      console.warn(`[mef-connector] ADVERTENCIA (MEF_ALLOW_SIZE_DRIFT=true): ${message}`);
+    } else {
+      throw new Error(message);
+    }
+  } else {
+    console.log(
+      `[mef-connector] Tamaño de ${filename} verificado: ${observedBytes.toLocaleString("es-PE")} bytes ` +
+        `(${(drift * 100).toFixed(2)}% de deriva vs. el confirmado en la calibración de offsets).`
+    );
+  }
+  return observedBytes;
+}
+
 const SECTION_SCAN_CHUNK_BYTES = 25 * 1024 * 1024;
 
 let cachedHeaderLine: string | null = null;
@@ -489,6 +560,8 @@ export async function ingestMefFullYearForDepartamento(
   const wantedDepartamento = ejecutoraDepartamento.toUpperCase().trim();
   const boundsByNivel = SECTION_NIVEL_MES_BOUNDS;
 
+  await assertMefFileSizeWithinTolerance(filename, NACIONAL_FILE_END_BYTE);
+
   const batchIds: number[] = [];
   const seccionesSinDatos: string[] = [];
   const allRecords: Record<string, unknown>[] = [];
@@ -734,6 +807,8 @@ export async function ingestMefFullYearForMetaDepartamento(
 ): Promise<FullYearIngestSummary> {
   const wantedMetaDepartamento = metaDepartamento.toUpperCase().trim();
   const meses = ["7", "6", "5", "4", "3", "2", "1", "0"];
+
+  await assertMefFileSizeWithinTolerance(filename, NACIONAL_FILE_END_BYTE);
 
   const batchIds: number[] = [];
   const seccionesSinDatos: string[] = [];

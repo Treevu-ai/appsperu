@@ -9,7 +9,7 @@ import {
   normalizeSeaceDepartmentScope,
   parseSeaceDate,
   seaceDepartmentCode,
-} from "../ingest/oece-minor-contracts-connector.js";
+} from "../ingest/seace-public-minor-contracts-connector.js";
 
 describe("OECE SEACE public minor-contract connector helpers", () => {
   it("classifies every contracting entity without excluding provincial municipalities", () => {

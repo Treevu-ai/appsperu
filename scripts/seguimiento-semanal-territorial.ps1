@@ -36,10 +36,12 @@ Log "Seguimiento semanal territorial - $Departamento"
 Log "Repo: $repoRoot"
 
 # 1. Traer ultimos cambios (no falla el resto si el pull falla, ej. sin red)
-Run-Step 'git pull' $repoRoot { git pull origin cursor/alsol-ingest-5-regiones-f938 }
+Run-Step 'git pull' $repoRoot { git pull origin master }
 
-# 2. Asegurar contenedores de las 3 fuentes que evolucionan durante el anio fiscal
-$dbApps = @('radar-ejecucion', 'infobras', 'radar-inversiones')
+# 2. Asegurar contenedores de las fuentes que evolucionan durante el anio fiscal,
+#    mas compras-publicas y ceplan-geo (no se re-ingestan cada semana, pero el
+#    export:snapshot del paso 7 si necesita que su API este arriba para leerlas).
+$dbApps = @('radar-ejecucion', 'infobras', 'radar-inversiones', 'compras-publicas', 'ceplan-geo')
 foreach ($app in $dbApps) {
   Run-Step "docker compose up -d ($app)" (Join-Path $repoRoot "apps\$app\api") { docker compose up -d }
 }
@@ -77,6 +79,37 @@ try {
   Log "Snapshot guardado: $snapshotPath"
 } finally {
   Pop-Location
+}
+
+# 7. Corte semanal explicito: exporta src/data/snapshot.json y abre un PR con
+#    el cambio (nunca push directo a master, mismo patron que el resto del
+#    proyecto). Asume que las 14 APIs ya estan arriba (scripts/dev-local.sh /
+#    PM2) - este script solo trae contenedores de base de datos, no los
+#    servidores HTTP. Un fallo aca no debe tumbar el resto del seguimiento.
+try {
+  Log '== export:snapshot (corte semanal para rastro-web) =='
+  Push-Location (Join-Path $repoRoot 'apps\rastro-web')
+  npm run export:snapshot *>&1 | Tee-Object -FilePath $logPath -Append
+  Pop-Location
+
+  Push-Location $repoRoot
+  $changed = git status --porcelain -- apps/rastro-web/src/data/snapshot.json
+  if ([string]::IsNullOrWhiteSpace($changed)) {
+    Log 'snapshot.json sin cambios (export fallo o no hay diferencias) - no se abre PR.'
+  } else {
+    $branch = "data/corte-semanal-$stamp"
+    git checkout -b $branch
+    git add apps/rastro-web/src/data/snapshot.json
+    git commit -m "data(rastro-web): corte semanal $stamp`n`nGenerado por scripts/seguimiento-semanal-territorial.ps1."
+    git push -u origin $branch
+    gh pr create --title "data(rastro-web): corte semanal $stamp" --body "Snapshot generado automaticamente por el cron semanal (scripts/export-snapshot.mjs). Revisar y mergear para publicar el corte nuevo." *>&1 |
+      Tee-Object -FilePath $logPath -Append
+    git checkout master
+    Log "PR de corte semanal abierto (rama $branch)."
+  }
+  Pop-Location
+} catch {
+  Log "ADVERTENCIA: publicacion del corte semanal fallo: $($_.Exception.Message) - revisar manualmente."
 }
 
 Log "Seguimiento semanal completo. Log: $logPath"

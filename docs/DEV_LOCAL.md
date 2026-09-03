@@ -26,7 +26,7 @@ Diagnóstico: `bash scripts/diagnose-web.sh`
 
 ## Requisitos
 
-- Docker (Postgres de las 13 apps con BD)
+- Docker (Postgres de las 14 apps con BD)
 - Node.js 22+
 - PM2 (`npm i -g pm2`) — lo instala `dev-local.sh` si falta
 
@@ -96,7 +96,7 @@ bash scripts/dev-local.sh --mcp
 
 Copia `.mcp.json.example` a la raíz del repo como `.mcp.json` (Claude Code) o pégalo en `~/.cursor/mcp.json` (Cursor) ajustando la ruta absoluta a `mcp-server/dist/index.js`.
 
-Reinicia Cursor. Verás **82 tools** de solo lectura.
+Reinicia Cursor. Verás **83 tools** de solo lectura.
 
 ## Comandos útiles
 

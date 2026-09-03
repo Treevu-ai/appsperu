@@ -1,0 +1,23 @@
+name: Check connectors documented
+
+# CX-06 (docs/TICKETS_Confiabilidad_Conectores_y_Cruces_v1.md#CX-06): falla si
+# aparece un conector nuevo (apps/*/api/src/ingest/*-connector.ts) sin una
+# mención de su nombre de archivo en docs/conectores.md. Solo corre el script
+# bash de chequeo — no instala dependencias de ninguna app, no toca bases de
+# datos ni ejecuta ingestas reales.
+
+on:
+  pull_request:
+    paths:
+      - "apps/*/api/src/ingest/**"
+      - "docs/conectores.md"
+      - "scripts/check-connectors-documented.sh"
+      - ".github/workflows/check-connectors.yml"
+
+jobs:
+  check-connectors-documented:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run check
+        run: bash scripts/check-connectors-documented.sh

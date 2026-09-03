@@ -10,8 +10,8 @@ type Paso = {
 const PASOS: Paso[] = [
   {
     n: "01",
-    titulo: "Ingesta",
-    desc: "Conectores API nativos a MEF, Invierte.pe, OECE, INFOBRAS, CEPLAN, SUNAT, RNP, MIDAGRI y BCRP. Ingesta regular con corte visible.",
+    titulo: "Recolectamos",
+    desc: "Traemos la información pública de 10 fuentes oficiales del Estado: presupuesto, obras, contratistas, sanciones y más. La actualizamos a mano, en tandas — no en vivo — y siempre decimos cuándo fue la última vez.",
     icon: (
       <svg className="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -22,8 +22,8 @@ const PASOS: Paso[] = [
   },
   {
     n: "02",
-    titulo: "Normalización",
-    desc: "Catálogo único de proyectos, componentes, metas y partidas. Misma CUI, misma lectura.",
+    titulo: "Emparejamos",
+    desc: "Confirmamos que la obra o entidad de una fuente es la misma que en otra. Cuando hay un código oficial exacto (RUC, código de obra) lo usamos; si no, avisamos que el cruce es aproximado.",
     icon: (
       <svg className="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <polygon points="12 2 2 7 12 12 22 7 12 2" />
@@ -34,8 +34,8 @@ const PASOS: Paso[] = [
   },
   {
     n: "03",
-    titulo: "Trazabilidad",
-    desc: "Cada hito con timestamp, fuente oficial, cobertura y corte.",
+    titulo: "Etiquetamos",
+    desc: "A cada número lo acompañamos con de dónde salió y cuándo se actualizó. Es una regla técnica que nuestro propio sistema obliga a cumplir — ningún dato se puede publicar sin esa etiqueta.",
     icon: (
       <svg className="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="10" />
@@ -46,8 +46,8 @@ const PASOS: Paso[] = [
   },
   {
     n: "04",
-    titulo: "Alertas",
-    desc: "Reportes comparativos por sector, distrito y proveedor. Lo descriptivo, no lo causal.",
+    titulo: "Detectamos señales",
+    desc: "Marcamos cuando una obra cuesta más de lo planeado, avanza más lento de lo prometido, o está paralizada. Mostramos el hecho — no decimos por qué pasó ni quién tiene la culpa.",
     icon: (
       <svg className="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
@@ -58,8 +58,8 @@ const PASOS: Paso[] = [
   },
   {
     n: "05",
-    titulo: "Visibilidad",
-    desc: "Dashboards por actor. Gobierno, contratista, auditor y ciudadano, cada uno con su lente.",
+    titulo: "Te lo mostramos",
+    desc: "Gobierno regional, prensa y ciudadanía, auditores: cada uno ve la misma información, ordenada según lo que necesita ver. Sin registrarte, sin pedirte el correo.",
     icon: (
       <svg className="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
@@ -77,12 +77,12 @@ export function ComoFunciona() {
           02 — Cómo funciona
         </p>
         <h2 className="text-fg font-semibold text-2xl md:text-3xl leading-tight tracking-tight">
-          Una cadena de evidencia inmutable, del planeamiento a la liquidación.
+          Ningún dato aparece solo — siempre con su origen y su fecha.
         </h2>
         <p className="mt-4 text-fg-soft leading-relaxed text-sm md:text-base">
-          Conectamos los sistemas nacionales y construimos una capa de trazabilidad que ningún actor
-          puede alterar sin dejar huella. Lo que hoy está disperso en 14 APIs sobre 7 fuentes oficiales, mañana vive
-          en una sola línea de tiempo.
+          Juntamos la información de 10 fuentes oficiales del Estado peruano en un solo lugar, fácil de revisar.
+          Nuestro propio sistema no deja publicar un número si no dice de dónde salió, qué tan completo está y a
+          qué fecha corresponde.
         </p>
       </div>
 
@@ -106,26 +106,45 @@ export function ComoFunciona() {
         ))}
       </div>
 
-      {/* JSON de evidencia */}
+      {/* Explicación en palabras simples del contrato de metadata (WithMetadata<T>, apps/rastro-web/src/lib/types.ts) */}
       <div className="mt-8 md:mt-10 rounded-2xl border border-line bg-ink-900/60 p-5 md:p-7">
         <div className="flex items-center justify-between mb-3 md:mb-4">
           <p className="text-xs font-mono text-muted uppercase tracking-[0.18em]">
-            Modelo de evidencia
+            Qué acompaña a cada número
           </p>
-          <span className="text-xs font-mono text-accent">inmutable</span>
+          <span className="text-xs font-mono text-accent">siempre</span>
         </div>
-        <pre className="font-mono text-[10.5px] sm:text-[11.5px] md:text-[12.5px] leading-relaxed text-fg-soft overflow-x-auto whitespace-pre-wrap break-words sm:whitespace-pre">
-{`{`}
-{`  "cui": "245891",`}
-{`  "fase": "ejecucion",`}
-{`  "hito": "valorizacion-14",`}
-{`  "ts": "2026-08-27T20:14:08Z",`}
-{`  "actor": "supervisor-externo",`}
-{`  "hash_prev": "0x9f4a…b21c",`}
-{`  "hash": "0xc12e…7a4f",`}
-{`  "evidencia": ["acta.pdf", "foto-meta-7.jpg"]`}
-{`}`}
-        </pre>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 text-sm">
+          <div className="flex items-start gap-2">
+            <span className="text-accent mt-1 shrink-0">▸</span>
+            <span className="text-fg-soft">
+              <strong className="text-fg">De dónde salió</strong> — qué fuente oficial lo publicó (ej. MEF).
+            </span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-accent mt-1 shrink-0">▸</span>
+            <span className="text-fg-soft">
+              <strong className="text-fg">Cuándo se actualizó</strong> — la fecha exacta del último corte.
+            </span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-accent mt-1 shrink-0">▸</span>
+            <span className="text-fg-soft">
+              <strong className="text-fg">Qué tan completo está</strong> — si es todo el dato o solo una parte.
+            </span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-accent mt-1 shrink-0">▸</span>
+            <span className="text-fg-soft">
+              <strong className="text-fg">Cómo se identificó</strong> — si el cruce entre fuentes fue exacto o
+              aproximado.
+            </span>
+          </div>
+        </div>
+        <p className="mt-4 text-xs text-muted">
+          ¿Eres desarrollador o auditor? La forma técnica exacta de esta etiqueta está documentada en{" "}
+          <a href="/docs/api" className="text-accent underline-offset-2 hover:underline">/docs/api</a>.
+        </p>
       </div>
     </section>
   );

@@ -9,34 +9,34 @@
 
 ---
 
-## Estado real (auditoría de código, 2026-08-31)
+## Estado real (auditoría de código, 2026-09-02)
 
-Este documento describía un plan (Sprints 11-14) escrito **antes** de que `apps/rastro-web` se construyera. La app ya existe, está en `master` y desplegada en Cloudflare Pages (`rastro.fyi`), pero el build real no siguió el plan ticket por ticket — algunas cosas se hicieron distinto, otras quedaron a medias, y algunas ni se empezaron. Tabla de contraste contra el código en `apps/rastro-web/src` (no contra intención, contra lo que corre):
+Este documento describía un plan (Sprints 11-14) escrito **antes** de que `apps/rastro-web` se construyera. La app ya existe, está en `master` y desplegada en Cloudflare Pages (`rastro.fyi`). La auditoría anterior (2026-08-31) encontró 6 hechos, 9 parciales, 5 pendientes; los PR #54 (rastro-web: catálogo, ranking, búsqueda, E2E) y el trabajo posterior de AL3-02/03/07/09/12/15 cerraron todos los huecos restantes. Tabla de contraste contra el código en `apps/rastro-web/src` (no contra intención, contra lo que corre):
 
 | ID | Estado | Nota |
 |---|---|---|
 | AL3-01 | ✅ Hecho | Vite + React Router + Tailwind, layout con nav, `.env.example` con las 14 vars. |
-| AL3-02 | 🟡 Parcial | `api-client.ts` + tipos + tests (MSW) reales, pero solo **6 de 14 apps** tienen funciones de consulta propias (radar-ejecucion, compras-publicas, identidad-fiscal, proveedores-sancionados, infobras + health genérico). Las otras 8 (radar-inversiones, ceplan-estrategico/geo, salud-institucional, actividad-agraria, seguridad-ciudadana, bcrp-comercio-exterior, inversion-privada, bcrp-la-libertad) solo tienen el health-check de `/estado`, sin función de datos. |
-| AL3-03 | 🟡 Parcial | `<DataFreshnessBar>` con colores ámbar/rojo y mensaje "API no disponible" — hecho. Falta el modal al clic con la lista completa de `meta_sources`. |
+| AL3-02 | ✅ Hecho | Las 14 apps tienen función de consulta tipada en `api-client.ts` (radar-inversiones, ceplan-estrategico, ceplan-geo, salud-institucional, actividad-agraria, seguridad-ciudadana, bcrp-comercio-exterior, inversion-privada y bcrp-la-libertad se agregaron 2026-09-02, además de las 5 ya existentes + health genérico). |
+| AL3-03 | ✅ Hecho | `<DataFreshnessBar>` con colores ámbar/rojo y mensaje "API no disponible". El texto/badge es clicable y abre un modal (`components/Modal.tsx`, sobre `<dialog>` nativo) con la lista completa de `meta_sources` — cada lote con registros, cobertura, fuente y checksum. |
 | AL3-13 | ✅ Hecho | Linter real (`scripts/lint-meta.mjs`) — usa el patrón `<NumberWithMetadata>`/`WithMetadata<T>` en vez del comentario `@alsol-meta` original, pero cumple el objetivo. Documentado en `apps/rastro-web/docs/linter-meta.md`. |
 | AL3-04 | ✅ Hecho | `/gore/la-libertad/ficha`. |
 | AL3-05 | ✅ Hecho | `/gore/la-libertad/comparativo`. |
 | AL3-06 | ✅ Hecho | `/gore/la-libertad/benchmark`. |
-| AL3-07 | 🟡 Parcial | `/proveedor/:ruc` con identidad + sanciones reales. La sección "Contrataciones" usa `compras_publicas_suppliers({})` sin filtro (comentario propio en el código lo marca como placeholder hasta tener match RUC↔supplierId). Falta el botón "Citar Rastro" con modal (existe la página estática `/citar-rastro.md` de AL3-16, pero no el modal in-page del criterio). |
-| AL3-08 | ⬜ Pendiente | No existe `/prensa/proveedores` (ranking con concentración). |
-| AL3-09 | 🟡 Parcial | `/distrito/:ubigeo` solo consume `infobras_public_works`, filtrado por **departamento** (prefijo UBIGEO de 2 dígitos), no por distrito exacto — comentario propio lo reconoce. Falta el segundo fetch en paralelo a `radar_ejecucion_infrastructure_assets`. |
-| AL3-10 | ⬜ Pendiente | No existe `/distrito/:ubigeo/integridad` ni `/docs/integridad`. |
-| AL3-11 | 🟡 Parcial | `/buscar` solo enruta por regex (RUC de 11 dígitos → `/proveedor`, UBIGEO de 6 → `/distrito`). Búsqueda libre por texto explícitamente no implementada (`alert()` "aún no implementada" en el código); sin endpoint `/api/search`, sin rate limit. |
-| AL3-12 | 🟡 Parcial | `/estado` consulta las 14 apps en paralelo y muestra up/down — hecho. Falta el refresh automático cada 60s del criterio (hoy es manual, al recargar). |
-| AL3-14 | ⬜ Pendiente | No hay Playwright ni suite E2E en el repo — `devDependencies` solo trae Vitest. Único test: `tests/api-client.test.ts` (unitario, MSW). |
-| AL3-15 | 🟡 Parcial | `/docs/api` lista los 82 tools, pero es una copia manual hardcodeada (`EXPECTED_TOOL_COUNT = 82` sincronizado a mano), no generada en build-time desde `mcp-server/src/catalog.ts` como pide el criterio. Sin buscador por nombre/descripción, sin tooltip `SIN_SCHEDULER`. |
+| AL3-07 | ✅ Hecho | `/proveedor/:ruc` con identidad + sanciones + contrataciones reales (match exacto `PE-RUC-<ruc>` contra `compras_publicas_suppliers`, corregido 2026-09-02 vía la suite E2E). Botón "Citar Rastro" con modal in-page (texto de citación con fuente/corte/cobertura + link a la guía completa). |
+| AL3-08 | ✅ Hecho | `/prensa/proveedores` — ranking con CR3/CR5/HHI por departamento. |
+| AL3-09 | ✅ Hecho | `/distrito/:ubigeo` consume, en paralelo, `infobras_public_works` + `radar_ejecucion_infrastructure_assets` (ambos filtrados por departamento en el backend) y resuelve el distrito exacto vía `ceplan_geo_territories` (UBIGEO completo) para filtrar ambos datasets en el cliente — con fallback honesto a la vista departamental si el territorio no se puede resolver. Verificado en E2E: el fixture 130101 trae 2 obras en distritos distintos y el test confirma que la que no matchea queda excluida. |
+| AL3-10 | ✅ Hecho | `/distrito/:ubigeo/integridad` + `/docs/integridad`. |
+| AL3-11 | ✅ Hecho | `/buscar` llama a `GET /api/search` (Cloudflare Pages Function) que agrega `radar_inversiones_investments` + `identidad_fiscal_contribuyentes` + `infobras_public_works` con timeout individual de 4s y disponibilidad honesta por fuente. Rate limit 30 req/min por IP vía KV. |
+| AL3-12 | ✅ Hecho | `/estado` consulta las 14 apps en paralelo, refresh automático cada 60s (`setInterval`, limpiado al desmontar) y muestra la hora de la última actualización. |
+| AL3-14 | ✅ Hecho | Suite Playwright (10 specs) contra fixtures fijas: 5 fichas de sector, 3 perfiles de proveedor, 2 distritos. Job `e2e` en `.github/workflows/rastro-web-ci.yml`. |
+| AL3-15 | ✅ Hecho | `/docs/api` generada en build-time: `scripts/generate-mcp-catalog.mjs` parsea `mcp-server/src/catalog.ts` y escribe `src/data/mcp-tools-catalog.json` (corre antes de `dev`/`build`/`typecheck`/`test`, no es una copia manual). Buscador por nombre/descripción y tooltip con el texto completo de `SIN_SCHEDULER` por fila. Reemplaza a `check-mcp-tools-sync.mjs` (eliminado — ya no puede haber desincronía si la fuente es siempre `catalog.ts`). |
 | AL3-16 | ✅ Hecho | `public/citar-rastro.md` con las 4 secciones + link en el footer de cada página. |
-| AL3-17 | ⬜ Pendiente | No hay middleware de rate limit (ni Cloudflare Pages Functions en el repo). |
-| AL3-18 | 🟡 Parcial | Deploy real en Cloudflare Pages (proyecto `rastro`, alias `rastro-5zm.pages.dev`) + custom domain `rastro.fyi` (ver `DEPLOY.md`). Falta: secret `CLOUDFLARE_DEPLOY_HOOK_URL` sin crear (pendiente #7 en `docs/ESTADO.md`, el workflow de deploy falla en cada push/cron); sin gate de E2E preview→producción porque no existe la suite E2E (AL3-14). |
-| AL3-19 | 🟡 Parcial | `.github/workflows/rastro-web-ci.yml` real con `typecheck` + `lint:meta` + `test` + `build`. Sin job `e2e` (no hay suite que correr). |
-| AL3-20 | ⬜ Pendiente | No existe `docs/validacion-smoke-rastro-web-v1.md`. |
+| AL3-17 | ✅ Hecho | Rate limit vía Cloudflare KV (`functions/lib/rate-limit.ts`), 30 req/min en `/api/search`. Métrica pública `429Count24h` en `/estado` vía `/api/rate-limit-stats`. |
+| AL3-18 | ✅ Hecho | Deploy real en Cloudflare Pages (proyecto `rastro`, alias `rastro-5zm.pages.dev`) + custom domain `rastro.fyi` (ver `DEPLOY.md`). `rastro-web-deploy.yml` corre la suite E2E completa (`npm run e2e`, gate) ANTES del build de producción — si falla, el job entero falla y ningún paso de deploy se ejecuta. |
+| AL3-19 | ✅ Hecho | `.github/workflows/rastro-web-ci.yml` con jobs `ci` (`typecheck` + `lint:meta` + `test` + `build`) y `e2e` (Playwright). |
+| AL3-20 | ✅ Hecho | `docs/validacion-smoke-rastro-web-v1.md` con capturas + JSON + texto renderizado de los 3 lectores + `/estado` + `/buscar`. |
 
-**Resumen:** 6 hechos, 9 parciales, 5 pendientes (de 20). El núcleo (fundación, 3 vistas del lector GORE, linter, deploy, cita) está sólido; lo que falta es sobre todo **cobertura** (8 apps sin cliente de datos, búsqueda libre, ranking de proveedores, integridad de infraestructura) y **verificación** (sin E2E, sin smoke test firmado, sin rate limit).
+**Resumen:** 20 hechos, 0 parciales, 0 pendientes (de 20). AL3-18 cerrado 2026-09-02: `rastro-web-deploy.yml` ahora ejecuta la suite E2E (Playwright) antes del build de producción y del deploy — si el E2E falla, no se despliega. El E2E corre primero a propósito (con URLs de prueba) para no pisar el `dist/` real que sí usa `.env.production` y que sube el paso de deploy.
 
 ---
 

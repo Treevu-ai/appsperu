@@ -1,0 +1,45 @@
+{
+  "conSancionesConContrataciones": {
+    "ruc": "20100000001",
+    "identidad": {
+      "value": { "ruc": "20100000001", "razonSocial": "CONSTRUCTORA EJEMPLO SAC", "estado": "ACTIVO", "condicion": "HABIDO", "ubigeo": "130101" },
+      "fuente": "SUNAT Padrón RUC",
+      "cobertura": "COMPLETA",
+      "matcher": "exacto-ruc",
+      "corte": "2026-08-20"
+    },
+    "sanciones": {
+      "items": [
+        { "ruc": "20100000001", "tipo": "Inhabilitación", "estado": "VIGENTE", "fechaInicio": "2026-01-01", "fechaFin": "2029-01-01", "expediente": "EXP-001-2026" }
+      ],
+      "cobertura": "COMPLETA",
+      "matcher": "exacto-ruc",
+      "corte": "2026-08-20"
+    },
+    "supplierRow": { "supplierId": "PE-RUC-20100000001", "supplierName": "CONSTRUCTORA EJEMPLO SAC", "valorTotal": 1250000, "adjudicaciones": 4, "entidadesDistintas": 2 }
+  },
+  "sinSancionesConContrataciones": {
+    "ruc": "20100000002",
+    "identidad": {
+      "value": { "ruc": "20100000002", "razonSocial": "SERVICIOS REGIONALES EIRL", "estado": "ACTIVO", "condicion": "HABIDO", "ubigeo": "130101" },
+      "fuente": "SUNAT Padrón RUC",
+      "cobertura": "COMPLETA",
+      "matcher": "exacto-ruc",
+      "corte": "2026-08-20"
+    },
+    "sanciones": { "items": [], "cobertura": "COMPLETA", "matcher": "exacto-ruc", "corte": "2026-08-20" },
+    "supplierRow": { "supplierId": "PE-RUC-20100000002", "supplierName": "SERVICIOS REGIONALES EIRL", "valorTotal": 340000, "adjudicaciones": 1, "entidadesDistintas": 1 }
+  },
+  "sinSancionesSinContrataciones": {
+    "ruc": "20100000003",
+    "identidad": {
+      "value": { "ruc": "20100000003", "razonSocial": "COMERCIAL NORTE SRL", "estado": "ACTIVO", "condicion": "HABIDO", "ubigeo": "130101" },
+      "fuente": "SUNAT Padrón RUC",
+      "cobertura": "COMPLETA",
+      "matcher": "exacto-ruc",
+      "corte": "2026-08-20"
+    },
+    "sanciones": { "items": [], "cobertura": "COMPLETA", "matcher": "exacto-ruc", "corte": "2026-08-20" },
+    "supplierRow": null
+  }
+}

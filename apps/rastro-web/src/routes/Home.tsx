@@ -19,8 +19,8 @@ export function Home() {
         />
         <div className="bg-ink-950 sm:bg-transparent sm:absolute sm:inset-x-0 sm:bottom-0 sm:bg-gradient-to-t sm:from-ink-950 sm:via-ink-950/80 sm:to-transparent px-4 sm:px-6 pb-6 sm:pb-8 pt-4 sm:pt-16">
           <p className="max-w-5xl mx-auto mb-4 text-fg-soft text-sm sm:text-base">
-            Cada señal deja un rastro. Nosotros lo hacemos{" "}
-            <span className="text-accent bg-accent/15 px-1.5 py-0.5 rounded">visible</span>.
+            Presupuesto, obras y contratistas de La Libertad, con{" "}
+            <span className="text-accent bg-accent/15 px-1.5 py-0.5 rounded">fuente y fecha verificables</span>.
           </p>
           <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:flex-wrap gap-3">
             <Link
@@ -43,9 +43,9 @@ export function Home() {
       <section className="relative max-w-5xl mx-auto px-6 py-16">
         <p className="text-xs tracking-widest text-accent font-mono">RASTRO · ALPHA</p>
         <p className="mt-4 text-fg-soft text-lg max-w-3xl leading-relaxed">
-          Plataforma de trazabilidad sobre datos abiertos del Estado peruano — accesible desde el navegador y desde
-          agentes IA vía MCP. Cada cifra lleva fuente, corte y cobertura; lo que falta se declara vacío, no se rellena
-          con suposiciones.
+          Rastro junta la información pública que el Estado ya publica —sobre obras, presupuesto y contratistas— y la
+          muestra clara, en un solo lugar. Cada dato dice de dónde salió y cuándo se actualizó, para que sepas si
+          puedes confiar en él. Cuando no tenemos un dato, lo decimos — nunca inventamos un número.
         </p>
       </section>
 
@@ -85,11 +85,11 @@ export function Home() {
         <div className="card border-accent/30">
           <div className="flex items-center gap-3 flex-wrap">
             <p className="text-xs text-accent font-mono">PARA AGENTES IA</p>
-            <span className="text-xs text-muted">MCP · 82 tools · stdio · local</span>
+            <span className="text-xs text-muted">MCP · 83 tools · stdio · local</span>
           </div>
-          <h2 className="text-fg font-semibold text-lg mt-2">Una sola query. Ochenta y dos tools a tu disposición.</h2>
+          <h2 className="text-fg font-semibold text-lg mt-2">Una sola query. Ochenta y tres tools a tu disposición.</h2>
           <p className="text-fg-soft mt-3">
-            Rastro expone un servidor MCP (Model Context Protocol) con 82 herramientas de solo lectura. Compatible con
+            Rastro expone un servidor MCP (Model Context Protocol) con 83 herramientas de solo lectura. Compatible con
             Claude Code, Claude Desktop, Cursor, Windsurf, Cline y Continue.dev. Las APIs corren en localhost; el MCP las
             agrega para tu agente.
           </p>
@@ -132,7 +132,7 @@ concentración. Cita cada RUC y cada OCID."`}</code>
 
           <div className="mt-6 flex flex-wrap gap-3">
             <Link to="/docs/api" className="btn-ghost">
-              Ver los 82 tools
+              Ver los 83 tools
             </Link>
             <a
               href="https://github.com/Treevu-ai/appsperu/tree/master/mcp-server"
