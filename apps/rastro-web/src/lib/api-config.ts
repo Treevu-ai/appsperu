@@ -27,6 +27,9 @@ export const APIS_NOT_PUBLISHED_MESSAGE =
 export function formatApiErrorForUi(err: unknown): string {
   if (!apisPublishedForBrowser()) return APIS_NOT_PUBLISHED_MESSAGE;
   if (err instanceof AppUnavailableError) {
+    if (err.kind === "snapshot_miss") {
+      return "Esta consulta específica no forma parte del corte semanal publicado.";
+    }
     if (err.kind === "network" || err.kind === "timeout") {
       return "api.rastro.pe no responde. Los datos en vivo están disponibles via MCP local (ver /docs/api).";
     }
