@@ -11,6 +11,7 @@ import { AppUnavailableError } from "../lib/types.js";
 import { CoverageBadge } from "../components/CoverageBadge.js";
 import { NumberWithMetadata, metaNumber } from "../components/NumberWithMetadata.js";
 import { Modal } from "../components/Modal.js";
+import { formatApiErrorForUi } from "../lib/api-config.js";
 
 interface SupplierMatch {
   ruc: string;
@@ -68,6 +69,16 @@ export function Proveedor() {
             });
           }
         }
+        // Promise.allSettled nunca rechaza — si las 3 llamadas fallaron, hay que
+        // avisarlo explícitamente en vez de dejar la página en blanco (bug real:
+        // sin esto, un RUC válido con APIs caídas no mostraba ningún mensaje).
+        const allRejected =
+          identidadRes.status === "rejected" &&
+          sancionesRes.status === "rejected" &&
+          supRes.status === "rejected";
+        if (allRejected) {
+          setError(formatApiErrorForUi(identidadRes.reason));
+        }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof AppUnavailableError ? err.message : (err as Error).message);
@@ -108,6 +119,13 @@ export function Proveedor() {
       </button>
 
       {loading ? <p className="text-muted">Consultando 3 APIs en paralelo…</p> : null}
+
+      {!loading && error && !identidad && !sanciones && !adjudicaciones ? (
+        <div className="card border-danger/30">
+          <p className="text-danger text-sm">No se pudo obtener información de este proveedor.</p>
+          <p className="text-fg-soft text-xs mt-2">{error}</p>
+        </div>
+      ) : null}
 
       {!loading && identidad ? (
         <section className="card">
