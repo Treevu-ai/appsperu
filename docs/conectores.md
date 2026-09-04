@@ -54,6 +54,35 @@ parseados — usado para poblar el catálogo maestro cuando no viene derivado de
 
 ---
 
+<a id="radar-ejecucion-airhsp"></a>
+### `airhsp-connector.ts` — Personal y planilla del sector público (AIRHSP/MEF)
+
+| | |
+|---|---|
+| **Descripción** | Trae el personal activo y pensionista del sector público, agregado por Unidad Ejecutora / régimen laboral / cargo (columna `CANTIDAD`) — **no es un registro de personas identificables**, no hay nombres en la fuente. Cierra el hueco de "personal/planilla municipal" identificado en `docs/COBERTURA_Y_CUMPLIMIENTO.md`. |
+| **Qué hace** | Descarga el CSV completo del año pedido, hace upsert en `airhsp_personal` con `ON CONFLICT` sobre la combinación (periodo, pliego, unidad ejecutora, tipo/subtipo de registro, régimen laboral, grupo ocupacional, cargo, condición laboral, régimen pensionario) — evita duplicar la misma fila agregada entre corridas. |
+| **Cómo lo hace** | Descarga en **streaming genuino** (`fetch` → `Readable.fromWeb` → `csv-parse` en modo stream, lotes de 1000 filas) — el archivo real pesa **~357 MB por año** (confirmado vía `curl -I`, no los ~13.5 MB que se asumió inicialmente); un primer intento con descarga+parseo síncrono (`res.text()` + `csv-parse/sync`) se quedó en 0 filas insertadas tras >7 min. Fingerprint del batch vía ETag del header HTTP (no checksum de contenido — streaming no permite hashear sin bufferizar de nuevo). El CSV trae la misma clave natural duplicada dentro de un mismo lote de 1000 en algunos casos — se deduplica por lote antes de insertar, si no Postgres rechaza el `ON CONFLICT DO UPDATE` por afectar la misma fila dos veces en una sentencia. |
+| **Frecuencia** | Manual (`npx tsx src/ingest/airhsp-connector.ts <año>`). Verificado en vivo 2026-09-04 contra el año 2026: **652,392 filas reales** tras dedup (streaming completo en ~8 min). |
+| **Fuente de datos** | `fs.datosabiertos.mef.gob.pe/datastorefiles/PERSONALSP_{año}.csv` — Plataforma Nacional de Datos Abiertos, dataset gestionado por MEF, un archivo por año (2017–2026), sin autenticación. |
+| **Alcance territorial** | Sin columna de ubigeo/departamento en la fuente — se ingiere a nivel nacional y el filtro a La Libertad se hace por texto sobre `pliego`/`unidad_ejecutora` (`GET /api/personal?entidad=LA LIBERTAD`). No es un filtro exacto: entidades cuyo nombre no menciona el departamento no aparecerían con ese filtro. |
+| **Cruces** | Ninguno implementado aún — candidato natural: cruzar `pliego`/`unidad_ejecutora` contra el `entity_crosswalk` que ya usan `compras-publicas`/`infobras` para vincular gasto en personal con ejecución presupuestal por entidad. |
+
+---
+
+### `bienes-muebles-baja-connector.ts` — Bienes muebles patrimoniales dados de baja (MEF)
+
+| | |
+|---|---|
+| **Descripción** | Activos muebles (equipos, mobiliario, vehículos, etc.) dados de baja/desincorporados por entidades del sector público, con la resolución administrativa que lo respalda. **No es el inventario completo de bienes muebles del Estado** — ese no tiene fuente pública estructurada conocida (verificado 2026-09-04: sin PDF/CSV/XLSX descargable para el inventario vivo, solo el aplicativo interno SINABIP). Cierra parcialmente el hueco de "patrimonio y bienes muebles" identificado en `docs/COBERTURA_Y_CUMPLIMIENTO.md`. |
+| **Qué hace** | Descarga el CSV del año pedido en streaming, hace upsert en `bienes_muebles_baja` con `ON CONFLICT` sobre `codigo_patrimonial` (código patrimonial único por activo). |
+| **Cómo lo hace** | Descarga en **streaming genuino** (`fetch` → `Readable.fromWeb` → `csv-parse` en modo stream, lotes de 1000 filas) — el archivo pesa 47–96 MB por año (confirmado vía `curl -I`, no ~13 MB), y una descarga+parseo síncrono (`res.text()` + `csv-parse/sync`) no completa en tiempo razonable para un archivo de este tamaño (lección de un conector hermano, `airhsp-connector.ts`, que se quedó en 0 filas insertadas tras >7 min intentando cargar 357 MB de una vez). Sin checksum de contenido (streaming no permite hashear sin bufferizar de nuevo) — usa ETag/Last-Modified del servidor como identidad del batch. El CSV trae `codigo_patrimonial` duplicado dentro del mismo archivo en algunos casos — se deduplica por lote antes de insertar (última ocurrencia gana), si no Postgres rechaza el `ON CONFLICT DO UPDATE` por afectar la misma fila dos veces en una sentencia. |
+| **Frecuencia** | Manual (`npx tsx src/ingest/run-bienes-muebles-baja.ts [años...]`, default 2020–2024). Verificado en vivo 2026-09-04 contra 2024: 274,841 filas procesadas, 169,674 filas reales tras deduplicación (1,652 filtrables a La Libertad/Trujillo por texto). |
+| **Fuente de datos** | `fs.datosabiertos.mef.gob.pe/datastorefiles/BAJA_BM_PAT_{año}_INV.csv` — Plataforma Nacional de Datos Abiertos, dataset gestionado por MEF, un archivo por año (2020–2024), sin autenticación. El archivo de diccionario de columnas referenciado en la página del dataset devuelve 404 en vivo — columnas confirmadas leyendo el encabezado real del CSV, no el diccionario. |
+| **Alcance territorial** | Sin columna de ubigeo/departamento en la fuente — se ingiere a nivel nacional y el filtro a La Libertad se hace por texto sobre `nom_entidad` (`GET /api/patrimonio/bienes-muebles-baja?entidad=LA LIBERTAD`), mismo patrón y misma limitación que `airhsp-connector.ts`. |
+| **Cruces** | Ninguno implementado — candidato: cruzar `ruc_entidad` contra `entity_crosswalk` para vincular bajas patrimoniales con la entidad en `budget_execution`/`awards`. |
+
+---
+
 <a id="compras-publicas"></a>
 ## compras-publicas — Contrataciones abiertas (OECE/OCDS)
 
@@ -124,14 +153,14 @@ contra inhabilitaciones vigentes — ambos reutilizan el mismo `extractRuc()` so
 
 | | |
 |---|---|
-| **Descripción** | Trae, por RUC, los accionistas/socios reales, representantes legales y órganos de administración de un proveedor del Estado — nombre, documento de identidad y % de participación accionaria. Es la primera fuente del catálogo que da identidad de dueños reales, no solo razón social. |
-| **Qué hace** | Para un RUC: (1) busca en el índice de proveedores para resolver su `codProv` interno, (2) pide la ficha `/resumen` (que trae `datosSunat` + `conformacion` en una sola respuesta) y hace upsert en `supplier_conformacion` (socios/representantes/órganos) y `supplier_conformacion_lookup` (estado agregado por RUC, incluye `tiene_socios` para no reconsultar RUCs ya sabidos vacíos). |
-| **Cómo lo hace** | **API JSON pública no documentada**, sin auth ni captcha, descubierta inspeccionando el bundle Angular de la SPA "Buscador de Proveedores del Estado" de OSCE (`apps.osce.gob.pe/perfilprov-ui`) — verificada en vivo el 2026-09-03. 300ms de cortesía entre RUCs. |
+| **Descripción** | Trae, por RUC, los accionistas/socios reales, representantes legales y órganos de administración de un proveedor del Estado — nombre y documento de identidad. Es la primera fuente del catálogo que da identidad de dueños reales, no solo razón social. **Compliance (2026-09-04)**: el % de participación accionaria se retiró de la API pública (no aportaba al caso de uso y era el dato de mayor riesgo) y el número de documento se sirve enmascarado (solo últimos 3 dígitos) — ver `docs/COBERTURA_Y_CUMPLIMIENTO.md`. |
+| **Qué hace** | Para un RUC: (1) busca en el índice de proveedores para resolver su `codProv` interno, (2) pide la ficha `/resumen` (que trae `datosSunat` + `conformacion` en una sola respuesta) y hace upsert en `supplier_conformacion` (socios/representantes/órganos) y `supplier_conformacion_lookup` (estado agregado por RUC, incluye `tiene_socios` para no reconsultar RUCs ya sabidos vacíos). `GET /api/conformacion/vinculos` (nuevo) cruza contra `awards`/`minor_contracts` y devuelve solo personas con RUCs distintos que ganaron adjudicaciones en entidades convocantes distintas — el patrón de interés real, no solo "misma empresa, varios contratos". |
+| **Cómo lo hace** | **API JSON pública no documentada**, sin auth ni captcha, descubierta inspeccionando el bundle Angular de la SPA "Buscador de Proveedores del Estado" de OSCE (`apps.osce.gob.pe/perfilprov-ui`) — verificada en vivo el 2026-09-03. 300ms de cortesía entre RUCs. Por decisión de proyecto, no se buscará autorización formal de OSCE (ver `docs/APRENDIZAJES_INGENIERIA_INVERSA_OSCE.md`). |
 | **Frecuencia** | Manual (`npm run ingest:conformacion [DEPARTAMENTO]`). Sin filtro de departamento recorre todos los RUCs de 11 dígitos ya vistos en `supplier_profiles`/`awards`; con departamento, solo los de esa región. |
 | **Fuente de datos** | `eap.oece.gob.pe/perfilprov-bus/1.0` (búsqueda) y `eap.oece.gob.pe/ficha-proveedor-cns/1.0` (ficha) — backend real de OSCE, no RNP (el portal legado `rnp.gob.pe` migró su contenido informativo a gob.pe y ya no es la fuente operativa de este dato). |
 | **Alcance territorial** | Ninguno propio — opera por RUC individual; el script de corrida masiva lo acota vía `awards.departamento` / distrito de `minor_contracts`. |
-| **Limitación conocida** | El campo `socios` viene vacío para proveedores tipo "CONTRATOS COLABORACION EMPRESARIAL" (consorcios) — no tienen accionistas en el sentido societario que expone este endpoint. Verificado con 3 consorcios de muestra; funciona bien para personas jurídicas regulares (S.A.C., S.R.L., E.I.R.L.). Corrida sobre los 1,446 RUCs de La Libertad (2026-09-03): 475 con socios reales (32.9%), 967 vacíos, 4 sin datos. |
-| **Cruces** | Se consulta por `ruc`, la misma clave que usan [`identidad-fiscal`](#identidad-fiscal) y [`proveedores-sancionados`](#proveedores-sancionados) — permite, en el futuro, encadenar identidad fiscal → dueños reales → sanciones sin un cruce nuevo. |
+| **Limitación conocida** | El campo `socios` viene vacío para proveedores tipo "CONTRATOS COLABORACION EMPRESARIAL" (consorcios) — no tienen accionistas en el sentido societario que expone este endpoint. Corrida nacional completa (2026-09-04): **3,818/3,818 RUCs (100%)**, 1,353 con socios (35%). El cruce vía `/vinculos` encontró un caso real (Loyola Zavaleta, dos RUCs distintos ganando en dos municipalidades distintas de La Libertad con 14 días de diferencia) — documentado como hipótesis, no acusación, en `docs/HALLAZGOS_CONFORMACION_SOCIETARIA.md`. Ampliar la muestra a nivel nacional no sumó casos nuevos porque `awards` en sí mismo solo cubre La Libertad — son dos ejes de cobertura independientes. |
+| **Cruces** | Se consulta por `ruc`, la misma clave que usan [`identidad-fiscal`](#identidad-fiscal) y [`proveedores-sancionados`](#proveedores-sancionados) — permite, en el futuro, encadenar identidad fiscal → dueños reales → sanciones sin un cruce nuevo. `GET /api/conformacion/vinculos` ya cruza contra `awards`/`minor_contracts` (ver arriba). |
 
 ---
 
@@ -212,6 +241,22 @@ Contratos: [`ceplan-crossref-territorial-v1.md`](data-contracts/ceplan-crossref-
 | `GET /api/territories/summary?departamento=` | Agregados dept: distritos + infra (5 regiones piloto) |
 
 Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distritos verificables.
+
+<a id="ceplan-geo-sbn"></a>
+### `sbn-supervision-connector.ts` — Patrimonio inmobiliario del Estado (SBN)
+
+| | |
+|---|---|
+| **Descripción** | Trae predios estatales efectivamente **supervisados** por SBN (Superintendencia Nacional de Bienes Estatales) — no el registro completo del universo de predios. Cierra parcialmente el hueco de "patrimonio y bienes muebles" identificado en `docs/COBERTURA_Y_CUMPLIMIENTO.md`; **solo inmuebles, no bienes muebles** (ver limitación). |
+| **Qué hace** | Descarga el CSV completo, parsea (delimitador `;`, encoding Latin-1) y hace upsert en `sbn_supervision_predios` con `ON CONFLICT` sobre (`numero_informe`, `cus`). |
+| **Cómo lo hace** | Descarga HTTP directa de un CSV público. El servidor está detrás de un WAF que bloquea requests sin `User-Agent` de navegador (responde 418) — no es autenticación real, un header normal basta. Parseo manual (split por `;`, sin librería CSV — archivo pequeño y sin campos entrecomillados). |
+| **Frecuencia** | Manual (`npx tsx src/ingest/sbn-supervision-connector.ts`). Verificado en vivo 2026-09-04: 1,324 filas reales, nacional. |
+| **Fuente de datos** | `datosabiertos.gob.pe/sites/default/files/Supervisión de predios estatales.csv` (grupo SBN en la Plataforma Nacional de Datos Abiertos). |
+| **Limitación conocida** | El dataset "SBN Predios del Estado registrados en el SINABIP" (el registro **completo**, no solo supervisados) solo se publica como enlace de Google Drive, y ese enlace está **roto** (verificado en vivo 2026-09-04: "No se encontró la página") — no hay forma pública de acceder al universo completo de predios hoy. Tampoco se encontró fuente pública descargable para **bienes muebles** (vehículos, equipos, mobiliario) tras búsqueda razonable — ese sub-hueco sigue abierto. |
+| **Alcance territorial** | Nacional; sin registros para LA LIBERTAD en la muestra verificada 2026-09-04 (LIMA concentra 690/1,324, ~52%) — hallazgo real de la fuente, no un filtro aplicado por el conector. |
+| **Cruces** | Ninguno implementado — candidato: cruzar `titular_predio`/distrito contra entidades ya identificadas en `radar-ejecucion`/`compras-publicas`. |
+
+---
 
 ---
 
