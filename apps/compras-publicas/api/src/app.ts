@@ -6,6 +6,7 @@ import biddersRouter from "./routes/bidders.js";
 import { observatoryRouter } from "./routes/observatory.js";
 import { entityProfilesRouter } from "./routes/entity-profiles.js";
 import { identitiesRouter } from "./routes/identities.js";
+import { conformacionRouter } from "./routes/conformacion.js";
 import { pool } from "./db/pool.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 
@@ -37,6 +38,7 @@ export function createApp() {
   app.use("/api/bidders", biddersRouter);
   app.use("/api/entities", entityProfilesRouter);
   app.use("/api/identities", identitiesRouter);
+  app.use("/api/conformacion", conformacionRouter);
   app.use("/api", observatoryRouter);
 
   // Debe ir al final: sin esto, un rechazo dentro de un handler async

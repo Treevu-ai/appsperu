@@ -21,6 +21,7 @@
     "reconcile:oece:ocids": "tsx src/reconciliation/run-oece-ocid-reconciliation.ts",
     "ingest:minor-contracts": "tsx src/ingest/run-minor-contracts.ts",
     "ingest:minor-contracts:full": "tsx src/ingest/run-minor-contracts.ts --full",
+    "ingest:conformacion": "tsx src/ingest/run-conformacion.ts",
     "ingest:legacy-orders": "tsx src/ingest/run-legacy-seace-orders.ts",
     "catalog:legacy-orders": "tsx src/ingest/build-legacy-seace-entity-catalog.ts",
     "coverage:minor-contracts": "tsx src/minor-contracts/coverage-report.ts",
