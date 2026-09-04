@@ -1,0 +1,39 @@
+# Generado por scripts/fly-generate-configs.sh
+# Deploy desde raíz: fly deploy . --config infra/fly/manifests/bcrp-comercio-exterior.toml
+app = "treevu-rastro-bcrp-comercio-exterior"
+primary_region = "gru"
+
+[build]
+  dockerfile = "../Dockerfile.api"
+  [build.args]
+    APP_DIR = "bcrp-comercio-exterior"
+
+[env]
+  PORT = "8080"
+  WEB_ORIGIN = "https://www.rastro.fyi,https://rastro.fyi,https://rastro-5zm.pages.dev"
+
+[http_service]
+  internal_port = 8080
+  force_https = false
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  # min=1 (no 0): el gateway alcanza cada app por red privada (.internal),
+  # y auto_start_machines solo despierta una maquina cuando el trafico
+  # llega por el proxy PUBLICO de esa app, no aplica a conexiones 6PN entre
+  # apps. Con min=0, Caddy nunca logra resolver el hostname .internal de una
+  # app dormida (no such host) y devuelve 503 aunque la app funcione bien
+  # accedida directamente. Encontrado en vivo desplegando el gateway.
+  min_machines_running = 1
+  processes = ["app"]
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "10s"
+    grace_period = "120s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1

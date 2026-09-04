@@ -31,7 +31,7 @@ export function formatApiErrorForUi(err: unknown): string {
       return "Esta consulta específica no forma parte del corte semanal publicado.";
     }
     if (err.kind === "network" || err.kind === "timeout") {
-      return "api.rastro.pe no responde. Los datos en vivo están disponibles via MCP local (ver /docs/api).";
+      return "api.rastro.fyi no responde. Los datos en vivo están disponibles via MCP local (ver /docs/api).";
     }
     const label = APP_CATALOG[err.appKey]?.label ?? err.appKey;
     if (import.meta.env.PROD) {

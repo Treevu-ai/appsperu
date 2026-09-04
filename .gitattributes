@@ -1,2 +1,6 @@
 # PowerShell scripts: ASCII only (Windows encoding breaks Unicode dashes)
 *.ps1 text eol=crlf
+
+# Shell scripts must stay LF: infra/fly/docker-entrypoint.sh runs inside an
+# Alpine container (#!/bin/sh) — CRLF breaks its shebang at container start.
+*.sh text eol=lf

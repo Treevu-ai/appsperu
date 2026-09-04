@@ -24,15 +24,20 @@ pages_build_output_dir = "./dist"
 binding = "RATE_LIMIT"
 id = "da7766279cc54ba5817e338b76eb3ef1"
 
-# Variables de entorno NO se ponen aquí. Se configuran en el dashboard
-# de Cloudflare Pages bajo Settings → Environment variables.
-# - VITE_API_BASE_URL_* (3 usadas por la Function /api/search —
-#   identidad-fiscal, radar-inversiones, infobras).
-# - CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET — Cloudflare Access
-#   Service Token. La Function /api/search los envía como headers
-#   `CF-Access-Client-Id` / `CF-Access-Client-Secret` a las APIs en vivo
-#   (api.rastro.pe). Sin esos tokens, Cloudflare Access bloquea la
-#   request con 403. Ver docs/API_ACCESS_PROTECTION.md.
+# Este archivo es solo para `wrangler pages dev` / deploy manual desde
+# apps/rastro-web/ (ver comentario de cabecera). El deploy real vía Git
+# (Cloudflare Workers Builds) lee el wrangler.toml de la raíz del repo —
+# ahí viven las 3 VITE_API_BASE_URL_* de producción, NO acá, para que
+# `wrangler pages dev` sin `.dev.vars` configurado no golpee accidentalmente
+# las APIs en vivo — usa `.dev.vars.example` como base para tu `.dev.vars`.
+#
+# CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET — Cloudflare Access Service
+# Token (secreto, NO va en ningún wrangler.toml). Se configura en el
+# dashboard de Cloudflare Pages → Settings → Variables and secrets → tipo
+# Secret. La Function /api/search los envía como headers
+# `CF-Access-Client-Id` / `CF-Access-Client-Secret` a las APIs en vivo
+# (api.rastro.fyi). Sin esos tokens, Cloudflare Access bloquea la request
+# con 403/302. Ver docs/API_ACCESS_PROTECTION.md.
 
 # Headers HTTP personalizados (Cache-Control, Security, etc.)
 # Aplican a todo el sitio. Se pueden sobreescribir por ruta si se necesita.
