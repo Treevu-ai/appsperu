@@ -17,7 +17,13 @@ primary_region = "gru"
   force_https = false
   auto_stop_machines = "stop"
   auto_start_machines = true
-  min_machines_running = 0
+  # min=1 (no 0): el gateway alcanza cada app por red privada (.internal),
+  # y auto_start_machines solo despierta una maquina cuando el trafico
+  # llega por el proxy PUBLICO de esa app, no aplica a conexiones 6PN entre
+  # apps. Con min=0, Caddy nunca logra resolver el hostname .internal de una
+  # app dormida (no such host) y devuelve 503 aunque la app funcione bien
+  # accedida directamente. Encontrado en vivo desplegando el gateway.
+  min_machines_running = 1
   processes = ["app"]
 
   [[http_service.checks]]
