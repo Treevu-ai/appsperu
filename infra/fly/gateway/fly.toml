@@ -1,5 +1,5 @@
 # Generado por scripts/fly-generate-configs.sh
-app = "rastro-api-gw"
+app = "treevu-rastro-gw"
 primary_region = "gru"
 
 [build]

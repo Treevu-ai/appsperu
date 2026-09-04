@@ -198,7 +198,7 @@ export interface IngestSummary {
 export async function ingestVertixPortfolio(): Promise<IngestSummary> {
   const pageLimit = Number(process.env.VERTIX_PAGE_LIMIT ?? 500);
   const national = await fetchVertixPage({ pageLimit });
-  const recordsTotal = national.RecordsTotal ?? national.Data.length;
+  const recordsTotal = national.RecordsTotal ?? (national.Data ?? []).length;
   const deptIndex = await buildDepartamentoIndex(pageLimit);
 
   const normalized = (national.Data ?? []).map((raw) => normalizeVertixProject(raw, deptIndex));

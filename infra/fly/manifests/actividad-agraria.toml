@@ -1,6 +1,6 @@
 # Generado por scripts/fly-generate-configs.sh
 # Deploy desde raíz: fly deploy . --config infra/fly/manifests/actividad-agraria.toml
-app = "rastro-api-actividad-agraria"
+app = "treevu-rastro-actividad-agraria"
 primary_region = "gru"
 
 [build]

@@ -1,6 +1,6 @@
 # Generado por scripts/fly-generate-configs.sh
 # Deploy desde raíz: fly deploy . --config infra/fly/manifests/seguridad-ciudadana.toml
-app = "rastro-api-seguridad-ciudadana"
+app = "treevu-rastro-seguridad-ciudadana"
 primary_region = "gru"
 
 [build]

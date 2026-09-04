@@ -1,6 +1,6 @@
 # Generado por scripts/fly-generate-configs.sh
 # Deploy desde raíz: fly deploy . --config infra/fly/manifests/inversion-privada.toml
-app = "rastro-api-inversion-privada"
+app = "treevu-rastro-inversion-privada"
 primary_region = "gru"
 
 [build]

@@ -1,6 +1,6 @@
 # Generado por scripts/fly-generate-configs.sh
 # Deploy desde raíz: fly deploy . --config infra/fly/manifests/bcrp-la-libertad.toml
-app = "rastro-api-bcrp-la-libertad"
+app = "treevu-rastro-bcrp-la-libertad"
 primary_region = "gru"
 
 [build]

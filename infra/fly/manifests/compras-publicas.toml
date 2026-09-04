@@ -1,6 +1,6 @@
 # Generado por scripts/fly-generate-configs.sh
 # Deploy desde raíz: fly deploy . --config infra/fly/manifests/compras-publicas.toml
-app = "rastro-api-compras-publicas"
+app = "treevu-rastro-compras-publicas"
 primary_region = "gru"
 
 [build]

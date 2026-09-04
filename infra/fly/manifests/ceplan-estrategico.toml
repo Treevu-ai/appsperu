@@ -1,6 +1,6 @@
 # Generado por scripts/fly-generate-configs.sh
 # Deploy desde raíz: fly deploy . --config infra/fly/manifests/ceplan-estrategico.toml
-app = "rastro-api-ceplan-estrategico"
+app = "treevu-rastro-ceplan-estrategico"
 primary_region = "gru"
 
 [build]

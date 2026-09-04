@@ -1,6 +1,6 @@
 # Generado por scripts/fly-generate-configs.sh
 # Deploy desde raíz: fly deploy . --config infra/fly/manifests/radar-ejecucion.toml
-app = "rastro-api-radar-ejecucion"
+app = "treevu-rastro-radar-ejecucion"
 primary_region = "gru"
 
 [build]

@@ -1,6 +1,6 @@
 # Generado por scripts/fly-generate-configs.sh
 # Deploy desde raíz: fly deploy . --config infra/fly/manifests/proveedores-sancionados.toml
-app = "rastro-api-proveedores-sancionados"
+app = "treevu-rastro-proveedores-sancionados"
 primary_region = "gru"
 
 [build]

@@ -1,11 +1,11 @@
-# Generado por scripts/fly-generate-configs.sh (prefix: rastro-api)
+# Generado por scripts/fly-generate-configs.sh (prefix: treevu-rastro)
 :8080 {
   handle / {
     respond "{\"status\":\"ok\",\"service\":\"api.rastro.fyi\",\"apps\":14}" 200
   }
 
   handle_path /radar-ejecucion/* {
-    reverse_proxy rastro-api-radar-ejecucion.internal:8080 {
+    reverse_proxy treevu-rastro-radar-ejecucion.internal:8080 {
       health_uri /health
       health_interval 30s
     }
@@ -13,7 +13,7 @@
   redir /radar-ejecucion /radar-ejecucion/
 
   handle_path /compras-publicas/* {
-    reverse_proxy rastro-api-compras-publicas.internal:8080 {
+    reverse_proxy treevu-rastro-compras-publicas.internal:8080 {
       health_uri /health
       health_interval 30s
     }
@@ -21,7 +21,7 @@
   redir /compras-publicas /compras-publicas/
 
   handle_path /radar-inversiones/* {
-    reverse_proxy rastro-api-radar-inversiones.internal:8080 {
+    reverse_proxy treevu-rastro-radar-inversiones.internal:8080 {
       health_uri /health
       health_interval 30s
     }
@@ -29,7 +29,7 @@
   redir /radar-inversiones /radar-inversiones/
 
   handle_path /infobras/* {
-    reverse_proxy rastro-api-infobras.internal:8080 {
+    reverse_proxy treevu-rastro-infobras.internal:8080 {
       health_uri /health
       health_interval 30s
     }
@@ -37,7 +37,7 @@
   redir /infobras /infobras/
 
   handle_path /ceplan-estrategico/* {
-    reverse_proxy rastro-api-ceplan-estrategico.internal:8080 {
+    reverse_proxy treevu-rastro-ceplan-estrategico.internal:8080 {
       health_uri /health
       health_interval 30s
     }
@@ -45,7 +45,7 @@
   redir /ceplan-estrategico /ceplan-estrategico/
 
   handle_path /ceplan-geo/* {
-    reverse_proxy rastro-api-ceplan-geo.internal:8080 {
+    reverse_proxy treevu-rastro-ceplan-geo.internal:8080 {
       health_uri /health
       health_interval 30s
     }
@@ -53,7 +53,7 @@
   redir /ceplan-geo /ceplan-geo/
 
   handle_path /identidad-fiscal/* {
-    reverse_proxy rastro-api-identidad-fiscal.internal:8080 {
+    reverse_proxy treevu-rastro-identidad-fiscal.internal:8080 {
       health_uri /health
       health_interval 30s
     }
@@ -61,7 +61,7 @@
   redir /identidad-fiscal /identidad-fiscal/
 
   handle_path /salud-institucional/* {
-    reverse_proxy rastro-api-salud-institucional.internal:8080 {
+    reverse_proxy treevu-rastro-salud-institucional.internal:8080 {
       health_uri /health
       health_interval 30s
     }
@@ -69,7 +69,7 @@
   redir /salud-institucional /salud-institucional/
 
   handle_path /proveedores-sancionados/* {
-    reverse_proxy rastro-api-proveedores-sancionados.internal:8080 {
+    reverse_proxy treevu-rastro-proveedores-sancionados.internal:8080 {
       health_uri /health
       health_interval 30s
     }
@@ -77,7 +77,7 @@
   redir /proveedores-sancionados /proveedores-sancionados/
 
   handle_path /actividad-agraria/* {
-    reverse_proxy rastro-api-actividad-agraria.internal:8080 {
+    reverse_proxy treevu-rastro-actividad-agraria.internal:8080 {
       health_uri /health
       health_interval 30s
     }
@@ -85,7 +85,7 @@
   redir /actividad-agraria /actividad-agraria/
 
   handle_path /seguridad-ciudadana/* {
-    reverse_proxy rastro-api-seguridad-ciudadana.internal:8080 {
+    reverse_proxy treevu-rastro-seguridad-ciudadana.internal:8080 {
       health_uri /health
       health_interval 30s
     }
@@ -93,7 +93,7 @@
   redir /seguridad-ciudadana /seguridad-ciudadana/
 
   handle_path /bcrp-comercio-exterior/* {
-    reverse_proxy rastro-api-bcrp-comercio-exterior.internal:8080 {
+    reverse_proxy treevu-rastro-bcrp-comercio-exterior.internal:8080 {
       health_uri /health
       health_interval 30s
     }
@@ -101,7 +101,7 @@
   redir /bcrp-comercio-exterior /bcrp-comercio-exterior/
 
   handle_path /inversion-privada/* {
-    reverse_proxy rastro-api-inversion-privada.internal:8080 {
+    reverse_proxy treevu-rastro-inversion-privada.internal:8080 {
       health_uri /health
       health_interval 30s
     }
@@ -109,7 +109,7 @@
   redir /inversion-privada /inversion-privada/
 
   handle_path /bcrp-la-libertad/* {
-    reverse_proxy rastro-api-bcrp-la-libertad.internal:8080 {
+    reverse_proxy treevu-rastro-bcrp-la-libertad.internal:8080 {
       health_uri /health
       health_interval 30s
     }

@@ -1,6 +1,6 @@
 # Generado por scripts/fly-generate-configs.sh
 # Deploy desde raíz: fly deploy . --config infra/fly/manifests/salud-institucional.toml
-app = "rastro-api-salud-institucional"
+app = "treevu-rastro-salud-institucional"
 primary_region = "gru"
 
 [build]

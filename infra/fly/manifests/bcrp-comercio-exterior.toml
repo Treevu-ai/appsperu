@@ -1,6 +1,6 @@
 # Generado por scripts/fly-generate-configs.sh
 # Deploy desde raíz: fly deploy . --config infra/fly/manifests/bcrp-comercio-exterior.toml
-app = "rastro-api-bcrp-comercio-exterior"
+app = "treevu-rastro-bcrp-comercio-exterior"
 primary_region = "gru"
 
 [build]

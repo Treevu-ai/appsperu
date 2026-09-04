@@ -32,7 +32,7 @@ VALUES (
   'ACTIVO-DRENAJE-2539202', '2539202', 'DISENO', 96.5,
   'ANIN informó avance del expediente técnico en etapa de diseño; obra aún no en ejecución.',
   'https://www.gob.pe/institucion/munitrujillo/noticias/1338294-expediente-tecnico-para-el-drenaje-pluvial-de-trujillo-esta-retrasado',
-  (SELECT batch_id FROM infrastructure_evidence_batches WHERE source_label='MPT: expediente técnico drenaje pluvial en diseño'),
+  (SELECT batch_id FROM infrastructure_evidence_batches WHERE source_url='https://www.gob.pe/institucion/munitrujillo/noticias/1338294-expediente-tecnico-para-el-drenaje-pluvial-de-trujillo-esta-retrasado'),
   DATE '2026-08-28'
 ) ON CONFLICT (asset_id, etapa, source_url) DO NOTHING;
 
@@ -43,7 +43,7 @@ INSERT INTO infrastructure_assets (
   'ACTIVO-SANEAMIENTO-LL-PILOTO', 'AGUA_SANEAMIENTO',
   'Cohorte piloto saneamiento urbano La Libertad (sin activo durable publicado)',
   'LA LIBERTAD', NULL, NULL, NULL, NULL, NULL, 'FUENTE_DECLARA_SIN_CLAVE_DURABLE',
-  (SELECT batch_id FROM infrastructure_evidence_batches WHERE source_label='MVCS: saneamiento urbano — cohorte piloto estructural'),
+  (SELECT batch_id FROM infrastructure_evidence_batches WHERE source_url='https://www.gob.pe/institucion/mvcs/noticias'),
   DATE '2026-08-28',
   'Estructura replicable a saneamiento; pendiente fuente con activo/acto/operador verificable (IF-01–03).'
 ) ON CONFLICT (asset_id) DO NOTHING;
@@ -58,6 +58,6 @@ VALUES (
   'ACTIVO-EDU-CASA-GRANDE-2026', NULL, 'EJECUCION_OBRA', 100,
   'ANIN publica inauguración/entrega de institución educativa; ALSOL no materializa acta de recepción.',
   'https://www.gob.pe/institucion/anin/noticias/1373519-anin-fortalece-la-infraestructura-educativa-con-nueva-institucion-en-la-libertad',
-  (SELECT batch_id FROM infrastructure_evidence_batches WHERE source_label='ANIN: IE Casa Grande — entrega/inauguración'),
+  (SELECT batch_id FROM infrastructure_evidence_batches WHERE source_url='https://www.gob.pe/institucion/anin/noticias/1373519-anin-fortalece-la-infraestructura-educativa-con-nueva-institucion-en-la-libertad'),
   DATE '2026-08-28'
 ) ON CONFLICT (asset_id, etapa, source_url) DO NOTHING;

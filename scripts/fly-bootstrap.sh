@@ -48,8 +48,7 @@ if ! "$FLY" auth whoami >/dev/null 2>&1; then
 fi
 
 fly_app_exists() {
-  "$FLY" apps list --json 2>/dev/null | jq -e --arg name "$1" \
-    '.[] | select(.Name == $name or .name == $name)' >/dev/null 2>&1
+  "$FLY" status -a "$1" >/dev/null 2>&1
 }
 
 ensure_fly_app() {

@@ -1,6 +1,6 @@
 # Generado por scripts/fly-generate-configs.sh
 # Deploy desde raíz: fly deploy . --config infra/fly/manifests/identidad-fiscal.toml
-app = "rastro-api-identidad-fiscal"
+app = "treevu-rastro-identidad-fiscal"
 primary_region = "gru"
 
 [build]
