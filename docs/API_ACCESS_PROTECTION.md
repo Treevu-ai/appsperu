@@ -1,20 +1,29 @@
-# Protección de `api.rastro.pe` con Cloudflare Access
+# Protección de `api.rastro.fyi` con Cloudflare Access
 
-> **TL;DR**: `api.rastro.pe` (proxy público de las 14 APIs en el VPS
-> 149.104.66.100) está abierto a internet. Esto doc activa **Cloudflare
-> Access** sobre esa zona con 2 Service Tokens dedicados: uno para la
-> Cloudflare Function `/api/search` de `rastro-web`, otro opcional para
-> futuros clientes backend (MCP server remoto, prensa, etc.). Los
+> **Migrado 2026-09-04**: este runbook originalmente apuntaba a
+> `api.rastro.pe` sobre un VPS (`docs/FLY_DEPLOY.md` explica por qué se
+> abandonó ese plan — el dominio `.pe` no era gestionable en la cuenta de
+> Cloudflare del proyecto y el VPS dejó de tener acceso). Adaptado a
+> `api.rastro.fyi` sobre el gateway Fly.io (`treevu-rastro-gw`) — mismos
+> pasos de Cloudflare Access, la arquitectura detrás cambió de VPS+nginx a
+> Fly.io+Caddy.
+
+> **TL;DR**: `api.rastro.fyi` (gateway Caddy en Fly.io, `treevu-rastro-gw`,
+> que enruta a las 14 APIs) está abierto a internet. Esto doc activa
+> **Cloudflare Access** sobre esa zona con 2 Service Tokens dedicados: uno
+> para la Cloudflare Function `/api/search` de `rastro-web`, otro opcional
+> para futuros clientes backend (MCP server remoto, prensa, etc.). Los
 > visitantes de `www.rastro.fyi` no se enteran — la UI sigue cargando
 > igual.
 
 ## Por qué
 
-El proxy nginx en `infra/api-proxy/nginx/api.rastro.pe.conf` está expuesto
-a internet con TLS (Certbot) pero sin autenticación. El certificado SSL
-de Let's Encrypt publica el dominio en los logs de Certificate
-Transparency — cualquiera puede descubrir `api.rastro.pe` en minutos y
-empezar a scrapear las 14 APIs.
+El gateway Caddy (`infra/fly/gateway/Caddyfile`, desplegado como
+`treevu-rastro-gw` en Fly.io) está expuesto a internet con TLS (certificado
+de Fly.io vía Let's Encrypt) pero sin autenticación propia. El certificado
+SSL publica el dominio en los logs de Certificate Transparency —
+cualquiera puede descubrir `api.rastro.fyi` en minutos y empezar a
+scrapear las 14 APIs.
 
 Cloudflare Access es la pieza de **Cloudflare Zero Trust** que se sienta
 delante de una zona y exige un JWT firmado por Cloudflare (Service Token
@@ -25,14 +34,15 @@ no requiere mantener un Worker, y deja un audit log de cada request.
 
 | Ruta | Antes | Después |
 |---|---|---|
-| `GET https://api.rastro.pe/<app>/...` desde internet | 200, sin auth | 403 de Cloudflare Access |
-| `GET https://api.rastro.pe/<app>/...` desde `www.rastro.fyi` (Function `/api/search` con Service Token) | 200 | 200 (igual) |
-| `GET http://localhost:<port>/...` desde el VPS | 200 (sin pasar por Access) | 200 (igual) |
+| `GET https://api.rastro.fyi/<app>/...` desde internet | 200, sin auth | 403 de Cloudflare Access |
+| `GET https://api.rastro.fyi/<app>/...` desde `www.rastro.fyi` (Function `/api/search` con Service Token) | 200 | 200 (igual) |
+| `GET http://<app>.internal:8080/...` entre apps de Fly (red privada 6PN) | 200 (sin pasar por Access) | 200 (igual) |
 | `GET http://localhost:<port>/...` desde tu laptop (MCP server local) | 200 (sin pasar por Access) | 200 (igual) |
 
-El Service Token **no** protege el tráfico entre el proxy nginx y las 14
-APIs en `127.0.0.1` — eso sigue siendo una red de confianza. Protege el
-tráfico de internet al proxy, que es lo que está expuesto.
+El Service Token **no** protege el tráfico entre el gateway Caddy y las 14
+APIs sobre la red privada de Fly.io (`*.internal:8080`) — eso sigue siendo
+una red de confianza. Protege el tráfico de internet al gateway, que es lo
+que está expuesto.
 
 ## Setup (una sola vez, dashboard-only)
 
@@ -45,10 +55,10 @@ más riesgo que valor).
 
 1. Cloudflare Zero Trust → **Access** → **Applications** → **Add an
    application** → **Self-hosted**.
-2. **Application name**: `Rastro API (api.rastro.pe)`.
+2. **Application name**: `Rastro API (api.rastro.fyi)`.
 3. **Session duration**: 1 hora (recomendado para Service Tokens — ver §3).
 4. **Application domain**:
-   - **Domain**: `api.rastro.pe`
+   - **Domain**: `api.rastro.fyi`
    - **Path**: `*` (cubre las 14 apps)
 5. **Identity providers**: dejar el default (One-time PIN si más adelante
    agregas acceso interactivo para prensa/sociedad civil).
@@ -110,7 +120,7 @@ Orden recomendado para no romper la búsqueda en producción:
 2. **Verificá que `/buscar` sigue funcionando** en `www.rastro.fyi`. La
    Function ya manda los headers CF-Access — pero como Access todavía no
    está activado, las requests pasan con 200 igual.
-3. **Verificá que una request directa a `api.rastro.pe` SIN token sigue
+3. **Verificá que una request directa a `api.rastro.fyi` SIN token sigue
    dando 200** (todavía no está bloqueada — esto confirma que el cambio
    del lado de Pages no rompió nada).
 4. Recién ahí activá Access en el dashboard (la aplicación ya está creada
@@ -119,19 +129,19 @@ Orden recomendado para no romper la búsqueda en producción:
 ### 6. Activar Access (un solo toggle)
 
 1. Cloudflare Zero Trust → **Access** → **Applications** → seleccionar
-   `Rastro API (api.rastro.pe)`.
+   `Rastro API (api.rastro.fyi)`.
 2. Cambiar el toggle de **Disabled** a **Active**.
 3. **Verificación inmediata**:
    - Desde tu laptop, sin token:
      ```bash
-     curl -sI https://api.rastro.pe/radar-ejecucion/health
+     curl -sI https://api.rastro.fyi/radar-ejecucion/health
      # → HTTP/2 403
      ```
    - Desde el navegador de `www.rastro.fyi`, abrir `/buscar` y hacer una
      búsqueda → sigue devolviendo resultados (la Function manda el
      Service Token, Access valida, la API responde).
 4. **Audit log**: Cloudflare Zero Trust → **Access** → **Logs** muestra
-   cada request a `api.rastro.pe` con IP, User-Agent, path, y
+   cada request a `api.rastro.fyi` con IP, User-Agent, path, y
    Allow/Deny.
 
 ## Rollback
@@ -140,7 +150,7 @@ Si algo se rompe (por ej. los secrets de Pages se pierden y la búsqueda
 deja de funcionar):
 
 1. **Corto plazo**: Cloudflare Zero Trust → **Access** → **Applications**
-   → `Rastro API (api.rastro.pe)` → toggle a **Disabled**. La API vuelve
+   → `Rastro API (api.rastro.fyi)` → toggle a **Disabled**. La API vuelve
    a estar abierta (como antes de este cambio).
 2. **Corto plazo #2**: en `wrangler.toml` no se tocó nada; los secrets
    en Pages están como **Encrypted** y se pueden re-ingresar manualmente
@@ -164,17 +174,17 @@ Cloudflare Access:
   Pages, ya está protegido por la CDN + WAF de Cloudflare y por el rate
   limit de la Function `/api/search` (AL3-17).
 - **No protege el MCP server local**. El MCP corre en tu máquina contra
-  `localhost:<port>` directamente, nunca toca `api.rastro.pe`. Si en el
+  `localhost:<port>` directamente, nunca toca `api.rastro.fyi`. Si en el
   futuro querés correr el MCP desde otra máquina apuntando a
-  `api.rastro.pe`, generás un Service Token adicional (`rastro-mcp` en el
+  `api.rastro.fyi`, generás un Service Token adicional (`rastro-mcp` en el
   dashboard) y lo configurás en el `.env` de esa máquina.
-- **No protege la ingestión ni los scripts de cron**. Esos corren en el
-  VPS o en tu laptop contra `localhost`, no contra el proxy público.
-- **No encripta los datos en tránsito entre el proxy nginx y las 14
-  APIs**. Eso es `http://127.0.0.1:<port>/` sin TLS — la red de
-  confianza del VPS. Si el VPS se compromete, el proxy queda como única
-  barrera; mitigable con `ufw`/`iptables` para que solo nginx pueda
-  hablar a los puertos 4000-4013 (no en alcance de este runbook).
+- **No protege la ingestión ni los scripts de cron**. Esos corren contra
+  Postgres/APIs locales en tu laptop, no contra el gateway público.
+- **No encripta los datos en tránsito entre el gateway Caddy y las 14
+  APIs**. Eso es `http://<app>.internal:8080/` sobre la red privada 6PN de
+  Fly.io — sin TLS, pero tampoco alcanzable desde fuera de la organización
+  Fly del proyecto. Si esa red se compromete, el gateway queda como única
+  barrera (no en alcance de este runbook).
 
 ## Cambios incluidos en este PR (referencia)
 
@@ -183,7 +193,7 @@ Cloudflare Access:
 | `apps/rastro-web/functions/types.d.ts` | Agrega `CF_ACCESS_CLIENT_ID` y `CF_ACCESS_CLIENT_SECRET` opcionales a `PagesEnv`. |
 | `apps/rastro-web/functions/api/search.ts` | Helper `cfAccessHeaders(env)` que agrega `CF-Access-Client-Id` y `CF-Access-Client-Secret` a los 3 fetch a APIs en vivo. |
 | `apps/rastro-web/functions/__tests__/cf-access-headers.test.ts` | Test que valida que los headers se envían cuando los 2 secrets están presentes, y NO se envían si falta alguno (dev local, config a medias). |
-| `apps/rastro-web/.env.production` | Limpia las 14 URLs de `api.rastro.pe` (eran código muerto en el bundle — filtraban el endpoint público a cualquiera con DevTools). Solo deja `VITE_PUBLIC_APIS_LIVE=false` y un comentario apuntando a este runbook. |
+| `apps/rastro-web/.env.production` | Limpia las 14 URLs de `api.rastro.pe` (eran código muerto en el bundle — filtraban el endpoint público a cualquiera con DevTools; PR #72, dominio pre-Fly.io). Solo deja `VITE_PUBLIC_APIS_LIVE=false` y un comentario apuntando a este runbook. |
 | `apps/rastro-web/.env.example` | Documenta el nuevo modelo en el header. |
 | `apps/rastro-web/.dev.vars.example` | Agrega `CF_ACCESS_CLIENT_ID` y `CF_ACCESS_CLIENT_SECRET` como placeholders opcionales. |
 | `apps/rastro-web/wrangler.toml` | Comentario en la sección de env vars apuntando a este runbook. |
