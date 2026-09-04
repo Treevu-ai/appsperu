@@ -46,7 +46,7 @@ const RATE_LIMIT_PER_MINUTE = 30;
  * por medio — cualquier 3xx se trata como fallo (cae al índice bundleado)
  * en vez de reenviar credenciales a un destino no verificado.
  */
-const ACCESS_PROTECTED_ORIGIN = "https://api.rastro.pe";
+const ACCESS_PROTECTED_ORIGIN = "https://api.rastro.fyi";
 
 import { checkRateLimit, clientIp, recordRateLimitExceeded } from "../lib/rate-limit.js";
 import searchIndex from "../../src/data/search-index.json" with { type: "json" };

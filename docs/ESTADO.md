@@ -366,6 +366,28 @@ avance (S/2,242.1M devengado / S/4,558.8M PIM), Gobiernos Locales 39.9%
 (S/1,092.5M / S/2,738.0M). Detalle completo en
 `docs/data-contracts/mef-presupuesto-ejecucion.md`.
 
+## Cloudflare Access activado en `api.rastro.fyi` (2026-09-04)
+
+Runbook `docs/API_ACCESS_PROTECTION.md` ejecutado de punta a punta: Application self-hosted
+(`api`, `api.rastro.fyi/*`), policy `Service Tokens only` (Action: Service Auth, selector
+Service Token → `rastro-search`) y Application activada. Verificado en vivo:
+`curl -sI https://api.rastro.fyi/radar-ejecucion/health` → `403` sin token, `200` con los
+headers `CF-Access-Client-Id`/`CF-Access-Client-Secret` del Service Token `rastro-search`.
+
+**Pendiente de renovación**: Service Token `rastro-search` expira **2027-09-04** (duración 1
+año). Client ID `e52e02146951f873594278eb5750e4b3.access` — el Client Secret ya está en los
+2 secrets de Cloudflare Pages (proyecto `rastro`, Production: `CF_ACCESS_CLIENT_ID` /
+`CF_ACCESS_CLIENT_SECRET`), no se repite acá.
+
+Bug encontrado y corregido en el mismo pase (aún sin mergear, rama `feat/fly-io-api-rastro-fyi`,
+PR #73): `functions/api/search.ts` tenía `ACCESS_PROTECTED_ORIGIN` hardcodeado a
+`https://api.rastro.pe` (dominio pre-Fly.io) — con Access ya activo, la Function nunca habría
+adjuntado el Service Token a `api.rastro.fyi` y la búsqueda en vivo habría caído siempre al
+índice bundleado sin avisar. Corregido a `api.rastro.fyi`, junto con las 3
+`VITE_API_BASE_URL_*` que faltaban por completo (ni en el dashboard de Pages ni en
+`wrangler.toml` de la raíz — la Function nunca tuvo `baseUrl` para intentar la llamada en vivo).
+Tests de `cf-access-headers.test.ts` actualizados al nuevo origin, 6/6 verdes.
+
 ## Pendientes conocidos (no bloqueantes, para cuando se retome)
 
 1. ~~`ceplan-estrategico`: modelo per-entidad~~ — **bloqueado por fuente**: ObservaPerú solo trae agregados por nivel de gobierno; `GET /api/meta/aplicativo` y `npm run probe:aplicativo` verifican en vivo si Aplicativo CEPLAN V.01 vuelve a exponer PEI/POI per-pliego. Tablas `strategic_objectives`/`strategic_actions`/`poi_activities`/`physical_targets` siguen vacías por diseño.

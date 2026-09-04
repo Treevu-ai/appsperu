@@ -75,9 +75,9 @@ describe("GET /api/search — Cloudflare Access (Service Token) headers", () => 
     const recorder = mockFetchWithRecorder();
     const { onRequestGet } = await import("../api/search.js");
     const ctx = makeContext("demo", {
-      VITE_API_BASE_URL_IDENTIDAD_FISCAL: "https://api.rastro.pe/identidad-fiscal",
-      VITE_API_BASE_URL_RADAR_INVERSIONES: "https://api.rastro.pe/radar-inversiones",
-      VITE_API_BASE_URL_INFOBRAS: "https://api.rastro.pe/infobras",
+      VITE_API_BASE_URL_IDENTIDAD_FISCAL: "https://api.rastro.fyi/identidad-fiscal",
+      VITE_API_BASE_URL_RADAR_INVERSIONES: "https://api.rastro.fyi/radar-inversiones",
+      VITE_API_BASE_URL_INFOBRAS: "https://api.rastro.fyi/infobras",
       CF_ACCESS_CLIENT_ID: "test-client-id-abc.access",
       CF_ACCESS_CLIENT_SECRET: "test-client-secret-xyz",
     }) as unknown as PagesEventContext;
@@ -116,7 +116,7 @@ describe("GET /api/search — Cloudflare Access (Service Token) headers", () => 
     const recorder = mockFetchWithRecorder();
     const { onRequestGet } = await import("../api/search.js");
     const ctx = makeContext("demo", {
-      VITE_API_BASE_URL_IDENTIDAD_FISCAL: "https://api.rastro.pe/identidad-fiscal",
+      VITE_API_BASE_URL_IDENTIDAD_FISCAL: "https://api.rastro.fyi/identidad-fiscal",
       CF_ACCESS_CLIENT_ID: "test-client-id-only.access",
       // CF_ACCESS_CLIENT_SECRET omitido a propósito
     }) as unknown as PagesEventContext;
@@ -129,12 +129,12 @@ describe("GET /api/search — Cloudflare Access (Service Token) headers", () => 
     }
   });
 
-  it("NO envía los headers ni la request si baseUrl no es exactamente https://api.rastro.pe, aunque los secrets estén configurados", async () => {
+  it("NO envía los headers ni la request si baseUrl no es exactamente https://api.rastro.fyi, aunque los secrets estén configurados", async () => {
     const recorder = mockFetchWithRecorder();
     const { onRequestGet } = await import("../api/search.js");
     const ctx = makeContext("demo", {
       // Origin parecido pero no exacto — typo o config a medias.
-      VITE_API_BASE_URL_IDENTIDAD_FISCAL: "https://api.rastro.pe.evil.example/identidad-fiscal",
+      VITE_API_BASE_URL_IDENTIDAD_FISCAL: "https://api.rastro.fyi.evil.example/identidad-fiscal",
       CF_ACCESS_CLIENT_ID: "test-client-id-abc.access",
       CF_ACCESS_CLIENT_SECRET: "test-client-secret-xyz",
     }) as unknown as PagesEventContext;
