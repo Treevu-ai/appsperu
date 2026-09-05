@@ -1,0 +1,21 @@
+{
+  "name": "@appsperu/shared-queries",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Fragmentos SQL compartidos entre apps que consultan `budget_execution` de radar-ejecucion — consolidado de 5 copias idénticas de LATEST_BUDGET_CTE (ver docs/adr/0019-alcance-workspace-utilidades-compartidas.md, CX-08).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.3",
+    "vitest": "^4.1.10"
+  }
+}

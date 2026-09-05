@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { LATEST_BUDGET_CTE } from "@appsperu/shared-queries";
 import { pool } from "../db/pool.js";
 import { ejecucionPool } from "../db/ejecucion-pool.js";
 import { asyncHandler } from "../lib/async-handler.js";
@@ -46,11 +47,7 @@ crossrefRouter.get(
     );
 
     const { rows: regionalRows } = await ejecucionPool.query<{ pim: string; devengado: string }>(
-      `WITH latest_budget AS (
-         SELECT DISTINCT ON (entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, '')) *
-         FROM budget_execution
-         ORDER BY entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, ''), fecha_corte DESC, id DESC
-       )
+      `${LATEST_BUDGET_CTE}
        SELECT COALESCE(SUM(b.pim), 0) AS pim, COALESCE(SUM(b.devengado), 0) AS devengado
        FROM latest_budget b
        JOIN entities e ON e.entity_code = b.entity_code
@@ -65,11 +62,7 @@ crossrefRouter.get(
       devengado: string;
       entidades: string;
     }>(
-      `WITH latest_budget AS (
-         SELECT DISTINCT ON (entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, '')) *
-         FROM budget_execution
-         ORDER BY entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, ''), fecha_corte DESC, id DESC
-       )
+      `${LATEST_BUDGET_CTE}
        SELECT COALESCE(SUM(b.pim), 0) AS pim, COALESCE(SUM(b.devengado), 0) AS devengado,
               COUNT(DISTINCT b.entity_code) AS entidades
        FROM latest_budget b

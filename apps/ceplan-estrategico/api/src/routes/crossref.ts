@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { LATEST_BUDGET_CTE } from "@appsperu/shared-queries";
 import { pool } from "../db/pool.js";
 import { ejecucionPool } from "../db/ejecucion-pool.js";
 import { asyncHandler } from "../lib/async-handler.js";
@@ -49,11 +50,7 @@ crossrefRouter.get(
       : [];
     const { rows: radarRows } = anioRadarEjecucion
       ? await ejecucionPool.query(
-          `WITH latest_budget AS (
-             SELECT DISTINCT ON (entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, '')) *
-             FROM budget_execution
-             ORDER BY entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, ''), fecha_corte DESC, id DESC
-           )
+          `${LATEST_BUDGET_CTE}
            SELECT e.nivel_gobierno, SUM(b.pim) AS pim, SUM(b.devengado) AS devengado
            FROM latest_budget b
            JOIN entities e ON e.entity_code = b.entity_code

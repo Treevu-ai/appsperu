@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { LATEST_BUDGET_CTE } from "@appsperu/shared-queries";
 import { pool } from "../db/pool.js";
 import { radarPool } from "../db/radar-pool.js";
 import { asyncHandler } from "../lib/async-handler.js";
@@ -47,11 +48,7 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
 
   const [devengadoResult, comprasResult] = await Promise.all([
     radarPool.query(
-      `WITH latest_budget AS (
-         SELECT DISTINCT ON (entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, '')) *
-         FROM budget_execution
-         ORDER BY entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, ''), fecha_corte DESC, id DESC
-       )
+      `${LATEST_BUDGET_CTE}
        SELECT entity_code, SUM(devengado) AS devengado, array_agg(DISTINCT fecha_corte) AS cortes
        FROM latest_budget
        WHERE entity_code = ANY($1)

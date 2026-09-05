@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { LATEST_BUDGET_CTE } from "@appsperu/shared-queries";
 import { ejecucionPool } from "../db/ejecucion-pool.js";
 import { infobrasPool } from "../db/infobras-pool.js";
 import { inversionesPool } from "../db/inversiones-pool.js";
@@ -41,11 +42,7 @@ scoreRouter.get("/", asyncHandler(async (req, res) => {
 
   // 1. Universo de entidades + ejecución presupuestal (radar-ejecucion, fuente primaria).
   const { rows: entityRows } = await ejecucionPool.query(
-    `WITH latest_budget AS (
-       SELECT DISTINCT ON (entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, '')) *
-       FROM budget_execution
-       ORDER BY entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, ''), fecha_corte DESC, id DESC
-     )
+    `${LATEST_BUDGET_CTE}
      SELECT e.entity_code, e.nombre, SUM(b.pim) AS pim, SUM(b.devengado) AS devengado
      FROM entities e
      JOIN territories t ON t.ubigeo = e.ubigeo
