@@ -64,6 +64,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
   ],
   infobras: [
     "infobras_crossref",
+    "infobras_crossref_ejecucion",
     "infobras_public_work_by_codigo",
     "infobras_public_works",
     "infobras_public_works_resumen",
