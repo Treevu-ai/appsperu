@@ -34,6 +34,7 @@ Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tie
 1. Cuenta Cloudflare con acceso al proyecto `rastro`.
 2. Repositorio `Treevu-ai/appsperu` con la carpeta `apps/rastro-web/`.
 3. Las 14 APIs accesibles vía proxy en el VPS (`https://api.rastro.pe/<app>`). Runbook: **`docs/API_PROXY_DEPLOY.md`**.
+4. (Opcional pero recomendado) `api.rastro.pe` protegido con Cloudflare Access — ver **`docs/API_ACCESS_PROTECTION.md`**. Sin este paso, las 14 APIs están abiertas a internet (cualquiera puede descubrirlas por el certificado SSL).
 
 ```bash
 # En el VPS (149.104.66.100)
@@ -140,6 +141,29 @@ Para no perder SEO de enlaces antiguos:
 1. Cloudflare Pages → proyecto viejo `alsolperu` → **Settings** → **Custom domains / redirects** → crear un **bulk redirect** (`301`) desde `alsolperu.pages.dev/*` a `https://rastro.fyi/$1`. Cloudflare lo soporta nativamente.
 2. (Opcional) Google Search Console → **Change of Address** tool, si `alsolperu.pages.dev` estaba indexado.
 
+### 6. Rate limit del buscador (KV namespace) — AL3-11/AL3-17
+
+`/api/search` y `/api/rate-limit-stats` (`apps/rastro-web/functions/`) son **Cloudflare Pages Functions** — código server-side que corre en el edge de Cloudflare, no en el navegador. Necesitan un namespace de KV para contar requests por IP. Este namespace **no se puede crear por API/dashboard automatizado desde este repo** (requiere tu sesión de `wrangler` o el dashboard) — un solo paso manual, una sola vez:
+
+1. Desde `apps/rastro-web/`, con `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` ya configurados (mismos del paso 3) o logueado con `npx wrangler login`:
+   ```bash
+   npx wrangler kv namespace create RATE_LIMIT
+   ```
+   Devuelve algo como:
+   ```
+   { binding = "RATE_LIMIT", id = "abcd1234..." }
+   ```
+2. Copia ese `id` y reemplaza el placeholder en `apps/rastro-web/wrangler.toml`:
+   ```toml
+   [[kv_namespaces]]
+   binding = "RATE_LIMIT"
+   id = "abcd1234..."   # el id real, no el placeholder
+   ```
+3. Si el deploy usa **Git deploy de Cloudflare Pages** (no `wrangler pages deploy` desde CI) en algún momento, el binding también debe declararse en el dashboard: Cloudflare → **Pages** → `rastro` → **Settings** → **Functions** → **KV namespace bindings** → agregar `RATE_LIMIT` → el mismo namespace del paso 1. El deploy actual vía `wrangler pages deploy` (workflow `rastro-web-deploy.yml`, opción A de la sección 3) lee el binding directo de `wrangler.toml`, así que este paso 3 es solo necesario si cambia el mecanismo de deploy.
+4. Local: `npx wrangler pages dev dist` simula el KV automáticamente (no necesita el `id` real para desarrollo local — solo para `wrangler pages deploy`). `npm run dev`/`vite` normal **no** sirve las Functions; para probarlas localmente hay que buildear (`npm run build`) y correr `wrangler pages dev dist`.
+
+Sin este namespace configurado, `/api/search` devuelve un error 500 al intentar `env.RATE_LIMIT.get(...)` — el rate limit no tiene modo "deshabilitado silenciosamente", falla fuerte para no publicar un buscador sin protección alguna.
+
 ---
 
 ## Workflows de GitHub Actions
@@ -149,9 +173,24 @@ Hay 2 workflows en `.github/workflows/`:
 | Workflow | Trigger | Acción |
 |---|---|---|
 | `rastro-web-ci.yml` | PR + push a master | typecheck + lint:meta + test + build (CI checks) |
-| `rastro-web-deploy.yml` | push a master + `workflow_dispatch` + **cron miércoles 12:00 UTC** | CI + curl al Deploy Hook → Cloudflare rebuild |
+| `rastro-web-deploy.yml` | push a master + `workflow_dispatch` + **cron miércoles 12:00 UTC** | CI + deploy vía `wrangler pages deploy` (opción A); cae a Deploy Hook (opción B) solo si faltan los secrets de wrangler |
 
 El **cron semanal** (`0 12 * * 3`) refresca el build cada miércoles a las 07:00 hora Perú para arrastrar los datos más recientes de las 14 APIs (ingestas diarias/semanales).
+
+`rastro-web-ci.yml` tiene 2 jobs: `ci` (typecheck + lint:meta + unit + build) y `e2e` (AL3-14, Playwright — ver abajo).
+
+### E2E local (AL3-14 — "JSON de API = JSON renderizado")
+
+La suite (`apps/rastro-web/e2e/*.spec.ts`) corre contra `vite preview` (build de producción), no contra `vite dev` — y **no depende de Postgres ni de las 14 APIs corriendo**: cada test intercepta las llamadas HTTP con `page.route` usando fixtures fijas en `e2e/fixtures/`, y compara el HTML renderizado contra el valor exacto de la fixture. Determinista en CI, no depende de datos reales que cambian.
+
+```bash
+cd apps/rastro-web
+npx playwright install chromium   # una sola vez
+npm run e2e                        # corre playwright.config.ts (build + preview + tests)
+npx playwright show-report         # abre el reporte HTML si algo falló
+```
+
+No confundir con las Pages Functions (`functions/`, sección 6 arriba): el E2E prueba páginas client-side (ficha de sector, proveedor, distrito), no `/api/search`. Si en el futuro se agrega E2E para el buscador, necesitará `wrangler pages dev dist` en vez de `vite preview`, porque las Functions no corren bajo `vite preview`.
 
 ### Disparar un redeploy manual
 
@@ -166,7 +205,7 @@ Cloudflare Pages sirve los archivos `public/` directamente en la raíz. No requi
 - `public/robots.txt` — permite indexar todo y declara el `Sitemap:`.
 - `public/sitemap.xml` — incluye las rutas públicas.
 - `public/llms.txt` — descripción del sitio para LLM crawlers (ChatGPT, Perplexity, Claude).
-- `index.html` — JSON-LD con `Organization`, `WebSite` y `SoftwareApplication` (este último para que AI crawlers descubran el MCP server con sus 82 tools).
+- `index.html` — JSON-LD con `Organization`, `WebSite` y `SoftwareApplication` (este último para que AI crawlers descubran el MCP server con sus 83 tools).
 - `index.html` — `<link rel="canonical">` apunta a `https://rastro.fyi/`.
 
 ---

@@ -261,20 +261,51 @@ observatoryRouter.get("/signals/:id", asyncHandler(async (req, res) => {
   res.json({ signal: signal.rows[0], evidence: evidence.rows, reviews: reviews.rows, limitation: "Esta señal identifica un patrón que merece revisión. No determina corrupción, favorecimiento, fraccionamiento ni incumplimiento." });
 }));
 
+/**
+ * ADR-0016 (docs/adr/0016-automatizacion-conectores-nucleo-evaluacion.md),
+ * recomendación 1: "última ingesta exitosa" con fecha, filas
+ * aceptadas/rechazadas y batch id — bajo costo, hace visible el problema de
+ * frescura sin automatizar nada. Extiende este endpoint ya existente (no se
+ * crea uno paralelo) con `latestBatchId` y `rejectedInLatestBatch` por
+ * fuente. `seace_contratos_menores` reporta `rejectedInLatestBatch: null`
+ * (no `0`) porque sus conectores (`legacy-seace-orders-connector.ts`,
+ * `seace-public-minor-contracts-connector.ts`) descartan filas por contador
+ * en memoria (`excludedWithoutSupplier`/`excludedOverLimit`), sin una tabla
+ * `*_rejected` persistida como sí tiene `oece_ocds` vía `awards_rejected` —
+ * `null` distingue "no trackeado" de "cero rechazos reales".
+ */
 observatoryRouter.get("/meta/freshness", asyncHandler(async (_req, res) => {
   const { rows } = await pool.query(
-    `SELECT 'oece_ocds' AS source,MAX(fetched_at) AS fetched_at,COALESCE(SUM(record_count),0)::integer AS records,
+    `WITH latest_oece AS (
+       SELECT id, fetched_at FROM raw_ocds_batches ORDER BY fetched_at DESC LIMIT 1
+     ), latest_seace AS (
+       SELECT id, fetched_at FROM raw_minor_contract_batches ORDER BY fetched_at DESC LIMIT 1
+     )
+     SELECT 'oece_ocds' AS source,
+            (SELECT fetched_at FROM latest_oece) AS fetched_at,
+            COALESCE((SELECT SUM(record_count) FROM raw_ocds_batches),0)::integer AS records,
+            (SELECT id FROM latest_oece) AS latest_batch_id,
+            (SELECT COUNT(*)::int FROM awards_rejected ar WHERE ar.source_batch_id = (SELECT id FROM latest_oece)) AS rejected_in_latest_batch,
             'Páginas recientes; cobertura parcial según la corrida.' AS coverage
-       FROM raw_ocds_batches
      UNION ALL
-     SELECT 'seace_contratos_menores' AS source,MAX(fetched_at) AS fetched_at,COALESCE(SUM(record_count),0)::integer AS records,
+     SELECT 'seace_contratos_menores' AS source,
+            (SELECT fetched_at FROM latest_seace) AS fetched_at,
+            COALESCE((SELECT SUM(record_count) FROM raw_minor_contract_batches),0)::integer AS records,
+            (SELECT id FROM latest_seace) AS latest_batch_id,
+            NULL AS rejected_in_latest_batch,
             'Buscador público observado; contratos menores materializados para el alcance seleccionado.' AS coverage
-       FROM raw_minor_contract_batches
      ORDER BY source`,
   );
   res.json({
-    sources: rows.map((row) => ({ source: row.source, fetchedAt: row.fetched_at, records: Number(row.records), coverage: row.coverage })),
-    limitation: "La fecha de extracción, el periodo de los datos y la cobertura no son equivalentes. Revise el contrato de datos antes de comparar fuentes.",
+    sources: rows.map((row) => ({
+      source: row.source,
+      fetchedAt: row.fetched_at,
+      records: Number(row.records),
+      latestBatchId: row.latest_batch_id === null ? null : Number(row.latest_batch_id),
+      rejectedInLatestBatch: row.rejected_in_latest_batch === null ? null : Number(row.rejected_in_latest_batch),
+      coverage: row.coverage,
+    })),
+    limitation: "La fecha de extracción, el periodo de los datos y la cobertura no son equivalentes. Revise el contrato de datos antes de comparar fuentes. `rejectedInLatestBatch: null` significa que esa fuente no trackea rechazos por lote persistido, no que no haya rechazos.",
   });
 }));
 

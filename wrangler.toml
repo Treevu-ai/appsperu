@@ -10,3 +10,13 @@ compatibility_date = "2025-09-01"
 [assets]
 directory = "./apps/rastro-web/dist"
 not_found_handling = "single-page-application"
+
+# Variables públicas (no-secretas) que consume functions/api/search.ts para
+# llamar a las 3 APIs de búsqueda en vivo, protegidas por Cloudflare Access
+# detrás del gateway Fly.io (ver docs/API_ACCESS_PROTECTION.md). El
+# dashboard de Pages solo permite gestionar Secrets desde su UI para este
+# proyecto — las variables de texto plano se toman de este archivo.
+[vars]
+VITE_API_BASE_URL_IDENTIDAD_FISCAL = "https://api.rastro.fyi/identidad-fiscal"
+VITE_API_BASE_URL_RADAR_INVERSIONES = "https://api.rastro.fyi/radar-inversiones"
+VITE_API_BASE_URL_INFOBRAS = "https://api.rastro.fyi/infobras"

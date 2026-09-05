@@ -1,8 +1,49 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-09-01.
+Última actualización: 2026-09-02.
 
 Doce apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+
+## Dashboard INFOBRAS + tema Cursor + diagnóstico UX + corte semanal explícito (2026-09-02)
+
+**Dashboard de señales INFOBRAS (PR #63)**: `/distrito/:ubigeo` ganó columnas de Cost Drift y Gap físico-financiero (`resumenObras` calculado en cliente); nueva ruta `/auditoria/entidades-infobras` para el crosswalk MEF↔INFOBRAS con filtro por nivel de confianza. De paso se encontró y corrigió un bug real preexistente: `PublicWork`/`PublicWorksResponse` en `api-client.ts` tenían un shape inventado (`descripcion`/`entidad`/`estado`/`paralizada`/`avanceFisicoPct`, envoltorio `items`) que nunca coincidió con la respuesta real de `apps/infobras/api/src/routes/public-works.ts` — corregido al shape real (`resultados`, `costDriftPct`, `gapFisicoFinanciero`, etc.).
+
+**Sistema de diseño Cursor light (PR #64)**: remap completo de tokens `@theme` en `index.css` (canvas crema `#f7f7f4`, acento naranja `#f54e00`, sin sombras, tipografía Inter/JetBrains Mono cargada de verdad por primera vez — antes los `font-family` declarados nunca se cargaban, siempre caían a fallback del sistema). Un solo archivo re-temató las ~30 rutas/componentes existentes sin tocarlos, porque el 100% del theming de color ya pasaba por esos tokens (verificado por grep: cero hex/rgba hardcodeados fuera de `index.css`).
+
+**Lenguaje simple en la landing + fixes responsivos (PR #65)**: reescritura completa de "El problema", "Cómo funciona", "Capacidades" y "Para quién" en `Home.tsx`/`components/home/*` para un público sin conocimiento técnico (sin PIA/PIM/devengado, sin JSON crudo — "Para agentes IA" se mantuvo técnico a propósito). Bug sistémico encontrado y corregido en 7 archivos: una `<table className="w-full">` sin `min-w-[...]` rompe `overflow-x-auto` en mobile aunque el wrapper exista — afectaba incluso tablas construidas en esta misma sesión.
+
+**Diagnóstico UX/UI del sitio en vivo + fixes (PR #67)**: revisión de `rastro.fyi` en producción encontró 6 problemas. El más grave — el CTA principal del hero llevaba a un error porque las APIs no están publicadas — quedó fuera de este PR (requería una solución de arquitectura, ver abajo). Se corrigieron los otros 4 accionables de inmediato: `Proveedor.tsx` quedaba en blanco sin ningún mensaje cuando las 3 APIs fallaban (`Promise.allSettled` nunca rechaza — bug real, no solo copy); `/buscar` filtraba puertos de desarrollo local (`:4000`...) al público en producción; lenguaje técnico en `/buscar` fuera de tono con el resto de la landing ya simplificada; mensaje "datos no disponibles" con tono de disculpa técnica como primera línea que ve cualquier visitante.
+
+**Corte semanal explícito (PRs #66, #68, #69)** — resuelve el hallazgo más grave del diagnóstico UX: en vez de exponer las 14 APIs en vivo (no publicadas hoy), se publica semanalmente una foto (corte) de los datos, generada por el cron ya existente (`scripts/seguimiento-semanal-territorial.ps1`, miércoles 8am hora Perú — PR #66 corrige que hacía `git pull` de una rama ya borrada). Arquitectura (PR #68): un solo punto de intercepción, `requestJson()` en `api-client.ts`, que ahora busca en `src/data/snapshot.json` (bundleado en el build) antes de fallar — no hizo falta tocar las 19 funciones exportadas del cliente. `export-snapshot.mjs` (nuevo) enumera el espacio finito de consultas que la UI realmente usa. `DataFreshnessBar` pasó de decir "datos en vivo no están en la web pública" a "Datos al `<fecha>` — corte semanal, no en vivo", leyendo el corte bundleado sin llamada de red.
+
+Quedaron 2 excepciones documentadas en el PR #68 (`Proveedor.tsx` por RUC, `Buscar.tsx` texto libre — espacio de input no finito) y se cerraron en el PR #69: `export-snapshot.mjs` gana una fase 2 que deriva el universo real de RUCs de la respuesta *sin filtro* de `compras-publicas/suppliers` (una sola llamada nacional, no el padrón completo de SUNAT de ~373MB/millones de RUCs) y precalcula identidad + sanciones de cada uno. `functions/api/search.ts` (Cloudflare Pages Function, código server-side separado de `api-client.ts`) gana un fallback a un índice de búsqueda bundleado (`search-index.json`, mismos datos ya descargados) cuando sus 3 fuentes en vivo no responden, con `corteUsado` expuesto en la respuesta para que la UI sea honesta sobre el origen del dato.
+
+**Nota operativa**: por ahora `snapshot.json`/`search-index.json` siguen en su placeholder vacío (`corte: null`) — el primer corte real lo genera la corrida del cron del miércoles 9 de septiembre, que abre un PR para revisión antes de publicarse (nunca push directo a `master`).
+
+## `rastro-web` 20/20 tickets AL3-* + pipeline de deploy verde de punta a punta + MCP crossref INFOBRAS (2026-09-02)
+
+**Cierre de los 20 tickets AL3-\* de `docs/TICKETS_Rastro_Capa_Lectura_v1.md`** (la auditoría del 2026-08-31 había encontrado 6 hechos, 9 parciales, 5 pendientes). PR #54 cerró AL3-08/10/11/14/17/20 (catálogo PNDA, ranking de proveedores, búsqueda + rate limit, suite E2E Playwright, integridad de infraestructura, smoke test). PR #57 cerró los 6 restantes:
+
+- **AL3-02**: las 9 apps que solo tenían health-check ahora tienen función de datos tipada en `api-client.ts` (radar-inversiones, ceplan-estrategico, ceplan-geo, salud-institucional, actividad-agraria, seguridad-ciudadana, bcrp-comercio-exterior, inversion-privada, bcrp-la-libertad) — las 14 apps quedan cubiertas.
+- **AL3-03**: `<DataFreshnessBar>` ahora abre un modal (`components/Modal.tsx`, `<dialog>` nativo, sin librería) con la lista completa de `meta_sources`.
+- **AL3-07**: botón "Citar Rastro" con modal in-page en `/proveedor/:ruc`.
+- **AL3-09**: `/distrito/:ubigeo` resuelve el distrito exacto vía `ceplan_geo_territories` (el UBIGEO completo) y filtra en el cliente tanto `infobras_public_works` como el nuevo fetch en paralelo a `radar_ejecucion_infrastructure_assets` — ninguno de los dos backends filtra por distrito, solo por departamento.
+- **AL3-12**: `/estado` hace refresh automático cada 60s.
+- **AL3-15**: `/docs/api` se genera en build-time (`scripts/generate-mcp-catalog.mjs` parsea `mcp-server/src/catalog.ts` por regex, sin arrastrar zod/el workspace de mcp-server al build de rastro-web) en vez de mantener una copia manual de los 82 tools a mano.
+
+**AL3-18 cerrado por separado (PR #58)**: `rastro-web-deploy.yml` no corría la suite E2E antes de desplegar. Se agregó el gate — corre ANTES del build de producción a propósito (el `webServer` de Playwright hace su propio build con URLs de prueba; si corriera después pisaría el `dist/` real que usa `.env.production`).
+
+**Bug real de CI encontrado y corregido, dos veces**: el job `e2e` de `rastro-web-ci.yml` **nunca había pasado en CI** desde que existe (PR #54 en adelante) — pasaba en local (40/40, 10/10) pero fallaba 0/10 en GitHub Actions. Causa: el comentario del workflow asumía "los valores de las URLs no importan porque `page.route` intercepta todo" — falso. Vite build usa `process.env` por encima de `.env.production` (así es como `loadEnv` de Vite prioriza), así que el job sí construye con esos valores falsos. Los `page.route("**/<app>/api/...")` de `e2e/*.spec.ts` necesitan el literal `/<app>/api/` en la URL — funciona con la convención real de producción (`https://api.rastro.pe/<app>`, un host + path por app) pero no con un host distinto por app (`https://infobras.example.test/api/x` no contiene `/infobras/api/x`). Corregido en `rastro-web-ci.yml` (PR #57) y replicado en `rastro-web-deploy.yml` (PR #58) con el mismo patrón path-based.
+
+**KV namespace `RATE_LIMIT` sin crear bloqueaba todo deploy a producción desde PR #54** (`wrangler.toml` tenía el placeholder `REEMPLAZAR_CON_EL_ID_DEL_NAMESPACE_KV`, `Error 8000022: Invalid KV namespace ID`) — nadie lo había notado porque el job `e2e` fallaba antes de llegar al deploy. Ricardo creó el namespace (`npx wrangler kv namespace create RATE_LIMIT`) y se actualizó `wrangler.toml` con el id real (PR #59).
+
+**Bug de configuración en el dashboard de Cloudflare Pages** (no en el repo): el check "Cloudflare Pages" de los PRs empezó a fallar en el PR #60 — Cloudflare cambió a "v2 root directory strategy" (cambio de su lado), y el "Build output directory" del proyecto (`dist`, no editable desde el dashboard en este proyecto) dejó de coincidir con dónde realmente cae el build (`apps/rastro-web/dist`, porque el "Build command" configurado usa `npm --prefix apps/rastro-web`). Como el campo de output directory no era editable, se ajustó el **Build command** para mover el resultado al final: `... && rm -rf dist && mv apps/rastro-web/dist dist`. Sin esto, ni los PR previews de Cloudflare ni el deploy real a producción hubieran podido servir un build actualizado, aunque el `wrangler pages deploy` de `rastro-web-deploy.yml` seguía funcionando bien (usa `apps/rastro-web/dist` directo, no pasa por esta configuración del dashboard).
+
+**Auditoría del PRD de 6 sprints de INFOBRAS retomada parcialmente** (ver pendiente #3 de abajo, corregido): la mayoría de lo que `docs/adr/0002-infobras-app-standalone-y-cruce-por-cui.md` marcaba como "fuera de alcance" en realidad ya estaba construido en el backend — señales Cost Drift/Gap físico-financiero/Paralización y el crosswalk INFOBRAS↔radar-ejecucion por nombre con niveles de confianza (`confirmada`/`candidata`, `GET /api/crossref/ejecucion`), todo probado. El único gap real era que ese endpoint nunca se agregó al catálogo MCP — PR #60 agrega `infobras_crossref_ejecucion` (83 tools totales). De paso se corrigió un bug en `generate-mcp-catalog.mjs`: no parseaba `querySchema` de una sola línea (ej. `{ confidence: z.enum([...]).optional() }`), devolvía `queryParams: []` aunque sí tuviera parámetros.
+
+**Verificación end-to-end confirmada en producción**: después de los PR #57–#60, un push a `master` corrió el pipeline completo (typecheck → lint-meta → unit → **E2E 10/10** → build → deploy Cloudflare Pages) en verde de punta a punta por primera vez — confirmado con `gh run view` contra el run real, no solo localmente.
+
+**Pendiente real que queda** (no urgente, ver pendiente #3 actualizado abajo): un dashboard en `rastro-web` que muestre visualmente las señales de INFOBRAS (Cost Drift, Gap físico-financiero, crosswalk de confianza) — hoy `/distrito/:ubigeo` solo muestra descripción/entidad/estado/avance físico, sin las señales. `docs/adr/0002-infobras-app-standalone-y-cruce-por-cui.md` también sigue sin actualizarse (todavía dice "fuera de alcance" sobre cosas que ya están hechas).
 
 ## `rastro.fyi` 522 + canonical `www` + UI mobile de `rastro-web` + limpieza de repo + dossier La Libertad (2026-09-01)
 
@@ -21,6 +62,19 @@ Doce apps standalone con API propia; todas son API-only (sin frontend web), salv
 - **Custom domain `rastro.fyi`** conectado al proyecto Cloudflare Pages `rastro` (PR #40): metadatos SEO/GEO (`index.html`, `robots.txt`, `sitemap.xml`, `llms.txt`, `citar-rastro.md`) apuntan a `rastro.fyi` como URL canónica; `rastro-5zm.pages.dev` (alias real del proyecto — no `rastro.pages.dev`, que ya estaba tomado) queda como fallback. Requirió CNAME manual en el DNS de `rastro.fyi` porque esa zona no vive en la misma cuenta/proyecto Cloudflare — el custom domain no se auto-configuró. Pasos documentados en `apps/rastro-web/DEPLOY.md` §4.
 - **Auditoría de código vs. backlog**: `docs/TICKETS_Rastro_Capa_Lectura_v1.md` y `docs/BACKLOG_Rastro_Capa_Lectura_No_Tecnicos_v1.md` describían un plan pre-build (Sprints 11-14) que nunca se actualizó contra lo que realmente se construyó. Se contrastó ticket por ticket contra `apps/rastro-web/src`: de los 20 tickets AL3-*, **6 hechos, 9 parciales, 5 pendientes**. Huecos más relevantes: 8 de las 14 apps backend no tienen función de datos en `api-client.ts` (solo health-check genérico); sin suite E2E (Playwright) pese a que el CI la asume; búsqueda libre en `/buscar` explícitamente no implementada; sin ranking de proveedores (`/prensa/proveedores`) ni integridad de infraestructura (`/distrito/:ubigeo/integridad`); sin rate limit; sin reporte de smoke test firmado. Detalle ticket por ticket en la tabla "Estado real" al inicio de `docs/TICKETS_Rastro_Capa_Lectura_v1.md`.
 - El pendiente #7 de abajo (`CLOUDFLARE_DEPLOY_HOOK_URL`) sigue sin resolverse — no forma parte de esta sesión.
+
+## Corrección — pendiente #7 (`CLOUDFLARE_DEPLOY_HOOK_URL`) ya estaba resuelto (2026-09-02)
+
+Al retomar este pendiente se encontró que estaba desactualizado: los secrets `CLOUDFLARE_API_TOKEN`
+y `CLOUDFLARE_ACCOUNT_ID` **ya están configurados** en GitHub → Settings → Secrets and variables →
+Actions (agregados en algún momento después del 2026-08-31, sin que se actualizara esta bitácora).
+El paso "Deploy a Cloudflare Pages (wrangler)" de `rastro-web-deploy.yml` (opción A, preferida sobre
+el Deploy Hook) corre exitosamente desde entonces — verificado contra el historial real de
+`gh run list --workflow=rastro-web-deploy.yml`: última falla 2026-08-31 (antes de que se agregaran
+los secrets), 16 corridas exitosas seguidas después, incluyendo `schedule` (cron semanal) y
+`workflow_dispatch`. `CLOUDFLARE_DEPLOY_HOOK_URL` (opción B, fallback) sigue sin existir pero ya no
+hace falta — el workflow nunca llega a ese paso mientras el token de wrangler siga funcionando.
+Pendiente #7 se marca resuelto.
 
 ## Rename ALSOL → Rastro completado + alta de `rastro-web` (2026-08-29)
 
@@ -312,12 +366,34 @@ avance (S/2,242.1M devengado / S/4,558.8M PIM), Gobiernos Locales 39.9%
 (S/1,092.5M / S/2,738.0M). Detalle completo en
 `docs/data-contracts/mef-presupuesto-ejecucion.md`.
 
+## Cloudflare Access activado en `api.rastro.fyi` (2026-09-04)
+
+Runbook `docs/API_ACCESS_PROTECTION.md` ejecutado de punta a punta: Application self-hosted
+(`api`, `api.rastro.fyi/*`), policy `Service Tokens only` (Action: Service Auth, selector
+Service Token → `rastro-search`) y Application activada. Verificado en vivo:
+`curl -sI https://api.rastro.fyi/radar-ejecucion/health` → `403` sin token, `200` con los
+headers `CF-Access-Client-Id`/`CF-Access-Client-Secret` del Service Token `rastro-search`.
+
+**Pendiente de renovación**: Service Token `rastro-search` expira **2027-09-04** (duración 1
+año). Client ID `e52e02146951f873594278eb5750e4b3.access` — el Client Secret ya está en los
+2 secrets de Cloudflare Pages (proyecto `rastro`, Production: `CF_ACCESS_CLIENT_ID` /
+`CF_ACCESS_CLIENT_SECRET`), no se repite acá.
+
+Bug encontrado y corregido en el mismo pase (aún sin mergear, rama `feat/fly-io-api-rastro-fyi`,
+PR #73): `functions/api/search.ts` tenía `ACCESS_PROTECTED_ORIGIN` hardcodeado a
+`https://api.rastro.pe` (dominio pre-Fly.io) — con Access ya activo, la Function nunca habría
+adjuntado el Service Token a `api.rastro.fyi` y la búsqueda en vivo habría caído siempre al
+índice bundleado sin avisar. Corregido a `api.rastro.fyi`, junto con las 3
+`VITE_API_BASE_URL_*` que faltaban por completo (ni en el dashboard de Pages ni en
+`wrangler.toml` de la raíz — la Function nunca tuvo `baseUrl` para intentar la llamada en vivo).
+Tests de `cf-access-headers.test.ts` actualizados al nuevo origin, 6/6 verdes.
+
 ## Pendientes conocidos (no bloqueantes, para cuando se retome)
 
 1. ~~`ceplan-estrategico`: modelo per-entidad~~ — **bloqueado por fuente**: ObservaPerú solo trae agregados por nivel de gobierno; `GET /api/meta/aplicativo` y `npm run probe:aplicativo` verifican en vivo si Aplicativo CEPLAN V.01 vuelve a exponer PEI/POI per-pliego. Tablas `strategic_objectives`/`strategic_actions`/`poi_activities`/`physical_targets` siguen vacías por diseño.
 2. ~~Implementación de `ceplan-geo`~~ — **hecho (API-only, 2026-08-26)**. Ingesta extendida 2026-08-27: `cb_redhidricaprinx` (`ingest:hydro-principal`) e `ip_prysecagr` (`ingest:projects-sectorial`). `cb_redhidricax` sigue POSPONER (345k).
-3. El resto del PRD de INFOBRAS (sprints 1-6: MCP tools, resolución de identidad avanzada, dashboard consolidado) — quedó fuera de alcance de la rebanada construida.
+3. ~~El resto del PRD de INFOBRAS~~ — **hecho de punta a punta (2026-09-02)**: señales Cost Drift/Gap físico-financiero/Paralización, crosswalk INFOBRAS↔radar-ejecucion con niveles de confianza, tool MCP (`infobras_crossref_ejecucion`, PR #60), y el **dashboard consolidado** en `rastro-web` (PR #63) — `/distrito/:ubigeo` expone las señales, `/auditoria/entidades-infobras` expone el crosswalk. `docs/adr/0002-infobras-app-standalone-y-cruce-por-cui.md` actualizado para reflejarlo.
 4. ~~Ingestas parciales acotadas a La Libertad~~ — **mitigado (2026-08-27)**: defaults de `.env.example` y `DEFAULT_TERRITORIAL_SCOPE` apuntan solo a `LA LIBERTAD`; scripts `ingest:libertad` por app y orquestador `scripts/ingest-la-libertad-completo.sh` para cobertura verificada.
 5. ~~Migración a Next 16 + React 19~~ — **N/A**: frontends web eliminados; el proyecto es API-only.
 6. ~~BCRP comercio exterior~~ — **hecho (2026-08-27)**: app `bcrp-comercio-exterior` (API 4011) ingiere series nacionales `PN38714BM`–`PN38723BM`; sin desagregado departamental (`RD38*` sigue congelado en origen).
-7. **Secret `CLOUDFLARE_DEPLOY_HOOK_URL` sin crear** — `rastro-web-deploy.yml` (mergeado en PR #39) falla explícitamente en cada push/cron hasta que exista. Crear en Cloudflare → Pages → proyecto `rastro` → Settings → Builds → Deploy hooks, y cargarlo en GitHub → Settings → Secrets and variables → Actions. Detalle de por qué no se automatizó vía API en la sección de arriba (2026-08-29).
+7. ~~Secret `CLOUDFLARE_DEPLOY_HOOK_URL` sin crear~~ — **resuelto de otra forma (verificado 2026-09-02)**: nunca se creó el Deploy Hook, pero `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` sí se configuraron en algún punto, y el paso de `wrangler pages deploy` (preferido sobre el hook) corre en verde desde 2026-08-31. Ver sección "Corrección — pendiente #7" arriba.

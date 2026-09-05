@@ -7,7 +7,15 @@ import { defineConfig, loadEnv } from "vite";
 // debe tener un valor por defecto "razonable" para una URL de backend: si
 // falta, queremos que el build falle, no que la app levante apuntando a
 // localhost equivocado y muestre datos fantasma.
-const REQUIRED_ENV_KEYS = [
+//
+// Excepción: si `VITE_PUBLIC_APIS_LIVE=false` (modo snapshot, valor por
+// defecto en producción), la UI no llama a ninguna API desde el navegador
+// (ver src/lib/api-config.ts) — las URLs son innecesarias y se omiten de
+// .env.production para no filtrar el endpoint público de api.rastro.pe en
+// el bundle. La única llamada viva es la Cloudflare Function /api/search,
+// que lee las URLs desde variables de entorno del dashboard de Pages, no
+// desde el bundle del cliente.
+const REQUIRED_API_ENV_KEYS = [
   "VITE_API_BASE_URL_RADAR_EJECUCION",
   "VITE_API_BASE_URL_COMPRAS_PUBLICAS",
   "VITE_API_BASE_URL_RADAR_INVERSIONES",
@@ -24,14 +32,23 @@ const REQUIRED_ENV_KEYS = [
   "VITE_API_BASE_URL_BCRP_LA_LIBERTAD",
 ] as const;
 
+function apisPublishedForBuild(env: Record<string, string>): boolean {
+  // Misma semántica que src/lib/api-config.ts → apisPublishedForBrowser():
+  // si la flag es "false"/"0"/"no", la UI no publica APIs.
+  const live = String(env.VITE_PUBLIC_APIS_LIVE ?? "").toLowerCase();
+  return !(live === "false" || live === "0" || live === "no");
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "VITE_");
-  const missing = REQUIRED_ENV_KEYS.filter((key) => !env[key]);
-  if (missing.length > 0 && mode !== "test") {
-    throw new Error(
-      `[rastro-web] Faltan variables de entorno requeridas: ${missing.join(", ")}. ` +
-        `Copia .env.example a .env y completa los 14 puertos.`,
-    );
+  if (apisPublishedForBuild(env) && mode !== "test") {
+    const missing = REQUIRED_API_ENV_KEYS.filter((key) => !env[key]);
+    if (missing.length > 0) {
+      throw new Error(
+        `[rastro-web] VITE_PUBLIC_APIS_LIVE=true pero faltan variables de entorno: ${missing.join(", ")}. ` +
+          `O configura las 14 URLs en .env, o pon VITE_PUBLIC_APIS_LIVE=false para modo snapshot.`,
+      );
+    }
   }
 
   return {
@@ -46,12 +63,26 @@ export default defineConfig(({ mode }) => {
       sourcemap: true,
     },
     test: {
+      // Default "node" — tests/api-client.test.ts depende del AbortController/
+      // fetch nativos de Node para clasificar timeout vs. network (probado:
+      // cambiar el entorno global a "jsdom" hace que ese test falle, porque
+      // el fetch/AbortController de jsdom no lanza el mismo DOMException).
+      // Los tests de componentes (@testing-library/react, necesitan DOM)
+      // usan un override por archivo: `// @vitest-environment jsdom` como
+      // primera línea del archivo — ver src/components/catalog/__tests__/ y
+      // src/routes/__tests__/Catalogo.test.tsx. `jsdom` ya era devDependency
+      // sin usar hasta ahora (nunca había un test que renderizara un
+      // componente).
       environment: "node",
       globals: true,
       setupFiles: ["./src/test/setup.ts"],
       css: false,
       pool: "threads",
       testTimeout: 15_000,
+      // e2e/*.spec.ts son tests de Playwright (AL3-14), no de Vitest — sin
+      // esto, Vitest los recoge por el glob por defecto (*.spec.ts) y falla
+      // al intentar importar `test`/`expect` de @playwright/test.
+      exclude: ["**/node_modules/**", "**/dist/**", "e2e/**", "e2e-smoke/**"],
     },
   };
 });

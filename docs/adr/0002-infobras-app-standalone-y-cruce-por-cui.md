@@ -1,7 +1,7 @@
 # ADR 0002 — INFOBRAS como app standalone, parser propio y cruce por CUI
 
 - Estado: Aceptado
-- Fecha: 2026-08-16
+- Fecha: 2026-08-16 (actualizado 2026-09-02 — ver "Actualización" al final)
 - Ámbito: App 04 (INFOBRAS — obras públicas), su relación con las apps existentes.
 
 ## Contexto
@@ -26,8 +26,16 @@ proyecto ya sufrida entre radar-ejecucion y compras-publicas), Express propio co
 ### 2. Alcance recortado: una rebanada vertical, no el PRD completo
 
 Se construyó conector → schema → API → frontend con datos reales de La Libertad, verificado
-end-to-end — el mismo patrón de entrega incremental de App01-03. El resto del PRD (6 sprints,
-MCP tools, resolución de identidad avanzada) queda fuera; se retoma si el usuario lo pide.
+end-to-end — el mismo patrón de entrega incremental de App01-03. ~~El resto del PRD (6 sprints,
+MCP tools, resolución de identidad avanzada) queda fuera; se retoma si el usuario lo pide.~~
+**Actualizado 2026-09-02**: la mayor parte de "el resto del PRD" ya se construyó en sesiones
+posteriores sin que se actualizara esta ADR — señales Cost Drift/Gap físico-financiero/
+Paralización (`signals/signals.ts`, expuestas en `GET /api/public-works`) y la resolución de
+identidad avanzada (crosswalk INFOBRAS↔radar-ejecucion por nombre, con niveles de confianza)
+están hechas y probadas. Ver sección 4 y "Actualización" al final. El único ítem del PRD
+original que sigue sin construirse es el frontend dedicado (`apps/infobras/web`, mencionado en
+la decisión 1) — nunca se materializó; `rastro-web` (que no existía cuando se escribió esta ADR)
+consume los datos de INFOBRAS pero no expone las señales visualmente todavía.
 
 ### 3. Parser XLSX propio en vez de una librería estándar
 
@@ -54,9 +62,15 @@ implementó `GET /api/crossref` en `infobras/api` con este patrón (mismo que el
 de App02: agregación en vivo + join en la capa de aplicación, sin tabla de crosswalk
 persistida, porque la clave es exacta y no hace falta cachear un score de confianza).
 
-El cruce con `radar-ejecucion` por nombre (la idea original) queda pendiente — no descartada,
+~~El cruce con `radar-ejecucion` por nombre (la idea original) queda pendiente — no descartada,
 solo no priorizada porque el cruce por CUI ya cubre el caso de uso principal (avance físico
-+ dato financiero del proyecto).
++ dato financiero del proyecto).~~ **Hecho (fecha exacta no registrada, confirmado 2026-09-02)**:
+se implementó con el mismo matcher difuso de `compras-publicas`, persistido en
+`entity_crosswalk` (`confidence`: `confirmada`/`candidata`, recalculable con
+`npm run crossref:build`) — expuesto en `GET /api/crossref/ejecucion`, que trae devengado,
+obras y obras paralizadas por entidad ya cruzada. Sin tool MCP hasta 2026-09-02
+(`infobras_crossref_ejecucion`, PR #60) — el endpoint funcionaba y estaba testeado, pero un
+agente IA no podía descubrirlo.
 
 ## Consecuencias
 
@@ -67,3 +81,28 @@ solo no priorizada porque el cruce por CUI ya cubre el caso de uso principal (av
 - El patrón de cruce "por ID exacto cuando existe, por nombre difuso cuando no" ya tiene tres
   implementaciones reales en el proyecto (SEC_EJEC en App02, CUI en App04, nombre en App03) —
   es candidato a extraerse como utilidad compartida si aparece una cuarta.
+
+## Actualización (2026-09-02)
+
+Esta ADR describía el estado de `infobras/api` al 2026-08-16, con el resto del PRD de 6
+sprints marcado explícitamente como "fuera de alcance". Una auditoría de código contra ese
+resumen (motivada por `docs/ESTADO.md` pendiente #3) encontró que casi todo se construyó
+en sesiones posteriores sin que nadie volviera a esta ADR para actualizarla — el texto llevaba
+semanas desactualizado. Estado real al 2026-09-02:
+
+| Ítem del PRD original | Estado |
+|---|---|
+| Cruce por CUI (INFOBRAS↔radar-inversiones) | ✅ Hecho desde el origen de esta ADR (sección 4) |
+| Señal Cost Drift | ✅ Hecho — `signals/signals.ts`, expuesta en `GET /api/public-works` |
+| Señal Gap físico-financiero | ✅ Hecho — ídem |
+| Señal Paralización | ✅ Hecho — campos crudos desde el conector original (`existeParalizacion`, `causal`, `fecha`, `dias`) |
+| Resolución de identidad avanzada (crosswalk por nombre, con confianza) | ✅ Hecho — `entity_crosswalk`, `GET /api/crossref/ejecucion` (ver sección 4 actualizada) |
+| MCP tools sobre lo anterior | ✅ Hecho — 5 tools (`infobras_public_works`, `_resumen`, `_by_codigo`, `crossref`, `crossref_ejecucion`); el último se agregó recién en PR #60 |
+| Frontend dedicado (`apps/infobras/web`) | ❌ Nunca se construyó — no existe en el repo |
+| Dashboard consolidado mostrando las señales | ✅ Hecho (PR #63, 2026-09-02) — `/distrito/:ubigeo` expone Cost Drift y Gap físico-financiero; `/auditoria/entidades-infobras` (nueva ruta) expone el crosswalk con filtro por nivel de confianza |
+
+**Pendiente real que queda del PRD original**: ninguno de fondo. El backend completo
+(señales, cruces, MCP) y el dashboard consolidado en `rastro-web` están hechos, probados y
+documentados en `docs/data-contracts/infobras-obras-publicas.md` y `docs/ESTADO.md`. Solo
+queda sin construir el frontend dedicado standalone (`apps/infobras/web`), que nunca fue
+parte del alcance real del proyecto — `rastro-web` es el único frontend.

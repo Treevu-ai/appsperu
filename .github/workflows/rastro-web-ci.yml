@@ -83,3 +83,84 @@ jobs:
           VITE_API_BASE_URL_BCRP_COMERCIO_EXTERIOR: http://localhost:4011
           VITE_API_BASE_URL_INVERSION_PRIVADA: http://localhost:4012
           VITE_API_BASE_URL_BCRP_LA_LIBERTAD: http://localhost:4013
+
+  e2e:
+    name: e2e (Playwright — JSON de API = JSON renderizado)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/rastro-web
+    env:
+      # webServer de playwright.config.ts corre `npm run build && npm run
+      # preview`; el build necesita las 14 vars igual que el job de arriba.
+      #
+      # IMPORTANTE: el path de cada URL (el segmento después del host) debe
+      # coincidir con el nombre de app que usan los `page.route("**/<app>/api/...")`
+      # de e2e/*.spec.ts — igual que en producción, donde api.rastro.pe enruta
+      # por path (`https://api.rastro.pe/infobras`, ver .env.production), no
+      # por subdominio. Un host por app (ej. https://infobras.example.test)
+      # rompe el match: "infobras.example.test/api/x" no contiene el substring
+      # literal "/infobras/api/x" que el glob busca, la request no se
+      # intercepta, sale a un DNS inexistente y el test hace timeout — se
+      # confirmó así en CI (10/10 fallando) tras asumir por error que "los
+      # valores no importan porque page.route intercepta todo".
+      VITE_API_BASE_URL_RADAR_EJECUCION: https://api.example.test/radar-ejecucion
+      VITE_API_BASE_URL_COMPRAS_PUBLICAS: https://api.example.test/compras-publicas
+      VITE_API_BASE_URL_RADAR_INVERSIONES: https://api.example.test/radar-inversiones
+      VITE_API_BASE_URL_INFOBRAS: https://api.example.test/infobras
+      VITE_API_BASE_URL_CEPLAN_ESTRATEGICO: https://api.example.test/ceplan-estrategico
+      VITE_API_BASE_URL_CEPLAN_GEO: https://api.example.test/ceplan-geo
+      VITE_API_BASE_URL_IDENTIDAD_FISCAL: https://api.example.test/identidad-fiscal
+      VITE_API_BASE_URL_SALUD_INSTITUCIONAL: https://api.example.test/salud-institucional
+      VITE_API_BASE_URL_PROVEEDORES_SANCIONADOS: https://api.example.test/proveedores-sancionados
+      VITE_API_BASE_URL_ACTIVIDAD_AGRARIA: https://api.example.test/actividad-agraria
+      VITE_API_BASE_URL_SEGURIDAD_CIUDADANA: https://api.example.test/seguridad-ciudadana
+      VITE_API_BASE_URL_BCRP_COMERCIO_EXTERIOR: https://api.example.test/bcrp-comercio-exterior
+      VITE_API_BASE_URL_INVERSION_PRIVADA: https://api.example.test/inversion-privada
+      VITE_API_BASE_URL_BCRP_LA_LIBERTAD: https://api.example.test/bcrp-la-libertad
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/rastro-web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser (Chromium only)
+        run: npm run e2e:install
+
+      - name: Run E2E suite
+        run: npm run e2e
+
+      - name: Summarize E2E result
+        if: always()
+        run: |
+          node -e "
+          const fs = require('fs');
+          const path = 'e2e-results.json';
+          if (!fs.existsSync(path)) { console.log('Sin reporte JSON de Playwright.'); process.exit(0); }
+          const report = JSON.parse(fs.readFileSync(path, 'utf8'));
+          let passed = 0, total = 0;
+          for (const suite of report.suites ?? []) {
+            for (const spec of suite.specs ?? []) {
+              total += 1;
+              if (spec.ok) passed += 1;
+            }
+          }
+          const line = \`E2E verde, \${passed}/\${total} diffs OK (JSON de API = JSON renderizado)\`;
+          console.log(line);
+          if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '## ' + line + '\n');
+          "
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/rastro-web/playwright-report/
+          retention-days: 7

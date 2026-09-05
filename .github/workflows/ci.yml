@@ -49,8 +49,9 @@ jobs:
         # resuelva contra el lockfile del workspace. El resto sigue exactamente
         # igual que antes (npm ci local, sin tocar).
         #
-        # `packages/entity-matcher`, `packages/http-client` (CX-13) y
-        # `packages/shared-queries` (CX-08, ver
+        # `packages/entity-matcher`, `packages/http-client` (CX-13),
+        # `packages/shared-queries` (CX-08), `packages/shared-identity`
+        # (CX-09) y `packages/shared-signals` (CX-10, ver
         # docs/adr/0019-alcance-workspace-utilidades-compartidas.md) se
         # consumen vía workspace symlink, pero npm ci no los compila: solo
         # enlaza el paquete, no corre su script `build`. Sin dist/,
@@ -61,8 +62,7 @@ jobs:
         # (compilaría también las apps del workspace, incluyendo cualquiera
         # con un build roto, y tumbaría el step para todo el matrix) sino con
         # un loop acotado a `packages/*`, tolerante a que algún paquete no
-        # exista todavía en una rama (ej. `entity-matcher` no está en esta
-        # rama, solo en `master` tras ADR-0017).
+        # exista todavía en una rama.
         run: |
           if [ -f "package-lock.json" ]; then
             npm ci

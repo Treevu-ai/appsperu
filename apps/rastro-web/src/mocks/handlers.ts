@@ -156,30 +156,61 @@ export const handlers = [
     }),
   ),
 
-  // infobras public works
+  // infobras public works — shape real de apps/infobras/api/src/routes/public-works.ts
+  // (withSignals()): `resultados`, no `items`; sin cobertura/matcher/corte a
+  // nivel de respuesta (ver apps/rastro-web/src/lib/api-client.ts).
   http.get("*/api/public-works", () =>
     HttpResponse.json({
-      items: [
+      resultados: [
         {
           codigoInfobras: "INF-2025-001",
-          descripcion: "MEJORAMIENTO DE CARRETERA TRUJILLO - OTUZCO",
-          cuit: "2456789",
-          entidad: "GOBIERNO REGIONAL LA LIBERTAD",
+          codigoEntidad: "E-831",
+          entidadNombre: "GOBIERNO REGIONAL LA LIBERTAD",
+          nombreObra: "MEJORAMIENTO DE CARRETERA TRUJILLO - OTUZCO",
+          modalidadEjecucion: "CONTRATA",
+          naturalezaObra: "MEJORAMIENTO",
+          estadoEjecucion: "EN EJECUCION",
+          nivelGobierno: "GOBIERNOS REGIONALES",
+          sectorEntidad: "TRANSPORTE",
+          cui: "2456789",
           departamento: "LA LIBERTAD",
           provincia: "TRUJILLO",
           distrito: "TRUJILLO",
-          estado: "EN EJECUCION",
-          paralizada: false,
-          avanceFisicoPct: 42.5,
-          ejecucionFinancieraPct: 38.0,
           montoViable: 50_000_000,
           costoActualizado: 53_200_000,
+          avanceFisicoProgPct: 45,
+          avanceFisicoRealPct: 42.5,
+          ejecucionFinancieraPct: 38.0,
+          existeParalizacion: false,
+          causalParalizacion: null,
+          fechaParalizacion: null,
+          diasParalizado: null,
+          costDriftPct: 6.4,
+          gapFisicoFinanciero: 4.5,
+          fuente: { dataset: "INFOBRAS - Datos Abiertos (Contraloría)", extraidoEl: "2026-08-26T00:00:00Z" },
         },
       ],
-      resumen: { total: 10_134, paralizadasPct: 2.5, conAvanceFisicoPct: 87.3 },
-      cobertura: "COMPLETA",
-      matcher: "departamento exact",
-      corte: "2026-08-26",
+    }),
+  ),
+
+  // infobras crossref ejecucion — crosswalk MEF↔INFOBRAS con confianza
+  http.get("*/api/crossref/ejecucion", () =>
+    HttpResponse.json({
+      resultados: [
+        {
+          ejecucionEntityCode: "831",
+          ejecucionNombre: "GOBIERNO REGIONAL LA LIBERTAD",
+          infobrasCodigoEntidad: "E-831",
+          infobrasEntidadNombre: "GOBIERNO REGIONAL LA LIBERTAD",
+          confidence: "confirmada",
+          score: 1,
+          devengado: 4_558_800_000,
+          coberturaTemporal: { cortesUsados: ["2026-08-26"], estado: "PARCIAL" },
+          obras: 12,
+          obrasParalizadas: 3,
+          computedAt: "2026-09-02T00:00:00Z",
+        },
+      ],
     }),
   ),
 ];

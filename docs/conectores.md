@@ -14,6 +14,11 @@ demanda. La columna "Frecuencia" de cada ficha distingue esto de la frecuencia c
 la *fuente* publica datos nuevos (que sí puede ser diaria/mensual), que es lo que determinaría
 qué tan seguido *convendría* correr el conector si se automatizara.
 
+> **Este catálogo se verifica automáticamente**: `scripts/check-connectors-documented.sh`
+> (CX-06) falla si aparece un `src/ingest/*-connector.ts` nuevo sin una mención de su nombre
+> de archivo en este documento. Si agregas un conector, actualiza este archivo en el mismo PR
+> — el chequeo no exige un formato de ficha específico, solo que el archivo esté nombrado acá.
+
 ---
 
 <a id="radar-ejecucion"></a>
@@ -24,14 +29,57 @@ qué tan seguido *convendría* correr el conector si se automatizara.
 | **Descripción** | Trae la ejecución presupuestal (PIA/PIM/Devengado) de gobiernos nacional, regionales y locales, agregada por entidad + función + año fiscal. |
 | **Qué hace** | Descarga el CSV nacional del año/granularidad pedida, filtra opcionalmente por departamento (de destino del gasto o de sede de la entidad ejecutora), agrega `SUM(PIA/PIM/DEVENGADO)` por `(SEC_EJEC, FUNCION, ANO_EJE)` y hace upsert en `budget_execution`. También deriva un catálogo territorial (`territories`) a partir de las columnas de ubigeo del propio CSV. |
 | **Cómo lo hace** | Descarga HTTP directa (no hay API CKAN real, esa URL sirve el shell Angular de la SPA). Los archivos pesan 4.5–10+ GB, así que se usa **HTTP Range** para traer un prefijo acotado (`DEFAULT_MAX_BYTES` = 25 MB) en vez de cargar el archivo completo en memoria. Hay un segundo modo, `ingestMefFullYearForDepartamento`, que descarga 16 secciones fijas (2 niveles de gobierno × 8 meses) usando offsets de byte observados manualmente para LA LIBERTAD — necesario porque PIA/PIM y DEVENGADO viven en filas separadas del CSV y una sola ventana parcial nunca trae ambos. Cada lote crudo se guarda en `raw_mef_batches` antes de normalizar (lake de evidencia, nunca se sobrescribe). |
+| **Decisión de riesgo (CX-02, 2026-09-02)** | Los offsets manuales no están garantizados por el MEF. En vez de completar un streaming real (esfuerzo mayor, ver [ADR-0015](adr/0015-mef-connector-offsets-manuales-decision.md)) se agregó monitoreo activo: `assertMefFileSizeWithinTolerance()` compara el tamaño real del archivo (`Range: bytes=0-0` + `Content-Range`) contra el tamaño confirmado cuando se calibraron los offsets (6,240,885,549 bytes) y **falla fuerte** si la deriva excede 2% — antes de que `ingestMefFullYearForDepartamento`/`ingestMefFullYearForMetaDepartamento` toquen una sola sección. `MEF_ALLOW_SIZE_DRIFT=true` degrada a advertencia para corridas donde el archivo cambió a propósito. |
 | **Frecuencia** | Manual (`npm run ingest:mef` en `apps/radar-ejecucion/api`). La fuente (Consulta Amigable / MEF) publica datos de 2025–2026 con corte mensual/diario; años anteriores son snapshots cerrados. Cada corrida trae un snapshot completo del archivo pedido, no un delta. |
 | **Fuente de datos** | Portal de Datos Abiertos del MEF — `datosabiertos.mef.gob.pe` (dataset "Presupuesto y ejecución de gasto"). Cobertura 2009–2026. |
 | **Cobertura real ingerida** | Ejecución de GR/GL: parcial por diseño y acotada a La Libertad vía offsets fijos. Gobierno Nacional por `DEPARTAMENTO_META` puede consultarse por región, pero todavía se corre de forma controlada por cada departamento; no equivale a cobertura integral de los cinco territorios. |
+| **Cruces (quién lo consume)** | `budget_execution` es la tabla más cruzada del monorepo. La consultan en vivo: [`actividad-agraria`](#actividad-agraria) (`GET /api/crossref`, FUNCION=AGROPECUARIA, exacto por departamento+año), [`seguridad-ciudadana`](#seguridad-ciudadana) (`GET /api/crossref`, FUNCION=ORDEN PUBLICO Y SEGURIDAD, mismo patrón), esta misma app vía `GET /api/tourism/crossref` (FUNCION=TURISMO, cruzando con `mincetur-hospedaje-connector.ts` de abajo), [`compras-publicas`](#compras-publicas) y [`radar-inversiones`](#radar-inversiones) (`SEC_EJEC` exacto), [`identidad-fiscal`](#identidad-fiscal) (`GET /api/crossref/entidades`, fuzzy por nombre) y [`ceplan-geo`](#ceplan-geo)/[`ceplan-estrategico`](#ceplan-estrategico) (vía HTTP entre microservicios). |
 | **Detalle completo** | [`docs/data-contracts/mef-presupuesto-ejecucion.md`](data-contracts/mef-presupuesto-ejecucion.md) |
 
 También en esta app: `territory-catalog.ts`, un loader genérico (no conector HTTP propio) que
 hace upsert de ubigeo/departamento/provincia/distrito en `territories` a partir de registros ya
 parseados — usado para poblar el catálogo maestro cuando no viene derivado del CSV del MEF.
+
+<a id="radar-ejecucion-mincetur"></a>
+### `mincetur-hospedaje-connector.ts` — Ocupabilidad hotelera (MINCETUR)
+
+| | |
+|---|---|
+| **Descripción** | Trae indicadores mensuales de ocupabilidad hotelera por departamento (arribos, pernoctaciones, número de establecimientos, tasa neta de ocupación de habitaciones). |
+| **Qué hace** | Descarga el CSV anual, se queda solo con la fila consolidada por departamento (`ID_CATEGORIA = "TT"` / "TODAS CONSOLIDADAS", descartando el desagregado por categoría de establecimiento) y hace upsert en `tourism_hospitality_monthly`. |
+| **Cómo lo hace** | Descarga HTTP directa de un CSV por año (`Indicadores_ocupabilidad_{año}.csv`), delimitador `;`, encoding Latin-1 explícito. Lote crudo en `raw_mincetur_batches` con checksum, `ON CONFLICT` por `(resource_id, checksum)` para no duplicar la misma corrida. |
+| **Frecuencia** | Manual (`npm run ingest:mincetur-hospedaje -- <año>`, por defecto el año anterior al actual). Snapshot completo del año pedido en cada corrida. |
+| **Fuente de datos** | `datosabiertos.mincetur.gob.pe/DGIETA/Indicadores_ocupabilidad_{año}.csv` (MINCETUR — Dirección General de Investigación y Estudios sobre Turismo y Artesanía). |
+| **Cruces** | `GET /api/tourism/crossref` (misma app) junta arribos/pernoctaciones con `budget_execution` en FUNCION=TURISMO, exacto por departamento y año fiscal, con un desglose específico para la Municipalidad Provincial de Trujillo — mismo patrón de bucket exacto que usan `actividad-agraria` y `seguridad-ciudadana` contra `mef-connector.ts`. |
+
+---
+
+<a id="radar-ejecucion-airhsp"></a>
+### `airhsp-connector.ts` — Personal y planilla del sector público (AIRHSP/MEF)
+
+| | |
+|---|---|
+| **Descripción** | Trae el personal activo y pensionista del sector público, agregado por Unidad Ejecutora / régimen laboral / cargo (columna `CANTIDAD`) — **no es un registro de personas identificables**, no hay nombres en la fuente. Cierra el hueco de "personal/planilla municipal" identificado en `docs/COBERTURA_Y_CUMPLIMIENTO.md`. |
+| **Qué hace** | Descarga el CSV completo del año pedido, hace upsert en `airhsp_personal` con `ON CONFLICT` sobre la combinación (periodo, pliego, unidad ejecutora, tipo/subtipo de registro, régimen laboral, grupo ocupacional, cargo, condición laboral, régimen pensionario) — evita duplicar la misma fila agregada entre corridas. |
+| **Cómo lo hace** | Descarga en **streaming genuino** (`fetch` → `Readable.fromWeb` → `csv-parse` en modo stream, lotes de 1000 filas) — el archivo real pesa **~357 MB por año** (confirmado vía `curl -I`, no los ~13.5 MB que se asumió inicialmente); un primer intento con descarga+parseo síncrono (`res.text()` + `csv-parse/sync`) se quedó en 0 filas insertadas tras >7 min. Fingerprint del batch vía ETag del header HTTP (no checksum de contenido — streaming no permite hashear sin bufferizar de nuevo). El CSV trae la misma clave natural duplicada dentro de un mismo lote de 1000 en algunos casos — se deduplica por lote antes de insertar, si no Postgres rechaza el `ON CONFLICT DO UPDATE` por afectar la misma fila dos veces en una sentencia. |
+| **Frecuencia** | Manual (`npx tsx src/ingest/airhsp-connector.ts <año>`). Verificado en vivo 2026-09-04 contra el año 2026: **652,392 filas reales** tras dedup (streaming completo en ~8 min). |
+| **Fuente de datos** | `fs.datosabiertos.mef.gob.pe/datastorefiles/PERSONALSP_{año}.csv` — Plataforma Nacional de Datos Abiertos, dataset gestionado por MEF, un archivo por año (2017–2026), sin autenticación. |
+| **Alcance territorial** | Sin columna de ubigeo/departamento en la fuente — se ingiere a nivel nacional y el filtro a La Libertad se hace por texto sobre `pliego`/`unidad_ejecutora` (`GET /api/personal?entidad=LA LIBERTAD`). No es un filtro exacto: entidades cuyo nombre no menciona el departamento no aparecerían con ese filtro. |
+| **Cruces** | Ninguno implementado aún — candidato natural: cruzar `pliego`/`unidad_ejecutora` contra el `entity_crosswalk` que ya usan `compras-publicas`/`infobras` para vincular gasto en personal con ejecución presupuestal por entidad. |
+
+---
+
+### `bienes-muebles-baja-connector.ts` — Bienes muebles patrimoniales dados de baja (MEF)
+
+| | |
+|---|---|
+| **Descripción** | Activos muebles (equipos, mobiliario, vehículos, etc.) dados de baja/desincorporados por entidades del sector público, con la resolución administrativa que lo respalda. **No es el inventario completo de bienes muebles del Estado** — ese no tiene fuente pública estructurada conocida (verificado 2026-09-04: sin PDF/CSV/XLSX descargable para el inventario vivo, solo el aplicativo interno SINABIP). Cierra parcialmente el hueco de "patrimonio y bienes muebles" identificado en `docs/COBERTURA_Y_CUMPLIMIENTO.md`. |
+| **Qué hace** | Descarga el CSV del año pedido en streaming, hace upsert en `bienes_muebles_baja` con `ON CONFLICT` sobre `codigo_patrimonial` (código patrimonial único por activo). |
+| **Cómo lo hace** | Descarga en **streaming genuino** (`fetch` → `Readable.fromWeb` → `csv-parse` en modo stream, lotes de 1000 filas) — el archivo pesa 47–96 MB por año (confirmado vía `curl -I`, no ~13 MB), y una descarga+parseo síncrono (`res.text()` + `csv-parse/sync`) no completa en tiempo razonable para un archivo de este tamaño (lección de un conector hermano, `airhsp-connector.ts`, que se quedó en 0 filas insertadas tras >7 min intentando cargar 357 MB de una vez). Sin checksum de contenido (streaming no permite hashear sin bufferizar de nuevo) — usa ETag/Last-Modified del servidor como identidad del batch. El CSV trae `codigo_patrimonial` duplicado dentro del mismo archivo en algunos casos — se deduplica por lote antes de insertar (última ocurrencia gana), si no Postgres rechaza el `ON CONFLICT DO UPDATE` por afectar la misma fila dos veces en una sentencia. |
+| **Frecuencia** | Manual (`npx tsx src/ingest/run-bienes-muebles-baja.ts [años...]`, default 2020–2024). Verificado en vivo 2026-09-04 contra 2024: 274,841 filas procesadas, 169,674 filas reales tras deduplicación (1,652 filtrables a La Libertad/Trujillo por texto). |
+| **Fuente de datos** | `fs.datosabiertos.mef.gob.pe/datastorefiles/BAJA_BM_PAT_{año}_INV.csv` — Plataforma Nacional de Datos Abiertos, dataset gestionado por MEF, un archivo por año (2020–2024), sin autenticación. El archivo de diccionario de columnas referenciado en la página del dataset devuelve 404 en vivo — columnas confirmadas leyendo el encabezado real del CSV, no el diccionario. |
+| **Alcance territorial** | Sin columna de ubigeo/departamento en la fuente — se ingiere a nivel nacional y el filtro a La Libertad se hace por texto sobre `nom_entidad` (`GET /api/patrimonio/bienes-muebles-baja?entidad=LA LIBERTAD`), mismo patrón y misma limitación que `airhsp-connector.ts`. |
+| **Cruces** | Ninguno implementado — candidato: cruzar `ruc_entidad` contra `entity_crosswalk` para vincular bajas patrimoniales con la entidad en `budget_execution`/`awards`. |
 
 ---
 
@@ -40,6 +88,14 @@ parseados — usado para poblar el catálogo maestro cuando no viene derivado de
 
 Esta app tiene **dos conectores** contra la misma API, cada uno contra un endpoint distinto del
 estándar OCDS (Open Contracting Data Standard).
+
+**Cruces de la app (`awards` es la tabla más leída desde afuera después de `budget_execution`)**:
+`GET /api/crossref` (propio) junta `entity_crosswalk` (`mef_entity_code` ↔ `oece_buyer_id`, fuzzy,
+recalculable con `npm run crossref:build`) con el devengado de [`radar-ejecucion`](#radar-ejecucion)
+y el total de procesos/valor de esta misma app. Desde afuera: [`identidad-fiscal`](#identidad-fiscal)
+lee `awards.supplier_id` (`GET /api/crossref`, RUC exacto extraído del prefijo `PE-RUC-`) y
+[`proveedores-sancionados`](#proveedores-sancionados) hace lo mismo para cruzar cada adjudicación
+contra inhabilitaciones vigentes — ambos reutilizan el mismo `extractRuc()` sobre `supplier_id`.
 
 <a id="compras-publicas-releases"></a>
 ### `oece-connector.ts` (releases)
@@ -67,6 +123,45 @@ estándar OCDS (Open Contracting Data Standard).
 | **Alcance territorial CLI** | Usa el mismo `OECE_DEPARTAMENTOS`; postores y adjudicaciones se restringen al mismo conjunto territorial. |
 | **Detalle completo** | [`docs/data-contracts/oece-contrataciones-abiertas.md`](data-contracts/oece-contrataciones-abiertas.md) |
 
+<a id="compras-publicas-legacy"></a>
+### `legacy-seace-orders-connector.ts` — Órdenes históricas SEACE (legado)
+
+| | |
+|---|---|
+| **Descripción** | Trae órdenes de compra (O/C) y de servicio (O/S) históricas, por entidad, del buscador **legado** de SEACE — universo anterior al estándar OCDS que expone OECE, útil para completar histórico que la API OCDS no cubre. |
+| **Qué hace** | Para un catálogo de entidades pre-verificadas de LA LIBERTAD (RUC + nombre oficial, cargado desde un XLSX local) y un año + lista de meses, descarga el XLS de órdenes de cada combinación entidad×mes, filtra las que tienen proveedor y monto válidos dentro del límite vigente, y hace upsert en el modelo canónico de contratos menores (`minor_contracts`, `municipalities`, `supplier_profiles`, `contract_evidence`, `contract_events`). |
+| **Cómo lo hace** | **Scraping de una interfaz JSF (JavaServer Faces) legacy**: GET a la página del buscador por RUC/año/mes, extrae el `javax.faces.ViewState` y la cookie de sesión del HTML, y replica el POST exacto que dispara el botón de exportación (`formBuscador:btnExportar`) para descargar el XLS. Es, junto con `sanciones-connector.ts` (proveedores-sancionados), el conector técnicamente más frágil del catálogo — depende de la estructura interna de un formulario JSF no documentado. |
+| **Frecuencia** | Manual (`npm run ingest:legacy-orders`). Snapshot por entidad×mes en cada corrida, no incremental. |
+| **Fuente de datos** | `prod2.seace.gob.pe/seacebus-uiwd-pub/buscadorPublico/ongei/buscadorPublicoOCOS.xhtml` (SEACE — buscador histórico público, interfaz observada, no documentada oficialmente). |
+| **Alcance territorial** | Requiere un catálogo de entidades pre-verificadas (`SEACE_LEGACY_ENTITY_CATALOG_PATH`), acotado a LA LIBERTAD por validación explícita del loader del catálogo. |
+
+<a id="compras-publicas-minor-contracts"></a>
+### `seace-public-minor-contracts-connector.ts` — Contratos menores (SEACE)
+
+| | |
+|---|---|
+| **Descripción** | Trae adjudicaciones de contratos menores (por debajo del umbral de 8 UIT) del buscador público **moderno** de SEACE. Se llamó `oece-minor-contracts-connector.ts` hasta 2026-09-02 — el nombre sugería una relación con `oece-connector.ts`/`oece-records-connector.ts` (API OCDS de OECE) que no existe; se renombró para reflejar que la fuente real es SEACE (ver [CX-03](TICKETS_Confiabilidad_Conectores_y_Cruces_v1.md)). |
+| **Qué hace** | Pagina el buscador por año y departamento (25 departamentos con código SEACE mapeado en el propio archivo), hasta 5000 registros por página; para cada contrato descubierto pide el detalle completo con concurrencia limitada (5 en paralelo); filtra ítems con estado `ADJUDICADO`, proveedor y monto válidos dentro del límite vigente; hace upsert en el mismo modelo canónico que `legacy-seace-orders-connector.ts`, y registra en `territorial_coverage` si la corrida fue completa, parcial o sin datos por departamento — declaración honesta de cobertura, no solo un conteo. |
+| **Cómo lo hace** | **API JSON interna no documentada** de SEACE (no requiere sesión ni cookies, a diferencia del conector legacy) — más estable que scraping HTML pero sigue sin ser un contrato público oficial. |
+| **Frecuencia** | Manual (`npm run ingest:minor-contracts`, o `:full` para recorrer todo sin límite por contrato). Por defecto limita a 100 contratos por departamento (parcial); con `maxContracts=0` recorre el universo completo visible. |
+| **Fuente de datos** | `prod6.seace.gob.pe/v1/s8uit-services/buscadorpublico` (SEACE — buscador público de contrataciones, interfaz observada). |
+| **Alcance territorial** | Configurable por departamento (`departamentos` en las opciones); cobertura real declarada por corrida en `territorial_coverage`. |
+| **Cruces** | Escribe en el mismo modelo canónico (`minor_contracts`, `municipalities`, `supplier_profiles`) que `legacy-seace-orders-connector.ts` — ambos alimentan `winning_supplier_id` en formato `seace:ruc:<11 dígitos>`. [`identidad-fiscal`](#identidad-fiscal) y [`proveedores-sancionados`](#proveedores-sancionados) cruzan contra `minor_contracts` desde 2026-09-02 (CX-01), con el mismo patrón que ya usaban contra `awards`. |
+
+<a id="compras-publicas-conformacion"></a>
+### `perfilprov-conformacion-connector.ts` — Conformación societaria (OSCE)
+
+| | |
+|---|---|
+| **Descripción** | Trae, por RUC, los accionistas/socios reales, representantes legales y órganos de administración de un proveedor del Estado — nombre y documento de identidad. Es la primera fuente del catálogo que da identidad de dueños reales, no solo razón social. **Compliance (2026-09-04)**: el % de participación accionaria se retiró de la API pública (no aportaba al caso de uso y era el dato de mayor riesgo) y el número de documento se sirve enmascarado (solo últimos 3 dígitos) — ver `docs/COBERTURA_Y_CUMPLIMIENTO.md`. |
+| **Qué hace** | Para un RUC: (1) busca en el índice de proveedores para resolver su `codProv` interno, (2) pide la ficha `/resumen` (que trae `datosSunat` + `conformacion` en una sola respuesta) y hace upsert en `supplier_conformacion` (socios/representantes/órganos) y `supplier_conformacion_lookup` (estado agregado por RUC, incluye `tiene_socios` para no reconsultar RUCs ya sabidos vacíos). `GET /api/conformacion/vinculos` (nuevo) cruza contra `awards`/`minor_contracts` y devuelve solo personas con RUCs distintos que ganaron adjudicaciones en entidades convocantes distintas — el patrón de interés real, no solo "misma empresa, varios contratos". |
+| **Cómo lo hace** | **API JSON pública no documentada**, sin auth ni captcha, descubierta inspeccionando el bundle Angular de la SPA "Buscador de Proveedores del Estado" de OSCE (`apps.osce.gob.pe/perfilprov-ui`) — verificada en vivo el 2026-09-03. 300ms de cortesía entre RUCs. Por decisión de proyecto, no se buscará autorización formal de OSCE (ver `docs/APRENDIZAJES_INGENIERIA_INVERSA_OSCE.md`). |
+| **Frecuencia** | Manual (`npm run ingest:conformacion [DEPARTAMENTO]`). Sin filtro de departamento recorre todos los RUCs de 11 dígitos ya vistos en `supplier_profiles`/`awards`; con departamento, solo los de esa región. |
+| **Fuente de datos** | `eap.oece.gob.pe/perfilprov-bus/1.0` (búsqueda) y `eap.oece.gob.pe/ficha-proveedor-cns/1.0` (ficha) — backend real de OSCE, no RNP (el portal legado `rnp.gob.pe` migró su contenido informativo a gob.pe y ya no es la fuente operativa de este dato). |
+| **Alcance territorial** | Ninguno propio — opera por RUC individual; el script de corrida masiva lo acota vía `awards.departamento` / distrito de `minor_contracts`. |
+| **Limitación conocida** | El campo `socios` viene vacío para proveedores tipo "CONTRATOS COLABORACION EMPRESARIAL" (consorcios) — no tienen accionistas en el sentido societario que expone este endpoint. Corrida nacional completa (2026-09-04): **3,818/3,818 RUCs (100%)**, 1,353 con socios (35%). El cruce vía `/vinculos` encontró un caso real (Loyola Zavaleta, dos RUCs distintos ganando en dos municipalidades distintas de La Libertad con 14 días de diferencia) — documentado como hipótesis, no acusación, en `docs/HALLAZGOS_CONFORMACION_SOCIETARIA.md`. Ampliar la muestra a nivel nacional no sumó casos nuevos porque `awards` en sí mismo solo cubre La Libertad — son dos ejes de cobertura independientes. |
+| **Cruces** | Se consulta por `ruc`, la misma clave que usan [`identidad-fiscal`](#identidad-fiscal) y [`proveedores-sancionados`](#proveedores-sancionados) — permite, en el futuro, encadenar identidad fiscal → dueños reales → sanciones sin un cruce nuevo. `GET /api/conformacion/vinculos` ya cruza contra `awards`/`minor_contracts` (ver arriba). |
+
 ---
 
 <a id="radar-inversiones"></a>
@@ -80,6 +175,7 @@ estándar OCDS (Open Contracting Data Standard).
 | **Frecuencia** | Manual (`npm run ingest:invierte`). Cada corrida es un snapshot parcial (por bytes), no un delta. |
 | **Fuente de datos** | `fs.datosabiertos.mef.gob.pe/datastorefiles/DETALLE_INVERSIONES.csv` (mismo host de archivos del MEF que usa `radar-ejecucion`, dataset distinto). |
 | **Alcance territorial CLI** | `INVIERTE_DEPARTAMENTOS` acepta La Libertad, Lambayeque, Piura, Cajamarca y Cusco. La completitud depende de recorrer todos los rangos del archivo fuente; el filtro no transforma un corte parcial en universo completo. |
+| **Cruces** | `investments` es la segunda tabla más cruzada del catálogo. Cruzan contra ella en vivo: `GET /api/crossref` (propio, `SEC_EJEC` exacto contra `budget_execution` de [`radar-ejecucion`](#radar-ejecucion)), [`infobras`](#infobras) (`GET /api/crossref`, `CUI` exacto) e [`inversion-privada`](#inversion-privada) (`GET /api/crossref/oxi`, `codigo_snip` exacto contra `codigo_referencia` de OxI). Los tres usan clave exacta compartida, sin matcher difuso — a diferencia de los cruces por nombre de entidad de otras apps. |
 | **Detalle completo** | [`docs/data-contracts/invierte-detalle-inversiones.md`](data-contracts/invierte-detalle-inversiones.md) |
 
 ---
@@ -90,7 +186,7 @@ estándar OCDS (Open Contracting Data Standard).
 | | |
 |---|---|
 | **Descripción** | Trae el dataset nacional de obras públicas monitoreadas por la Contraloría (INFOBRAS) — avance físico, paralización, entidad responsable. |
-| **Qué hace** | Descarga el XLSX completo a un archivo temporal (no en memoria), lo parsea en streaming y normaliza filas hacia el modelo de obras. Cruza con `radar-inversiones` por `CUI` (exacto) y con `radar-ejecucion` por nombre de entidad (matcher difuso). |
+| **Qué hace** | Descarga el XLSX completo a un archivo temporal (no en memoria), lo parsea en streaming y normaliza filas hacia el modelo de obras. `GET /api/crossref` cruza con `radar-inversiones` por `CUI` exacto; `GET /api/crossref/ejecucion` cruza con `radar-ejecucion` por nombre de entidad, vía un `entity_crosswalk` **propio de esta app** (no el mismo que usa `compras-publicas` — cada app mantiene su propio crosswalk mef↔fuente, aunque comparten el mismo nombre de tabla y el mismo matcher difuso `matchEntitiesToPadron`/equivalente). |
 | **Cómo lo hace** | Descarga HTTP directa de un `.xlsx` (~57 MB) a disco (no vía Range — el archivo es manejable, pero sí requiere streaming al parsear). Reintentos con backoff exponencial (hasta `MAX_ATTEMPTS` = 4, `BASE_BACKOFF_MS` = 2000 ms) porque el servidor puede responder 503 a mitad de transferencia en archivos grandes. |
 | **Frecuencia** | Manual (`npm run ingest:infobras`). Snapshot completo del dataset en cada corrida (no incremental). |
 | **Fuente de datos** | `infobras.contraloria.gob.pe` — descarga directa vía `InfobrasWeb/Archivo/DownloadFile`. |
@@ -146,6 +242,22 @@ Contratos: [`ceplan-crossref-territorial-v1.md`](data-contracts/ceplan-crossref-
 
 Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distritos verificables.
 
+<a id="ceplan-geo-sbn"></a>
+### `sbn-supervision-connector.ts` — Patrimonio inmobiliario del Estado (SBN)
+
+| | |
+|---|---|
+| **Descripción** | Trae predios estatales efectivamente **supervisados** por SBN (Superintendencia Nacional de Bienes Estatales) — no el registro completo del universo de predios. Cierra parcialmente el hueco de "patrimonio y bienes muebles" identificado en `docs/COBERTURA_Y_CUMPLIMIENTO.md`; **solo inmuebles, no bienes muebles** (ver limitación). |
+| **Qué hace** | Descarga el CSV completo, parsea (delimitador `;`, encoding Latin-1) y hace upsert en `sbn_supervision_predios` con `ON CONFLICT` sobre (`numero_informe`, `cus`). |
+| **Cómo lo hace** | Descarga HTTP directa de un CSV público. El servidor está detrás de un WAF que bloquea requests sin `User-Agent` de navegador (responde 418) — no es autenticación real, un header normal basta. Parseo manual (split por `;`, sin librería CSV — archivo pequeño y sin campos entrecomillados). |
+| **Frecuencia** | Manual (`npx tsx src/ingest/sbn-supervision-connector.ts`). Verificado en vivo 2026-09-04: 1,324 filas reales, nacional. |
+| **Fuente de datos** | `datosabiertos.gob.pe/sites/default/files/Supervisión de predios estatales.csv` (grupo SBN en la Plataforma Nacional de Datos Abiertos). |
+| **Limitación conocida** | El dataset "SBN Predios del Estado registrados en el SINABIP" (el registro **completo**, no solo supervisados) solo se publica como enlace de Google Drive, y ese enlace está **roto** (verificado en vivo 2026-09-04: "No se encontró la página") — no hay forma pública de acceder al universo completo de predios hoy. Tampoco se encontró fuente pública descargable para **bienes muebles** (vehículos, equipos, mobiliario) tras búsqueda razonable — ese sub-hueco sigue abierto. |
+| **Alcance territorial** | Nacional; sin registros para LA LIBERTAD en la muestra verificada 2026-09-04 (LIMA concentra 690/1,324, ~52%) — hallazgo real de la fuente, no un filtro aplicado por el conector. |
+| **Cruces** | Ninguno implementado — candidato: cruzar `titular_predio`/distrito contra entidades ya identificadas en `radar-ejecucion`/`compras-publicas`. |
+
+---
+
 ---
 
 <a id="identidad-fiscal"></a>
@@ -154,7 +266,7 @@ Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distrito
 | | |
 |---|---|
 | **Descripción** | Trae el padrón reducido de RUC de SUNAT — universo completo de contribuyentes, filtrado a personas jurídicas (RUC-20, ~2.3M de 18.3M) para cruzar estatus tributario contra proveedores del Estado y contra los propios gobiernos/municipalidades. |
-| **Qué hace** | Descarga el ZIP, extrae el `.txt` de padrón, normaliza y hace inserts por lote hacia `contribuyentes`. Cruza con `compras-publicas` por RUC exacto embebido en `awards.supplier_id` y con `radar-ejecucion` por nombre de entidad (reutiliza el matcher difuso de `compras-publicas` sin modificación). |
+| **Qué hace** | Descarga el ZIP, extrae el `.txt` de padrón, normaliza y hace inserts por lote hacia `contribuyentes`. `GET /api/crossref` cruza con `compras-publicas` por RUC exacto embebido en `awards.supplier_id` (marca cada adjudicación `irregular` si el proveedor no está ACTIVO/HABIDO); `GET /api/crossref/entidades` cruza con `radar-ejecucion` por nombre de entidad, acotando el padrón al prefijo de ubigeo departamental antes de correr el matcher difuso (sin ese acote, comparar contra las ~2.3M filas completas tomó 89s medidos en vivo y llegó a colgar el build de Next.js; acotado a un departamento baja a segundos). |
 | **Cómo lo hace** | Descarga HTTP directa del ZIP (~373 MB comprimido) a disco, con reintentos con backoff (mismo patrón que `infobras-connector.ts`). Inserta en lotes de `INSERT_BATCH_SIZE` = 1000 filas — la primera versión usaba una sola transacción para las 2.3M filas y tardaba 40+ minutos; el batching lo bajó a ~4 minutos. |
 | **Frecuencia** | Manual (`npm run ingest:padron`). La fuente (SUNAT) se actualiza a diario, según lo documentado en `docs/ESTADO.md`; el conector no está automatizado para seguir ese ritmo. |
 | **Fuente de datos** | `www2.sunat.gob.pe/padron_reducido_ruc.zip`. |
@@ -168,7 +280,7 @@ Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distrito
 
 | | |
 |---|---|
-| **Descripción** | Trae inhabilitaciones y multas vigentes/históricas del Tribunal de Contrataciones del Estado — la señal más fuerte de riesgo sobre un proveedor (una inhabilitación vigente es prohibición legal de contratar, no solo irregularidad administrativa). Cruza con `compras-publicas` por RUC exacto. |
+| **Descripción** | Trae inhabilitaciones y multas vigentes/históricas del Tribunal de Contrataciones del Estado — la señal más fuerte de riesgo sobre un proveedor (una inhabilitación vigente es prohibición legal de contratar, no solo irregularidad administrativa). `GET /api/crossref` cruza con `compras-publicas` por RUC exacto (mismo `extractRuc()` sobre `awards.supplier_id` que usa `identidad-fiscal`) y, en el **mismo endpoint**, trae también el estado tributario de esa entidad desde [`identidad-fiscal`](#identidad-fiscal) (`estado_contribuyente`/`condicion_domicilio`) — no son dos cruces separados, es una sola respuesta con inhabilitación + estado tributario por adjudicación, y distingue si la inhabilitación estaba vigente en la fecha de adjudicación o solo lo está hoy. |
 | **Qué hace** | Abre sesión (GET), exporta el reporte completo (POST replicando el botón "Exportar Excel"), parsea el HTML tabular resultante, separa secciones de inhabilitaciones vs. multas y normaliza cada una hacia su tabla. |
 | **Cómo lo hace** | El endpoint real usa sesión ASP clásica (cookie `ASPSESSIONID...`). Se replica el POST exacto que dispara el botón de exportar, con los campos del formulario vacíos (sin filtro = todos los proveedores), reutilizando la cookie recién abierta. El captcha visible en la página **no se valida ni en cliente ni en servidor** para este endpoint específico — confirmado en vivo comparando MD5 contra la descarga manual (idéntico). Se descartó explícitamente el dataset homónimo de `datosabiertos.gob.pe` por estar abandonado desde 2018. |
 | **Frecuencia** | Manual (`npm run ingest:sanciones`). Snapshot completo del reporte en cada corrida. |
@@ -198,7 +310,7 @@ Tres conectores independientes, misma app y misma plataforma origen (VERTIX):
 | | |
 |---|---|
 | **Descripción** | Trae la cartera de proyectos OxI (Obras por Impuestos) en promoción — universo distinto a APP/PA aunque comparta plataforma VERTIX. Único de los dos conectores VERTIX que trae un código de referencia cruzable con `radar-inversiones`. |
-| **Qué hace** | Descarga el XLSX (vía JSON+base64) de `investmentpromotionExport.php`, parsea columnas B→Q y normaliza hacia `oxi_investment_promotions`. Expone `GET /api/crossref/oxi` contra `radar-inversiones` por `codigo_snip`. |
+| **Qué hace** | Descarga el XLSX (vía JSON+base64) de `investmentpromotionExport.php`, parsea columnas B→Q y normaliza hacia `oxi_investment_promotions`. Expone `GET /api/crossref/oxi` contra [`radar-inversiones`](#radar-inversiones) por `codigo_referencia` (columna "CODIGO SNIP / INVIERTE.PE / CÓDIGO IDEA" del export OxI) igualado a `codigo_snip` de `investments` — exacto, sin fuzzy; una fila sin match no implica que el proyecto no exista en Invierte.pe, solo que su código en OxI no coincide con un `codigo_snip` de esa fuente. |
 | **Cómo lo hace** | POST `multipart/form-data` (`Lan=es`) al mismo proxy PHP de `investinperu.pe`. Sin sesión. XLSX pequeño (~760 filas, con shared strings), parseado completo en memoria — sin streaming. |
 | **Frecuencia** | Manual (`npm run ingest:oxi`). Snapshot completo en cada corrida. |
 | **Fuente de datos** | `https://www.investinperu.pe/wp-content/themes/hello-elementor-child/__api/service/oxi/investmentpromotionExport.php` |
@@ -219,6 +331,22 @@ Tres conectores independientes, misma app y misma plataforma origen (VERTIX):
 
 ---
 
+<a id="bcrp-comercio-exterior"></a>
+## bcrp-comercio-exterior — Comercio exterior (BCRP)
+
+| | |
+|---|---|
+| **Descripción** | Trae series mensuales de comercio exterior agregado nacional (exportaciones/importaciones) publicadas por el BCRP — no confundir con `bcrp-la-libertad`, que es actividad económica regional vía PDF. |
+| **Qué hace** | Pide un rango de periodos (calculado por defecto, o vía `BCRP_TRADE_PERIOD_START`/`BCRP_TRADE_PERIOD_END`) para un conjunto fijo de códigos de serie (`NATIONAL_TRADE_SERIES`), guarda el JSON crudo en `raw_bcrp_batches` con checksum, normaliza y hace upsert en `trade_indicators` por `(series_code, period_year, period_month)`. |
+| **Cómo lo hace** | **API REST oficial**, sin sesión ni autenticación — el conector más simple del catálogo. |
+| **Frecuencia** | Manual (`npm run ingest:trade`). Cada corrida trae el rango de periodos pedido completo. |
+| **Fuente de datos** | `estadisticas.bcrp.gob.pe/estadisticas/series/api` (BCRPData — Banco Central de Reserva del Perú). |
+| **Cobertura real ingerida** | Agregado nacional únicamente — un solo valor por mes y serie, sin desagregado por departamento/producto/empresa. El desagregado departamental (`RD38085BM`-`RD38111BM`) existe en la API pero está congelado desde dic-2022/dic-2023 (verificado en vivo), por eso el conector implementado usa solo las series nacionales (`PN38714BM`-`PN38723BM`), que sí están al día. |
+| **Detalle completo** | [`docs/data-contracts/bcrp-comercio-exterior.md`](data-contracts/bcrp-comercio-exterior.md) |
+| **Nota** | Este conector **ya está implementado y activo** — corrige una entrada anterior de este catálogo que lo listaba como "candidato evaluado, no implementado". |
+
+---
+
 <a id="bcrp-la-libertad"></a>
 ## bcrp-la-libertad — Síntesis de Actividad Económica (BCRP Sucursal Trujillo)
 
@@ -232,6 +360,39 @@ Tres conectores independientes, misma app y misma plataforma origen (VERTIX):
 | **Cobertura real ingerida** | 7/10 ANEXOS (1,2,3,5,6,8,10 — incluye ejecución presupuestal, el más relevante para cruzar con `radar-ejecucion`). Anexos 4, 7 y 9 usan un layout de tabla con valores separados por espacio en vez de tab, ambiguo de partir sin arriesgar corromper datos (separador de miles indistinguible de separador de columna) — se dejan sin ingerir. Verificado con el PDF de enero 2026: 650 filas, cifras coincidentes con el texto narrativo del reporte. |
 | **Detalle completo** | [`docs/data-contracts/bcrp-sintesis-la-libertad.md`](data-contracts/bcrp-sintesis-la-libertad.md) |
 | **ADR** | [`docs/adr/0014-bcrp-la-libertad-sintesis-economica-ingesta-manual.md`](adr/0014-bcrp-la-libertad-sintesis-economica-ingesta-manual.md) |
+
+---
+
+<a id="actividad-agraria"></a>
+## actividad-agraria — Jornal, alquiler de tractor y de yunta (MIDAGRI)
+
+Tres datasets distintos de MIDAGRI, todos servidos por **un solo motor genérico reutilizable**
+(`regional-monthly-connector.ts`) que cada conector parametriza con su URL de recurso y su tabla
+destino — mismo patrón de fetch → checksum → normaliza → upsert que el resto del catálogo, sin
+duplicar lógica entre los tres.
+
+| | |
+|---|---|
+| **Descripción** | Indicadores mensuales agropecuarios por departamento: jornal agrícola (S/ por día), alquiler de tractor y alquiler de yunta. |
+| **Qué hace** | Descarga el CSV del dataset, guarda el lote crudo en `raw_midagri_batches` con checksum, normaliza y hace upsert por `(departamento, anio, mes)` en la tabla correspondiente. Filas con región/año inválido o ausente van a la tabla `*_rejected` respectiva, nunca se descartan en silencio. |
+| **Cómo lo hace** | Descarga HTTP directa (CSV delimitado por `;`, con BOM) — mismo `User-Agent` de navegador que usa `sidpol-connector.ts` de seguridad-ciudadana. |
+| **Frecuencia** | Manual, un script por dataset (`npm run ingest:jornal`, `ingest:tractor`, `ingest:yunta`) o los tres encadenados (`npm run ingest:midagri-regional`). Snapshot completo del CSV en cada corrida. |
+| **Fuente de datos** | `www.datosabiertos.gob.pe` (MIDAGRI) — tres recursos distintos: `Valor de Jornal.xlsx - C.102_0.csv` (jornal), `Precio de Alquiler de Tractor.csv` (tractor), `precioxyunta.csv` (yunta). |
+| **Cruces** | `GET /api/crossref` junta jornal/tractor/yunta con `budget_execution` de [`radar-ejecucion`](#radar-ejecucion), FUNCION=AGROPECUARIA, exacto por departamento+año (ADR-0003, ADR-0008) — mismo patrón que usa [`seguridad-ciudadana`](#seguridad-ciudadana) para orden público. El endpoint distingue explícitamente ejecución con sede en el departamento de gasto de Gobierno Nacional dirigido a él (`meta_departamento`), y advierte que insumo agrícola y gasto AGROPECUARIA miden dimensiones distintas — el cruce no implica eficiencia ni causalidad. |
+
+---
+
+<a id="seguridad-ciudadana"></a>
+## seguridad-ciudadana — Denuncias policiales (MININTER/SIDPOL)
+
+| | |
+|---|---|
+| **Descripción** | Trae el dataset nacional de denuncias policiales por modalidad, agregado por `(año, mes, ubigeo, modalidad)`. |
+| **Qué hace** | Descarga el CSV, guarda el lote crudo en `raw_sidpol_batches` con checksum, deduplica filas repetidas del CSV de origen por la misma clave `(anio, mes, ubigeo, modalidad)` (Postgres rechaza un `ON CONFLICT DO UPDATE` que afecte la misma fila dos veces en un mismo statement) y hace upsert en `police_reports` en lotes de 1000. |
+| **Cómo lo hace** | Descarga HTTP directa de un CSV (delimitado por coma, con BOM). El portal está detrás de un WAF que bloquea requests sin headers de navegador — confirmado en vivo el 2026-08-27 (un fetch sin `User-Agent` devuelve HTTP 418 con una página de bloqueo en vez del CSV). |
+| **Frecuencia** | Manual (`npm run ingest:sidpol`). Snapshot completo del CSV nacional en cada corrida. |
+| **Fuente de datos** | `www.datosabiertos.gob.pe` (MININTER — `DATASET_Denuncias_Policiales_Ene 2018 a Julio 2026.csv`). |
+| **Cruces** | `GET /api/crossref` junta denuncias con `budget_execution` de [`radar-ejecucion`](#radar-ejecucion), FUNCION=ORDEN PUBLICO Y SEGURIDAD, exacto por departamento+año — mismo patrón de bucket exacto (sin matcher difuso) que usa [`actividad-agraria`](#actividad-agraria) para gasto agropecuario. Distingue igual ejecución regional/local de gasto nacional dirigido (ej. PNP con sede en Lima operando en la región), y advierte explícitamente que no implica causalidad entre denuncias y gasto. |
 
 ---
 
@@ -249,35 +410,69 @@ Tres conectores independientes, misma app y misma plataforma origen (VERTIX):
 
 ---
 
+## Mapa de cruces entre apps
+
+Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada
+app), no una relación conceptual. La columna "Clave" distingue cruce **exacto** (columna
+compartida sin ambigüedad) de **fuzzy** (matcher difuso sobre nombre, con `confidence`
+`confirmada`/`candidata` persistido en una tabla `entity_crosswalk` — nota: cada app que la usa
+mantiene su **propio** `entity_crosswalk`, no es una tabla compartida entre apps).
+
+| App que consulta | App(s) consultada(s) | Endpoint | Clave | Exacto/Fuzzy |
+|---|---|---|---|---|
+| [actividad-agraria](#actividad-agraria) | radar-ejecucion | `GET /api/crossref` | departamento + FUNCION=AGROPECUARIA | Exacto |
+| [seguridad-ciudadana](#seguridad-ciudadana) | radar-ejecucion | `GET /api/crossref` | departamento + FUNCION=ORDEN PUBLICO Y SEGURIDAD | Exacto |
+| radar-ejecucion (interno) | mincetur-hospedaje ↔ mef | `GET /api/tourism/crossref` | departamento + FUNCION=TURISMO | Exacto |
+| [compras-publicas](#compras-publicas) | radar-ejecucion | `GET /api/crossref` | `mef_entity_code` ↔ `oece_buyer_id` | Fuzzy |
+| [radar-inversiones](#radar-inversiones) | radar-ejecucion | `GET /api/crossref` | `SEC_EJEC` | Exacto |
+| [identidad-fiscal](#identidad-fiscal) | compras-publicas (`awards` **+** `minor_contracts`) | `GET /api/crossref` | RUC (`PE-RUC-` o `seace:ruc:` en `supplier_id`) | Exacto |
+| [identidad-fiscal](#identidad-fiscal) | radar-ejecucion | `GET /api/crossref/entidades` | nombre de entidad | Fuzzy |
+| [proveedores-sancionados](#proveedores-sancionados) | compras-publicas (`awards` **+** `minor_contracts`) **+** identidad-fiscal | `GET /api/crossref` (un solo endpoint, tres fuentes) | RUC | Exacto |
+| [infobras](#infobras) | radar-inversiones | `GET /api/crossref` | `CUI` | Exacto |
+| [infobras](#infobras) | radar-ejecucion | `GET /api/crossref/ejecucion` | nombre de entidad | Fuzzy |
+| [inversion-privada](#inversion-privada) (oxi) | radar-inversiones | `GET /api/crossref/oxi` | `codigo_referencia` ↔ `codigo_snip` | Exacto |
+| [ceplan-geo](#ceplan-geo) | radar-inversiones, infobras, radar-ejecucion | `GET /api/crossref/*` (3 endpoints) | UBIGEO exacto / depto-provincia-distrito | Mixto |
+| [ceplan-estrategico](#ceplan-estrategico) | radar-ejecucion | `GET /api/crossref` | nivel de gobierno (GN/GR/MP/MD) | Exacto (bucket) |
+| [salud-institucional](#salud-institucional) | radar-ejecucion, infobras, radar-inversiones, compras-publicas, identidad-fiscal | `GET /api/score` (agregador, no crossref clásico) | `entity_code` | Exacto |
+
+**Gap cerrado (CX-01, 2026-09-02)**: hasta esa fecha, los crossref de `identidad-fiscal` y
+`proveedores-sancionados` solo leían `awards` (poblada por `oece-connector.ts` /
+`oece-records-connector.ts`). Los otros dos conectores de `compras-publicas`
+(`legacy-seace-orders-connector.ts`, `seace-public-minor-contracts-connector.ts`) escriben en
+`minor_contracts` con `winning_supplier_id` en formato `seace:ruc:<11 dígitos>` (distinto del
+`PE-RUC-<11 dígitos>` de `awards.supplier_id`). Ambos endpoints ahora consultan las dos tablas en
+paralelo y devuelven un campo `origen: "awards" | "minor_contracts"` por resultado — un proveedor
+con contratos menores irregulares y sin adjudicaciones OCDS ya aparece en ambos cruces. `minor_
+contracts` no registra moneda (a diferencia de `awards`, que sí trae `valor_moneda` del estándar
+OCDS); esos resultados devuelven `valorMoneda: null` en vez de asumir soles.
+
+---
+
 ## Resumen
 
 | Conector | App | Fuente | Método | Frecuencia de ejecución | Cobertura ingerida |
 |---|---|---|---|---|---|
 | `mef-connector.ts` | radar-ejecucion | MEF (Consulta Amigable) | Descarga CSV vía HTTP Range | Manual | Parcial (La Libertad) |
+| `mincetur-hospedaje-connector.ts` | radar-ejecucion | MINCETUR (ocupabilidad hotelera) | Descarga CSV anual | Manual | Completa (nacional, fila consolidada por depto) |
 | `oece-connector.ts` | compras-publicas | OECE OCDS `/releases` | API REST JSON paginada | Manual | Parcial (10 páginas recientes) |
 | `oece-records-connector.ts` | compras-publicas | OECE OCDS `/records` | API REST JSON paginada | Manual | Parcial |
+| `legacy-seace-orders-connector.ts` | compras-publicas | SEACE buscador histórico (legado, JSF) | Scraping con ViewState/sesión | Manual | Parcial (por catálogo de entidades, La Libertad) |
+| `seace-public-minor-contracts-connector.ts` | compras-publicas | SEACE buscador público moderno | API JSON interna no documentada | Manual | Parcial por defecto (100/depto); completa con `--full` |
+| `perfilprov-conformacion-connector.ts` | compras-publicas | OSCE Buscador de Proveedores del Estado | API JSON interna no documentada | Manual | Por RUC ya conocido; vacío para consorcios |
 | `invierte-connector.ts` | radar-inversiones | MEF Invierte.pe | Descarga CSV vía HTTP Range | Manual | Parcial (por bytes) |
 | `infobras-connector.ts` | infobras | Contraloría INFOBRAS | Descarga XLSX completa | Manual | Completa (snapshot nacional) |
 | `observa-connector.ts` | ceplan-estrategico | ObservaPerú/CEPLAN | Descarga JSON estático | Manual | Completa (agregado por nivel de gobierno) |
-| `geoserver-connector.ts` | ceplan-geo | CEPLAN GeoServer | WFS GeoJSON paginado | Manual | Completa (distritos + infra MVP) |
+| `geoserver-client.ts` | ceplan-geo | CEPLAN GeoServer | WFS GeoJSON paginado | Manual | Completa (distritos + infra MVP) |
 | `padron-connector.ts` | identidad-fiscal | SUNAT Padrón RUC | Descarga ZIP completo | Manual | Completa (nacional, ~2.3M filas) |
 | `sanciones-connector.ts` | proveedores-sancionados | RNP/OECE Tribunal de Contrataciones | Sesión ASP + export HTML | Manual | Completa (nacional, ~17.9K filas) |
 | `vertix-connector.ts` | inversion-privada | PROINVERSIÓN VERTIX (investinperu.pe) | POST multipart JSON | Manual | Completa (cartera APP/PA) |
 | `oxi-connector.ts` | inversion-privada | PROINVERSIÓN VERTIX OxI (investinperu.pe) | POST multipart, XLSX en JSON base64 | Manual | Completa (761 nacional, 55 La Libertad) |
 | `gis-connector.ts` | inversion-privada | PROINVERSIÓN VERTIX GIS (vertix.proinversion.gob.pe) | GET GeoJSON, sin auth | Manual | Completa (473 features nacional) |
+| `bcrp-connector.ts` | bcrp-comercio-exterior | BCRPData (API series) | API REST JSON oficial | Manual | Completa (agregado nacional, sin desagregado) |
 | `pdf-connector.ts` | bcrp-la-libertad | BCRP Sucursal Trujillo (PDF, descarga manual por WAF) | Parseo de texto tabulado con `pdf-parse` | Manual (archivo local) | Parcial (7/10 anexos) |
+| `jornal-agricola-connector.ts` | actividad-agraria | MIDAGRI (datosabiertos.gob.pe) | Descarga CSV (motor compartido) | Manual | Completa (nacional) |
+| `tractor-rental-connector.ts` | actividad-agraria | MIDAGRI (datosabiertos.gob.pe) | Descarga CSV (motor compartido) | Manual | Completa (nacional) |
+| `yunta-rental-connector.ts` | actividad-agraria | MIDAGRI (datosabiertos.gob.pe) | Descarga CSV (motor compartido) | Manual | Completa (nacional) |
+| `sidpol-connector.ts` | seguridad-ciudadana | MININTER (datosabiertos.gob.pe) | Descarga CSV, maneja WAF | Manual | Completa (nacional) |
 | — (agregador) | salud-institucional | Las otras 5 apps | Query en vivo, sin ingesta | Bajo demanda (por request) | N/A |
-
-## Candidatos evaluados, no implementados
-
-<a id="bcrp-comercio-exterior"></a>
-### bcrp-comercio-exterior — Comercio exterior (BCRP), candidato no construido
-
-| | |
-|---|---|
-| **Descripción** | Exportaciones por departamento e importaciones por aduana (BCRPData) — evaluado como novena fuente para sector producción/comercio exterior, ausente hoy del proyecto. |
-| **Por qué no está construido** | El desagregado por departamento (`RD38085BM`-`RD38111BM`) está congelado en Dic-2022/Dic-2023 (re-verificado en vivo). El agregado nacional (`PN38714BM`-`PN38723BM`) sí está al día a jun-2026, pero es un solo número por mes — sin producto, sin empresa, sin `entity_code`. |
-| **Qué sí tiene, a diferencia del resto** | API REST real, documentada, sin sesión ni scraping — confirmado en vivo. El conector más simple de construir de todos, si se acepta la granularidad limitada del agregado nacional. |
-| **Fuente de datos** | `estadisticas.bcrp.gob.pe/estadisticas/series/api` (Banco Central de Reserva del Perú). |
-| **Detalle completo** | [`docs/data-contracts/bcrp-comercio-exterior.md`](data-contracts/bcrp-comercio-exterior.md) |
 

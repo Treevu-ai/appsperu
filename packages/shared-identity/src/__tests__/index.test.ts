@@ -14,6 +14,10 @@ describe("extractRuc", () => {
     expect(extractRuc("PE-RUC-123")).toBeNull();
     expect(extractRuc("PE-RUC-123456789012")).toBeNull();
   });
+
+  it("extracts the 11-digit RUC from a seace:ruc: supplier id (minor_contracts)", () => {
+    expect(extractRuc("seace:ruc:20610467122")).toBe("20610467122");
+  });
 });
 
 describe("vigenteEnFecha", () => {

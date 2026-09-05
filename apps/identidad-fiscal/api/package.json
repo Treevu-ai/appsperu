@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@appsperu/shared-identity": "*",
+    "@appsperu/entity-matcher": "*",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^4.19.2",

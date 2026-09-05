@@ -1,20 +1,28 @@
 /**
- * Extrae el RUC de un `supplier_id` de OCDS con el formato `PE-RUC-<11 dígitos>`
- * — el 77.3% de la muestra de compras-publicas (confirmado en vivo el
- * 2026-08-20, ver docs/data-contracts/sunat-padron-ruc.md). El resto son
- * consorcios con un id interno más corto que no es RUC estándar y no cruzan
- * por esta vía; en ese caso devuelve `null`, nunca un valor inventado.
+ * Extrae el RUC de un `supplier_id`. `PE-RUC-<11 dígitos>` es el formato OCDS
+ * de la mayoría de proveedores en compras-publicas (77.3% de la muestra,
+ * confirmado en vivo el 2026-08-20, ver docs/data-contracts/sunat-padron-ruc.md).
+ * `seace:ruc:<11 dígitos>` es el usado por los contratos menores vía SEACE
+ * (`minor_contracts.winning_supplier_id`, ver
+ * legacy-seace-orders-connector.ts / seace-public-minor-contracts-connector.ts).
+ * El resto son consorcios con un id interno más corto que no es RUC estándar
+ * y no cruzan por esta vía; en ese caso devuelve `null`, nunca un valor
+ * inventado.
  *
- * Consolidado de 3 copias idénticas que existían en `identidad-fiscal`,
+ * Consolidado de las copias idénticas que existían en `identidad-fiscal`,
  * `proveedores-sancionados` y `salud-institucional` (CX-09, ver
  * docs/adr/0019-alcance-workspace-utilidades-compartidas.md).
  */
-const RUC_PREFIX = "PE-RUC-";
+const RUC_PREFIXES = ["PE-RUC-", "seace:ruc:"] as const;
 
 export function extractRuc(supplierId: string): string | null {
-  if (!supplierId.startsWith(RUC_PREFIX)) return null;
-  const ruc = supplierId.slice(RUC_PREFIX.length);
-  return /^\d{11}$/.test(ruc) ? ruc : null;
+  for (const prefix of RUC_PREFIXES) {
+    if (supplierId.startsWith(prefix)) {
+      const ruc = supplierId.slice(prefix.length);
+      return /^\d{11}$/.test(ruc) ? ruc : null;
+    }
+  }
+  return null;
 }
 
 export type EstadoTemporal = true | false | "NO_VERIFICABLE";

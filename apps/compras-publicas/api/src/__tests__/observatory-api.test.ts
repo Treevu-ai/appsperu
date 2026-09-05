@@ -96,16 +96,17 @@ describe("GET /api/semantic-review-clusters", () => {
 describe("GET /api/meta/freshness", () => {
   it("makes the extraction date and coverage contract visible", async () => {
     queryMock.mockResolvedValueOnce({ rows: [
-      { source: "oece_ocds", fetched_at: "2026-08-23T10:00:00.000Z", records: "12", coverage: "Parcial" },
-      { source: "seace_contratos_menores", fetched_at: "2026-08-23T11:00:00.000Z", records: "34", coverage: "Materializada" },
+      { source: "oece_ocds", fetched_at: "2026-08-23T10:00:00.000Z", records: "12", latest_batch_id: "42", rejected_in_latest_batch: "3", coverage: "Parcial" },
+      { source: "seace_contratos_menores", fetched_at: "2026-08-23T11:00:00.000Z", records: "34", latest_batch_id: "7", rejected_in_latest_batch: null, coverage: "Materializada" },
     ] });
     const response = await request(createApp()).get("/api/meta/freshness");
     expect(response.status).toBe(200);
     expect(response.body.sources).toEqual([
-      { source: "oece_ocds", fetchedAt: "2026-08-23T10:00:00.000Z", records: 12, coverage: "Parcial" },
-      { source: "seace_contratos_menores", fetchedAt: "2026-08-23T11:00:00.000Z", records: 34, coverage: "Materializada" },
+      { source: "oece_ocds", fetchedAt: "2026-08-23T10:00:00.000Z", records: 12, latestBatchId: 42, rejectedInLatestBatch: 3, coverage: "Parcial" },
+      { source: "seace_contratos_menores", fetchedAt: "2026-08-23T11:00:00.000Z", records: 34, latestBatchId: 7, rejectedInLatestBatch: null, coverage: "Materializada" },
     ]);
     expect(response.body.limitation).toMatch(/no son equivalentes/i);
+    expect(response.body.limitation).toMatch(/rejectedInLatestBatch/);
   });
 });
 

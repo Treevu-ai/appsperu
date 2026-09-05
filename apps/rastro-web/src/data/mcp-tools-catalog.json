@@ -1,0 +1,989 @@
+[
+  {
+    "name": "radar_ejecucion_execution",
+    "app": "radar-ejecucion",
+    "description": "Ejecución presupuestal (PIA/PIM/Devengado) por entidad + función + año fiscal, agregada desde el CSV nacional del MEF. Cobertura PARCIAL: acotada a La Libertad (offsets fijos en el conector), no todo el país. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/execution",
+    "pathParams": [],
+    "queryParams": [
+      "nivel",
+      "funcion",
+      "anio",
+      "ubigeo"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_execution_by_entity",
+    "app": "radar-ejecucion",
+    "description": "Detalle de ejecución presupuestal de una entidad específica por su entity_code. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/execution/{entityCode}",
+    "pathParams": [
+      "entityCode"
+    ],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_benchmark",
+    "app": "radar-ejecucion",
+    "description": "Compara la ejecución de una entidad contra su cohorte (mismo nivel de gobierno) en un año fiscal dado — devuelve 422 si no hay regla de cohorte definida para su nivel_gobierno, en vez de publicar un benchmark sin base. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/benchmark/{entityCode}",
+    "pathParams": [
+      "entityCode"
+    ],
+    "queryParams": [
+      "anio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_meta_sources",
+    "app": "radar-ejecucion",
+    "description": "Metadata de los últimos 10 lotes de ingesta del MEF (cuándo se corrió, cuántos registros, checksum).",
+    "pathTemplate": "/api/meta/sources",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "radar_ejecucion_lluvias_seguimiento",
+    "app": "radar-ejecucion",
+    "description": "Tablero terminal de seguimiento ante lluvias: actividad MEF con PIA/PIM/devengado y, en una sección separada, proyectos territoriales con CUI verificado. No une ambas secciones por similitud de nombre ni inventa PIM, CUI o distrito beneficiado. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/lluvias/seguimiento",
+    "pathParams": [],
+    "queryParams": [
+      "anio",
+      "departamento",
+      "busqueda"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_sector_inventory",
+    "app": "radar-ejecucion",
+    "description": "Inventario de entidades MEF presentes para La Libertad: Gobierno Nacional por destino declarado y Gobierno Regional por sede ejecutora. Indica si una entidad ya tiene clasificación sectorial verificada; no clasificada no significa ausente del sector. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/sectores/inventory",
+    "pathParams": [],
+    "queryParams": [
+      "anio",
+      "departamento",
+      "limit"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_sector_ficha",
+    "app": "radar-ejecucion",
+    "description": "Ficha de entidades verificadas de un sector: PIA/PIM/devengado, regla territorial y cortes usados. CUI, obra y contratación solo aparecen con claves oficiales exactas; no se infieren por nombre o embeddings. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/sectores/{sectorId}/ficha",
+    "pathParams": [
+      "sectorId"
+    ],
+    "queryParams": [
+      "anio",
+      "departamento"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_sector_comparativo",
+    "app": "radar-ejecucion",
+    "description": "Comparativo descriptivo de entidades sectoriales verificadas. Mantiene separadas la responsabilidad nacional dirigida al departamento y la ejecución regional por sede; no genera score ni suma ambos universos como si fueran uno solo. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/sectores/comparativo",
+    "pathParams": [],
+    "queryParams": [
+      "anio",
+      "departamento",
+      "sectores"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_budget_movement",
+    "app": "radar-ejecucion",
+    "description": "Explicación determinística de cómo se distribuye PIA, PIM y devengado entre Gobierno Nacional dirigido a La Libertad y Gobierno Regional ejecutado por sus unidades. No describe pagos, avance físico, impacto ni calidad, y no suma ambos universos. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/sectores/movimiento-presupuestal",
+    "pathParams": [],
+    "queryParams": [
+      "anio",
+      "departamento",
+      "sectores"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_care_services",
+    "app": "radar-ejecucion",
+    "description": "Registro trazable de servicios que cuidan en La Libertad: infraestructura (CUI y obra INFOBRAS solo por clave exacta) y alimentación escolar (cobertura, comités, lotes, proveedores y entregas únicamente cuando una fuente oficial los vincula). La ausencia de RUC, lote o entrega se declara como vacío de evidencia; no se infiere por nombres. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/servicios-cuidados",
+    "pathParams": [],
+    "queryParams": [
+      "tipo",
+      "departamento"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_food_lots",
+    "app": "radar-ejecucion",
+    "description": "Lotes de alimentación escolar materializados desde evidencia oficial en La Libertad. Expone contrato, comité, proveedor literal y RUC únicamente si fue publicado de forma exacta; una referencia de entrega no equivale a acta de recepción escolar. Cobertura PARCIAL y manual-asistida: no representa el universo de lotes publicados. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/servicios-cuidados/alimentacion/lotes",
+    "pathParams": [],
+    "queryParams": [
+      "periodo",
+      "estado"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_food_coverage",
+    "app": "radar-ejecucion",
+    "description": "Cobertura escolar verificable de alimentación. Solo muestra colegio, provincia, distrito y entrega cuando existen código modular y acta/evidencia oficial; un total regional agregado no se reparte entre distritos. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/servicios-cuidados/alimentacion/cobertura",
+    "pathParams": [],
+    "queryParams": [
+      "periodo",
+      "provincia",
+      "distrito"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_food_supplier",
+    "app": "radar-ejecucion",
+    "description": "Lotes alimentarios y evidencia de cumplimiento consultables por RUC exacto de 11 dígitos. No vincula por nombre de consorcio; 404 significa que no existe un vínculo RUC-lote materializado, no una conclusión sobre el proveedor. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/servicios-cuidados/alimentacion/proveedores/{ruc}",
+    "pathParams": [
+      "ruc"
+    ],
+    "queryParams": [
+      "periodo"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_food_integrity",
+    "app": "radar-ejecucion",
+    "description": "Control de integridad de la cadena lote-RUC-colegio-entrega. Devuelve BLOQUEADO_POR_EVIDENCIA cuando faltan claves o actas; no convierte esos vacíos en un indicador de incumplimiento. Con estricto=true usa HTTP 409 para impedir automatizaciones que requieran la cadena completa. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/servicios-cuidados/alimentacion/integridad",
+    "pathParams": [],
+    "queryParams": [
+      "periodo",
+      "estricto"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_food_evidence_queue",
+    "app": "radar-ejecucion",
+    "description": "Cola de evidencia faltante para trazabilidad alimentaria: RUC, padrón de colegios, actas o viabilidad de fuente. Es una prioridad de revisión humana, no una lista de observados. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/servicios-cuidados/alimentacion/evidencia-pendiente",
+    "pathParams": [],
+    "queryParams": [
+      "periodo",
+      "estado"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_supplier_observations",
+    "app": "radar-ejecucion",
+    "description": "Observaciones documentadas sobre un proveedor, únicamente por RUC exacto: sanción formal, denuncia con expediente, proceso en curso o antigüedad del RUC frente a una fecha contractual. No genera score ni concluye responsabilidad; una denuncia o proceso no equivale a sanción. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/servicios-cuidados/alimentacion/observaciones-proveedor/{ruc}",
+    "pathParams": [
+      "ruc"
+    ],
+    "queryParams": [
+      "tipo",
+      "estado"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_supplier_observations_unlinked",
+    "app": "radar-ejecucion",
+    "description": "Referencias externas sobre proveedores sin RUC exacto. Se preservan para revisión, pero el sistema prohíbe atribuirlas a un proveedor, lote, contrato o ranking. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/servicios-cuidados/alimentacion/observaciones-proveedor/pendientes",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_tourism_hospedaje",
+    "app": "radar-ejecucion",
+    "description": "Indicadores MINCETUR de hospedaje (arribos, pernoctaciones) por departamento/mes, fuente Indicadores de Ocupabilidad PNDA. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/turismo/hospedaje",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "anio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_tourism_crossref",
+    "app": "radar-ejecucion",
+    "description": "Cruce turismo: flujo hospedaje MINCETUR vs gasto función TURISMO (MEF), con PIM/devengado MPT Trujillo y separación sede vs meta departamento. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/turismo/crossref",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "anio",
+      "anioFiscal",
+      "entidadMpt"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_infrastructure_assets",
+    "app": "radar-ejecucion",
+    "description": "Activos de infraestructura materializados para La Libertad: CUI/obra cuando existe, y evidencia separada de cierre, operador, mantenimiento, disponibilidad y servicio. Avance físico, presupuesto o inauguración no se presentan como operación. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/infraestructura/activos",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "sector"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_infrastructure_asset",
+    "app": "radar-ejecucion",
+    "description": "Ficha completa de un activo: identidad, obra INFOBRAS por CUI exacto, recepción/cierre, operador, mantenimiento, disponibilidad, indicadores y vacíos de evidencia. No certifica calidad, seguridad ni impacto. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/infraestructura/activos/{assetId}",
+    "pathParams": [
+      "assetId"
+    ],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_infrastructure_operation",
+    "app": "radar-ejecucion",
+    "description": "Evidencia de recepción, operador y disponibilidad de un activo. La ausencia de estos registros es un vacío de ALSOL, no prueba de que el activo no funcione. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/infraestructura/activos/{assetId}/operacion",
+    "pathParams": [
+      "assetId"
+    ],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_infrastructure_maintenance",
+    "app": "radar-ejecucion",
+    "description": "Evidencia de mantenimiento atribuida a un activo. PIM/devengado identifica financiamiento o ejecución registrada, no prueba por sí solo mantenimiento realizado o disponibilidad. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/infraestructura/activos/{assetId}/mantenimiento",
+    "pathParams": [
+      "assetId"
+    ],
+    "queryParams": [
+      "anio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_infrastructure_integrity",
+    "app": "radar-ejecucion",
+    "description": "Control de integridad de infraestructura: verifica qué activos tienen cierre, operador, mantenimiento, disponibilidad e indicador. Con estricto=true devuelve 409 si no existe evidencia mínima para presentarlos como infraestructura que funciona. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/infraestructura/integridad",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "sector",
+      "estricto"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_infrastructure_evidence_queue",
+    "app": "radar-ejecucion",
+    "description": "Cola de evidencia faltante por activo: recepción, operador, mantenimiento o disponibilidad. Es una prioridad de revisión, no una lista de infraestructura inoperativa. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/infraestructura/evidencia-pendiente",
+    "pathParams": [],
+    "queryParams": [
+      "estado"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_sector_review_queue",
+    "app": "radar-ejecucion",
+    "description": "Consulta la cola de candidatos CUI-actividad o entidad-compra pendientes de revisión humana. Los candidatos no son vínculos oficiales ni alimentan agregados sectoriales.",
+    "pathTemplate": "/api/sectores/revision",
+    "pathParams": [],
+    "queryParams": [
+      "estado",
+      "limit"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "compras_publicas_procurement",
+    "app": "compras-publicas",
+    "description": "Procesos de contratación pública (releases OCDS) ingeridos desde OECE. Cobertura PARCIAL: cada corrida trae hasta 10 páginas más recientes, no el histórico completo. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/procurement",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "categoria",
+      "buyerId"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "compras_publicas_procurement_by_ocid",
+    "app": "compras-publicas",
+    "description": "Detalle de un proceso de contratación específico por su OCID.",
+    "pathTemplate": "/api/procurement/{ocid}",
+    "pathParams": [
+      "ocid"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "compras_publicas_suppliers",
+    "app": "compras-publicas",
+    "description": "Proveedores del Estado agregados por adjudicaciones, entidades distintas y valor total, con índice de concentración de mercado. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/suppliers",
+    "pathParams": [],
+    "queryParams": [
+      "departamento"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "compras_publicas_supplier_by_id",
+    "app": "compras-publicas",
+    "description": "Historial completo de adjudicaciones de un proveedor específico por su supplier_id.",
+    "pathTemplate": "/api/suppliers/{supplierId}",
+    "pathParams": [
+      "supplierId"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "compras_publicas_crossref",
+    "app": "compras-publicas",
+    "description": "Cruce compras-publicas <-> radar-ejecucion por nombre de entidad (matcher difuso, persistido en entity_crosswalk) — trae devengado y compras por entidad ya cruzada. `confidence` filtra confirmada/candidata.",
+    "pathTemplate": "/api/crossref",
+    "pathParams": [],
+    "queryParams": [
+      "confidence"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "radar_inversiones_investments",
+    "app": "radar-inversiones",
+    "description": "Proyectos de inversión pública (Invierte.pe) — costos, estado, entidad responsable. Cobertura PARCIAL: snapshot por ventana de bytes del CSV, no el archivo completo. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/investments",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "estado",
+      "situacion",
+      "funcion"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_inversiones_investment_by_cui",
+    "app": "radar-inversiones",
+    "description": "Detalle de un proyecto de inversión específico por su CUI (Código Único de Inversión).",
+    "pathTemplate": "/api/investments/{cui}",
+    "pathParams": [
+      "cui"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "radar_inversiones_crossref",
+    "app": "radar-inversiones",
+    "description": "Cruce radar-inversiones <-> radar-ejecucion por SEC_EJEC (clave exacta, sin matching difuso) — inversiones de un departamento junto con el devengado presupuestal de la misma entidad. Default: LA LIBERTAD.",
+    "pathTemplate": "/api/crossref",
+    "pathParams": [],
+    "queryParams": [
+      "departamento"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "infobras_public_works",
+    "app": "infobras",
+    "description": "Obras públicas monitoreadas por la Contraloría (INFOBRAS) — avance físico/financiero, paralización, entidad responsable. Cobertura completa (snapshot nacional del XLSX). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/public-works",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "estado",
+      "conParalizacion"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "infobras_public_works_resumen",
+    "app": "infobras",
+    "description": "Resumen agregado: total de obras, % con paralización, % con avance físico reportado.",
+    "pathTemplate": "/api/public-works/resumen",
+    "pathParams": [],
+    "queryParams": [
+      "departamento"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "infobras_public_work_by_codigo",
+    "app": "infobras",
+    "description": "Detalle de una obra específica por su código INFOBRAS.",
+    "pathTemplate": "/api/public-works/{codigoInfobras}",
+    "pathParams": [
+      "codigoInfobras"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "infobras_crossref",
+    "app": "infobras",
+    "description": "Cruce infobras <-> radar-inversiones por CUI (clave exacta) — obras de un departamento junto con su inversión asociada. Default: LA LIBERTAD.",
+    "pathTemplate": "/api/crossref",
+    "pathParams": [],
+    "queryParams": [
+      "departamento"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "infobras_crossref_ejecucion",
+    "app": "infobras",
+    "description": "Cruce infobras <-> radar-ejecucion por nombre de entidad (matcher difuso, persistido en entity_crosswalk, recalculable con `npm run crossref:build`) — trae devengado, obras y obras paralizadas por entidad ya cruzada. `confidence` filtra confirmada/candidata.",
+    "pathTemplate": "/api/crossref/ejecucion",
+    "pathParams": [],
+    "queryParams": [
+      "confidence"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "ceplan_estrategico_indicators",
+    "app": "ceplan-estrategico",
+    "description": "Indicadores priorizados de gestión estratégica del Estado, agregados por nivel de gobierno (GN/GR/MP/MD/Total) — NO hay modelo per-entidad disponible públicamente. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/indicators",
+    "pathParams": [],
+    "queryParams": [
+      "indicatorCode",
+      "nivelGobierno"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "ceplan_estrategico_indicators_seg",
+    "app": "ceplan-estrategico",
+    "description": "SEG (Strategic Execution Gap): nacional CEPLAN (CUMP03−CUMP02, GN/GR) o proxy departamental PROXY_DEPARTAMENTAL (MEF devengado/PIM − avance físico INFOBRAS). Solo 5 regiones piloto ALSOL con ?departamento=. Cobertura parcial.",
+    "pathTemplate": "/api/indicators/seg",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "anio"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "ceplan_estrategico_indicators_execution_efficiency",
+    "app": "ceplan-estrategico",
+    "description": "Execution Efficiency: nacional CEPLAN (CUMP02/CUMP03, GN/GR) o proxy departamental PROXY_DEPARTAMENTAL (avance físico INFOBRAS / ejecución presupuestal MEF). Solo 5 regiones piloto con ?departamento=. Cobertura parcial.",
+    "pathTemplate": "/api/indicators/execution-efficiency",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "anio"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "ceplan_estrategico_indicators_plan_budget_alignment",
+    "app": "ceplan-estrategico",
+    "description": "Plan–Budget Alignment departamental (mapeo heurístico CEPLAN dimensión → función MEF v1). Participación % del devengado por dimensión en un departamento piloto. No prueba alineación PEI. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/indicators/plan-budget-alignment",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "anio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "ceplan_estrategico_crossref",
+    "app": "ceplan-estrategico",
+    "description": "Cruce ceplan-estrategico <-> radar-ejecucion por nivel de gobierno (único bucket exacto entre ambas fuentes: solo GN/GR, CEPLAN no distingue MP de MD y radar-ejecucion los junta en 'GOBIERNOS LOCALES'). Los años de cada fuente pueden no coincidir y se devuelven ambos explícitos.",
+    "pathTemplate": "/api/crossref",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "ceplan_estrategico_crossref_territorial",
+    "app": "ceplan-estrategico",
+    "description": "Cruce ceplan-estrategico <-> ceplan-geo por departamento piloto ALSOL (5 regiones). Adjunta CUMP02/CUMP03 nacionales (GN/GR) con contexto territorial (distritos, infraestructura). Matcher: departamento_prefijo_ubigeo. Cobertura PARCIAL — no implica desempeño estratégico regional.",
+    "pathTemplate": "/api/crossref/territorial",
+    "pathParams": [],
+    "queryParams": [
+      "departamento"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "ceplan_estrategico_meta_aplicativo",
+    "app": "ceplan-estrategico",
+    "description": "Estado del Aplicativo CEPLAN V.01 y fuentes alternativas para datos per-entidad (PEI/POI por pliego). Hoy perEntityAvailable=false: ObservaPerú solo trae agregados por nivel de gobierno. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/meta/aplicativo",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "ceplan_geo_layers",
+    "app": "ceplan-geo",
+    "description": "Catálogo de capas WFS ingeridas desde el GeoServer de CEPLAN (PostGIS). Cobertura nacional en capas MVP (distritos, aeropuertos, puertos). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/layers",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "ceplan_geo_layer_by_id",
+    "app": "ceplan-geo",
+    "description": "Metadatos de una capa geoespacial por UUID interno.",
+    "pathTemplate": "/api/layers/{id}",
+    "pathParams": [
+      "id"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "ceplan_geo_layer_features",
+    "app": "ceplan-geo",
+    "description": "Features vectoriales de una capa, con bbox y limit opcionales.",
+    "pathTemplate": "/api/layers/{id}/features",
+    "pathParams": [
+      "id"
+    ],
+    "queryParams": [
+      "bbox",
+      "limit"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "ceplan_geo_territories",
+    "app": "ceplan-geo",
+    "description": "Distrito/territorio oficial por UBIGEO o por tríada departamento/provincia/distrito. Sin coordenadas inventadas. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/territories",
+    "pathParams": [],
+    "queryParams": [
+      "ubigeo",
+      "departamento",
+      "provincia",
+      "distrito"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "ceplan_geo_territories_summary",
+    "app": "ceplan-geo",
+    "description": "Agregados territoriales por departamento piloto ALSOL (5 regiones): conteo de distritos e infraestructura dentro del polígono departamental. Solo LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO.",
+    "pathTemplate": "/api/territories/summary",
+    "pathParams": [],
+    "queryParams": [
+      "departamento"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "ceplan_geo_territories_bbox",
+    "app": "ceplan-geo",
+    "description": "Territorios (distritos) que intersectan un bounding box.",
+    "pathTemplate": "/api/territories/bbox",
+    "pathParams": [],
+    "queryParams": [
+      "minx",
+      "miny",
+      "maxx",
+      "maxy"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "ceplan_geo_infrastructure",
+    "app": "ceplan-geo",
+    "description": "Infraestructura publicada por CEPLAN: aeropuertos, puertos, red hídrica principal (cb_redhidricaprinx) y proyectos sectoriales agro (ip_prysecagr). Filtro opcional por código INEI de departamento (2 dígitos). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/infrastructure",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "ceplan_geo_infrastructure_near",
+    "app": "ceplan-geo",
+    "description": "Infraestructura (aeropuertos, puertos, red hídrica principal, proyectos sectoriales agro) dentro de un radio (km) del centroide del distrito (UBIGEO). Proximidad descriptiva, no causal. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/infrastructure/near",
+    "pathParams": [],
+    "queryParams": [
+      "ubigeo",
+      "radius_km"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "ceplan_geo_crossref_inversiones",
+    "app": "ceplan-geo",
+    "description": "Cruce ceplan-geo <-> radar-inversiones: enriquece inversiones con territorio CEPLAN e infra cercana. Matcher territorial por nombre (la API de inversiones no expone UBIGEO). Requiere radar-inversiones corriendo. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/crossref/inversiones",
+    "pathParams": [],
+    "queryParams": [
+      "departamento"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "ceplan_geo_crossref_obras",
+    "app": "ceplan-geo",
+    "description": "Cruce ceplan-geo <-> infobras: enriquece obras con territorio CEPLAN sin usar coordenadas (INFOBRAS no las publica). Requiere infobras corriendo. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/crossref/obras",
+    "pathParams": [],
+    "queryParams": [
+      "departamento"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "ceplan_geo_crossref_ejecucion",
+    "app": "ceplan-geo",
+    "description": "Cruce ceplan-geo <-> radar-ejecucion por UBIGEO: ejecución por sede (ubigeo) y gasto nacional dirigido (metaDepartamento) en secciones separadas, con infraestructura cercana. No sumar ambos ámbitos. Requiere radar-ejecucion. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/crossref/ejecucion",
+    "pathParams": [],
+    "queryParams": [
+      "ubigeo"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "ceplan_geo_denominadores_poblacion",
+    "app": "ceplan-geo",
+    "description": "Población por UBIGEO (piloto provincia Trujillo, Censo INEI 2017) para denominadores territoriales. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/denominadores/poblacion",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "provincia"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "ceplan_geo_denominadores_tasas",
+    "app": "ceplan-geo",
+    "description": "Tasas por distrito dentro de una provincia (ej. denuncias por 1 000 hab.) usando población INEI 2017 y volumen de seguridad-ciudadana. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/denominadores/tasas",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "provincia",
+      "anio",
+      "por",
+      "metrica"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "identidad_fiscal_contribuyentes",
+    "app": "identidad-fiscal",
+    "description": "Busca contribuyentes en el Padrón RUC de SUNAT (personas jurídicas, RUC-20) por razón social, estado o ubigeo. Cobertura nacional completa (~2.3M filas).  La fuente SUNAT se actualiza a diario; este conector no está automatizado para seguir ese ritmo.Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/contribuyentes",
+    "pathParams": [],
+    "queryParams": [
+      "razonSocial",
+      "estado",
+      "ubigeo"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "identidad_fiscal_contribuyente_by_ruc",
+    "app": "identidad-fiscal",
+    "description": "Detalle de un contribuyente específico por RUC exacto (11 dígitos).",
+    "pathTemplate": "/api/contribuyentes/{ruc}",
+    "pathParams": [
+      "ruc"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "identidad_fiscal_crossref_proveedores",
+    "app": "identidad-fiscal",
+    "description": "Cruce identidad-fiscal <-> compras-publicas por RUC exacto (extraído de supplier_id, cobertura ~77.3% de adjudicaciones) — marca proveedores con estatus tributario irregular (BAJA/NO HABIDO) que ganaron contratos públicos. `soloIrregulares=true` filtra solo esos casos. Default: LA LIBERTAD.",
+    "pathTemplate": "/api/crossref",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "soloIrregulares"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "identidad_fiscal_crossref_entidades",
+    "app": "identidad-fiscal",
+    "description": "Cruce identidad-fiscal <-> radar-ejecucion por nombre de entidad (matcher difuso, confirmada/candidata) — resuelve el RUC de cada gobierno/municipalidad para chequear su propio estatus tributario. Default: LA LIBERTAD.",
+    "pathTemplate": "/api/crossref/entidades",
+    "pathParams": [],
+    "queryParams": [
+      "departamento"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "proveedores_sancionados_sanciones",
+    "app": "proveedores-sancionados",
+    "description": "Inhabilitaciones y multas del Tribunal de Contrataciones para un RUC específico (requerido). 'Vigente hoy' no equivale a 'vigente al momento de la adjudicación' — revisar fechas `desde`/`hasta` de cada registro antes de concluir algo sobre un contrato pasado. Cobertura nacional completa (~17.9K filas). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/sanciones",
+    "pathParams": [],
+    "queryParams": [
+      "ruc"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "proveedores_sancionados_crossref",
+    "app": "proveedores-sancionados",
+    "description": "Cruce proveedores-sancionados <-> compras-publicas por RUC exacto — señal más fuerte que el estatus tributario: una inhabilitación VIGENTE es prohibición LEGAL de contratar con el Estado. `soloInhabilitados=true` filtra solo adjudicaciones con inhabilitación vigente. Default: LA LIBERTAD.",
+    "pathTemplate": "/api/crossref",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "soloInhabilitados"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "salud_institucional_score",
+    "app": "salud-institucional",
+    "description": "Score compuesto 0-100 por entidad, calculado EN VIVO combinando ejecución (radar-ejecucion), obras (infobras), inversiones (radar-inversiones), compras (compras-publicas) y salud tributaria de proveedores (identidad-fiscal). Si una fuente no tiene dato para una entidad, ese componente se OMITE del promedio — nunca se imputa 0 ni 100 por ausencia. No hay 'ingesta' propia que programar: requiere que las otras 5 apps estén corriendo. Default: LA LIBERTAD, año 2026.",
+    "pathTemplate": "/api/score",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "anio"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "actividad_agraria_wage",
+    "app": "actividad-agraria",
+    "description": "Valor de jornal agrícola (S/.) por departamento/año/mes, fuente MIDAGRI. Serie mensual normalizada; un valor null puede significar 'mes reportado sin dato' ('-' en el origen) o 'mes futuro aún no reportado' — ambos casos son indistinguibles en este endpoint. Cobertura nacional completa. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/wage",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "anio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "actividad_agraria_regional_outcome",
+    "app": "actividad-agraria",
+    "description": "Métricas de resultado agropecuario regional (VBP, superficie, productores) — piloto SIEA La Libertad 2024 materializado como MANUAL_PILOT hasta existir CSV PNDA equivalente. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/regional-outcome",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "anio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "actividad_agraria_crossref",
+    "app": "actividad-agraria",
+    "description": "Cruce resultado agro (SIEA piloto) + insumos MIDAGRI (jornal/tractor/yunta) vs gasto AGROPECUARIA en radar-ejecucion, separando ejecución con sede regional/local de gasto nacional dirigido (meta_departamento). No sumar ambos ámbitos.",
+    "pathTemplate": "/api/crossref",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "anio"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "actividad_agraria_tractor_rental",
+    "app": "actividad-agraria",
+    "description": "Precio de alquiler de tractor agrícola (S/.) por departamento/año/mes, fuente MIDAGRI-03.04. Misma semántica que jornal: null = mes sin dato o futuro no reportado. Cobertura nacional. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/tractor-rental",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "anio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "actividad_agraria_yunta_rental",
+    "app": "actividad-agraria",
+    "description": "Precio de alquiler de yunta (S/.) por departamento/año/mes, fuente MIDAGRI-03.05. Misma semántica que jornal: null = mes sin dato o futuro no reportado. Cobertura nacional. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/yunta-rental",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "anio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "seguridad_ciudadana_denuncias",
+    "app": "seguridad-ciudadana",
+    "description": "Denuncias policiales agregadas (SIDPOL, MININTER) por departamento/provincia/distrito/año/mes/modalidad (Robo, Hurto, Extorsión, Estafa, Violencia contra la mujer e integrantes, Secuestro, Otros). Son conteos ya agregados por el origen, no eventos individuales. Cobertura nacional completa 2018-2026, sin filtros trae el universo entero — usar al menos departamento en producción. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/denuncias",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "provincia",
+      "anio",
+      "modalidad"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "seguridad_ciudadana_crossref",
+    "app": "seguridad-ciudadana",
+    "description": "Cruce seguridad-ciudadana <-> radar-ejecucion por departamento exacto (sin fuzzy) — total de denuncias del año por modalidad junto a la ejecución presupuestal de la función ORDEN PUBLICO Y SEGURIDAD, separando ejecución con sede regional/local de gasto de Gobierno Nacional dirigido al departamento. No implica causalidad ni correlación entre ambas series.",
+    "pathTemplate": "/api/crossref",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "anio"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "bcrp_trade",
+    "app": "bcrp-comercio-exterior",
+    "description": "Comercio exterior agregado nacional (millones US$ FOB) — exportaciones, importaciones y balanza comercial mensual, series PN38714BM–PN38723BM. Sin desagregación territorial ni por empresa; indicador macro de contexto. Cobertura nacional completa desde 2012. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/trade",
+    "pathParams": [],
+    "queryParams": [
+      "series",
+      "anio",
+      "desde",
+      "hasta"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "bcrp_meta_sources",
+    "app": "bcrp-comercio-exterior",
+    "description": "Metadata de los últimos 10 lotes de ingesta BCRP (series, rango, checksum).",
+    "pathTemplate": "/api/meta/sources",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "inversion_privada_projects",
+    "app": "inversion-privada",
+    "description": "Cartera de inversión privada PROINVERSIÓN (VERTIX) — proyectos APP y PA con sector, fase, titular y monto. Sin CUI; departamento inferido por filtro del buscador. Cobertura completa de la cartera consultable. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/projects",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "sector",
+      "tipo",
+      "titular",
+      "fase"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "inversion_privada_project_by_id",
+    "app": "inversion-privada",
+    "description": "Detalle de un proyecto de la cartera VERTIX por su Id interno PROINVERSIÓN.",
+    "pathTemplate": "/api/projects/{vertixId}",
+    "pathParams": [
+      "vertixId"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "inversion_privada_meta_sources",
+    "app": "inversion-privada",
+    "description": "Metadata de los últimos lotes de ingesta VERTIX (APP/PA) y OxI, con desglose APP/PA y por fase OxI.",
+    "pathTemplate": "/api/meta/sources",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "inversion_privada_oxi_projects",
+    "app": "inversion-privada",
+    "description": "Cartera OxI (Obras por Impuestos) en promoción por PROINVERSIÓN — universo distinto a APP/PA, misma plataforma VERTIX. `codigoReferencia` viene de una columna fuente que mezcla tres sistemas de código (SNIP / Invierte.pe / IDEA) — no asumir que siempre es un codigo_snip exacto. Cobertura completa del export consultado (761 nacional, 55 en La Libertad, verificado 2026-08-28). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/oxi",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "funcion",
+      "fase",
+      "entidad"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "inversion_privada_oxi_crossref_invierte",
+    "app": "inversion-privada",
+    "description": "Cruce OxI <-> radar-inversiones (Invierte.pe) por codigo_snip exacto (sin fuzzy). Solo confirma lo que efectivamente matchea — una fila sin match no implica que el proyecto no exista en Invierte.pe, solo que su código en OxI no coincidió. Incluye resumen con tasa de match real. Default LA LIBERTAD.",
+    "pathTemplate": "/api/crossref/oxi",
+    "pathParams": [],
+    "queryParams": [
+      "departamento"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "inversion_privada_gis_geojson",
+    "app": "inversion-privada",
+    "description": "GeoJSON FeatureCollection real y descargable de la cartera VERTIX (endpoint público de vertix.proinversion.gob.pe, sin login — a diferencia del visor GIS oficial que sí lo requiere). Cruce IDPROYECTO=vertix_id verificado (151/156 exacto). Cobertura completa del feed consultado (473 features, verificado 2026-08-28). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/gis/geojson",
+    "pathParams": [],
+    "queryParams": [
+      "departamento"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "inversion_privada_gis_project_geometry",
+    "app": "inversion-privada",
+    "description": "Geometría(s) GIS de un proyecto APP/PA específico por su vertix_id (mismo Id de vertixService.php).",
+    "pathTemplate": "/api/gis/projects/{vertixId}",
+    "pathParams": [
+      "vertixId"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "bcrp_la_libertad_indicadores",
+    "app": "bcrp-la-libertad",
+    "description": "Indicadores mensuales de actividad económica de La Libertad (BCRP Sucursal Trujillo): agropecuario, pesca, minería, crédito, depósitos, ejecución presupuestal (anexo=10). A diferencia del resto del catálogo, la ingesta de esta fuente es MANUAL — el PDF mensual está detrás de un WAF que bloquea descarga automatizada; alguien debe bajarlo con un navegador real y correr `npm run ingest:pdf` (ver ADR-0014). Cobertura parcial de anexos: 1,2,3,5,6,8,10 se ingieren correctamente; 4,7,9 usan un layout de tabla ambiguo (separador de miles indistinguible de separador de columna) y no se ingieren para evitar datos corruptos silenciosos.",
+    "pathTemplate": "/api/indicadores",
+    "pathParams": [],
+    "queryParams": [
+      "anexo",
+      "indicador",
+      "anio",
+      "mes"
+    ],
+    "sinScheduler": false
+  }
+]

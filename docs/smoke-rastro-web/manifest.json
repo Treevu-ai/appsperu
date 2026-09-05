@@ -1,0 +1,62 @@
+[
+  {
+    "ruta": "/gore/la-libertad/ficha?sector=TRANSPORTE&anio=2026",
+    "captura": "ficha-transporte.png",
+    "texto": "LECTOR GORE · LA LIBERTAD\n\nAnálisis sectorial\n\nEjecución presupuestal del sector verificado, dirigida al departamento o ejecutada por la sede regional. La ausencia de un dato se declara como vacío, no como conclusión.\n\nFicha\nComparativo\nBenchmark\nSector\nTRANSPORTE\nSALUD\nEDUCACION\nAGRICULTURA\nVIVIENDA\nENERGIA_MINAS\nPRODUCE\nAMBIENTAL\nJUSTICIA\nDEFENSA\nINTERIOR\nTRABAJO\nCOMERCIO_EXTERIOR_TURISMO\nCULTURA\nECONOMIA_FINANZAS\nAño\nTRANSPORTE\nCOMPLETA\ncorte: 2026-08-20\n\nmatcher: exacto-funcion · regla: PIA/PIM/Devengado agregados por sector y año fiscal.\n\nPIA\n\n12,500,000S/\n\nPIM\n\n18,300,000S/\n\nDevengado\n\n9,100,000S/\n\nReglas territoriales: las entidades nacionales se consultan por gasto dirigido al departamento (meta_departamento); las regionales, por la unidad ejecutora con sede en La Libertad. Esta vista no suma ambos universos."
+  },
+  {
+    "ruta": "/gore/la-libertad/ficha?sector=SALUD&anio=2026",
+    "captura": "ficha-salud.png",
+    "texto": "LECTOR GORE · LA LIBERTAD\n\nAnálisis sectorial\n\nEjecución presupuestal del sector verificado, dirigida al departamento o ejecutada por la sede regional. La ausencia de un dato se declara como vacío, no como conclusión.\n\nFicha\nComparativo\nBenchmark\nSector\nTRANSPORTE\nSALUD\nEDUCACION\nAGRICULTURA\nVIVIENDA\nENERGIA_MINAS\nPRODUCE\nAMBIENTAL\nJUSTICIA\nDEFENSA\nINTERIOR\nTRABAJO\nCOMERCIO_EXTERIOR_TURISMO\nCULTURA\nECONOMIA_FINANZAS\nAño\nSALUD\nPARCIAL\ncorte: 2026-08-20\n\nmatcher: exacto-funcion · regla: PIA/PIM/Devengado agregados por sector y año fiscal.\n\nPIA\n\n8,200,000S/\n\nPIM\n\n9,750,000S/\n\nDevengado\n\n4,300,000S/\n\nReglas territoriales: las entidades nacionales se consultan por gasto dirigido al departamento (meta_departamento); las regionales, por la unidad ejecutora con sede en La Libertad. Esta vista no suma ambos universos."
+  },
+  {
+    "ruta": "/gore/la-libertad/ficha?sector=EDUCACION&anio=2026",
+    "captura": "ficha-educacion.png",
+    "texto": "LECTOR GORE · LA LIBERTAD\n\nAnálisis sectorial\n\nEjecución presupuestal del sector verificado, dirigida al departamento o ejecutada por la sede regional. La ausencia de un dato se declara como vacío, no como conclusión.\n\nFicha\nComparativo\nBenchmark\nSector\nTRANSPORTE\nSALUD\nEDUCACION\nAGRICULTURA\nVIVIENDA\nENERGIA_MINAS\nPRODUCE\nAMBIENTAL\nJUSTICIA\nDEFENSA\nINTERIOR\nTRABAJO\nCOMERCIO_EXTERIOR_TURISMO\nCULTURA\nECONOMIA_FINANZAS\nAño\nEDUCACION\nCOMPLETA\ncorte: 2026-08-20\n\nmatcher: exacto-funcion · regla: PIA/PIM/Devengado agregados por sector y año fiscal.\n\nPIA\n\n21,000,000S/\n\nPIM\n\n25,400,000S/\n\nDevengado\n\n15,200,000S/\n\nReglas territoriales: las entidades nacionales se consultan por gasto dirigido al departamento (meta_departamento); las regionales, por la unidad ejecutora con sede en La Libertad. Esta vista no suma ambos universos."
+  },
+  {
+    "ruta": "/gore/la-libertad/ficha?sector=AGRICULTURA&anio=2026",
+    "captura": "ficha-agricultura.png",
+    "texto": "LECTOR GORE · LA LIBERTAD\n\nAnálisis sectorial\n\nEjecución presupuestal del sector verificado, dirigida al departamento o ejecutada por la sede regional. La ausencia de un dato se declara como vacío, no como conclusión.\n\nFicha\nComparativo\nBenchmark\nSector\nTRANSPORTE\nSALUD\nEDUCACION\nAGRICULTURA\nVIVIENDA\nENERGIA_MINAS\nPRODUCE\nAMBIENTAL\nJUSTICIA\nDEFENSA\nINTERIOR\nTRABAJO\nCOMERCIO_EXTERIOR_TURISMO\nCULTURA\nECONOMIA_FINANZAS\nAño\nAGRICULTURA\nCOMPLETA\ncorte: 2026-08-20\n\nmatcher: exacto-funcion · regla: PIA/PIM/Devengado agregados por sector y año fiscal.\n\nPIA\n\n4,100,000S/\n\nPIM\n\n5,600,000S/\n\nDevengado\n\n2,450,000S/\n\nReglas territoriales: las entidades nacionales se consultan por gasto dirigido al departamento (meta_departamento); las regionales, por la unidad ejecutora con sede en La Libertad. Esta vista no suma ambos universos."
+  },
+  {
+    "ruta": "/gore/la-libertad/ficha?sector=VIVIENDA&anio=2026",
+    "captura": "ficha-vivienda.png",
+    "texto": "LECTOR GORE · LA LIBERTAD\n\nAnálisis sectorial\n\nEjecución presupuestal del sector verificado, dirigida al departamento o ejecutada por la sede regional. La ausencia de un dato se declara como vacío, no como conclusión.\n\nFicha\nComparativo\nBenchmark\nSector\nTRANSPORTE\nSALUD\nEDUCACION\nAGRICULTURA\nVIVIENDA\nENERGIA_MINAS\nPRODUCE\nAMBIENTAL\nJUSTICIA\nDEFENSA\nINTERIOR\nTRABAJO\nCOMERCIO_EXTERIOR_TURISMO\nCULTURA\nECONOMIA_FINANZAS\nAño\nVIVIENDA\nPARCIAL\ncorte: 2026-08-20\n\nmatcher: exacto-funcion · regla: PIA/PIM/Devengado agregados por sector y año fiscal.\n\nPIA\n\n3,300,000S/\n\nPIM\n\n4,200,000S/\n\nDevengado\n\n1,100,000S/\n\nReglas territoriales: las entidades nacionales se consultan por gasto dirigido al departamento (meta_departamento); las regionales, por la unidad ejecutora con sede en La Libertad. Esta vista no suma ambos universos."
+  },
+  {
+    "ruta": "/proveedor/20100000001",
+    "captura": "proveedor-conSancionesConContrataciones.png",
+    "texto": "LECTOR PRENSA · RUC 20100000001\n\nPerfil de proveedor\n\nIdentidad SUNAT, contrataciones públicas y sanciones del Tribunal. La ausencia de un dato se declara como vacío, no como conclusión.\n\nIdentidad\nCOMPLETA\nRazón social\nCONSTRUCTORA EJEMPLO SAC\nEstado SUNAT\nACTIVO\nCondición\nHABIDO\nUBIGEO\n130101\n\nmatcher: exacto-ruc · corte: 2026-08-20\n\nSanciones\nCOMPLETA\nInhabilitación\nVIGENTE\nexp. EXP-001-2026\n\nmatcher: exacto-ruc · corte: 2026-08-20\n\nContrataciones\nNO_APLICA\nValor total adjudicado\nS/ 1,250,000\nAdjudicaciones\n4\nHHI del subconjunto\n5,000\n\nCONSTRUCTORA EJEMPLO SAC · el endpoint no declara fecha de corte ni matcher para esta consulta."
+  },
+  {
+    "ruta": "/proveedor/20100000002",
+    "captura": "proveedor-sinSancionesConContrataciones.png",
+    "texto": "LECTOR PRENSA · RUC 20100000002\n\nPerfil de proveedor\n\nIdentidad SUNAT, contrataciones públicas y sanciones del Tribunal. La ausencia de un dato se declara como vacío, no como conclusión.\n\nIdentidad\nCOMPLETA\nRazón social\nSERVICIOS REGIONALES EIRL\nEstado SUNAT\nACTIVO\nCondición\nHABIDO\nUBIGEO\n130101\n\nmatcher: exacto-ruc · corte: 2026-08-20\n\nSanciones\nCOMPLETA\n\nNo se registran sanciones en el periodo cubierto.\n\nmatcher: exacto-ruc · corte: 2026-08-20\n\nContrataciones\nNO_APLICA\nValor total adjudicado\nS/ 340,000\nAdjudicaciones\n1\nHHI del subconjunto\n5,000\n\nSERVICIOS REGIONALES EIRL · el endpoint no declara fecha de corte ni matcher para esta consulta."
+  },
+  {
+    "ruta": "/proveedor/20100000003",
+    "captura": "proveedor-sinSancionesSinContrataciones.png",
+    "texto": "LECTOR PRENSA · RUC 20100000003\n\nPerfil de proveedor\n\nIdentidad SUNAT, contrataciones públicas y sanciones del Tribunal. La ausencia de un dato se declara como vacío, no como conclusión.\n\nIdentidad\nCOMPLETA\nRazón social\nCOMERCIAL NORTE SRL\nEstado SUNAT\nACTIVO\nCondición\nHABIDO\nUBIGEO\n130101\n\nmatcher: exacto-ruc · corte: 2026-08-20\n\nSanciones\nCOMPLETA\n\nNo se registran sanciones en el periodo cubierto.\n\nmatcher: exacto-ruc · corte: 2026-08-20"
+  },
+  {
+    "ruta": "/distrito/130101",
+    "captura": "distrito-130101.png",
+    "texto": "LECTOR AUDITORÍA · UBIGEO 130101\n\nObras y activos (alcance departamental)\n\nINFOBRAS (Contraloría) para el departamento al que pertenece este distrito. Sin coordenadas: INFOBRAS no las publica.\n\nVer integridad de infraestructura →\n\n2 obras\nPARCIAL\ncorte: 2026-08-20\n\nParalizadas: 50.0% · Con avance físico: 50.0%\n\nCódigo\tDescripción\tEntidad\tEstado\tAvance físico\nINF-001\tMejoramiento de pista Av. España\tMUNICIPALIDAD PROVINCIAL DE TRUJILLO\tEN EJECUCION\t62.5%\nINF-002\tConstrucción de posta de salud El Porvenir\tGOBIERNO REGIONAL LA LIBERTAD\tPARALIZADA\t—"
+  },
+  {
+    "ruta": "/distrito/060101",
+    "captura": "distrito-060101.png",
+    "texto": "LECTOR AUDITORÍA · UBIGEO 060101\n\nObras y activos (alcance departamental)\n\nINFOBRAS (Contraloría) para el departamento al que pertenece este distrito. Sin coordenadas: INFOBRAS no las publica.\n\nVer integridad de infraestructura →\n\n1 obras\nPARCIAL\ncorte: 2026-08-20\n\nParalizadas: 0.0% · Con avance físico: 100.0%\n\nCódigo\tDescripción\tEntidad\tEstado\tAvance físico\nINF-101\tRehabilitación de canal de riego Namora\tMUNICIPALIDAD PROVINCIAL DE CAJAMARCA\tCULMINADA\t100.0%"
+  },
+  {
+    "ruta": "/estado",
+    "captura": "estado.png",
+    "texto": "ESTADO DEL PRODUCTO\n\n14 APIs en vivo\n\nHealth-check independiente por app. Refresh manual al recargar la página.\n\n14 arriba\n·\n0 caídas\n·\n429Count24h: 0\nApp\tPuerto\tEstado\tDetalle\nActividad Agraria (MIDAGRI)\t4009\tUP\t\nBCRP Comercio Exterior\t4011\tUP\t\nBCRP La Libertad\t4013\tUP\t\nCEPLAN Estratégico\t4004\tUP\t\nCEPLAN Geo\t4005\tUP\t\nCompras Públicas (OECE/OCDS)\t4001\tUP\t\nIdentidad Fiscal (SUNAT RUC)\t4006\tUP\t\nINFOBRAS (Contraloría)\t4003\tUP\t\nInversión Privada (PROINVERSIÓN)\t4012\tUP\t\nProveedores Sancionados\t4008\tUP\t\nRadar Ejecución (MEF)\t4000\tUP\t\nRadar Inversiones (Invierte.pe)\t4002\tUP\t\nSalud Institucional\t4007\tUP\t\nSeguridad Ciudadana (SIDPOL)\t4010\tUP\t"
+  },
+  {
+    "ruta": "/buscar (q=constructora)",
+    "captura": "buscar.png",
+    "texto": "BÚSQUEDA\n\nRUC, CUI, código INFOBRAS, UBIGEO o texto\n\nPega un identificador oficial (RUC de 11 dígitos, UBIGEO de 6 dígitos) o escribe un nombre — la búsqueda de texto consulta identidad-fiscal, radar-inversiones e infobras, acotada a LA LIBERTAD para las dos últimas.\n\nBuscar\nTipo\tIdentificador\tDescripción\tFuente\nRUC\t20100000001\tCONSTRUCTORA EJEMPLO SAC\tidentidad-fiscal / contribuyentes\n\nSolo identidad-fiscal soporta búsqueda de texto libre real. radar-inversiones e infobras se filtran en el borde (edge), acotados a LA LIBERTAD.\n\nApps detrás de esta UI\nRadar Ejecución (MEF)\n:4000\nCompras Públicas (OECE/OCDS)\n:4001\nRadar Inversiones (Invierte.pe)\n:4002\nINFOBRAS (Contraloría)\n:4003\nCEPLAN Estratégico\n:4004\nCEPLAN Geo\n:4005\nIdentidad Fiscal (SUNAT RUC)\n:4006\nSalud Institucional\n:4007\nProveedores Sancionados\n:4008\nActividad Agraria (MIDAGRI)\n:4009\nSeguridad Ciudadana (SIDPOL)\n:4010\nBCRP Comercio Exterior\n:4011\nInversión Privada (PROINVERSIÓN)\n:4012\nBCRP La Libertad\n:4013"
+  }
+]

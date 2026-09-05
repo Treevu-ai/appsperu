@@ -196,12 +196,12 @@
   <h1>Trazabilidad <span class="accent">real</span><br>de la inversión<br>pública.</h1>
   <h2>Una plataforma de transparencia verificable para el Gobierno Regional de La Libertad.</h2>
   <p class="cover-lede">
-    Convertir cada sol de inversión pública de La Libertad en información visible para el ciudadano, en tiempo real, con corte y fuente verificables. Lo que el Estado peruano ya publica — 14 fuentes oficiales, 7 portales — puesto a disposición del vecino, del periodista, del auditor, en menos de 1 minuto.
+    Convertir cada sol de inversión pública de La Libertad en información visible para el ciudadano, con corte semanal verificado — fuente, cobertura y fecha de cada cifra siempre a la vista. Lo que el Estado peruano ya publica — 14 fuentes oficiales, 7 portales — puesto a disposición del vecino, del periodista, del auditor, en menos de 1 minuto.
   </p>
   <div class="cover-meta">
     <div class="stack">
       <div class="label">Producto</div>
-      <div class="value">Rastro v0.1.0 · MCP 82 tools</div>
+      <div class="value">Rastro v0.1.0 · MCP 83 tools</div>
     </div>
     <div class="stack" style="text-align: right;">
       <div class="label">Ámbito</div>
@@ -229,7 +229,7 @@
       <tr class="item"><td class="n">01</td><td><a href="#sec-1"><b>La fotografía del problema</b> — La Libertad pierde 97 de cada 100 soles antes de liquidar</a></td><td class="p">03</td></tr>
       <tr class="item"><td class="n">02</td><td><a href="#sec-2"><b>Por qué las soluciones tradicionales no funcionaron</b> — SEACE, INFOBRAS y los portales opacos</a></td><td class="p">04</td></tr>
       <tr class="grp"><td colspan="3">Bloque II — La propuesta</td></tr>
-      <tr class="item"><td class="n">03</td><td><a href="#sec-3"><b>Qué es Rastro</b> — 14 APIs, 82 tools, 3 lectores</a></td><td class="p">06</td></tr>
+      <tr class="item"><td class="n">03</td><td><a href="#sec-3"><b>Qué es Rastro</b> — 14 APIs, 83 tools, 3 lectores</a></td><td class="p">06</td></tr>
       <tr class="item"><td class="n">04</td><td><a href="#sec-4"><b>Los tres lectores como compromiso político</b> — GORE, prensa, auditoría, ciudadano</a></td><td class="p">08</td></tr>
       <tr class="grp"><td colspan="3">Bloque III — Implementación</td></tr>
       <tr class="item"><td class="n">05</td><td><a href="#sec-5"><b>Plan de implementación</b> — 100 días · 18 meses · 4 años</a></td><td class="p">10</td></tr>
@@ -354,7 +354,7 @@
   <p class="eyebrow">Bloque II — La propuesta</p>
   <h2 class="section"><span class="num">03</span>Qué es Rastro.</h2>
   <p class="lead">
-    Una plataforma que conecta los sistemas donde el Estado peruano publica datos de inversión pública y los pone en una sola pantalla, en tiempo real, con la firma del Estado en cada número. No reemplazamos a la Contraloría ni a la OCI. Les damos una herramienta para hacer su trabajo en 5 minutos lo que antes tomaba 5 meses.
+    Una plataforma que conecta los sistemas donde el Estado peruano publica datos de inversión pública y los pone en una sola pantalla, con corte semanal verificado y la firma del Estado en cada número. No reemplazamos a la Contraloría ni a la OCI. Les damos una herramienta para hacer su trabajo en 5 minutos lo que antes tomaba 5 meses.
   </p>
 
   <h3 class="sub">Anatomía de la plataforma</h3>
@@ -371,17 +371,17 @@
         <div class="api-pill">OECE</div>
         <div class="api-pill">SUNAT</div>
         <div class="api-pill">RNP</div>
-        <div class="api-pill">CEPLAN</div>
+        <div class="api-pill">CEPLAN Estr.</div>
+        <div class="api-pill">CEPLAN Geo</div>
         <div class="api-pill">MIDAGRI</div>
-        <div class="api-pill">BCRP</div>
+        <div class="api-pill">BCRP Com.Ext.</div>
+        <div class="api-pill">BCRP La Lib.</div>
         <div class="api-pill">PROINVERSIÓN</div>
         <div class="api-pill">MININTER</div>
-        <div class="api-pill">OEFA</div>
-        <div class="api-pill">DGPMI</div>
-        <div class="api-pill">MIDIS</div>
+        <div class="api-pill">Salud Inst.</div>
       </div>
     </div>
-    <p class="src">Fuentes: MEF, Invierte.pe, OECE (SEACE), INFOBRAS (Contraloría), CEPLAN, SUNAT (RUC), RNP, MIDAGRI, BCRP, PROINVERSIÓN, MEF-DGPMI, MIDIS, MININTER (SIDPOL), OEFA. Una por cada fuente.</p>
+    <p class="src">Fuentes: MEF, Invierte.pe, OECE (SEACE), INFOBRAS (Contraloría), SUNAT (RUC), RNP (proveedores sancionados), CEPLAN (estratégico y geo), MIDAGRI, BCRP (comercio exterior y La Libertad), PROINVERSIÓN, MININTER (SIDPOL). Salud Institucional agrega en vivo las otras fuentes en un score compuesto. 14 APIs propias en total.</p>
   </div>
 
   <h3 class="sub">Lo que se entrega al ciudadano, en una sola capa</h3>
@@ -393,7 +393,7 @@
       <div class="k">APIs activas sobre 7 portales oficiales del Estado peruano. Catálogo único, semántica de respuesta común.</div>
     </div>
     <div class="kpi">
-      <div class="v">82</div>
+      <div class="v">83</div>
       <div class="k">Tools MCP para agentes de IA. Un agente externo (Claude, Cursor, Windsurf) consulta Rastro como un colega más.</div>
     </div>
     <div class="kpi">
@@ -444,7 +444,7 @@
       <tr>
         <td><strong>GORE La Libertad</strong></td>
         <td>¿Cómo vamos vs la cohorte? ¿Dónde está el vacío?</td>
-        <td class="num">/gore/la-libertad</td>
+        <td class="num">/gore/la-libertad/ficha</td>
         <td><span class="pill ok">Servidor público</span></td>
       </tr>
       <tr>
@@ -455,8 +455,14 @@
       </tr>
       <tr>
         <td><strong>Auditoría / OCI</strong></td>
-        <td>¿Qué obras hay en este distrito? ¿Tienen cierre, operador, mantenimiento?</td>
+        <td>¿Qué obras hay en este distrito? ¿Sobrecosto, brecha físico-financiera, cierre, operador, mantenimiento?</td>
         <td class="num">/distrito/{ubigeo}</td>
+        <td><span class="pill ok">Público</span></td>
+      </tr>
+      <tr>
+        <td><strong>Auditoría / OCI</strong></td>
+        <td>¿Qué entidades tienen alto gasto y varias obras paralizadas a la vez? (cruce MEF↔INFOBRAS, con nivel de confianza)</td>
+        <td class="num">/auditoria/entidades-infobras</td>
         <td><span class="pill ok">Público</span></td>
       </tr>
     </tbody>
@@ -708,7 +714,7 @@
     <li>MATRIZ de cobertura territorial (<code>docs/matriz-cobertura-5-regiones-2026-08.md</code>)</li>
     <li>MEMO La Libertad inversión pública + privada (<code>docs/MEMO_LA_LIBERTAD_INVERSION_PUBLICA_PRIVADA_2026-08-28.md</code>)</li>
     <li>Análisis La Libertad: brechas y competitividad (<code>docs/analisis-la-libertad-2026-08.md</code>)</li>
-    <li>Catálogo de los 82 tools MCP (<code>mcp-server/src/catalog.ts</code>)</li>
+    <li>Catálogo de los 83 tools MCP (<code>mcp-server/src/catalog.ts</code>)</li>
   </ul>
 
   <div class="conclusion" style="margin-top: 20px;">

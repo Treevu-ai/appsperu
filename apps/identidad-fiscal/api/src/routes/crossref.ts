@@ -18,13 +18,27 @@ const CrossrefQuerySchema = z.object({
 const ESTADOS_REGULARES = new Set(["ACTIVO"]);
 const CONDICIONES_REGULARES = new Set(["HABIDO"]);
 
+type ContractRow = {
+  origen: "awards" | "minor_contracts";
+  ocid: string | null;
+  awardId: string | null;
+  supplierId: string | null;
+  supplierName: string | null;
+  buyerName: string | null;
+  valorMonto: number | null;
+  valorMoneda: string | null;
+  fecha: string | Date | null;
+};
+
 /**
  * Cruce proveedor <-> padrón RUC, por RUC exacto extraído de `supplier_id`
  * (sin matching difuso — a diferencia del cruce por nombre de entidad que sí
  * lo necesita, ver "RUC del lado entidad" en el data contract). Cada
- * adjudicación se marca `irregular: true` si el proveedor no está ACTIVO/
+ * contratación se marca `irregular: true` si el proveedor no está ACTIVO/
  * HABIDO en el padrón, o si su RUC no se encontró ahí (aún no ingerido, o
- * el RUC-20 filtrado en la ingesta no lo cubre).
+ * el RUC-20 filtrado en la ingesta no lo cubre). Cubre tanto adjudicaciones
+ * OCDS (`awards`) como contratos menores (`minor_contracts`, campo `origen`
+ * distingue el origen de cada fila — CX-01).
  */
 crossrefRouter.get("/", asyncHandler(async (req, res) => {
   const parsed = parseQuery(CrossrefQuerySchema, req.query, res);
@@ -32,17 +46,58 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
   const wantedDepartamento = parsed.departamento?.toUpperCase().trim() ?? "LA LIBERTAD";
   const soloIrregulares = parsed.soloIrregulares === "true";
 
-  const { rows: awardRows } = await comprasPool.query(
-    `SELECT ocid, award_id, supplier_id, supplier_name, buyer_name, valor_monto, valor_moneda, fecha
-     FROM awards
-     WHERE departamento = $1`,
-    [wantedDepartamento]
-  );
+  const [{ rows: awardRows }, { rows: minorContractRows }] = await Promise.all([
+    comprasPool.query(
+      `SELECT ocid, award_id, supplier_id, supplier_name, buyer_name, valor_monto, valor_moneda, fecha
+       FROM awards
+       WHERE departamento = $1`,
+      [wantedDepartamento]
+    ),
+    comprasPool.query(
+      `SELECT c.contracting_id, c.ocid, c.award_id, c.winning_supplier_id AS supplier_id,
+              s.legal_name AS supplier_name, m.official_name AS buyer_name,
+              c.awarded_amount AS valor_monto, c.award_date AS fecha
+       FROM minor_contracts c
+       LEFT JOIN supplier_profiles s ON s.supplier_id = c.winning_supplier_id
+       LEFT JOIN municipalities m ON m.municipality_id = c.municipality_id
+       WHERE c.winning_supplier_id IS NOT NULL AND (m.department = $1 OR c.execution_department = $1)`,
+      [wantedDepartamento]
+    ),
+  ]);
+
+  const contractRows: ContractRow[] = [
+    ...awardRows.map((row): ContractRow => ({
+      origen: "awards",
+      ocid: row.ocid,
+      awardId: row.award_id,
+      supplierId: row.supplier_id,
+      supplierName: row.supplier_name,
+      buyerName: row.buyer_name,
+      valorMonto: row.valor_monto === null ? null : Number(row.valor_monto),
+      valorMoneda: row.valor_moneda,
+      fecha: row.fecha,
+    })),
+    // minor_contracts no registra moneda (no viene del estándar OCDS como
+    // `awards`) — se deja `valorMoneda: null` en vez de asumir soles, para
+    // no inventar un dato que la fuente no persiste.
+    ...minorContractRows.map((row): ContractRow => ({
+      origen: "minor_contracts",
+      ocid: row.ocid,
+      awardId: row.award_id,
+      supplierId: row.supplier_id,
+      supplierName: row.supplier_name,
+      buyerName: row.buyer_name,
+      valorMonto: row.valor_monto === null ? null : Number(row.valor_monto),
+      valorMoneda: null,
+      fecha: row.fecha,
+    })),
+  ];
 
   const rucBySupplierId = new Map<string, string>();
-  for (const row of awardRows) {
-    const ruc = extractRuc(row.supplier_id as string);
-    if (ruc) rucBySupplierId.set(row.supplier_id as string, ruc);
+  for (const row of contractRows) {
+    if (!row.supplierId) continue;
+    const ruc = extractRuc(row.supplierId);
+    if (ruc) rucBySupplierId.set(row.supplierId, ruc);
   }
 
   const rucs = [...new Set(rucBySupplierId.values())];
@@ -64,9 +119,9 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
     }
   }
 
-  const resultados = awardRows.map((row) => {
-    const supplierId = row.supplier_id as string;
-    const ruc = rucBySupplierId.get(supplierId) ?? null;
+  const resultados = contractRows.map((row) => {
+    const supplierId = row.supplierId;
+    const ruc = supplierId ? rucBySupplierId.get(supplierId) ?? null : null;
     const contribuyente = ruc ? contribuyenteByRuc.get(ruc) ?? null : null;
 
     const esRucValido = ruc !== null;
@@ -95,13 +150,14 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
       : "NO_VERIFICABLE";
 
     return {
+      origen: row.origen,
       ocid: row.ocid,
-      awardId: row.award_id,
+      awardId: row.awardId,
       supplierId,
-      supplierName: row.supplier_name,
-      buyerName: row.buyer_name,
-      valorMonto: row.valor_monto === null ? null : Number(row.valor_monto),
-      valorMoneda: row.valor_moneda,
+      supplierName: row.supplierName,
+      buyerName: row.buyerName,
+      valorMonto: row.valorMonto,
+      valorMoneda: row.valorMoneda,
       fecha: row.fecha,
       rucValido: esRucValido,
       encontradoEnPadron,

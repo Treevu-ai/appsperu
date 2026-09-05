@@ -1,0 +1,69 @@
+# Build any appsperu API from monorepo root context.
+ARG APP_DIR=radar-ejecucion
+
+FROM node:22-alpine AS build
+WORKDIR /repo
+ARG APP_DIR
+# La mayoría de apps son standalone (su propio package-lock.json). Las 3 del
+# workspace (ADR-0017: compras-publicas, infobras, identidad-fiscal —
+# comparten packages/entity-matcher vía npm workspace) no tienen lockfile
+# propio; resuelven contra el de la raíz, igual que hace CI (ver ci.yml).
+# Se copian ambos contextos siempre — el condicional de abajo elige.
+COPY package.json package-lock.json ./
+COPY packages ./packages
+COPY apps/${APP_DIR}/api ./apps/${APP_DIR}/api
+# mkdir node_modules first so the root dir always exists (even empty for
+# standalone apps) — the runtime stage below copies it unconditionally.
+RUN mkdir -p node_modules && \
+    if [ -f "apps/${APP_DIR}/api/package-lock.json" ]; then \
+      npm --prefix "apps/${APP_DIR}/api" ci; \
+    else \
+      npm ci && npm run build --workspace=packages/entity-matcher; \
+    fi
+# Solo corre "build" si el package.json de esta app declara ese script — no
+# todas lo tienen (algunas corren directo con tsx, ver infra/api-proxy/apps.tsv).
+# Si lo declara y falla, el build de la imagen falla (no se enmascara con
+# `|| true`): un TS roto no debe degradar en silencio a correr via tsx en
+# producción, que es justo lo que pasaba antes.
+# `--prefix <dir>` para instalar tsx choca con la detección de workspace de
+# npm cuando <dir> es a la vez miembro del workspace raíz (arborist termina
+# en "Cannot read properties of null (reading 'edgesOut')") — para esas 3
+# apps hay que usar `--workspace=<dir>` desde la raíz en su lugar.
+RUN if grep -q '"build"[[:space:]]*:' "apps/${APP_DIR}/api/package.json"; then \
+      npm --prefix "apps/${APP_DIR}/api" run build; \
+    elif [ -f "apps/${APP_DIR}/api/package-lock.json" ]; then \
+      echo "apps/${APP_DIR}/api no declara script build — corre via tsx" && \
+      npm --prefix "apps/${APP_DIR}/api" install tsx --no-save; \
+    else \
+      echo "apps/${APP_DIR}/api no declara script build — corre via tsx (workspace)" && \
+      npm install tsx --workspace="apps/${APP_DIR}/api" --no-save; \
+    fi
+# `tsc` solo compila .ts a .js — no copia los .sql de las migraciones, y
+# `migrate.ts` las busca en un directorio "migrations" hermano de su propio
+# archivo compilado (dist/db/migrations). Sin este paso, cualquier app que
+# compile vía tsc y tenga migraciones crashea en el arranque con ENOENT en
+# producción (encontrado en vivo: 9 de 14 apps deployan la imagen "bien" pero
+# quedan en crash-loop porque dist/db/migrations no existe).
+RUN if [ -d "apps/${APP_DIR}/api/src/db/migrations" ] && [ -d "apps/${APP_DIR}/api/dist" ]; then \
+      mkdir -p "apps/${APP_DIR}/api/dist/db/migrations" && \
+      cp apps/${APP_DIR}/api/src/db/migrations/*.sql "apps/${APP_DIR}/api/dist/db/migrations/"; \
+    fi
+
+FROM node:22-alpine
+WORKDIR /repo
+ARG APP_DIR
+ENV NODE_ENV=production
+ENV PORT=8080
+# Preserva la estructura /repo/apps/<app>/api (en vez de aplanar a /app) para
+# que la resolución de módulos de Node siga encontrando /repo/node_modules
+# igual que en el build stage — las 3 apps del workspace (ADR-0017) dependen
+# de eso para resolver @appsperu/entity-matcher. Reinstalar con `npm ci` acá
+# fallaría para esas 3 (no tienen package-lock.json propio, ver arriba).
+COPY --from=build /repo/node_modules ./node_modules
+COPY --from=build /repo/packages ./packages
+COPY --from=build /repo/apps/${APP_DIR}/api ./apps/${APP_DIR}/api
+WORKDIR /repo/apps/${APP_DIR}/api
+COPY infra/fly/docker-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+EXPOSE 8080
+ENTRYPOINT ["/entrypoint.sh"]
