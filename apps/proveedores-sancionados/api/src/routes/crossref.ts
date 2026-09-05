@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { extractRuc } from "@appsperu/shared-identity";
 import { pool } from "../db/pool.js";
 import { comprasPool } from "../db/compras-pool.js";
 import { fiscalPool } from "../db/fiscal-pool.js";
@@ -13,13 +14,6 @@ const CrossrefQuerySchema = z.object({
   departamento: z.string().min(1).optional(),
   soloInhabilitados: z.enum(["true", "false"]).optional(),
 });
-
-const RUC_PREFIX = "PE-RUC-";
-function extractRuc(supplierId: string): string | null {
-  if (!supplierId.startsWith(RUC_PREFIX)) return null;
-  const ruc = supplierId.slice(RUC_PREFIX.length);
-  return /^\d{11}$/.test(ruc) ? ruc : null;
-}
 
 /**
  * Cruce proveedor <-> Tribunal de Contrataciones, por RUC exacto (extraído

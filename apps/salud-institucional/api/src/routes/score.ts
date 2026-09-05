@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { LATEST_BUDGET_CTE } from "@appsperu/shared-queries";
+import { extractRuc } from "@appsperu/shared-identity";
 import { ejecucionPool } from "../db/ejecucion-pool.js";
 import { infobrasPool } from "../db/infobras-pool.js";
 import { inversionesPool } from "../db/inversiones-pool.js";
@@ -17,12 +18,6 @@ const ScoreQuerySchema = z.object({
   anio: z.string().regex(/^\d{4}$/).optional(),
 });
 
-const RUC_PREFIX = "PE-RUC-";
-function extractRuc(supplierId: string): string | null {
-  if (!supplierId.startsWith(RUC_PREFIX)) return null;
-  const ruc = supplierId.slice(RUC_PREFIX.length);
-  return /^\d{11}$/.test(ruc) ? ruc : null;
-}
 const ESTADOS_REGULARES = new Set(["ACTIVO"]);
 const CONDICIONES_REGULARES = new Set(["HABIDO"]);
 
