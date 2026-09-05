@@ -1186,4 +1186,23 @@ export const TOOL_CATALOG: ToolSpec[] = [
       ubigeo: z.string().min(1).optional(),
     },
   },
+
+  // ---- informes-control (Contraloría, informes de servicios de control) ----
+  {
+    name: "informes_control_informes",
+    app: "informes-control",
+    description:
+      "Informes de auditoría/servicios de control de la Contraloría (entidad, ubicación, fechas, sector, si tiene " +
+      "un hallazgo de responsabilidad). Por diseño, NUNCA expone nombres de funcionarios ni detalle individual de " +
+      "responsabilidad — `esConResponsabilidad` es un booleano, no un nombre. Ingesta por año (no todo el histórico " +
+      "a la vez); usar `periodo` para acotar. " + SIN_SCHEDULER,
+    pathTemplate: "/api/informes",
+    pathParams: [],
+    querySchema: {
+      entidad: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE), no exacta."),
+      departamento: z.string().min(1).optional(),
+      periodo: z.string().regex(/^\d{4}$/).optional(),
+      esConResponsabilidad: z.enum(["true", "false"]).optional(),
+    },
+  },
 ];

@@ -57,6 +57,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "compras_publicas_supplier_by_id",
     "compras_publicas_suppliers",
   ],
+  "informes-control": ["informes_control_informes"],
   "identidad-fiscal": [
     "identidad_fiscal_contribuyente_by_ruc",
     "identidad_fiscal_contribuyentes",

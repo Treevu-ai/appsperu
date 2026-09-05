@@ -1060,5 +1060,19 @@
       "ubigeo"
     ],
     "sinScheduler": true
+  },
+  {
+    "name": "informes_control_informes",
+    "app": "informes-control",
+    "description": "Informes de auditoría/servicios de control de la Contraloría (entidad, ubicación, fechas, sector, si tiene un hallazgo de responsabilidad). Por diseño, NUNCA expone nombres de funcionarios ni detalle individual de responsabilidad — `esConResponsabilidad` es un booleano, no un nombre. Ingesta por año (no todo el histórico a la vez); usar `periodo` para acotar. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/informes",
+    "pathParams": [],
+    "queryParams": [
+      "entidad",
+      "departamento",
+      "periodo",
+      "esConResponsabilidad"
+    ],
+    "sinScheduler": true
   }
 ]

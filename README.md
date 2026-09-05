@@ -35,6 +35,7 @@ Rastro es una plataforma de inteligencia que ayuda a equipos y organizaciones a 
 | `servicios-salud` | Establecimientos de salud (RENIPRESS/SUSALUD) + cruce con inversión | 4014 |
 | `programas-sociales` | Cobertura de programas sociales (INFOMIDIS/MIDIS) + cruce con inversión | 4015 |
 | `actividad-empresarial` | Empresas del sector privado por distrito (MTPE) + cruce con inversión | 4016 |
+| `informes-control` | Informes de servicios de control (Contraloría), sin datos de persona natural | 4017 |
 
 ## Levantar una app
 

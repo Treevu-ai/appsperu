@@ -469,6 +469,24 @@ duplicar lógica entre los tres.
 
 ---
 
+<a id="informes-control"></a>
+## informes-control — Informes de Servicios de Control (Contraloría)
+
+### `informes-control-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Trae informes de auditoría/servicios de control de la Contraloría (entidad auditada, ubicación, fechas, sector, tipo de servicio, si tiene un hallazgo de responsabilidad). Cierra el hueco de "rendición de cuentas formal" identificado en `docs/COBERTURA_Y_CUMPLIMIENTO.md` (antes marcado como "hueco real, no cerrable a corto plazo"). |
+| **Qué hace** | Pagina la API real de la Contraloría por año, normaliza cada fila a solo campos de entidad/informe, y hace upsert por `codigo_informe`. **Decisión de diseño explícita y verificada con test**: los campos `Funcionarios`, `TotalFuncionarios`, `Responsabilidad` y `Text` de la fuente — que pueden contener nombres de personas naturales con responsabilidad identificada — nunca se leen del objeto crudo, ni se persisten, ni se exponen. Solo se conserva `es_con_responsabilidad` como booleano (existe un hallazgo o no, sin decir de quién). |
+| **Cómo lo hace** | Reverse engineering del mismo tipo que `perfilprov-conformacion-connector.ts` contra OECE: la SPA del buscador (`buscadorinformes.contraloria.gob.pe`) consume un handler ASP.NET no documentado (`BusquedaInformesCGR.ashx?Action=loadInformesElastic`) descubierto inspeccionando su JS. Paginación de 500 filas, cortesía de 300ms entre requests. Lote crudo en `raw_contraloria_batches`. |
+| **Frecuencia** | Manual (`npm run ingest:informes -- <año>` en `apps/informes-control/api`, default año actual). Un año por corrida — no hace backfill automático de todo el histórico (363,971 informes totales confirmados en vivo). |
+| **Fuente de datos** | `buscadorinformes.contraloria.gob.pe/BuscadorCGR/Informes/` — Contraloría General de la República, endpoint no documentado públicamente pero accesible sin autenticación. |
+| **Cobertura real ingerida** | Nacional, por año (verificado en vivo: 2015 → 2 informes, 2026 → 24,256). |
+| **Cruces** | Ninguno implementado todavía — candidato natural: cruzar `entidad`/`codigo_entidad` contra `entity_crosswalk` para vincular hallazgos de auditoría con ejecución presupuestal/obras de la misma entidad. |
+| **Detalle completo** | [`docs/data-contracts/contraloria-informes-control.md`](data-contracts/contraloria-informes-control.md) |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada
@@ -542,4 +560,5 @@ OCDS); esos resultados devuelven `valorMoneda: null` en vez de asumir soles.
 | `renipress-connector.ts` | servicios-salud | SUSALUD RENIPRESS (datosabiertos.gob.pe) | Descarga CSV, maneja WAF, resuelve recurso vía `package_show` | Manual | Completa (nacional) |
 | `infomidis-connector.ts` | programas-sociales | MIDIS INFOMIDIS (datosabiertos.gob.pe) | Descarga CSV, maneja WAF, resuelve recurso por `created` (no por nombre de archivo) | Manual | Completa (nacional) |
 | `mtpe-distrital-connector.ts` | actividad-empresarial | MTPE (www2.trabajo.gob.pe, portal propio) | Scraping HTML + descarga .7z + descompresión + parseo XLSX | Manual | Completa (nacional, año más reciente: 2025) |
+| `informes-control-connector.ts` | informes-control | Contraloría (buscadorinformes.contraloria.gob.pe) | Reverse engineering de API JSON no documentada, mismo patrón que OECE — descarta campos de persona natural en el parseo | Manual | Completa (nacional, por año) |
 

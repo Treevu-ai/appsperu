@@ -30,6 +30,7 @@ ALL_APPS=(
   servicios-salud
   programas-sociales
   actividad-empresarial
+  informes-control
 )
 
 if [ "$#" -gt 0 ]; then
