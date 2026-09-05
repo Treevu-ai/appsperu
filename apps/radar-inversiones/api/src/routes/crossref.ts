@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { LATEST_BUDGET_CTE } from "@appsperu/shared-queries";
 import { pool } from "../db/pool.js";
 import { ejecucionPool } from "../db/ejecucion-pool.js";
 import { asyncHandler } from "../lib/async-handler.js";
@@ -42,11 +43,7 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
   const secEjecCodes = invRows.map((r) => r.sec_ejec);
 
   const { rows: devengadoRows } = await ejecucionPool.query(
-    `WITH latest_budget AS (
-       SELECT DISTINCT ON (entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, '')) *
-       FROM budget_execution
-       ORDER BY entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, ''), fecha_corte DESC, id DESC
-     )
+    `${LATEST_BUDGET_CTE}
      SELECT b.entity_code AS entity_code, e.nombre AS nombre, SUM(b.devengado) AS devengado,
             array_agg(DISTINCT b.fecha_corte) AS cortes
      FROM latest_budget b

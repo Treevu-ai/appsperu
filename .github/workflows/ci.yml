@@ -49,17 +49,31 @@ jobs:
         # resuelva contra el lockfile del workspace. El resto sigue exactamente
         # igual que antes (npm ci local, sin tocar).
         #
-        # `packages/entity-matcher` se consume vía workspace symlink, pero npm
-        # ci no lo compila: solo enlaza el paquete, no corre su script `build`.
-        # Sin dist/, `tsc --noEmit` de las 3 apps consumidoras falla con
-        # "Cannot find module '@appsperu/entity-matcher' or its corresponding
-        # type declarations" (visto en CI real). Se compila explícitamente
-        # después del ci del workspace.
+        # `packages/entity-matcher`, `packages/http-client` (CX-13),
+        # `packages/shared-queries` (CX-08), `packages/shared-identity`
+        # (CX-09) y `packages/shared-signals` (CX-10, ver
+        # docs/adr/0019-alcance-workspace-utilidades-compartidas.md) se
+        # consumen vía workspace symlink, pero npm ci no los compila: solo
+        # enlaza el paquete, no corre su script `build`. Sin dist/,
+        # `tsc --noEmit` de las apps consumidoras falla con "Cannot find
+        # module '@appsperu/...' or its corresponding type declarations"
+        # (visto en CI real para entity-matcher). Se compilan explícitamente
+        # después del ci del workspace — NO con `npm run build --workspaces`
+        # (compilaría también las apps del workspace, incluyendo cualquiera
+        # con un build roto, y tumbaría el step para todo el matrix) sino con
+        # un loop acotado a `packages/*`, tolerante a que algún paquete no
+        # exista todavía en una rama.
         run: |
           if [ -f "package-lock.json" ]; then
             npm ci
           else
-            (cd "$GITHUB_WORKSPACE" && npm ci && npm run build --workspace=packages/entity-matcher)
+            cd "$GITHUB_WORKSPACE"
+            npm ci
+            for pkg in packages/*/; do
+              if [ -f "${pkg}package.json" ]; then
+                npm run build --workspace="${pkg%/}" --if-present
+              fi
+            done
           fi
       - run: npx tsc --noEmit
       - run: npm test --if-present

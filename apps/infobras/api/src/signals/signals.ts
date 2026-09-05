@@ -1,12 +1,9 @@
 /**
- * Cost Drift: cuánto se desvió el costo actualizado respecto al monto
- * viable/aprobado originalmente. null cuando no hay base de comparación
- * (monto viable ausente o cero) — nunca se divide por cero ni se asume 0%.
+ * Re-exportada desde `@appsperu/shared-signals` (CX-10, ver
+ * docs/adr/0020-umbral-sobrecosto-unificado.md) — este archivo era su única
+ * definición hasta que se compartió con salud-institucional.
  */
-export function costDriftPct(montoViable: number | null, costoActualizado: number | null): number | null {
-  if (montoViable === null || costoActualizado === null || montoViable === 0) return null;
-  return Math.round(((costoActualizado - montoViable) / montoViable) * 10000) / 100;
-}
+export { costDriftPct } from "@appsperu/shared-signals";
 
 /**
  * Gap físico-financiero: diferencia entre avance físico real y ejecución

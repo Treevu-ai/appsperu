@@ -10,6 +10,9 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@appsperu/shared-queries": "*",
+    "@appsperu/shared-signals": "*",
+    "@appsperu/shared-identity": "*",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^4.19.2",

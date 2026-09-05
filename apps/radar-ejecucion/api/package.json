@@ -43,6 +43,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@appsperu/shared-queries": "*",
     "cors": "^2.8.6",
     "csv-parse": "^5.5.6",
     "dotenv": "^17.4.2",

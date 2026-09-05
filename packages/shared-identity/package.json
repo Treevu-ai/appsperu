@@ -1,0 +1,21 @@
+{
+  "name": "@appsperu/shared-identity",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Utilidades compartidas de identidad de proveedores: extracción de RUC desde supplier_id de OCDS y verificación de vigencia temporal de un estado (sanción, condición tributaria) contra una fecha de referencia — consolidado de 3 copias de extractRuc y 1 de temporal-status (ver docs/adr/0019-alcance-workspace-utilidades-compartidas.md, CX-09).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.3",
+    "vitest": "^4.1.10"
+  }
+}

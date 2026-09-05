@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { extractRuc, vigenteEnFecha } from "@appsperu/shared-identity";
 import { pool } from "../db/pool.js";
 import { comprasPool } from "../db/compras-pool.js";
 import { ejecucionPool } from "../db/ejecucion-pool.js";
@@ -13,28 +14,6 @@ const CrossrefQuerySchema = z.object({
   departamento: z.string().min(1).optional(),
   soloIrregulares: z.enum(["true", "false"]).optional(),
 });
-
-/**
- * `awards.supplier_id` en compras-publicas viene como `PE-RUC-<11 dígitos>`
- * para la mayoría de proveedores (77.3% de la muestra, confirmado en vivo el
- * 2026-08-20 — ver docs/data-contracts/sunat-padron-ruc.md). El resto son
- * consorcios con un id interno más corto que no es RUC estándar y no cruzan
- * por esta vía. `minor_contracts.winning_supplier_id` (contratos menores vía
- * SEACE — `legacy-seace-orders-connector.ts` y
- * `seace-public-minor-contracts-connector.ts`) usa el prefijo `seace:ruc:`
- * en su lugar; ambos formatos se aceptan (CX-01, ver docs/conectores.md).
- */
-const RUC_PREFIXES = ["PE-RUC-", "seace:ruc:"] as const;
-
-function extractRuc(supplierId: string): string | null {
-  for (const prefix of RUC_PREFIXES) {
-    if (supplierId.startsWith(prefix)) {
-      const ruc = supplierId.slice(prefix.length);
-      return /^\d{11}$/.test(ruc) ? ruc : null;
-    }
-  }
-  return null;
-}
 
 const ESTADOS_REGULARES = new Set(["ACTIVO"]);
 const CONDICIONES_REGULARES = new Set(["HABIDO"]);
@@ -157,6 +136,19 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
     // marca aparte (`encontradoEnPadron: false`) para no acusar sin evidencia.
     const irregular = encontradoEnPadron && (!estadoRegular || !condicionRegular);
 
+    // `irregular` de arriba usa el estado ACTUAL del padrón (último batch
+    // ingerido), no el estado en la fecha de la adjudicación — `contribuyentes`
+    // sobrescribe el estado en cada reingesta (ON CONFLICT DO UPDATE) y no
+    // guarda desde cuándo empezó, a diferencia de `inhabilitaciones` en
+    // proveedores-sancionados (que sí tiene `desde`/`hasta`). Por eso
+    // `vigenteEnFecha` siempre recibe `desde: null` acá y el resultado es
+    // "NO_VERIFICABLE" hoy — no se inventa una fecha que SUNAT no publica.
+    // Mismo patrón de rigor temporal que proveedores-sancionados/crossref.ts,
+    // aplicado con el dato que esta fuente sí tiene (CX-09).
+    const estadoTributarioEnFechaAdjudicacion = contribuyente
+      ? vigenteEnFecha(row.fecha, null, null)
+      : "NO_VERIFICABLE";
+
     return {
       origen: row.origen,
       ocid: row.ocid,
@@ -173,6 +165,7 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
       condicionDomicilio: contribuyente?.condicion ?? null,
       ubigeoProveedor: contribuyente?.ubigeo ?? null,
       irregular,
+      estadoTributarioEnFechaAdjudicacion,
     };
   });
 

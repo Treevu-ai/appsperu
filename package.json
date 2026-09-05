@@ -1,11 +1,18 @@
 {
   "name": "appsperu",
   "private": true,
-  "description": "Monorepo raíz — SOLO declara el workspace acotado del ADR-0017 (consolidación de matchers de entidad). Las 14 apps siguen siendo proyectos npm independientes con su propio package-lock.json y CI; ninguna otra se agregó a `workspaces` a propósito, para no ampliar el alcance de este cambio (ver docs/adr/0017-consolidacion-entity-crosswalk-evaluacion.md).",
+  "description": "Monorepo raíz — declara el workspace acotado de ADR-0017 (matchers de entidad: compras-publicas, infobras, identidad-fiscal), su ampliación de ADR-0019/CX-08 (LATEST_BUDGET_CTE: radar-ejecucion, salud-institucional, radar-inversiones, ceplan-estrategico, actividad-agraria, seguridad-ciudadana) y CX-09 (extractRuc/temporal-status: proveedores-sancionados). El resto de apps siguen siendo proyectos npm independientes con su propio package-lock.json y CI; una app entra a `workspaces` solo cuando un ticket concreto la toca, nunca de forma preventiva (ver docs/adr/0017-consolidacion-entity-crosswalk-evaluacion.md y docs/adr/0019-alcance-workspace-utilidades-compartidas.md).",
   "workspaces": [
     "packages/*",
     "apps/compras-publicas/api",
     "apps/infobras/api",
-    "apps/identidad-fiscal/api"
+    "apps/identidad-fiscal/api",
+    "apps/radar-ejecucion/api",
+    "apps/salud-institucional/api",
+    "apps/radar-inversiones/api",
+    "apps/ceplan-estrategico/api",
+    "apps/actividad-agraria/api",
+    "apps/seguridad-ciudadana/api",
+    "apps/proveedores-sancionados/api"
   ]
 }

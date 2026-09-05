@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
-import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
+import { fetchWithTimeout } from "@appsperu/http-client";
 import { normalizeContractObject } from "../minor-contracts/normalize-object.js";
 import { MINOR_CONTRACT_LIMIT_2026, MINOR_CONTRACT_NORMALIZER_VERSION } from "../minor-contracts/types.js";
 
@@ -371,8 +371,8 @@ export async function ingestSeacePublicMinorContracts(options: SeaceMinorContrac
               execution_department, execution_province, execution_district,
               publication_date, quotation_start_date, quotation_end_date, winning_supplier_id,
               status, source_url, source_timestamp, source_batch_id, minor_source_batch_id, data_version, normalizer_version)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$10,$11,$12,$13,$14,$15,$16,'AWARDED',$17,$18,NULL,$19,
-                   'oece-seace-public-ui-v1',$20)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$10,$11,$12,$13,$14,$15,$16,$17,'AWARDED',$18,$19,NULL,$20,
+                   'oece-seace-public-ui-v1',$21)
            ON CONFLICT (contracting_id) DO UPDATE SET object_original=EXCLUDED.object_original,
              object_normalized=EXCLUDED.object_normalized, category=EXCLUDED.category, awarded_amount=EXCLUDED.awarded_amount,
              execution_department=EXCLUDED.execution_department, execution_province=EXCLUDED.execution_province,

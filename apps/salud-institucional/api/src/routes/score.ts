@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
+import { LATEST_BUDGET_CTE } from "@appsperu/shared-queries";
+import { extractRuc } from "@appsperu/shared-identity";
 import { ejecucionPool } from "../db/ejecucion-pool.js";
 import { infobrasPool } from "../db/infobras-pool.js";
 import { inversionesPool } from "../db/inversiones-pool.js";
@@ -16,12 +18,6 @@ const ScoreQuerySchema = z.object({
   anio: z.string().regex(/^\d{4}$/).optional(),
 });
 
-const RUC_PREFIX = "PE-RUC-";
-function extractRuc(supplierId: string): string | null {
-  if (!supplierId.startsWith(RUC_PREFIX)) return null;
-  const ruc = supplierId.slice(RUC_PREFIX.length);
-  return /^\d{11}$/.test(ruc) ? ruc : null;
-}
 const ESTADOS_REGULARES = new Set(["ACTIVO"]);
 const CONDICIONES_REGULARES = new Set(["HABIDO"]);
 
@@ -41,11 +37,7 @@ scoreRouter.get("/", asyncHandler(async (req, res) => {
 
   // 1. Universo de entidades + ejecución presupuestal (radar-ejecucion, fuente primaria).
   const { rows: entityRows } = await ejecucionPool.query(
-    `WITH latest_budget AS (
-       SELECT DISTINCT ON (entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, '')) *
-       FROM budget_execution
-       ORDER BY entity_code, funcion, anio_fiscal, COALESCE(meta_departamento, ''), COALESCE(generica, ''), fecha_corte DESC, id DESC
-     )
+    `${LATEST_BUDGET_CTE}
      SELECT e.entity_code, e.nombre, SUM(b.pim) AS pim, SUM(b.devengado) AS devengado
      FROM entities e
      JOIN territories t ON t.ubigeo = e.ubigeo
@@ -77,6 +69,13 @@ scoreRouter.get("/", asyncHandler(async (req, res) => {
   );
 
   // 3. Inversiones (radar-inversiones), por SEC_EJEC exacto — sin crosswalk, clave compartida directa.
+  // La condición de abajo es el equivalente SQL de
+  // `costDriftPct(monto_viable, costo_actualizado) > SOBRECOSTO_UMBRAL_PCT`
+  // (@appsperu/shared-signals, ver docs/adr/0020-umbral-sobrecosto-unificado.md).
+  // No se calcula fila por fila en JS (evita traer todas las inversiones a
+  // memoria solo para un COUNT) — si SOBRECOSTO_UMBRAL_PCT deja de ser 0,
+  // esta condición debe actualizarse a
+  // `costo_actualizado > monto_viable * (1 + SOBRECOSTO_UMBRAL_PCT / 100)`.
   const { rows: inversionRows } = await inversionesPool.query(
     `SELECT sec_ejec AS entity_code,
             COUNT(*) AS total,

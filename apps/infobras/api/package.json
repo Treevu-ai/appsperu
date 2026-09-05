@@ -14,6 +14,8 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@appsperu/shared-queries": "*",
+    "@appsperu/shared-signals": "*",
     "@appsperu/entity-matcher": "*",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",

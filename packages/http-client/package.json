@@ -1,0 +1,22 @@
+{
+  "name": "@appsperu/http-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cliente HTTP compartido para las 14 APIs de AppsPerú: fetch con timeout configurable y errores tipados (timeout/network/http/invalid_json), consolidado de 3 copias locales de `fetchJson` (ver docs/adr/0019-alcance-workspace-utilidades-compartidas.md, CX-13).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "typescript": "^5.5.3",
+    "vitest": "^4.1.10"
+  }
+}

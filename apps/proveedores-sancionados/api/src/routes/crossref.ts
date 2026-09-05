@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { extractRuc } from "@appsperu/shared-identity";
 import { pool } from "../db/pool.js";
 import { comprasPool } from "../db/compras-pool.js";
 import { fiscalPool } from "../db/fiscal-pool.js";
@@ -13,22 +14,6 @@ const CrossrefQuerySchema = z.object({
   departamento: z.string().min(1).optional(),
   soloInhabilitados: z.enum(["true", "false"]).optional(),
 });
-
-/**
- * `awards.supplier_id` usa `PE-RUC-<11 dígitos>`; `minor_contracts.winning_
- * supplier_id` (contratos menores vía SEACE) usa `seace:ruc:<11 dígitos>` —
- * ambos formatos se aceptan (CX-01, ver docs/conectores.md).
- */
-const RUC_PREFIXES = ["PE-RUC-", "seace:ruc:"] as const;
-function extractRuc(supplierId: string): string | null {
-  for (const prefix of RUC_PREFIXES) {
-    if (supplierId.startsWith(prefix)) {
-      const ruc = supplierId.slice(prefix.length);
-      return /^\d{11}$/.test(ruc) ? ruc : null;
-    }
-  }
-  return null;
-}
 
 type ContractRow = {
   origen: "awards" | "minor_contracts";

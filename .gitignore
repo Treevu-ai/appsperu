@@ -21,3 +21,20 @@ logs/
 # OS / editor
 .DS_Store
 *.sw?
+
+# Worktrees de git usados para desarrollo en paralelo (no son contenido del repo)
+.worktrees/
+
+# Python (tools/ckan-indexer, tools/scrapers)
+__pycache__/
+*.pyc
+
+# Caché y salidas locales de tools/scrapers y tools/ckan-indexer — datos
+# descargados/generados, no código fuente, no se versionan
+tools/scrapers/cache/
+tools/scrapers/reports/
+tools/ckan-indexer/state/
+
+# Borradores locales de financiamiento — cifras y estrategia institucional,
+# nunca al historial del repo publico (ver docs/financiamiento/README.md)
+docs/financiamiento/
