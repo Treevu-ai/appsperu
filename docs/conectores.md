@@ -191,6 +191,7 @@ contra inhabilitaciones vigentes — ambos reutilizan el mismo `extractRuc()` so
 | **Frecuencia** | Manual (`npm run ingest:infobras`). Snapshot completo del dataset en cada corrida (no incremental). |
 | **Fuente de datos** | `infobras.contraloria.gob.pe` — descarga directa vía `InfobrasWeb/Archivo/DownloadFile`. |
 | **Alcance territorial CLI** | `INFOBRAS_DEPARTAMENTOS` acepta La Libertad, Lambayeque, Piura, Cajamarca y Cusco. El XLSX fuente es nacional y se guarda el tamaño de lote nacional antes del filtro territorial. Los porcentajes se preservan como fuente y la columna admite valores atípicamente escalados; no se reinterpreta un porcentaje en la ingesta. |
+| **Cost Drift** | `costDriftPct` (% de desvío entre `monto_viable` y `costo_actualizado` de una obra) vive en `@appsperu/shared-signals`, compartida con `salud-institucional`. Umbral de "sobrecosto" (`SOBRECOSTO_UMBRAL_PCT`) unificado en el mismo paquete — ver [ADR-0020](adr/0020-umbral-sobrecosto-unificado.md). |
 | **Detalle completo** | [`docs/data-contracts/infobras-obras-publicas.md`](data-contracts/infobras-obras-publicas.md) |
 
 ---
@@ -255,8 +256,6 @@ Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distrito
 | **Limitación conocida** | El dataset "SBN Predios del Estado registrados en el SINABIP" (el registro **completo**, no solo supervisados) solo se publica como enlace de Google Drive, y ese enlace está **roto** (verificado en vivo 2026-09-04: "No se encontró la página") — no hay forma pública de acceder al universo completo de predios hoy. Tampoco se encontró fuente pública descargable para **bienes muebles** (vehículos, equipos, mobiliario) tras búsqueda razonable — ese sub-hueco sigue abierto. |
 | **Alcance territorial** | Nacional; sin registros para LA LIBERTAD en la muestra verificada 2026-09-04 (LIMA concentra 690/1,324, ~52%) — hallazgo real de la fuente, no un filtro aplicado por el conector. |
 | **Cruces** | Ninguno implementado — candidato: cruzar `titular_predio`/distrito contra entidades ya identificadas en `radar-ejecucion`/`compras-publicas`. |
-
----
 
 ---
 
@@ -406,6 +405,7 @@ duplicar lógica entre los tres.
 | **Cómo lo hace** | Queries directas contra las 5 bases (connection strings en `.env`), sin lote ni tabla intermedia — no aplica el patrón "descarga → lake crudo → normaliza" de los demás conectores porque no hay descarga: los datos ya están ingeridos por las apps origen. |
 | **Frecuencia** | N/A — se recalcula en cada request, no hay "ingesta" que programar. |
 | **Fuente de datos** | Las 5 bases Postgres de las otras apps (indirectamente, las 5 fuentes externas de arriba). |
+| **Sobrecosto (componente inversiones)** | `costo_actualizado > monto_viable` en SQL — equivalente a `costDriftPct(...) > SOBRECOSTO_UMBRAL_PCT` de `@appsperu/shared-signals` (no calculado fila por fila por performance). Umbral unificado con `infobras` — ver [ADR-0020](adr/0020-umbral-sobrecosto-unificado.md). |
 | **Detalle completo** | [`docs/data-contracts/salud-institucional-score.md`](data-contracts/salud-institucional-score.md) |
 
 ---
@@ -474,5 +474,7 @@ OCDS); esos resultados devuelven `valorMoneda: null` en vez de asumir soles.
 | `tractor-rental-connector.ts` | actividad-agraria | MIDAGRI (datosabiertos.gob.pe) | Descarga CSV (motor compartido) | Manual | Completa (nacional) |
 | `yunta-rental-connector.ts` | actividad-agraria | MIDAGRI (datosabiertos.gob.pe) | Descarga CSV (motor compartido) | Manual | Completa (nacional) |
 | `sidpol-connector.ts` | seguridad-ciudadana | MININTER (datosabiertos.gob.pe) | Descarga CSV, maneja WAF | Manual | Completa (nacional) |
+| `airhsp-connector.ts` | radar-ejecucion | MEF AIRHSP (datosabiertos.gob.pe) | Descarga CSV anual | Manual | Completa (nacional, agregado por entidad/régimen/cargo — sin filtro territorial en la fuente) |
+| `sbn-supervision-connector.ts` | ceplan-geo | SBN (datosabiertos.gob.pe) | Descarga CSV, maneja WAF | Manual | Parcial (solo predios supervisados, no el registro completo — enlace roto) |
 | — (agregador) | salud-institucional | Las otras 5 apps | Query en vivo, sin ingesta | Bajo demanda (por request) | N/A |
 
