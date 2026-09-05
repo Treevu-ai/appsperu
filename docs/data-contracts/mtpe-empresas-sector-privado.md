@@ -68,9 +68,14 @@ aparece un segundo recurso CSV, `pickEmpresasResource` lo detecta y **advierte e
 
 ## Cautelas
 
-- No se investigó en este ticket si MTPE publica esta misma serie en otro portal (ej. un sistema
-  operacional propio del MTPE, fuera de la PNDA) con cortes más recientes — solo se confirmó el
-  estado del catálogo de `datosabiertos.gob.pe`.
+- **Actualización 2026-09-05 (ver ADR-0021 addendum): sí existe una fuente más fresca, fuera de
+  PNDA.** MTPE publica esta misma serie ("EMPRESAS_25", mismo esquema exacto) en su propio portal
+  operativo (`www2.trabajo.gob.pe/estadisticas/ind-lab-a-nivel-distrital/`), con años **2014 a
+  2025** — confirmado descargando y abriendo el archivo de 2025 (1,515 distritos, formato
+  `.7z` → `.xlsx` con 49 hojas). Este conector, tal como está implementado, **sigue apuntando a
+  la versión 2022 de PNDA a propósito** — migrar a la fuente de MTPE requiere parsear XLSX y
+  descomprimir 7z, ninguno con precedente en el proyecto, y es una decisión de esfuerzo M
+  pendiente de tomar explícitamente (ver ADR-0021 addendum), no un ajuste menor de este ticket.
 - El cruce de este dataset contra inversión pública (`GET /api/crossref`) es deliberadamente
   descriptivo, sin inferencia de causalidad — ver `docs/PRD_Actividad_Empresarial_Formal_v1.md`
   §7 para el razonamiento completo.

@@ -93,11 +93,73 @@ INFOMIDIS/Pensión 65 en ADR-0018, pero acá el resultado es el opuesto:
   otras publicaciones del Estado peruano sí ha expuesto RUC de empleador sin datos de la persona;
   no asumir sin abrir el archivo real.
 
+## Addendum — fuente más fresca encontrada fuera de PNDA (2026-09-05)
+
+A pedido explícito de revisar si había información más reciente en otro lugar antes de dar por
+buena la vigencia de 2022 del Hallazgo 1: **sí existe, y es sustancialmente mejor.**
+
+MTPE mantiene su propio portal operativo de estadísticas
+(`www2.trabajo.gob.pe/estadisticas/ind-lab-a-nivel-distrital/`), separado de la PNDA, con
+**"Indicadores Laborales a Nivel Distrital"** publicados anualmente desde **2014 hasta 2025**
+(el año más reciente confirmado, no un snapshot congelado). Cada año se publica como una
+publicación en `gob.pe/institucion/mtpe/informes-publicaciones/...`, que enlaza un archivo
+comprimido `.7z` alojado en `cdn.www.gob.pe`.
+
+**Confirmado en vivo, descargado y abierto** (`8222238-indicadores-a-nivel-distrital-2025.7z`,
+19.8 MB comprimido, un único archivo `INDICADORES A NIVEL DISTRITAL 2025.xlsx` de 23 MB
+adentro): la hoja `EMPRESAS_25` es **el mismo dataset exacto** que el Hallazgo 1 de PNDA
+("NÚMERO DE EMPRESAS EN EL SECTOR PRIVADO POR MESES, SEGÚN DISTRITOS"), mismas columnas
+(`Código de Ubigeo`, `DISTRITOS`, `ENERO`...`DICIEMBRE`, con "SETIEMBRE" igual que en PNDA), pero
+para **el año 2025** — 3 años más reciente que lo único disponible en PNDA. **1,515 distritos**
+(más que los 1,398 de la versión 2022 de PNDA — probablemente distritos nuevos creados en el
+intervalo, no verificado en este addendum).
+
+El archivo Excel trae, además, **48 hojas más** con indicadores relacionados (tamaño de empresa,
+remuneraciones, trabajadores por sexo/régimen laboral/tipo de contrato, pensionistas, etc.) — un
+universo de datos mucho más rico que el CSV simple ya ingerido, sin explorar en este addendum más
+allá de confirmar que `EMPRESAS_25` reproduce la misma estructura.
+
+### Por qué esto no se encontró en el spike original
+
+El spike original (package_list/package_show de `datosabiertos.gob.pe`) solo cubre lo que MTPE
+publica *en la PNDA*. Este portal (`www2.trabajo.gob.pe` y las publicaciones en
+`gob.pe/institucion/mtpe/informes-publicaciones/`) es una fuente completamente distinta que la
+PNDA no indexa ni enlaza — el mismo patrón de "portal operacional vs. dataset en el catálogo
+central" que ya se vio con MIDAGRI/SIEA en ADR-0007 y CEPLAN en ADR-0009, pero acá el resultado es
+al revés: el portal operacional SÍ tiene el dato exportable (no es un dashboard sin descarga como
+en esos casos), simplemente MTPE nunca lo republicó en la PNDA con el mismo nivel de vigencia.
+
+### Riesgo de acceso confirmado, mismo patrón que el resto del proyecto
+
+`gob.pe` devuelve **HTTP 418** al user-agent por defecto de herramientas de fetch automatizado
+(confirmado con WebFetch) — mismo WAF que `datosabiertos.gob.pe`. Con un header `User-Agent` de
+navegador real, la descarga funciona sin problema. El archivo requiere además descomprimir `.7z`
+(no soportado nativamente por `Expand-Archive` de Windows ni por ninguna librería Node ya usada
+en el proyecto) — se necesitaría `7-Zip` en el sistema o una librería JS de descompresión 7z
+(ej. `7z-wasm` o invocar un binario `7z` externo), una dependencia nueva que ningún conector
+existente del proyecto tiene todavía.
+
+### Recomendación
+
+**No se recomienda migrar el conector ya construido (`actividad-empresarial`) a esta fuente sin
+una decisión explícita de producto**, porque el costo de implementación es real y distinto al
+resto del proyecto:
+1. Parsear `.xlsx` (no CSV) — el proyecto no tiene precedente de parsear Excel con una librería
+   como `exceljs`/`xlsx` (el único conector que toca Excel, `pdf-connector.ts` de
+   `bcrp-la-libertad`, en realidad parsea PDF, no XLSX).
+2. Descomprimir `.7z` — dependencia nueva, sin precedente en el proyecto.
+3. Confirmar si los años 2014-2024 tienen la misma estructura exacta que 2025 antes de construir
+   una serie histórica (no verificado en este addendum — se abrió y confirmó solo el archivo de
+   2025).
+
+Si se decide avanzar, es un ticket de esfuerzo M (no S como AE-01 original), con su propio
+data contract actualizado — no un ajuste menor del conector existente.
+
 ## Conclusión del spike
 
 | Dataset | Confianza | Recomendación |
 |---|---|---|
-| Empresas Sector Privado por distrito | Alta | Candidato real para un futuro PRD ejecutable — único con UBIGEO + serie temporal + sin PII |
+| Empresas Sector Privado por distrito | Alta | **Ya implementado (AE-01/02/03) sobre la versión 2022 de PNDA.** Addendum: existe una versión 2014-2025 en `www2.trabajo.gob.pe`, 3 años más fresca — migrar es una decisión de producto aparte (esfuerzo M: XLSX + 7z), no un ajuste menor. |
 | Trabaja Perú (seguimiento, agregado) | Alta | Válido pero histórico y cerrado (jun-ago 2020) — solo útil como snapshot puntual, no serie viva |
 | Trabaja Perú (personas) | Alta (de descarte) | **Nunca ingerir** — DNI individual confirmado |
 | Empleo Registro Administrativo | Alta (de descarte) | Sin UBIGEO — no compatible con el patrón de cruce del proyecto |
