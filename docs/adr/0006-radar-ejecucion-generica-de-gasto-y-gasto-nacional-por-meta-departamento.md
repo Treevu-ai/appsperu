@@ -1,5 +1,34 @@
 # ADR-0006: `radar-ejecucion` — clasificación económica del gasto (genérica) y gasto de Gobierno Nacional dirigido a un departamento (caso Reconstrucción con Cambios / ANIN en La Libertad)
 
+> **Actualización 2026-09-05 — Vertical "burocracia vs. inversión" implementado.**
+> Nuevo endpoint `GET /api/burocracia-inversion` (`apps/radar-ejecucion/api/src/routes/burocracia-inversion.ts`),
+> el primer caso de uso real que consume `generica`/`generica_nombre` para el propósito con el
+> que se diseñó esta decisión ("cuánto del gasto es planilla vs. inversión", línea 98 de este
+> mismo ADR). Por entidad/año, suma devengado bajo `generica = '1'` (personal) y
+> `generica = '6'` (inversión) y expone el ratio entre ambos, con distrito real vía
+> `entities.ubigeo → territories.distrito`.
+>
+> **Corrección 2026-09-05**: el resto de este ADR (secciones "Decisión 1" y "API" más abajo)
+> describe los códigos de genérica como `"2.1"` (personal) y `"2.6"` (inversión) — verificado
+> en vivo contra `budget_execution` real, esa notación es incorrecta. El código MEF real es un
+> dígito simple: `1` = PERSONAL Y OBLIGACIONES SOCIALES, `2` = PENSIONES Y OTRAS PRESTACIONES
+> SOCIALES, `3` = BIENES Y SERVICIOS, `4` = DONACIONES Y TRANSFERENCIAS, `5` = OTROS GASTOS,
+> `6` = ADQUISICION DE ACTIVOS NO FINANCIEROS, `8` = SERVICIO DE LA DEUDA PUBLICA (confirmado
+> con `SELECT DISTINCT generica, generica_nombre FROM budget_execution` en la base real). Nadie
+> filtraba por este campo hasta ahora, por lo que el error nunca se manifestó en un bug — queda
+> corregido aquí en vez de reescribir el texto original, para no perder el rastro del error.
+>
+> Tres decisiones de diseño directamente derivadas de
+> las consecuencias negativas documentadas más abajo en este ADR: (1) excluye filas con
+> `meta_departamento IS NOT NULL` — ese gasto (el caso ANIN de esta misma actualización) solo
+> tiene destino a nivel departamento, no distrito, así que incluirlo le atribuiría a la fila el
+> distrito de la *sede* de la entidad, no el del gasto real; (2) filas con `generica IS NULL`
+> (la re-ingesta pendiente que advierte la sección "Negativas" de este ADR) se excluyen de ambos
+> sumandos, no se tratan como cero, y se exponen vía un flag `tieneFilasSinClasificar` por fila;
+> (3) cuando `devengadoInversion = 0` el ratio se expone como `null` con `ratioIndefinido: true`,
+> no como división por cero. Sin ingesta nueva — es una vista analítica sobre `budget_execution`
+> ya poblado.
+>
 > **Actualización 2026-08-22 — Decisión 2 implementada y verificada con datos reales.**
 > `ingestMefFullYearForMetaDepartamento` (nueva función en `mef-connector.ts`) corrió contra el
 > archivo real y confirmó el hallazgo que motivó este ADR: **AUTORIDAD NACIONAL DE
