@@ -1,6 +1,7 @@
 import express, { type ErrorRequestHandler } from "express";
 import { sancionesRouter } from "./routes/sanciones.js";
 import { crossrefRouter } from "./routes/crossref.js";
+import { redesProveedoresRouter } from "./routes/redes-proveedores.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 import { pool } from "./db/pool.js";
 
@@ -21,6 +22,7 @@ export function createApp() {
   app.use("/api", apiRateLimit);
   app.use("/api/sanciones", sancionesRouter);
   app.use("/api/crossref", crossrefRouter);
+  app.use("/api/crossref/redes-proveedores", redesProveedoresRouter);
 
   app.use(errorHandler);
 
