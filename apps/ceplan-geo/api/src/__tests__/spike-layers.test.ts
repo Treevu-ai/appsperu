@@ -1,6 +1,16 @@
-import { describe, expect, it } from "vitest";
-import { recommendDecision } from "../cli/spike-layers.js";
-import { PILOT_DEPARTMENTS } from "../lib/pilot-departments.js";
+import { describe, expect, it, vi } from "vitest";
+
+// pilot-departments.ts importa el pool de Postgres (para una función no
+// usada por estos tests) que lanza al cargar el módulo si DATABASE_URL no
+// está definida — sin esto, este archivo nunca cargaba en CI (no hay
+// DATABASE_URL en ese entorno). Mismo mock que ya usan crossref-api.test.ts
+// y api.test.ts en esta misma app.
+vi.mock("../db/pool.js", () => ({
+  pool: { query: vi.fn() },
+}));
+
+const { recommendDecision } = await import("../cli/spike-layers.js");
+const { PILOT_DEPARTMENTS } = await import("../lib/pilot-departments.js");
 
 describe("spike-layers", () => {
   it("recommends POSPONER for layers above 200k features", () => {
