@@ -65,6 +65,9 @@ y la página pública `/docs/api` en [rastro.pages.dev/docs/api](https://rastro.
 - [`docs/adr/`](docs/adr/) — decisiones arquitectónicas con su razón.
 - [`docs/PRD_Seguimiento_Sectores_y_GORE_La_Libertad_v1.md`](docs/PRD_Seguimiento_Sectores_y_GORE_La_Libertad_v1.md)
   — seguimiento terminal de ministerios, organismos y Gobierno Regional La Libertad con cortes y vínculos verificables.
+- [`docs/PRD_Consolidacion_Logica_Compartida_y_Rigor_Temporal_v1.md`](docs/PRD_Consolidacion_Logica_Compartida_y_Rigor_Temporal_v1.md)
+  ([tickets](docs/TICKETS_Consolidacion_Logica_Compartida_y_Rigor_Temporal_v1.md)) — consolidar lógica SQL/JS
+  duplicada entre apps y cerrar una asimetría de rigor temporal en el cruce de identidad-fiscal.
 
 ## Consultas sectoriales por terminal
 
