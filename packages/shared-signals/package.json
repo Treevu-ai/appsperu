@@ -1,0 +1,21 @@
+{
+  "name": "@appsperu/shared-signals",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Señales de sobrecosto compartidas entre infobras (obras) y salud-institucional (inversiones) — cálculo de porcentaje de desvío y umbral nombrado, para que ambas apps definan 'sobrecosto' con la misma regla explícita (ver docs/adr/0020-umbral-sobrecosto-unificado.md, CX-10).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.3",
+    "vitest": "^4.1.10"
+  }
+}

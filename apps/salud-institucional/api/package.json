@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@appsperu/shared-queries": "*",
+    "@appsperu/shared-signals": "*",
     "@appsperu/shared-identity": "*",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",

@@ -69,6 +69,13 @@ scoreRouter.get("/", asyncHandler(async (req, res) => {
   );
 
   // 3. Inversiones (radar-inversiones), por SEC_EJEC exacto — sin crosswalk, clave compartida directa.
+  // La condición de abajo es el equivalente SQL de
+  // `costDriftPct(monto_viable, costo_actualizado) > SOBRECOSTO_UMBRAL_PCT`
+  // (@appsperu/shared-signals, ver docs/adr/0020-umbral-sobrecosto-unificado.md).
+  // No se calcula fila por fila en JS (evita traer todas las inversiones a
+  // memoria solo para un COUNT) — si SOBRECOSTO_UMBRAL_PCT deja de ser 0,
+  // esta condición debe actualizarse a
+  // `costo_actualizado > monto_viable * (1 + SOBRECOSTO_UMBRAL_PCT / 100)`.
   const { rows: inversionRows } = await inversionesPool.query(
     `SELECT sec_ejec AS entity_code,
             COUNT(*) AS total,
