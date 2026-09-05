@@ -108,13 +108,14 @@ describe("crossref routes", () => {
       geometryGeojson: null,
     });
     fetchEjecucionByUbigeoMock.mockResolvedValue({
-      filas: [{ entityCode: "123", nombre: "MPT", nivelGobierno: "GOBIERNOS LOCALES", funcion: "Salud", pim: 1, devengado: 1, fechaCorte: "2026-08-01" }],
+      filasSede: [{ entityCode: "123", nombre: "MPT", nivelGobierno: "GOBIERNOS LOCALES", funcion: "Salud", pim: 1, devengado: 1, fechaCorte: "2026-08-01" }],
+      filasNacionalDirigido: [],
       dependency: { app: "radar-ejecucion", url: "http://localhost:4000", ok: true },
     });
 
     const res = await request(createApp()).get("/api/crossref/ejecucion").query({ ubigeo: "130101" });
     expect(res.status).toBe(200);
     expect(res.body.matcher).toBe("ubigeo_exacto");
-    expect(res.body.resultados[0].ejecucion).toHaveLength(1);
+    expect(res.body.resultados[0].ejecucionSedeRegional).toHaveLength(1);
   });
 });

@@ -16,6 +16,7 @@ jobs:
           - apps/actividad-agraria/api
           - apps/bcrp-comercio-exterior/api
           - apps/ceplan-estrategico/api
+          - apps/ceplan-geo/api
           - apps/compras-publicas/api
           - apps/identidad-fiscal/api
           - apps/infobras/api
