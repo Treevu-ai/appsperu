@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
-import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
+import { fetchWithTimeout } from "@appsperu/http-client";
 import { OecePageNotFoundError, normalizeDepartamentoScope } from "./oece-connector.js";
 import { findBuyerDepartamento, normalizeAwards, type OcdsRecord } from "./normalize-awards.js";
 import { normalizeBidders, persistBidders } from "./normalize-bidders.js";

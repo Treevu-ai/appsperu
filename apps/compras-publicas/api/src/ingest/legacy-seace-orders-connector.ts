@@ -4,7 +4,7 @@ import path from "node:path";
 import * as XLSX from "xlsx";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
-import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
+import { fetchWithTimeout } from "@appsperu/http-client";
 import { normalizeContractObject } from "../minor-contracts/normalize-object.js";
 import { MINOR_CONTRACT_LIMIT_2026, MINOR_CONTRACT_NORMALIZER_VERSION } from "../minor-contracts/types.js";
 import { classifyContractingEntity } from "./oece-minor-contracts-connector.js";

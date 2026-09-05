@@ -34,8 +34,47 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: ${{ matrix.package }}/package-lock.json
-      - run: npm ci
+          # Casi todas las apps tienen su propio package-lock.json (instalación
+          # standalone, sin cambios). apps/compras-publicas/api, apps/infobras/api
+          # y apps/identidad-fiscal/api son la excepción (ADR-0017, workspace de
+          # npm acotado a esas 3 + packages/entity-matcher) — su lockfile vive
+          # en la raíz del repo. Se listan ambos paths; hashFiles usa el que
+          # exista para cada matrix entry, sin fallar si el otro no matchea.
+          cache-dependency-path: |
+            ${{ matrix.package }}/package-lock.json
+            package-lock.json
+      - name: Install dependencies
+        # Las 3 apps del workspace (ver comentario arriba) no tienen su propio
+        # package-lock.json — `npm ci` debe correr desde la raíz para que
+        # resuelva contra el lockfile del workspace. El resto sigue exactamente
+        # igual que antes (npm ci local, sin tocar).
+        #
+        # `packages/entity-matcher`, `packages/http-client` (CX-13) y
+        # `packages/shared-queries` (CX-08, ver
+        # docs/adr/0019-alcance-workspace-utilidades-compartidas.md) se
+        # consumen vía workspace symlink, pero npm ci no los compila: solo
+        # enlaza el paquete, no corre su script `build`. Sin dist/,
+        # `tsc --noEmit` de las apps consumidoras falla con "Cannot find
+        # module '@appsperu/...' or its corresponding type declarations"
+        # (visto en CI real para entity-matcher). Se compilan explícitamente
+        # después del ci del workspace — NO con `npm run build --workspaces`
+        # (compilaría también las apps del workspace, incluyendo cualquiera
+        # con un build roto, y tumbaría el step para todo el matrix) sino con
+        # un loop acotado a `packages/*`, tolerante a que algún paquete no
+        # exista todavía en una rama (ej. `entity-matcher` no está en esta
+        # rama, solo en `master` tras ADR-0017).
+        run: |
+          if [ -f "package-lock.json" ]; then
+            npm ci
+          else
+            cd "$GITHUB_WORKSPACE"
+            npm ci
+            for pkg in packages/*/; do
+              if [ -f "${pkg}package.json" ]; then
+                npm run build --workspace="${pkg%/}" --if-present
+              fi
+            done
+          fi
       - run: npx tsc --noEmit
       - run: npm test --if-present
       - run: npm run build --if-present

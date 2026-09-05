@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
-import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
+import { fetchWithTimeout } from "@appsperu/http-client";
 import { normalizeOcdsReleases, type OcdsRelease } from "./normalize.js";
 
 const API_BASE_URL = "https://contratacionesabiertas.oece.gob.pe/api/v1";

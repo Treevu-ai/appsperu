@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../db/pool.js", () => ({ pool: {} }));
-vi.mock("../lib/fetch-with-timeout.js", () => ({ fetchWithTimeout: vi.fn() }));
+vi.mock("@appsperu/http-client", () => ({ fetchWithTimeout: vi.fn() }));
 
 import { fetchRecordsPage, recordsPageUrl } from "../ingest/oece-records-connector.js";
 import { fetchReleasesPage, OecePageNotFoundError, releasesPageUrl } from "../ingest/oece-connector.js";
-import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
+import { fetchWithTimeout } from "@appsperu/http-client";
 import { monthlySegments } from "../ingest/oece-segments.js";
 
 describe("OECE range ingestion URLs", () => {
