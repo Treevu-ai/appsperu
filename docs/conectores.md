@@ -454,16 +454,16 @@ duplicar lógica entre los tres.
 <a id="actividad-empresarial"></a>
 ## actividad-empresarial — Empresas del sector privado por distrito (MTPE)
 
-### `empresas-distrito-connector.ts`
+### `mtpe-distrital-connector.ts`
 
 | | |
 |---|---|
-| **Descripción** | Trae el conteo mensual de empresas activas del sector privado por distrito, fuente MTPE. Primera señal de actividad económica formal privada del proyecto — el resto de cruces existentes comparan inversión contra un servicio público, nunca contra el tejido empresarial. |
-| **Qué hace** | Resuelve el recurso CSV del dataset vía `package_show`, lo descarga y normaliza de formato ancho (una fila por distrito, 12 columnas de mes) a formato largo `(ubigeo, anio, mes)` en `empresas_privadas_distrito` — mismo patrón que `jornal-agricola-connector.ts`. El año se extrae del título del recurso, nunca de la columna `FECHA_CORTE` (esa columna es la fecha de publicación del corte, no el año de los datos — confirmado en vivo: `FECHA_CORTE=20230807` para datos de 2022). |
-| **Cómo lo hace** | Descarga HTTP directa (~1,398 distritos, archivo pequeño). CSV delimitado por `;`, **encoding Latin-1** (confirmado con "NEPEÑA"). Valores numéricos con espacio final (`"10076 "`) — se hace `trim()` antes de convertir, no es un separador de miles. Requiere el mismo `User-Agent` de navegador que el resto de conectores contra `datosabiertos.gob.pe`. Solo un recurso CSV confirmado hoy; si aparece un segundo, el conector advierte explícitamente en vez de asumir cuál usar. Lote crudo en `raw_mtpe_batches`. |
-| **Frecuencia** | Manual (`npm run ingest:empresas` en `apps/actividad-empresarial/api`). **Vigencia confirmada: único año disponible es 2022** — no hay corte más reciente publicado por MTPE bajo este dataset. |
-| **Fuente de datos** | `datosabiertos.gob.pe` (PNDA), dataset `empresas-en-el-sector-privado-por-mes-según-distritos-ministerio-de-trabajo-y-promoción-del` — MTPE. Existe un dataset gemelo descartado con slug distinto (ver data contract). |
-| **Cobertura real ingerida** | Nacional, un solo año (2022). |
+| **Descripción** | Trae el conteo mensual de empresas activas del sector privado por distrito, fuente MTPE. Primera señal de actividad económica formal privada del proyecto — el resto de cruces existentes comparan inversión contra un servicio público, nunca contra el tejido empresarial. **Migrado 2026-09-05**: la primera versión ingería un CSV de PNDA congelado en 2022; esta versión ingiere el portal propio de MTPE, con años 2014-2025. |
+| **Qué hace** | Resuelve dinámicamente el año más reciente publicado (scrapea el listado de MTPE, no asume una URL fija), descarga el `.7z`, lo descomprime, parsea la hoja `EMPRESAS_{año}` del `.xlsx` resultante, y normaliza de formato ancho a formato largo `(ubigeo, anio, mes)` en `empresas_privadas_distrito` — mismo patrón que `jornal-agricola-connector.ts`. Verifica en vivo que la hoja realmente declara el año esperado antes de usarla (no confía solo en el nombre de la hoja). |
+| **Cómo lo hace** | Tres pasos, tres formatos: HTML del listado → HTML de la publicación anual → `.7z` → `.xlsx` (~23 MB, 49 hojas, solo se usa una). Tres técnicas sin precedente previo en el proyecto: scraping de HTML para descubrir la URL (el resto usa CKAN o URLs predecibles), descompresión `.7z` (`node-7z`+`7zip-bin`, binario empaquetado, no depende de 7-Zip instalado en el sistema), y parseo de Excel (`exceljs` — el único otro conector no-CSV del proyecto parsea PDF, no XLSX). Encabezado y columnas de mes se resuelven por nombre, no por posición fija (robustez ante cambios de estructura entre años). Mismo `User-Agent` de navegador — `gob.pe` tiene el mismo WAF que `datosabiertos.gob.pe`. Lote crudo en `raw_mtpe_batches`. |
+| **Frecuencia** | Manual (`npm run ingest:empresas` en `apps/actividad-empresarial/api`). Cada corrida ingiere el año más reciente publicado — no hace backfill histórico automático de 2014-2024. |
+| **Fuente de datos** | `www2.trabajo.gob.pe/estadisticas/ind-lab-a-nivel-distrital/` — portal operativo propio de MTPE, **no** la PNDA. El dataset gemelo de PNDA (congelado en 2022) queda completamente reemplazado. |
+| **Cobertura real ingerida** | Nacional, año más reciente disponible (2025 confirmado en vivo: 1,510 distritos, 18,120 filas). |
 | **Cruces** | `GET /api/crossref` cruza contra `investments` de [radar-inversiones](#radar-inversiones) (pool directo, sin filtrar por función — no hay categoría de gasto específica para "actividad empresarial"), por UBIGEO. Deliberadamente **sin** un campo tipo "punto ciego": a diferencia de salud/social, pocas empresas en un distrito no es un problema que la inversión deba resolver. |
 | **Detalle completo** | [`docs/data-contracts/mtpe-empresas-sector-privado.md`](data-contracts/mtpe-empresas-sector-privado.md) |
 
@@ -541,5 +541,5 @@ OCDS); esos resultados devuelven `valorMoneda: null` en vez de asumir soles.
 | — (agregador) | salud-institucional | Las otras 5 apps | Query en vivo, sin ingesta | Bajo demanda (por request) | N/A |
 | `renipress-connector.ts` | servicios-salud | SUSALUD RENIPRESS (datosabiertos.gob.pe) | Descarga CSV, maneja WAF, resuelve recurso vía `package_show` | Manual | Completa (nacional) |
 | `infomidis-connector.ts` | programas-sociales | MIDIS INFOMIDIS (datosabiertos.gob.pe) | Descarga CSV, maneja WAF, resuelve recurso por `created` (no por nombre de archivo) | Manual | Completa (nacional) |
-| `empresas-distrito-connector.ts` | actividad-empresarial | MTPE (datosabiertos.gob.pe) | Descarga CSV, maneja WAF | Manual | Completa (nacional, un solo año: 2022) |
+| `mtpe-distrital-connector.ts` | actividad-empresarial | MTPE (www2.trabajo.gob.pe, portal propio) | Scraping HTML + descarga .7z + descompresión + parseo XLSX | Manual | Completa (nacional, año más reciente: 2025) |
 

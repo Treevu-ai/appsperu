@@ -15,7 +15,7 @@ export default defineConfig({
         "src/index.ts",
         "src/db/migrate.ts",
         "src/db/pool.ts",
-        "src/ingest/empresas-distrito-connector.ts",
+        "src/ingest/mtpe-distrital-connector.ts",
         "vitest.config.ts",
       ],
     },

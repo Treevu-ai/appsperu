@@ -1,11 +1,15 @@
 # PRD — Actividad Empresarial Formal por Distrito (MTPE)
 
-**Estado:** Completado — AE-01, AE-02 y AE-03 implementados y verificados el 2026-09-05 contra la
-fuente real (MTPE) y Postgres real: 1,398 distritos / 16,776 filas ingeridas, año 2022 extraído
-correctamente del título del recurso (no de `FECHA_CORTE`), encoding Latin-1 confirmado en
-producción ("NEPEÑA" se lee bien), crossref probado en vivo (ej. Trujillo: 10,660 empresas
-activas dic-2022 vs. S/ 7,326M de inversión viable acumulada), sin ningún campo `puntoCiego` ni
-inferencia de causalidad en la respuesta. Ver `docs/conectores.md` para la ficha completa.
+**Estado:** Completado y migrado — AE-01, AE-02 y AE-03 implementados el 2026-09-05 sobre el CSV
+de PNDA (año 2022), y **migrados el mismo día** a la fuente propia de MTPE
+(`www2.trabajo.gob.pe`, 2014-2025) tras confirmar en una búsqueda avanzada que existía una versión
+sustancialmente más fresca. La versión vigente ingiere 2025 (1,510 distritos, 18,120 filas),
+resolviendo dinámicamente el año más reciente en cada corrida en vez de un año fijo — ver
+`docs/adr/0021-research-spike-mtpe-empleo-formalizacion.md` (addendum) y
+`docs/data-contracts/mtpe-empresas-sector-privado.md` para el detalle técnico completo (scraping
+HTML, descompresión `.7z`, parseo `.xlsx` — tres técnicas nuevas para el proyecto). Crossref
+probado en vivo contra el nuevo corte (Trujillo: 11,928 empresas activas dic-2025 vs. S/ 7,326M de
+inversión viable acumulada), sin ningún campo `puntoCiego` ni inferencia de causalidad.
 **Fecha:** 2026-09-05
 **Ámbito:** una app nueva (`actividad-empresarial`), `mcp-server/src/catalog.ts`, `docs/conectores.md`, `docs/data-contracts/`
 **Horizonte:** un sprint corto (alcance más chico que el PRD de Salud+Social — un solo dataset)

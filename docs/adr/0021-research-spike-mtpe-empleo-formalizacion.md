@@ -139,27 +139,24 @@ en el proyecto) — se necesitaría `7-Zip` en el sistema o una librería JS de 
 (ej. `7z-wasm` o invocar un binario `7z` externo), una dependencia nueva que ningún conector
 existente del proyecto tiene todavía.
 
-### Recomendación
+### Migrado (2026-09-05)
 
-**No se recomienda migrar el conector ya construido (`actividad-empresarial`) a esta fuente sin
-una decisión explícita de producto**, porque el costo de implementación es real y distinto al
-resto del proyecto:
-1. Parsear `.xlsx` (no CSV) — el proyecto no tiene precedente de parsear Excel con una librería
-   como `exceljs`/`xlsx` (el único conector que toca Excel, `pdf-connector.ts` de
-   `bcrp-la-libertad`, en realidad parsea PDF, no XLSX).
-2. Descomprimir `.7z` — dependencia nueva, sin precedente en el proyecto.
-3. Confirmar si los años 2014-2024 tienen la misma estructura exacta que 2025 antes de construir
-   una serie histórica (no verificado en este addendum — se abrió y confirmó solo el archivo de
-   2025).
+Decisión de producto tomada: migrar. El conector `actividad-empresarial` se reescribió por
+completo (`mtpe-distrital-connector.ts` + `mtpe-distrital-parse.ts`) para apuntar a este portal
+en vez de PNDA. Verificado en vivo de punta a punta: scraping del listado → resolución del año
+2025 → descarga del `.7z` real → descompresión (`node-7z`+`7zip-bin`) → parseo del `.xlsx`
+(`exceljs`) → 1,510 distritos, 18,120 filas insertadas en Postgres real. Detalle completo en
+`docs/data-contracts/mtpe-empresas-sector-privado.md`.
 
-Si se decide avanzar, es un ticket de esfuerzo M (no S como AE-01 original), con su propio
-data contract actualizado — no un ajuste menor del conector existente.
+**No se hizo backfill de 2014-2024** — cada corrida ingiere solo el año más reciente publicado;
+extender a una serie histórica queda como trabajo futuro si se decide, verificando cada año
+individualmente antes de asumir que comparte la misma estructura de hoja.
 
 ## Conclusión del spike
 
 | Dataset | Confianza | Recomendación |
 |---|---|---|
-| Empresas Sector Privado por distrito | Alta | **Ya implementado (AE-01/02/03) sobre la versión 2022 de PNDA.** Addendum: existe una versión 2014-2025 en `www2.trabajo.gob.pe`, 3 años más fresca — migrar es una decisión de producto aparte (esfuerzo M: XLSX + 7z), no un ajuste menor. |
+| Empresas Sector Privado por distrito | Alta | **Migrado (2026-09-05)** a la fuente de `www2.trabajo.gob.pe` (2014-2025, año más reciente ingerido: 2025). La versión 2022 de PNDA queda reemplazada por completo. |
 | Trabaja Perú (seguimiento, agregado) | Alta | Válido pero histórico y cerrado (jun-ago 2020) — solo útil como snapshot puntual, no serie viva |
 | Trabaja Perú (personas) | Alta (de descarte) | **Nunca ingerir** — DNI individual confirmado |
 | Empleo Registro Administrativo | Alta (de descarte) | Sin UBIGEO — no compatible con el patrón de cruce del proyecto |
