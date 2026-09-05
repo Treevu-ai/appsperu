@@ -410,3 +410,106 @@ describe("GET /api/benchmark/:entityCode", () => {
     expect(typeof res.body.percentil).toBe("number");
   });
 });
+
+describe("GET /api/burocracia-inversion", () => {
+  it("calcula el ratio planilla/inversión a partir de generica 2.1 y 2.6", async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          entity_code: "001",
+          nombre: "Municipalidad de Ejemplo",
+          nivel_gobierno: "GOBIERNO_LOCAL",
+          departamento: "LA LIBERTAD",
+          provincia: "TRUJILLO",
+          distrito: "TRUJILLO",
+          anio_fiscal: 2025,
+          devengado_personal: "400000",
+          devengado_inversion: "200000",
+          devengado_clasificado: "650000",
+          tiene_filas_sin_clasificar: false,
+        },
+      ],
+    });
+
+    const app = createApp();
+    const res = await request(app).get("/api/burocracia-inversion").query({ anio: "2025" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.resultados[0]).toMatchObject({
+      entityCode: "001",
+      distrito: "TRUJILLO",
+      devengadoPersonal: 400000,
+      devengadoInversion: 200000,
+      devengadoTotal: 650000,
+      ratioPlanillaInversion: 2,
+      ratioIndefinido: false,
+      tieneFilasSinClasificar: false,
+    });
+    expect(res.body.metodologia.genericaPersonal).toMatch(/^1 —/);
+
+    const [, params] = queryMock.mock.calls[0];
+    expect(params).toEqual([2025]);
+  });
+
+  it("expone ratioIndefinido en vez de dividir por cero cuando no hay inversión", async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          entity_code: "002",
+          nombre: "Municipalidad Sin Inversión",
+          nivel_gobierno: "GOBIERNO_LOCAL",
+          departamento: "LA LIBERTAD",
+          provincia: "TRUJILLO",
+          distrito: "EL PORVENIR",
+          anio_fiscal: 2025,
+          devengado_personal: "150000",
+          devengado_inversion: "0",
+          devengado_clasificado: "150000",
+          tiene_filas_sin_clasificar: false,
+        },
+      ],
+    });
+
+    const app = createApp();
+    const res = await request(app).get("/api/burocracia-inversion");
+
+    expect(res.status).toBe(200);
+    expect(res.body.resultados[0].ratioPlanillaInversion).toBeNull();
+    expect(res.body.resultados[0].ratioIndefinido).toBe(true);
+  });
+
+  it("marca tieneFilasSinClasificar cuando hay filas con generica NULL excluidas de las sumas", async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          entity_code: "003",
+          nombre: "Municipalidad Parcial",
+          nivel_gobierno: "GOBIERNO_LOCAL",
+          departamento: "LA LIBERTAD",
+          provincia: "TRUJILLO",
+          distrito: "MOCHE",
+          anio_fiscal: 2024,
+          devengado_personal: "100000",
+          devengado_inversion: "50000",
+          devengado_clasificado: "150000",
+          tiene_filas_sin_clasificar: true,
+        },
+      ],
+    });
+
+    const app = createApp();
+    const res = await request(app).get("/api/burocracia-inversion");
+
+    expect(res.status).toBe(200);
+    expect(res.body.resultados[0].tieneFilasSinClasificar).toBe(true);
+    expect(res.body.resultados[0].devengadoTotal).toBe(150000);
+  });
+
+  it("responde 400 cuando anio no es un año de 4 dígitos, sin tocar la base", async () => {
+    const app = createApp();
+    const res = await request(app).get("/api/burocracia-inversion?anio=abc");
+
+    expect(res.status).toBe(400);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+});
