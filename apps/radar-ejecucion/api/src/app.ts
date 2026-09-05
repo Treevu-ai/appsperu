@@ -12,6 +12,7 @@ import { tourismRouter } from "./routes/tourism.js";
 import { personalRouter } from "./routes/personal.js";
 import { bienesMueblesBajaRouter } from "./routes/bienes-muebles-baja.js";
 import { burocraciaInversionRouter } from "./routes/burocracia-inversion.js";
+import { bienesMueblesBajaPorDistritoRouter } from "./routes/bienes-muebles-baja-por-distrito.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 import { pool } from "./db/pool.js";
 
@@ -42,6 +43,7 @@ export function createApp() {
   app.use("/api/turismo", tourismRouter);
   app.use("/api/personal", personalRouter);
   app.use("/api/patrimonio/bienes-muebles-baja", bienesMueblesBajaRouter);
+  app.use("/api/patrimonio/bienes-muebles-baja/por-distrito", bienesMueblesBajaPorDistritoRouter);
   app.use("/api/burocracia-inversion", burocraciaInversionRouter);
 
   // Debe ir al final: sin esto, un rechazo dentro de un handler async
