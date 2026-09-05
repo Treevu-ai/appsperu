@@ -1,0 +1,21 @@
+name: actividad-empresarial
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: actempresarial
+      POSTGRES_PASSWORD: actempresarial
+      POSTGRES_DB: actividad_empresarial
+    ports:
+      - "127.0.0.1:5447:5432"
+    volumes:
+      - actividad_empresarial_pgdata:/var/lib/postgresql/data
+
+volumes:
+  actividad_empresarial_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true

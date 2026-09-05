@@ -1,0 +1,21 @@
+name: servicios-salud
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: serviciossalud
+      POSTGRES_PASSWORD: serviciossalud
+      POSTGRES_DB: servicios_salud
+    ports:
+      - "127.0.0.1:5445:5432"
+    volumes:
+      - servicios_salud_pgdata:/var/lib/postgresql/data
+
+volumes:
+  servicios_salud_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true

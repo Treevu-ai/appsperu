@@ -16,6 +16,7 @@ import { APP_KEYS, type AppKey } from "../apps.js";
  * (2026-09-05) agrupando por `app` y ordenando alfabéticamente los nombres.
  */
 const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
+  "actividad-empresarial": ["actividad_empresarial_crossref", "actividad_empresarial_empresas"],
   "actividad-agraria": [
     "actividad_agraria_crossref",
     "actividad_agraria_regional_outcome",
@@ -78,6 +79,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "inversion_privada_project_by_id",
     "inversion_privada_projects",
   ],
+  "programas-sociales": ["programas_sociales_cobertura", "programas_sociales_crossref"],
   "proveedores-sancionados": ["proveedores_sancionados_crossref", "proveedores_sancionados_sanciones"],
   "radar-ejecucion": [
     "radar_ejecucion_benchmark",
@@ -110,6 +112,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
   "radar-inversiones": ["radar_inversiones_crossref", "radar_inversiones_investment_by_cui", "radar_inversiones_investments"],
   "salud-institucional": ["salud_institucional_score"],
   "seguridad-ciudadana": ["seguridad_ciudadana_crossref", "seguridad_ciudadana_denuncias"],
+  "servicios-salud": ["servicios_salud_crossref", "servicios_salud_ipress"],
 };
 
 describe("MCP catalog", () => {

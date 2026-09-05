@@ -410,6 +410,65 @@ duplicar lógica entre los tres.
 
 ---
 
+<a id="servicios-salud"></a>
+## servicios-salud — Establecimientos de salud (RENIPRESS/SUSALUD)
+
+> No confundir con [salud-institucional](#salud-institucional): esa app es un score de salud
+> *institucional/financiera* de una entidad pública (presupuesto, obras, compras), sin relación
+> con servicios de salud MINSA/SUSALUD. Esta app (`servicios-salud`) es la que trae el estado
+> real de establecimientos de salud. Ver `docs/PRD_Servicios_Salud_Programas_Sociales_v1.md` §SS-01.
+
+### `renipress-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Trae el Registro Nacional de IPRESS (instituciones prestadoras de servicios de salud — hospitales, centros y puestos de salud), con su estado operativo real declarado por SUSALUD. Cierra el "punto ciego" de si un establecimiento financiado por una obra pública está activo. |
+| **Qué hace** | Resuelve el recurso CSV más reciente del dataset (el nombre del archivo cambia cada corte, `RENIPRESS_{dd-mm-aaaa}.csv`) vía `package_show` de CKAN, lo descarga y hace upsert por `cod_ipress` en `ipress`. Reemplazó al dataset `minsa-ipress` que asumía el PRD original — ese recurso está congelado desde 2017. |
+| **Cómo lo hace** | Descarga HTTP directa (36,004 filas, ~19 MB — no requiere streaming). CSV delimitado por `;`, UTF-8 con BOM. **Requiere un header `User-Agent` de navegador real** — el WAF de `datosabiertos.gob.pe` devuelve HTTP 418 sin él (confirmado en vivo, ADR-0018 addendum). `estado` se guarda tal cual viene del CSV, sin normalizar a booleano. Lote crudo en `raw_renipress_batches`. |
+| **Frecuencia** | Manual (`npm run ingest:renipress` en `apps/servicios-salud/api`). La fuente publica un corte mensual. |
+| **Fuente de datos** | `datosabiertos.gob.pe` (PNDA), dataset `registro-nacional-de-entidades-prestadoras-de-servicios-de-salud-renipress` — SUSALUD. |
+| **Cobertura real ingerida** | Nacional (36,004 establecimientos confirmados en el corte de agosto 2026, 26,901 con `ESTADO = ACTIVO`) — a diferencia de la mayoría de apps de Rastro, no está acotada a La Libertad porque el archivo es pequeño. |
+| **Cruces** | `GET /api/crossref` cruza `ipress` (agregado por UBIGEO, total y `ESTADO='ACTIVO'`) contra `investments` de [radar-inversiones](#radar-inversiones), pool directo (`INVERSIONES_DATABASE_URL`), filtrado por `FUNCION IN ('SALUD', 'SALUD Y SANEAMIENTO')` — ambos valores confirmados en vivo el 2026-09-05 (740 + 26 filas; `SANEAMIENTO` a secas, 1,109 filas, se excluye a propósito). UBIGEO exacto, sin matcher difuso. Declara en la propia respuesta el alcance territorial real de `investments` (hoy 100% LA LIBERTAD, consultado en vivo, no hardcodeado). |
+| **Detalle completo** | [`docs/data-contracts/renipress-susalud.md`](data-contracts/renipress-susalud.md) |
+
+---
+
+<a id="programas-sociales"></a>
+## programas-sociales — Cobertura de programas sociales (INFOMIDIS/MIDIS)
+
+### `infomidis-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Trae la cobertura mensual de programas sociales del MIDIS (JUNTOS, QALI WARMA, FONCODES, CUNAMÁS, CONTIGO, PAIS/Tambos y **Pensión 65 agregado por distrito**), ya agregada por distrito por el propio MIDIS. Reemplaza el plan original de ingerir JUNTOS y Pensión 65 por separado — INFOMIDIS resuelve de raíz el riesgo de PII de Pensión 65 (agregado oficial, nunca registro individual). |
+| **Qué hace** | Resuelve el recurso CSV más reciente del dataset vía `package_show`, lo descarga y hace upsert por `(ubigeo, fecha_corte)` en `cobertura_social`. Busca cada columna por palabras clave normalizadas (no por nombre exacto) para tolerar variaciones de esquema entre cortes — si una columna esperada no aparece, se reporta en `columnasFaltantes` sin abortar la ingesta. |
+| **Cómo lo hace** | El nombre de archivo de este dataset es demasiado inconsistente para usarlo como señal de "más reciente" (`202408_INFOMIDIS.csv`, `OCTUBRE_2024.csv`, `MARZO2025_1.csv` — sin patrón común, con duplicados y un recurso `format: "data"` con URL vacía). El conector elige por el timestamp `created` de CKAN en su lugar. CSV delimitado por `;`, **encoding Latin-1** (a diferencia de RENIPRESS, que es UTF-8 BOM). Comas como separador de miles dentro de valores numéricos (`"5,234"` = 5234, no 5.234) — un `Number()` ingenuo los trunca. Requiere el mismo header `User-Agent` de navegador que RENIPRESS. Lote crudo en `raw_infomidis_batches`. |
+| **Frecuencia** | Manual (`npm run ingest:infomidis` en `apps/programas-sociales/api`). La fuente publica un corte mensual, con rezago de publicación confirmado de hasta ~4 meses entre el mes reportado y su fecha real de subida al portal. |
+| **Fuente de datos** | `datosabiertos.gob.pe` (PNDA), dataset `cobertura-de-los-programas-sociales-adscritos-al-midis-...` — MIDIS. |
+| **Cobertura real ingerida** | Nacional (~1,892 distritos por corte, confirmado en vivo para agosto 2024) — no acotada a La Libertad. |
+| **Cruces** | `GET /api/crossref` cruza `investments` de [radar-inversiones](#radar-inversiones) (pool directo, `FUNCION IN ('PROTECCIÓN SOCIAL', 'ASISTENCIA Y PREVISION SOCIAL')`, ambos confirmados en vivo el 2026-09-05: 50 + 1 filas) contra el último corte de `cobertura_social` por UBIGEO. `cobertura_social` no tiene columna de departamento (INFOMIDIS no la trae), así que el cruce solo lista distritos del lado de `investments` (acotado por `departamento`), no todos los distritos con cobertura social. |
+| **Detalle completo** | [`docs/data-contracts/infomidis-cobertura-social.md`](data-contracts/infomidis-cobertura-social.md) |
+
+---
+
+<a id="actividad-empresarial"></a>
+## actividad-empresarial — Empresas del sector privado por distrito (MTPE)
+
+### `empresas-distrito-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Trae el conteo mensual de empresas activas del sector privado por distrito, fuente MTPE. Primera señal de actividad económica formal privada del proyecto — el resto de cruces existentes comparan inversión contra un servicio público, nunca contra el tejido empresarial. |
+| **Qué hace** | Resuelve el recurso CSV del dataset vía `package_show`, lo descarga y normaliza de formato ancho (una fila por distrito, 12 columnas de mes) a formato largo `(ubigeo, anio, mes)` en `empresas_privadas_distrito` — mismo patrón que `jornal-agricola-connector.ts`. El año se extrae del título del recurso, nunca de la columna `FECHA_CORTE` (esa columna es la fecha de publicación del corte, no el año de los datos — confirmado en vivo: `FECHA_CORTE=20230807` para datos de 2022). |
+| **Cómo lo hace** | Descarga HTTP directa (~1,398 distritos, archivo pequeño). CSV delimitado por `;`, **encoding Latin-1** (confirmado con "NEPEÑA"). Valores numéricos con espacio final (`"10076 "`) — se hace `trim()` antes de convertir, no es un separador de miles. Requiere el mismo `User-Agent` de navegador que el resto de conectores contra `datosabiertos.gob.pe`. Solo un recurso CSV confirmado hoy; si aparece un segundo, el conector advierte explícitamente en vez de asumir cuál usar. Lote crudo en `raw_mtpe_batches`. |
+| **Frecuencia** | Manual (`npm run ingest:empresas` en `apps/actividad-empresarial/api`). **Vigencia confirmada: único año disponible es 2022** — no hay corte más reciente publicado por MTPE bajo este dataset. |
+| **Fuente de datos** | `datosabiertos.gob.pe` (PNDA), dataset `empresas-en-el-sector-privado-por-mes-según-distritos-ministerio-de-trabajo-y-promoción-del` — MTPE. Existe un dataset gemelo descartado con slug distinto (ver data contract). |
+| **Cobertura real ingerida** | Nacional, un solo año (2022). |
+| **Cruces** | `GET /api/crossref` cruza contra `investments` de [radar-inversiones](#radar-inversiones) (pool directo, sin filtrar por función — no hay categoría de gasto específica para "actividad empresarial"), por UBIGEO. Deliberadamente **sin** un campo tipo "punto ciego": a diferencia de salud/social, pocas empresas en un distrito no es un problema que la inversión deba resolver. |
+| **Detalle completo** | [`docs/data-contracts/mtpe-empresas-sector-privado.md`](data-contracts/mtpe-empresas-sector-privado.md) |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada
@@ -434,6 +493,9 @@ mantiene su **propio** `entity_crosswalk`, no es una tabla compartida entre apps
 | [ceplan-geo](#ceplan-geo) | radar-inversiones, infobras, radar-ejecucion | `GET /api/crossref/*` (3 endpoints) | UBIGEO exacto / depto-provincia-distrito | Mixto |
 | [ceplan-estrategico](#ceplan-estrategico) | radar-ejecucion | `GET /api/crossref` | nivel de gobierno (GN/GR/MP/MD) | Exacto (bucket) |
 | [salud-institucional](#salud-institucional) | radar-ejecucion, infobras, radar-inversiones, compras-publicas, identidad-fiscal | `GET /api/score` (agregador, no crossref clásico) | `entity_code` | Exacto |
+| [servicios-salud](#servicios-salud) | radar-inversiones | `GET /api/crossref` | UBIGEO + FUNCION IN (SALUD, SALUD Y SANEAMIENTO) | Exacto |
+| [programas-sociales](#programas-sociales) | radar-inversiones | `GET /api/crossref` | UBIGEO + FUNCION IN (PROTECCIÓN SOCIAL, ASISTENCIA Y PREVISION SOCIAL) | Exacto |
+| [actividad-empresarial](#actividad-empresarial) | radar-inversiones | `GET /api/crossref` | UBIGEO (sin filtro de función — cruce descriptivo, sin "punto ciego") | Exacto |
 
 **Gap cerrado (CX-01, 2026-09-02)**: hasta esa fecha, los crossref de `identidad-fiscal` y
 `proveedores-sancionados` solo leían `awards` (poblada por `oece-connector.ts` /
@@ -477,4 +539,7 @@ OCDS); esos resultados devuelven `valorMoneda: null` en vez de asumir soles.
 | `airhsp-connector.ts` | radar-ejecucion | MEF AIRHSP (datosabiertos.gob.pe) | Descarga CSV anual | Manual | Completa (nacional, agregado por entidad/régimen/cargo — sin filtro territorial en la fuente) |
 | `sbn-supervision-connector.ts` | ceplan-geo | SBN (datosabiertos.gob.pe) | Descarga CSV, maneja WAF | Manual | Parcial (solo predios supervisados, no el registro completo — enlace roto) |
 | — (agregador) | salud-institucional | Las otras 5 apps | Query en vivo, sin ingesta | Bajo demanda (por request) | N/A |
+| `renipress-connector.ts` | servicios-salud | SUSALUD RENIPRESS (datosabiertos.gob.pe) | Descarga CSV, maneja WAF, resuelve recurso vía `package_show` | Manual | Completa (nacional) |
+| `infomidis-connector.ts` | programas-sociales | MIDIS INFOMIDIS (datosabiertos.gob.pe) | Descarga CSV, maneja WAF, resuelve recurso por `created` (no por nombre de archivo) | Manual | Completa (nacional) |
+| `empresas-distrito-connector.ts` | actividad-empresarial | MTPE (datosabiertos.gob.pe) | Descarga CSV, maneja WAF | Manual | Completa (nacional, un solo año: 2022) |
 

@@ -1087,4 +1087,103 @@ export const TOOL_CATALOG: ToolSpec[] = [
       mes: z.coerce.number().int().min(1).max(12).optional(),
     },
   },
+
+  // ---- servicios-salud (RENIPRESS/SUSALUD, establecimientos de salud) ----
+  {
+    name: "servicios_salud_ipress",
+    app: "servicios-salud",
+    description:
+      "Establecimientos de salud (RENIPRESS/SUSALUD) con su estado operativo real (`ACTIVO` u otro valor tal cual " +
+      "lo declara SUSALUD, no normalizado a booleano). Cobertura nacional completa, no acotada a La Libertad. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/ipress",
+    pathParams: [],
+    querySchema: {
+      ubigeo: z.string().min(1).optional(),
+      departamento: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+      estado: z.string().min(1).optional(),
+    },
+  },
+  {
+    name: "servicios_salud_crossref",
+    app: "servicios-salud",
+    description:
+      "Cruce por UBIGEO entre inversión pública en salud (`investments` de radar-inversiones, FUNCION IN ('SALUD', " +
+      "'SALUD Y SANEAMIENTO') — ambos valores confirmados en vivo, no asumidos) y establecimientos RENIPRESS activos. " +
+      "Responde si un distrito con inversión en salud tiene o no un IPRESS activo ('puntoCiego'). `investments` hoy " +
+      "solo cubre La Libertad — la respuesta declara el alcance territorial real, consultado en vivo en cada request, " +
+      "no un valor fijo. " + SIN_SCHEDULER,
+    pathTemplate: "/api/crossref",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Por defecto LA LIBERTAD."),
+      ubigeo: z.string().min(1).optional(),
+    },
+  },
+
+  // ---- programas-sociales (INFOMIDIS/MIDIS, cobertura de programas sociales) ----
+  {
+    name: "programas_sociales_cobertura",
+    app: "programas-sociales",
+    description:
+      "Cobertura mensual de programas sociales MIDIS (JUNTOS, WASI MIKUNA/ex-QALI WARMA, FONCODES, CUNAMÁS, CONTIGO, " +
+      "PAIS/Tambos y Pensión 65) ya agregada por distrito por el propio MIDIS — nunca un registro individual. " +
+      "Cobertura nacional completa, no acotada a La Libertad. Un valor null significa 'sin dato ese corte para ese " +
+      "distrito', no cobertura cero. " + SIN_SCHEDULER,
+    pathTemplate: "/api/cobertura",
+    pathParams: [],
+    querySchema: {
+      ubigeo: z.string().min(1).optional(),
+      fechaCorte: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Formato YYYY-MM-DD."),
+    },
+  },
+  {
+    name: "programas_sociales_crossref",
+    app: "programas-sociales",
+    description:
+      "Cruce por UBIGEO entre inversión pública en protección social (`investments` de radar-inversiones, FUNCION IN " +
+      "('PROTECCIÓN SOCIAL', 'ASISTENCIA Y PREVISION SOCIAL') — ambos valores confirmados en vivo) y el último corte " +
+      "de cobertura INFOMIDIS disponible para ese distrito. Solo lista distritos del lado de `investments` (acotado " +
+      "por `departamento`) — `cobertura_social` no trae columna de departamento en su propia fuente. " + SIN_SCHEDULER,
+    pathTemplate: "/api/crossref",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Por defecto LA LIBERTAD."),
+      ubigeo: z.string().min(1).optional(),
+    },
+  },
+
+  // ---- actividad-empresarial (MTPE, empresas del sector privado por distrito) ----
+  {
+    name: "actividad_empresarial_empresas",
+    app: "actividad-empresarial",
+    description:
+      "Conteo mensual de empresas activas del sector privado por distrito, fuente MTPE. Cobertura nacional. " +
+      "Único año disponible: 2022 — MTPE no ha publicado un corte más reciente bajo este dataset. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/empresas",
+    pathParams: [],
+    querySchema: {
+      ubigeo: z.string().min(1).optional(),
+      anio: z.string().regex(/^\d{4}$/).optional(),
+      mes: z.coerce.number().int().min(1).max(12).optional(),
+    },
+  },
+  {
+    name: "actividad_empresarial_crossref",
+    app: "actividad-empresarial",
+    description:
+      "Cruce descriptivo por UBIGEO entre inversión pública total (`investments` de radar-inversiones, todas las " +
+      "funciones — no hay categoría de gasto específica para actividad empresarial) y el conteo de empresas activas " +
+      "del corte más reciente disponible (2022). Sin inferencia de causalidad: no incluye ningún campo de 'punto " +
+      "ciego' ni etiqueta distritos como deficientes. `investments` hoy solo cubre La Libertad — la respuesta " +
+      "declara el alcance territorial real, consultado en vivo. " + SIN_SCHEDULER,
+    pathTemplate: "/api/crossref",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Por defecto LA LIBERTAD."),
+      ubigeo: z.string().min(1).optional(),
+    },
+  },
 ];

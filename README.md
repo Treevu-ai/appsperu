@@ -32,6 +32,9 @@ Rastro es una plataforma de inteligencia que ayuda a equipos y organizaciones a 
 | `bcrp-comercio-exterior` | Comercio exterior agregado nacional (BCRP) | 4011 |
 | `inversion-privada` | Cartera APP/PA + Obras por Impuestos (PROINVERSIÓN/VERTIX) | 4012 |
 | `bcrp-la-libertad` | Síntesis de actividad económica de La Libertad (BCRP Trujillo) | 4013 |
+| `servicios-salud` | Establecimientos de salud (RENIPRESS/SUSALUD) + cruce con inversión | 4014 |
+| `programas-sociales` | Cobertura de programas sociales (INFOMIDIS/MIDIS) + cruce con inversión | 4015 |
+| `actividad-empresarial` | Empresas del sector privado por distrito (MTPE) + cruce con inversión | 4016 |
 
 ## Levantar una app
 

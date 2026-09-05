@@ -1,5 +1,11 @@
 # Backlog: Expansión de Rastro - Módulo PNDA
 
+> **Nota de reemplazo (2026-09-05):** el alcance ejecutable de Salud y Social vive ahora en
+> [`PRD_Servicios_Salud_Programas_Sociales_v1.md`](PRD_Servicios_Salud_Programas_Sociales_v1.md),
+> que además revierte el TICKET-01 (no se construye un `PndaConnector` genérico — ver
+> [`ADR-0018`](adr/0018-research-spike-pnda-educacion-salud-social.md)). Este backlog se conserva
+> como registro histórico de la propuesta original.
+
 ## Épica A: Infraestructura Core (Connector)
 - [ ] TICKET-01: Desarrollar PndaConnector en packages/ para consumo de API CKAN (REST).
 - [ ] TICKET-02: Implementar lógica de descarga, validación y cache de archivos CSV/JSON desde PNDA.
@@ -18,7 +24,7 @@
 - [ ] TICKET-11: Validar calidad de los cruces mediante muestreo manual en La Libertad.
 
 ## Épica D: Capa de Lectura (Frontend & MCP)
-- [ ] TICKET-12: Crear vistas de "Ficha de Sector" para Educación y Salud en astro.fyi.
+- [ ] TICKET-12: Crear vistas de "Ficha de Sector" para Educación y Salud en rastro.fyi.
 - [ ] TICKET-13: Implementar componentes de visualización de brechas (indicadores visuales) en las fichas de distrito.
 - [ ] TICKET-14: Exponer los nuevos endpoints de salud, educación y social en el servidor MCP.
-- [ ] TICKET-15: Actualizar la documentación de la API en astro.fyi/docs/api.
+- [ ] TICKET-15: Actualizar la documentación de la API en rastro.fyi/docs/api.
