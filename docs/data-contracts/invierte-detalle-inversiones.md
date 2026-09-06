@@ -29,7 +29,10 @@ presupuesto, el archivo es manejable.
 | `COSTO_ACTUALIZADO` | Numérico | Costo actualizado — comparar con `MONTO_VIABLE` es la señal defendible que el documento fuente menciona explícitamente ("costo actualizado superior al costo inicial") |
 | `DEPARTAMENTO` / `PROVINCIA` / `DISTRITO` / `UBIGEO` | Carácter | **Vienen directos**, a diferencia del presupuesto — no hace falta reconstruir el ubigeo |
 | `FUNCION`, `TIPO_INVERSION` | Carácter | Clasificación |
-| `FECHA_REGISTRO`, `FECHA_VIABILIDAD` | Fecha | |
+| `FECHA_REGISTRO`, `FECHA_VIABILIDAD` | Fecha | Vienen con sufijo de hora (`2021-12-28 00:00:00`) — el conector solo toma los primeros 10 caracteres. |
+| `NUM_HABITANTES_BENEF` | Numérico | Beneficiarios declarados por el MEF para la inversión — dato oficial por CUI, agregado 2026-09-06 tras encontrar que el conector no lo leía. |
+| `AVANCE_EJECUCION` | Numérico | Documentado por el MEF como "porcentaje de avance de ejecución", pero valores reales observados llegan a >32 millones — no se trata como porcentaje, se guarda tal cual. |
+| `FEC_FIN_EJECUCION` | Fecha | Fecha de fin de ejecución física, mismo formato con sufijo de hora que `FECHA_REGISTRO`. |
 
 ## Fila de muestra real (recortada)
 
@@ -48,6 +51,19 @@ MONTO_VIABLE=1853953.5, DEPARTAMENTO=CUSCO, PROVINCIA=URUBAMBA, DISTRITO=OLLANTA
 - No confirmado: si un mismo CUI puede aparecer más de una vez en el archivo completo
   (ej. actualizaciones históricas). El conector trata duplicados dentro de un mismo lote
   como rechazo explícito, no como sobrescritura silenciosa.
+
+## Bug corregido — `fecha_registro`/`fecha_viabilidad` casi siempre NULL (2026-09-06)
+
+`FECHA_REGISTRO`/`FECHA_VIABILIDAD` llegan con sufijo de hora (`2021-12-28 00:00:00`), pero
+el filtro de persistencia exigía el patrón exacto `^\d{4}-\d{2}-\d{2}$` (con `$` al final) —
+nunca matcheaba, así que casi todas las filas quedaban con esas dos columnas en `NULL` desde
+que existe el conector. Verificado en vivo: de 7,994 filas de La Libertad, solo 30 tenían
+`fecha_registro` antes del fix. Corregido a un patrón de prefijo (`left(x.fecha_registro,10)::date`)
+y, un segundo bug relacionado: el `ON CONFLICT ... DO UPDATE SET` nunca incluía estas dos
+columnas, así que una fila ya existente (insertada con el bug activo) jamás se corregía en
+una re-ingesta posterior — solo un `DELETE` + reinserción la arreglaba. Ambos corregidos
+juntos; tras una re-ingesta completa, 7,973/7,994 filas de La Libertad quedaron con
+`fecha_registro` poblado.
 
 ## Paginación en `GET /api/investments` — 2026-08-28
 
