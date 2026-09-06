@@ -36,6 +36,8 @@ ALL_APPS=(
   renamu
   autoridades-electas
   instituciones-educativas
+  infracciones-ambientales
+  red-vial-subnacional
 )
 
 if [ "$#" -gt 0 ]; then

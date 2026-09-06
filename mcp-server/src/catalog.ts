@@ -1407,4 +1407,47 @@ export const TOOL_CATALOG: ToolSpec[] = [
       departamento: z.string().min(1).optional().describe("Por defecto LA LIBERTAD."),
     },
   },
+
+  // ---- infracciones-ambientales (OEFA, RUIAS) ----
+  {
+    name: "infracciones_ambientales_infracciones",
+    app: "infracciones-ambientales",
+    description:
+      "Registro Único de Infractores Ambientales Sancionados (OEFA) — administrado sancionado, subsector " +
+      "económico (minería, industria, hidrocarburos, agricultura, pesquería, residuos sólidos, electricidad, " +
+      "consultoras ambientales), ubicación, expediente/resolución, detalle de la infracción, monto de multa. " +
+      "`numeroDocumento` se enmascara (últimos 3 dígitos) cuando el administrado es persona natural (D.N.I.) — " +
+      "para R.U.C. se expone completo. 14,724 filas nacionales verificadas (610 en La Libertad, 12 " +
+      "provincias). " + SIN_SCHEDULER,
+    pathTemplate: "/api/infracciones",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+      subsectorEconomico: z.string().min(1).optional(),
+      administrado: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+    },
+  },
+
+  // ---- red-vial-subnacional (MTC/Provías Descentralizado) ----
+  {
+    name: "red_vial_subnacional_intervenciones",
+    app: "red-vial-subnacional",
+    description:
+      "Intervenciones en redes viales departamentales/vecinales (Provías Descentralizado, MTC) — código de " +
+      "ruta, tramo, longitud en km, estado de conservación (Bueno/Regular/Malo), tipo de superficie, tipo de " +
+      "intervención (mantenimiento/mejoramiento/conservación), responsable. Nivel de detalle: ruta/tramo dentro " +
+      "de una provincia, no distrito exacto (una ruta puede cruzar más de uno). Nombres de provincia con tildes " +
+      "inconsistentes en la fuente real (ej. 'VIRU' y 'VIRÚ' como valores distintos) — no normalizado. 12,536 " +
+      "filas nacionales verificadas (461 en La Libertad, 12 provincias). " + SIN_SCHEDULER,
+    pathTemplate: "/api/intervenciones",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      estado: z.string().min(1).optional().describe("Ej. 'BUENO', 'MALO'."),
+      codigoRuta: z.string().min(1).optional(),
+    },
+  },
 ];
