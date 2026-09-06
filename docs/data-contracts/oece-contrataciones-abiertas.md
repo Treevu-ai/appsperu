@@ -94,3 +94,32 @@ campo `license`).
   de comprador por departamento antes de paginar — no se probó todavía.
 - El API está en "Versión en Beta" según el propio portal (banner visible) — puede
   cambiar sin aviso.
+
+## Hallazgo — procesos sin adjudicar eran invisibles (2026-09-06)
+
+`normalizeAwards` descarta en silencio cualquier record sin `awards`, con el comentario
+"todavía no llegó a esa etapa". Ese comentario conflaba dos casos distintos: un proceso
+**en trámite** (sin resolver aún) y un proceso **concluido sin adjudicar** (declarado
+desierto o nulo) — ambos invisibles por igual.
+
+Confirmado en vivo contra `GET /api/v1/records`: `compiledRelease.tender.items[].statusDetails`
+trae el estado real por ítem. Muestra de 60 records / 4 meses de 2026:
+
+| `statusDetails` | Conteo | Interpretación |
+|---|---|---|
+| `CONTRATADO` | 41 | Adjudicado y contratado |
+| `DESIERTO` | 14 | Terminal, sin adjudicar (nadie presentó oferta válida) |
+| `NULO` | 5 | Terminal, sin adjudicar (proceso declarado nulo) |
+| `CONVOCADO` | 3 | En trámite — no terminal, correctamente ignorado |
+| `RETROTRAIDO_POR_RESOLUCION` | 3 | Ambiguo — no clasificado, no persistido |
+| `CONSENTIDO` | 2 | Adjudicación consentida (post-award) |
+| `PENDIENTE_DE_REGISTRO_DE_EFECTO` | 1 | Ambiguo — no clasificado, no persistido |
+
+**~29% de los ítems muestreados (19/66) terminaron sin adjudicar** — dinero público
+convocado que Rastro nunca había registrado. Nuevo conector:
+`normalize-unsuccessful-tenders.ts`, reutiliza los records ya traídos por
+`oece-records-connector.ts` (sin llamadas extra a la API), captura solo `DESIERTO`/`NULO`
+(los dos estados terminales confirmados) en la tabla `unsuccessful_tenders`, expuesta en
+`GET /api/procurement-sin-adjudicar`. Deliberadamente no se clasifican
+`RETROTRAIDO_POR_RESOLUCION` ni `PENDIENTE_DE_REGISTRO_DE_EFECTO` — sin evidencia de qué
+significan operacionalmente, no se fuerza una clasificación.

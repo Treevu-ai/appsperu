@@ -122,6 +122,7 @@ contra inhabilitaciones vigentes — ambos reutilizan el mismo `extractRuc()` so
 | **Fuente de datos** | `contratacionesabiertas.oece.gob.pe/api/v1` (mismo host que arriba, endpoint distinto). |
 | **Alcance territorial CLI** | Usa el mismo `OECE_DEPARTAMENTOS`; postores y adjudicaciones se restringen al mismo conjunto territorial. |
 | **Detalle completo** | [`docs/data-contracts/oece-contrataciones-abiertas.md`](data-contracts/oece-contrataciones-abiertas.md) |
+| **Ítems sin adjudicar (2026-09-06)** | `normalize-unsuccessful-tenders.ts` reutiliza los mismos records ya traídos por este conector (sin llamadas extra) y captura ítems `tender.items[].statusDetails IN ('DESIERTO','NULO')` — dinero público convocado que terminó sin adjudicar a nadie, invisible hasta ahora porque `normalizeAwards` descarta en silencio todo record sin `awards`. ~29% de una muestra real (19/66 ítems, 4 meses de 2026). Tabla `unsuccessful_tenders`, expuesta en `GET /api/procurement-sin-adjudicar`. Detalle en el mismo data contract de arriba. |
 
 <a id="compras-publicas-legacy"></a>
 ### `legacy-seace-orders-connector.ts` — Órdenes históricas SEACE (legado)

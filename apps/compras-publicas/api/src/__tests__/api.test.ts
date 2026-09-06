@@ -140,3 +140,42 @@ describe("GET /api/procurement/:ocid", () => {
     expect(res.body.buyerName).toMatch(/SANCHEZ CARRION/);
   });
 });
+
+describe("GET /api/procurement-sin-adjudicar", () => {
+  it("returns items declared DESIERTO/NULO, filtered by departamento", async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          ocid: "ocds-dgv273-seacev3-1221373",
+          tender_id: "1221373",
+          item_id: "item-1",
+          status_details: "DESIERTO",
+          item_description: "COMBUSTIBLE DIESEL",
+          buyer_id: "PE-CONSUCODE-822",
+          buyer_name: "MUNICIPALIDAD DISTRITAL DE X",
+          departamento: "LA LIBERTAD",
+          fecha: "2026-06-01",
+          fetched_at: "2026-09-06T00:00:00.000Z",
+        },
+      ],
+    });
+
+    const app = createApp();
+    const res = await request(app).get("/api/procurement-sin-adjudicar").query({ departamento: "LA LIBERTAD" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.resultados[0]).toMatchObject({
+      ocid: "ocds-dgv273-seacev3-1221373",
+      statusDetails: "DESIERTO",
+      departamento: "LA LIBERTAD",
+    });
+    expect(res.body.resultados[0].fuente.dataset).toMatch(/sin adjudicar/);
+  });
+
+  it("rejects a statusDetails value outside the DESIERTO/NULO enum", async () => {
+    const app = createApp();
+    const res = await request(app).get("/api/procurement-sin-adjudicar").query({ statusDetails: "CONVOCADO" });
+    expect(res.status).toBe(400);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+});

@@ -6,6 +6,7 @@ import { fetchWithTimeout } from "@appsperu/http-client";
 import { OecePageNotFoundError, normalizeDepartamentoScope } from "./oece-connector.js";
 import { findBuyerDepartamento, normalizeAwards, type OcdsRecord } from "./normalize-awards.js";
 import { normalizeBidders, persistBidders } from "./normalize-bidders.js";
+import { normalizeUnsuccessfulTenders } from "./normalize-unsuccessful-tenders.js";
 
 const API_BASE_URL = "https://contratacionesabiertas.oece.gob.pe/api/v1";
 const DEFAULT_MAX_PAGES = 10;
@@ -90,6 +91,8 @@ export interface IngestAwardsSummary {
   biddersFailed?: number;
   biddersRejected?: number;
   biddersSkippedOtherDepartamento?: number;
+  unsuccessfulTendersAccepted?: number;
+  unsuccessfulTendersRejected?: number;
 }
 
 async function recordTerritorialCoverage(input: {
@@ -226,6 +229,28 @@ export async function ingestAwards(options: IngestAwardsOptions = {}): Promise<I
       );
     }
 
+    // Ítems declarados DESIERTO/NULO — dinero público convocado que terminó
+    // sin adjudicar a nadie. Mismo alcance territorial que awards.
+    const { rows: allUnsuccessfulRows, rejected: unsuccessfulRejected } = normalizeUnsuccessfulTenders(allRecords);
+    const unsuccessfulRows = wantedDepartamentos.size > 0
+      ? allUnsuccessfulRows.filter((r) => wantedDepartamentos.has(r.departamento?.toUpperCase().trim() ?? ""))
+      : allUnsuccessfulRows;
+
+    for (const row of unsuccessfulRows) {
+      await client.query(
+        `INSERT INTO unsuccessful_tenders
+           (ocid, tender_id, item_id, status_details, item_description, buyer_id, buyer_name, departamento, fecha, source_batch_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+         ON CONFLICT (ocid, item_id) DO UPDATE
+           SET status_details = EXCLUDED.status_details,
+               source_batch_id = EXCLUDED.source_batch_id`,
+        [
+          row.ocid, row.tenderId, row.itemId, row.statusDetails, row.itemDescription,
+          row.buyerId, row.buyerName, row.departamento, row.fecha, batchId,
+        ]
+      );
+    }
+
     await client.query("COMMIT");
 
     if (wantedDepartamentos.size > 0) {
@@ -252,6 +277,8 @@ export async function ingestAwards(options: IngestAwardsOptions = {}): Promise<I
       biddersFailed,
       biddersRejected: biddersRejected.length,
       biddersSkippedOtherDepartamento: allRecords.length - bidderRecords.length,
+      unsuccessfulTendersAccepted: unsuccessfulRows.length,
+      unsuccessfulTendersRejected: unsuccessfulRejected.length,
     };
   } catch (err) {
     await client.query("ROLLBACK");
