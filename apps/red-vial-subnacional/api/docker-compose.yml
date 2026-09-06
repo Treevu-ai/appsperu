@@ -1,0 +1,21 @@
+name: red-vial-subnacional
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: red_vial_subnacional
+      POSTGRES_PASSWORD: red_vial_subnacional
+      POSTGRES_DB: red_vial_subnacional
+    ports:
+      - "127.0.0.1:5455:5432"
+    volumes:
+      - red_vial_subnacional_pgdata:/var/lib/postgresql/data
+
+volumes:
+  red_vial_subnacional_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true

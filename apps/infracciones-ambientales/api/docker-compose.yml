@@ -1,0 +1,21 @@
+name: infracciones-ambientales
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: infracciones_ambientales
+      POSTGRES_PASSWORD: infracciones_ambientales
+      POSTGRES_DB: infracciones_ambientales
+    ports:
+      - "127.0.0.1:5454:5432"
+    volumes:
+      - infracciones_ambientales_pgdata:/var/lib/postgresql/data
+
+volumes:
+  infracciones_ambientales_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true

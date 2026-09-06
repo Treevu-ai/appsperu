@@ -614,6 +614,52 @@ completo, censal, con la frecuencia de actualización más alta de cualquier fue
 
 ---
 
+<a id="infracciones-ambientales"></a>
+## infracciones-ambientales — Registro Único de Infractores Ambientales Sancionados (OEFA)
+
+Investigado y construido 2026-09-06, en paralelo con `red-vial-subnacional`, continuando el
+barrido de entidades no exploradas (OEFA) tras cerrar la Fase 0 de MINEDU.
+
+### `ruias-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Registro de sanciones ambientales (OEFA) — administrado sancionado, subsector económico, ubicación, expediente/resolución, detalle de infracción, monto de multa. Mismo tipo de valor que `proveedores-sancionados` pero para el ámbito ambiental (minería, industria, hidrocarburos, agricultura, pesquería, residuos sólidos, electricidad, consultoras ambientales). |
+| **Qué hace** | Descarga el CSV directo (sin resolver por `package_show` — el dataset no responde a esa consulta en este portal), normaliza y hace upsert en `infracciones_ambientales`, en lotes de 1000. |
+| **Exclusión/enmascarado de PII** | `nombre_administrado` se ingiere sin cambios (mismo fundamento legal que `proveedores-sancionados`, Ley 27806). `id_doc_administrado` se **enmascara** (últimos 3 dígitos) cuando `tipo_doc = 'D.N.I.'` — confirmado en vivo que sí aparecen sancionados persona natural (ej. mineros artesanales), mismo patrón que `perfilprov-conformacion`. Para R.U.C./OTROS se ingiere completo. |
+| **Hallazgos reales de la fuente** | Valores ausentes representados con el literal `"-"` (no celda vacía); montos con coma decimal (`"13170,43"`); fechas como enteros `AAAAMMDD`; `DISTRITO` (y a veces `PROVINCIA`) puede traer varios valores separados por coma en una sola celda cuando una infracción abarca más de un distrito (no se parte, se ingiere tal cual). **`(nro_expediente, nro_rd)` no es clave única** — una misma resolución puede traer varias filas de detalle distintas (8,265 de 14,937 filas nacionales comparten expediente+RD con otra fila); se usa un hash de contenido como clave de upsert. Bug real corregido durante la construcción: la fuente trae filas exactamente duplicadas dentro de un mismo lote de inserción — Postgres rechazaba el `ON CONFLICT` hasta deduplicar por hash antes de insertar (mismo patrón que `identidad-fiscal`). |
+| **Frecuencia** | Manual (`npm run ingest:ruias` en `apps/infracciones-ambientales/api`). |
+| **Fuente de datos** | `datosabiertos.gob.pe/sites/default/files/1a_Registro Único de Infractores Ambientales Sancionados.csv` (OEFA). |
+| **Cobertura real ingerida** | Verificado en vivo 2026-09-06: 14,937 filas de origen, **14,724 filas únicas insertadas** tras deduplicar, 0 rechazadas. La Libertad: **610 sanciones, 12 provincias**. |
+| **Detalle completo** | [`docs/data-contracts/oefa-ruias.md`](data-contracts/oefa-ruias.md) |
+| **Cruces** | Ninguno implementado — candidato natural: por RUC contra `identidad-fiscal`/`compras-publicas` (mismo `extractRuc()` ya usado en el resto del catálogo) para ver si una empresa sancionada ambientalmente también contrata con el Estado. |
+
+---
+
+<a id="red-vial-subnacional"></a>
+## red-vial-subnacional — Intervenciones en Redes Viales Subnacionales (MTC/Provías Descentralizado)
+
+Investigado y construido 2026-09-06. **Resuelto con ayuda del usuario**: el fetch automático
+sobre la página del dataset no lograba renderizar el recurso (contenido cargado dinámicamente,
+ni siquiera decodificar entidades HTML como en MINEDU sirvió); el usuario navegó la página en un
+browser normal y compartió el enlace directo, que sí resolvió.
+
+### `pvd-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Intervenciones en redes viales departamentales/vecinales (gestión de Provías Descentralizado) — código de ruta, tramo, longitud en km, estado de conservación, tipo de superficie, tipo de intervención (mantenimiento/mejoramiento/conservación), responsable. |
+| **Qué hace** | Descarga el CSV directo, normaliza y hace upsert en `intervenciones_viales`, en lotes de 1000. |
+| **Nivel de detalle** | Ruta/tramo dentro de una **provincia** — no baja a distrito exacto (una ruta puede cruzar más de uno). |
+| **Hallazgos reales de la fuente** | Encoding **Latin-1** (no UTF-8). Nombres de columna con espacios irregulares (`" CONVENIO"` con espacio inicial, `"CORREDOR VIAL ALIMENTADOR"` con espacios internos) — se acceden por bracket notation exacto. Valores ausentes como `"-"`, igual que RUIAS. **`(ID_INTERVENCION, CODIGO_RUTA, TRAMO)` no es clave única** (10,430 `ID_INTERVENCION` distintos de 12,536 filas) — mismo patrón de hash de contenido que `infracciones-ambientales`. **Nombres de provincia con tildes inconsistentes** en la misma fuente (ej. `"VIRU"` y `"VIRÚ"` como valores distintos en La Libertad) — no normalizado en esta versión, documentado como limitación conocida. |
+| **Frecuencia** | Manual (`npm run ingest:pvd` en `apps/red-vial-subnacional/api`). Nombre de archivo trae la fecha de corte embebida — estabilidad entre cortes no confirmada. |
+| **Fuente de datos** | `datosabiertos.gob.pe/sites/default/files/1_Dataset_Intervenciones_PVD_<fecha>.csv` (MTC/Provías Descentralizado) — la página del dataset no renderiza este link a un fetch automático, hay que obtenerlo navegando manualmente si el nombre de archivo cambia. |
+| **Cobertura real ingerida** | Verificado en vivo 2026-09-06: **12,536 filas insertadas, 0 rechazadas**. La Libertad: **461 intervenciones, 12 provincias** (con la salvedad de la duplicación de tildes). |
+| **Detalle completo** | [`docs/data-contracts/mtc-pvd-intervenciones.md`](data-contracts/mtc-pvd-intervenciones.md) |
+| **Cruces** | Ninguno implementado — candidato natural: por departamento/provincia contra `radar-ejecucion` (`FUNCION = TRANSPORTE`), mismo patrón de bucket exacto que ya usan `actividad-agraria`/`seguridad-ciudadana`. |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada
@@ -697,4 +743,6 @@ OCDS); esos resultados devuelven `valorMoneda: null` en vez de asumir soles.
 | `renamu-connector.ts` | renamu | INEI RENAMU (inei.gob.pe) | Descarga ZIP, extrae CSV en memoria | Manual | Parcial por diseño (solo Módulo II: vehículos/telefonía/internet; Módulo I con PII del alcalde excluido; Módulos III-V no explorados) — universo nacional completo dentro de ese alcance (1,891 municipalidades) |
 | `autoridades-connector.ts` | autoridades-electas | JNE Autoridades Electas (datosabiertos.gob.pe) | Resuelve recurso vía `package_show`, descarga XLS, parsea con `xlsx` | Manual | Parcial por diseño (solo el recurso sin DNI, solo autoridades nacionales en el corte actual — el recurso histórico con DNI de autoridades regionales/municipales 2014-2022 no se ingiere) |
 | `padron-connector.ts` | instituciones-educativas | MINEDU/ESCALE Padrón Web (escale.minedu.gob.pe) | Resuelve corte más reciente por scraping HTML, descarga ZIP, extrae DBF, parsea con `dbffile` (encoding cp850) | Manual | Completa (nacional censal, 180,826 filas; La Libertad 9,391/12 provincias/84 distritos) |
+| `ruias-connector.ts` | infracciones-ambientales | OEFA RUIAS (datosabiertos.gob.pe) | Descarga CSV directo, hash de contenido como clave (sin clave natural única) | Manual | Completa (nacional, 14,724 filas únicas; La Libertad 610/12 provincias) |
+| `pvd-connector.ts` | red-vial-subnacional | MTC/Provías Descentralizado (datosabiertos.gob.pe) | Descarga CSV directo (Latin-1), hash de contenido como clave | Manual | Completa (nacional, 12,536 filas; La Libertad 461/12 provincias) |
 

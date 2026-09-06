@@ -2,7 +2,47 @@
 
 Última actualización: 2026-09-06.
 
-Diecinueve apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+Veintiuna apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+
+## OEFA + MTC — dos apps más, foco explícito en La Libertad (2026-09-06)
+
+Continuación del barrido de entidades no exploradas, con foco explícito pedido por el usuario en
+La Libertad (departamento, provincias y distritos) para cada hallazgo nuevo.
+
+**MTC (Fase 0 previa quedó parcial)**: el dataset departamental confirmado antes (SINAC) era
+desactualizado y sin desagregado provincial. El dataset correcto —
+"Intervenciones en Redes Viales Subnacionales" de Provías Descentralizado — no se pudo resolver
+por fetch automático (la página del dataset carga el recurso dinámicamente); **el usuario navegó
+la página en un browser normal y compartió el enlace directo**, que sí funcionó. Mientras se
+esperaba esa resolución, se investigó **OEFA en paralelo** y se encontró un dataset real y
+descargable de inmediato (RUIAS).
+
+**App nueva `infracciones-ambientales`** (puerto 4023, Postgres 5454): Registro Único de
+Infractores Ambientales Sancionados (OEFA) — mismo tipo de valor que `proveedores-sancionados`
+pero para el ámbito ambiental (minería, industria, hidrocarburos, agricultura, pesquería,
+residuos sólidos, electricidad, consultoras ambientales). `id_doc_administrado` se enmascara
+cuando el sancionado es persona natural (D.N.I.) — confirmado en vivo que sí aparecen (mineros
+artesanales), mismo patrón de enmascarado que `perfilprov-conformacion`. Bug real corregido
+durante la construcción: la fuente trae filas duplicadas dentro de un mismo lote de inserción,
+y `(nro_expediente, nro_rd)` no es clave única (una resolución puede traer varias infracciones
+detalladas) — se usa un hash de contenido como clave de upsert en su lugar. Verificado en vivo:
+14,937 filas de origen, 14,724 únicas insertadas, 0 rechazadas. **La Libertad: 610 sanciones, 12
+provincias.**
+
+**App nueva `red-vial-subnacional`** (puerto 4024, Postgres 5455): intervenciones en redes
+viales departamentales/vecinales gestionadas por Provías Descentralizado — código de ruta,
+tramo, longitud, estado de conservación, tipo de intervención. Nivel de detalle: ruta/tramo
+dentro de una provincia (no distrito exacto). Mismo patrón de hash de contenido que
+`infracciones-ambientales` (`(ID_INTERVENCION, CODIGO_RUTA, TRAMO)` tampoco es clave única).
+Limitación real documentada, no resuelta: nombres de provincia con tildes inconsistentes en la
+misma fuente (`"VIRU"` y `"VIRÚ"` como valores distintos). Verificado en vivo: 12,536 filas
+insertadas, 0 rechazadas. **La Libertad: 461 intervenciones, 12 provincias.**
+
+Suma 2 tools MCP nuevas (101→103 tools, 21 apps). Detalle completo en
+[`docs/conectores.md#infracciones-ambientales`](conectores.md#infracciones-ambientales) /
+[`docs/conectores.md#red-vial-subnacional`](conectores.md#red-vial-subnacional) y sus
+respectivos data contracts (`docs/data-contracts/oefa-ruias.md`,
+`docs/data-contracts/mtc-pvd-intervenciones.md`).
 
 ## MINEDU/ESCALE — padrón nacional de instituciones educativas, 180,826 filas (2026-09-06)
 
@@ -270,6 +310,8 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `renamu` | Capacidad institucional municipal: vehículos, telefonía, internet (INEI) | 4020 | 5451 | Construida, probada, verificada (parcial por diseño: solo Módulo II) |
 | `autoridades-electas` | Autoridades proclamadas por proceso electoral, sin DNI (JNE) | 4021 | 5452 | Construida, probada, verificada (parcial por diseño: solo el recurso sin DNI, hoy solo nacional) |
 | `instituciones-educativas` | Padrón nacional de instituciones educativas, con ubicación (MINEDU/ESCALE) | 4022 | 5453 | Construida, probada, verificada (180,826 filas, La Libertad: 9,391/12 provincias/84 distritos) |
+| `infracciones-ambientales` | Registro de infractores ambientales sancionados (OEFA/RUIAS) | 4023 | 5454 | Construida, probada, verificada (14,724 filas, La Libertad: 610/12 provincias) |
+| `red-vial-subnacional` | Intervenciones viales departamentales/vecinales (MTC/Provías Descentralizado) | 4024 | 5455 | Construida, probada, verificada (12,536 filas, La Libertad: 461/12 provincias) |
 
 ## `bcrp-la-libertad` — ingesta manual, distinto a todo el resto del proyecto (2026-08-28)
 
@@ -306,12 +348,13 @@ automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incl
 `mcp-server/README.md`, sección "Alcance actual y lo que falta", antes de exponerlo fuera de
 `localhost`).
 
-101 tools (19 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA + OxI + GIS (`inversion-privada`);
+103 tools (21 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA + OxI + GIS (`inversion-privada`);
 nueva app `bcrp-la-libertad` (ingesta manual, ver sección dedicada arriba). Ampliación 2026-09-05:
 `mindef` y `mimp` (+5 tools), cruce persona-a-persona por DNI en `proveedores-sancionados`
 (ver sección "Barrido de calidad de datos + MINDEF/MIMP + cruce por DNI" arriba). Ampliación
-2026-09-06: `renamu` (+2 tools), `autoridades-electas` (+1 tool) e `instituciones-educativas`
-(+2 tools), ver secciones dedicadas arriba.
+2026-09-06: `renamu` (+2 tools), `autoridades-electas` (+1 tool), `instituciones-educativas`
+(+2 tools), `infracciones-ambientales` (+1 tool) y `red-vial-subnacional` (+1 tool), ver
+secciones dedicadas arriba.
 
 ## Cruces entre apps (todos verificados con datos reales)
 

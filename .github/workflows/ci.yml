@@ -23,6 +23,7 @@ jobs:
           - apps/identidad-fiscal/api
           - apps/informes-control/api
           - apps/infobras/api
+          - apps/infracciones-ambientales/api
           - apps/instituciones-educativas/api
           - apps/mindef/api
           - apps/mimp/api
@@ -30,6 +31,7 @@ jobs:
           - apps/proveedores-sancionados/api
           - apps/radar-ejecucion/api
           - apps/radar-inversiones/api
+          - apps/red-vial-subnacional/api
           - apps/renamu/api
           - apps/salud-institucional/api
           - apps/seguridad-ciudadana/api
