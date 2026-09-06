@@ -212,7 +212,7 @@ async function upsertLegacyOrder(client: PoolClient, input: { entity: LegacySeac
   await client.query(
     `INSERT INTO municipalities (municipality_id,ruc,official_name,department,province,district,ubigeo,entity_type,source,source_timestamp)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-     ON CONFLICT (municipality_id) DO UPDATE SET ruc=EXCLUDED.ruc,official_name=EXCLUDED.official_name,province=EXCLUDED.province,
+     ON CONFLICT (municipality_id) DO UPDATE SET ruc=EXCLUDED.ruc,official_name=EXCLUDED.official_name,department=EXCLUDED.department,province=EXCLUDED.province,
        district=EXCLUDED.district,ubigeo=EXCLUDED.ubigeo,entity_type=EXCLUDED.entity_type,source=EXCLUDED.source,source_timestamp=EXCLUDED.source_timestamp`,
     [municipalityId, entity.ruc, entity.officialName, entity.department, entity.province, entity.district, entity.ubigeo, classifyContractingEntity(entity.officialName), LEGACY_SOURCE, sourceTimestamp],
   );
@@ -226,9 +226,15 @@ async function upsertLegacyOrder(client: PoolClient, input: { entity: LegacySeac
     `INSERT INTO minor_contracts (contracting_id,source_contracting_id,ocid,award_id,municipality_id,year,object_original,object_normalized,category,contract_type,awarded_amount,
       execution_department,execution_province,execution_district,publication_date,award_date,winning_supplier_id,status,order_number,source_url,source_timestamp,source_batch_id,minor_source_batch_id,data_version,normalizer_version)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$10,$11,$12,$13,$14,$14,$15,$16,$17,$18,$19,NULL,$20,'oece-seace-legacy-orders-v1',$21)
-     ON CONFLICT (contracting_id) DO UPDATE SET object_original=EXCLUDED.object_original,object_normalized=EXCLUDED.object_normalized,awarded_amount=EXCLUDED.awarded_amount,
-       publication_date=EXCLUDED.publication_date,award_date=EXCLUDED.award_date,winning_supplier_id=EXCLUDED.winning_supplier_id,status=EXCLUDED.status,source_url=EXCLUDED.source_url,
-       source_timestamp=EXCLUDED.source_timestamp,minor_source_batch_id=EXCLUDED.minor_source_batch_id,updated_at=now()`,
+     ON CONFLICT (contracting_id) DO UPDATE SET source_contracting_id=EXCLUDED.source_contracting_id,ocid=EXCLUDED.ocid,
+       award_id=EXCLUDED.award_id,municipality_id=EXCLUDED.municipality_id,year=EXCLUDED.year,
+       object_original=EXCLUDED.object_original,object_normalized=EXCLUDED.object_normalized,category=EXCLUDED.category,
+       contract_type=EXCLUDED.contract_type,awarded_amount=EXCLUDED.awarded_amount,
+       execution_department=EXCLUDED.execution_department,execution_province=EXCLUDED.execution_province,execution_district=EXCLUDED.execution_district,
+       publication_date=EXCLUDED.publication_date,award_date=EXCLUDED.award_date,winning_supplier_id=EXCLUDED.winning_supplier_id,status=EXCLUDED.status,
+       order_number=EXCLUDED.order_number,source_url=EXCLUDED.source_url,
+       source_timestamp=EXCLUDED.source_timestamp,source_batch_id=NULL,data_version=EXCLUDED.data_version,normalizer_version=EXCLUDED.normalizer_version,
+       minor_source_batch_id=EXCLUDED.minor_source_batch_id,updated_at=now()`,
     [contractingId, `${entity.ruc}:${input.year}:${input.month}:${order.orderType}:${order.orderNumber}`, `seace:legacy:orders:${entity.ruc}:${input.year}:${input.month}`,
       `seace:legacy:award:${rowHash}`, municipalityId, input.year, order.description, normalizeContractObject(order.description), category, order.amount,
       entity.department, entity.province, entity.district, order.issueDate, supplierId, order.status ?? "REGISTERED", order.orderNumber, input.sourceUrl, sourceTimestamp, input.batchId, MINOR_CONTRACT_NORMALIZER_VERSION],

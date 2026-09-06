@@ -349,6 +349,7 @@ export async function ingestSeacePublicMinorContracts(options: SeaceMinorContrac
              (municipality_id, official_name, department, province, district, entity_code_oece, entity_type, source, source_timestamp)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
            ON CONFLICT (municipality_id) DO UPDATE SET official_name=EXCLUDED.official_name,
+             department=EXCLUDED.department,
              province=COALESCE(EXCLUDED.province, municipalities.province), district=COALESCE(EXCLUDED.district, municipalities.district),
              entity_code_oece=EXCLUDED.entity_code_oece, entity_type=EXCLUDED.entity_type,
              source=EXCLUDED.source, source_timestamp=EXCLUDED.source_timestamp`,
@@ -373,13 +374,17 @@ export async function ingestSeacePublicMinorContracts(options: SeaceMinorContrac
               status, source_url, source_timestamp, source_batch_id, minor_source_batch_id, data_version, normalizer_version)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$10,$11,$12,$13,$14,$15,$16,$17,'AWARDED',$18,$19,NULL,$20,
                    'oece-seace-public-ui-v1',$21)
-           ON CONFLICT (contracting_id) DO UPDATE SET object_original=EXCLUDED.object_original,
-             object_normalized=EXCLUDED.object_normalized, category=EXCLUDED.category, awarded_amount=EXCLUDED.awarded_amount,
+           ON CONFLICT (contracting_id) DO UPDATE SET source_contracting_id=EXCLUDED.source_contracting_id,
+             ocid=EXCLUDED.ocid, award_id=EXCLUDED.award_id, municipality_id=EXCLUDED.municipality_id, year=EXCLUDED.year,
+             object_original=EXCLUDED.object_original,
+             object_normalized=EXCLUDED.object_normalized, category=EXCLUDED.category, contract_type=EXCLUDED.contract_type,
+             awarded_amount=EXCLUDED.awarded_amount,
              execution_department=EXCLUDED.execution_department, execution_province=EXCLUDED.execution_province,
              execution_district=EXCLUDED.execution_district,
              publication_date=EXCLUDED.publication_date, quotation_start_date=EXCLUDED.quotation_start_date,
              quotation_end_date=EXCLUDED.quotation_end_date, winning_supplier_id=EXCLUDED.winning_supplier_id,
              status=EXCLUDED.status, source_url=EXCLUDED.source_url, source_timestamp=EXCLUDED.source_timestamp,
+             data_version=EXCLUDED.data_version, normalizer_version=EXCLUDED.normalizer_version,
              source_batch_id=NULL, minor_source_batch_id=EXCLUDED.minor_source_batch_id, updated_at=now()`,
           [canonicalId, String(contractId), `seace:contract:${contractId}`, String(item.idContratoItem), municipalityId, year,
             objectOriginal, normalizeContractObject(objectOriginal), category, amount,

@@ -148,8 +148,11 @@ async function insertBatch(rawBatch: AirhspRow[], batchId: number): Promise<numb
      ON CONFLICT (periodo, codigo_pliego, codigo_ue, desc_tipo_registro, desc_sub_tipo_registro,
        desc_regimen_laboral, desc_grupo_ocupacional, desc_cargo_estructural,
        desc_condicion_laboral, desc_regimen_pensionario)
-     DO UPDATE SET cantidad = EXCLUDED.cantidad, costo_total_anual = EXCLUDED.costo_total_anual,
-       source_batch_id = EXCLUDED.source_batch_id`,
+     DO UPDATE SET ejercicio = EXCLUDED.ejercicio, mes = EXCLUDED.mes, nivel = EXCLUDED.nivel,
+       codigo_sector = EXCLUDED.codigo_sector, sector = EXCLUDED.sector, pliego = EXCLUDED.pliego,
+       unidad_ejecutora = EXCLUDED.unidad_ejecutora, tipo_establecimiento = EXCLUDED.tipo_establecimiento,
+       estado_registro = EXCLUDED.estado_registro, cantidad = EXCLUDED.cantidad,
+       costo_total_anual = EXCLUDED.costo_total_anual, source_batch_id = EXCLUDED.source_batch_id`,
     params
   );
   return batch.length;

@@ -88,6 +88,7 @@ export async function ingestMinceturHospedajeYear(anio: number): Promise<Hospeda
            numero_establecimientos, porcentaje_tnoh, source_batch_id
          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
          ON CONFLICT (departamento, anio, mes) DO UPDATE SET
+           id_ubigeo_depto = EXCLUDED.id_ubigeo_depto,
            total_arribos = EXCLUDED.total_arribos,
            total_pernoctaciones = EXCLUDED.total_pernoctaciones,
            numero_establecimientos = EXCLUDED.numero_establecimientos,
