@@ -2,14 +2,51 @@
 
 Última actualización: 2026-09-06.
 
-Diecisiete apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+Dieciocho apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+
+## JNE/Autoridades Electas — segunda app del barrido INEI/JNE, hallazgo de dos esquemas incompatibles (2026-09-06)
+
+Continuación de la sesión RENAMU (ver sección siguiente). **App nueva `autoridades-electas`**
+(puerto 4021, Postgres 5452): ingiere autoridades proclamadas por el JNE — nombre, cargo,
+organización política, ubigeo, periodo de mandato.
+
+La ambigüedad marcada como crítica en la Fase 0 ("¿son candidatos o autoridades ya electas?")
+quedó **resuelta al construir**: se leyó el `.xls` real con `xlsx`/SheetJS (no `exceljs`, que no
+soporta el formato binario legado) en vez de confiar en un resumen automático de fetch genérico
+sobre contenido binario — que había sido la fuente de la ambigüedad original. El archivo real
+trae actas de proclamación oficiales (`TXPRONUNCIAMIENTO` = "ACTA PROCLAMACIÓN N° 00001") y
+periodos de mandato reales (2026-2031 en el corte verificado): son autoridades ya proclamadas,
+no candidatos.
+
+**Hallazgo no anticipado que cambió el alcance**: el dataset del JNE en la Plataforma Nacional de
+Datos Abiertos existe en dos recursos con **esquema incompatible**. El recurso "actual" (el que
+se decidió ingerir) no trae documento de identidad — 208 filas verificadas, autoridades
+nacionales (Presidencia, Senado, Diputados, Parlamento Andino) de Elecciones Generales 2026. El
+otro recurso, un archivo histórico fechado (noviembre 2025, 39,342 filas 2014-2022 de
+autoridades regionales/municipales), **sí trae DNI sin enmascarar** y usa un esquema de columnas
+completamente distinto — se decidió explícitamente NO ingerirlo en esta versión, por su mayor
+riesgo de PII y por requerir su propio normalizador y su propia revisión de enmascarado (mismo
+estándar que ya aplican `perfilprov-conformacion` y el cruce por DNI de `proveedores-sancionados`).
+
+Dos hallazgos de ingeniería adicionales durante la construcción: el `package_show` de CKAN para
+este dataset devuelve `result` como un array (no como objeto directo, a diferencia de otros
+`package_show` ya consumidos en el catálogo); y el campo `format` de CKAN reporta `.xlsx` para un
+archivo que en realidad es un `.xls` binario legado — el conector filtra por título de recurso,
+no por ese campo.
+
+Verificado en vivo: 208 filas, 0 rechazadas. Suma 1 tool MCP nueva (98→99 tools, 18 apps). El
+cruce originalmente hipotetizado (autoridad electa ↔ proveedor/sancionado, por nombre) queda
+como trabajo futuro — solo tendrá cobertura territorial útil (La Libertad) cuando el corte
+"actual" incluya autoridades regionales/municipales (se espera con las Elecciones Regionales y
+Municipales de octubre 2026). Detalle completo en
+[`docs/conectores.md#autoridades-electas`](conectores.md#autoridades-electas) y
+[`docs/data-contracts/jne-autoridades-electas.md`](data-contracts/jne-autoridades-electas.md).
 
 ## RENAMU/INEI — primer conector que mide capacidad institucional, no ejecución (2026-09-06)
 
 Tras hacer inventario "entidad por entidad" de qué se ingiere hoy, se identificaron INEI y
 JNE/Infogob como los huecos de mayor valor no explorados. Fase 0 (investigación en vivo) para
-ambos; se construyó primero RENAMU, quedando JNE/Autoridades Electas con su data contract listo
-(`docs/data-contracts/jne-autoridades-electas.md`) pero sin construir todavía.
+ambos; se construyó primero RENAMU y luego JNE/Autoridades Electas (ver sección arriba).
 
 **App nueva `renamu`** (puerto 4020, Postgres 5451): ingiere el Registro Nacional de
 Municipalidades del INEI — encuesta censal anual (no muestra) a las 1,891 municipalidades del
@@ -192,6 +229,7 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `mindef` | Convenios offset, capacitación en el exterior y misiones de paz ONU (MINDEF) | 4018 | 5449 | Construida, probada, verificada |
 | `mimp` | Violencia contra la mujer (CEM) y consultas Chat 100 (MIMP) | 4019 | 5450 | Construida, probada, verificada |
 | `renamu` | Capacidad institucional municipal: vehículos, telefonía, internet (INEI) | 4020 | 5451 | Construida, probada, verificada (parcial por diseño: solo Módulo II) |
+| `autoridades-electas` | Autoridades proclamadas por proceso electoral, sin DNI (JNE) | 4021 | 5452 | Construida, probada, verificada (parcial por diseño: solo el recurso sin DNI, hoy solo nacional) |
 
 ## `bcrp-la-libertad` — ingesta manual, distinto a todo el resto del proyecto (2026-08-28)
 
@@ -228,11 +266,11 @@ automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incl
 `mcp-server/README.md`, sección "Alcance actual y lo que falta", antes de exponerlo fuera de
 `localhost`).
 
-98 tools (17 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA + OxI + GIS (`inversion-privada`);
+99 tools (18 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA + OxI + GIS (`inversion-privada`);
 nueva app `bcrp-la-libertad` (ingesta manual, ver sección dedicada arriba). Ampliación 2026-09-05:
 `mindef` y `mimp` (+5 tools), cruce persona-a-persona por DNI en `proveedores-sancionados`
 (ver sección "Barrido de calidad de datos + MINDEF/MIMP + cruce por DNI" arriba). Ampliación
-2026-09-06: `renamu` (+2 tools, ver sección dedicada arriba).
+2026-09-06: `renamu` (+2 tools) y `autoridades-electas` (+1 tool), ver secciones dedicadas arriba.
 
 ## Cruces entre apps (todos verificados con datos reales)
 

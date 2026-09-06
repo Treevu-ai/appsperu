@@ -1345,4 +1345,28 @@ export const TOOL_CATALOG: ToolSpec[] = [
       anio: z.coerce.number().int().min(2000).max(2100).optional(),
     },
   },
+
+  // ---- autoridades-electas (JNE, datos abiertos) ----
+  {
+    name: "autoridades_electas_autoridades",
+    app: "autoridades-electas",
+    description:
+      "Autoridades proclamadas por el JNE (nombre, cargo, organización política, ubigeo, periodo de mandato) — " +
+      "no candidatos: `pronunciamiento` es un acta de proclamación oficial real, verificada contra el corte " +
+      "2026-07-30 (Presidencia, Senado, Diputados, Parlamento Andino de Elecciones Generales 2026). Sin " +
+      "documento de identidad — este conector ingiere deliberadamente solo el recurso del JNE sin DNI; el " +
+      "recurso histórico distinto que sí trae DNI sin enmascarar (autoridades regionales/municipales " +
+      "2014-2022) NO se ingiere en esta versión. Sin clave única de persona (no hay DNI): el match es por " +
+      "nombre completo + cargo + proceso electoral + ubigeo, con riesgo real de colisión por homonimia. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/autoridades",
+    pathParams: [],
+    querySchema: {
+      nombre: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE) sobre nombre completo."),
+      cargo: z.string().min(1).optional(),
+      organizacionPolitica: z.string().min(1).optional(),
+      ubigeo: z.string().regex(/^\d{6}$/).optional(),
+      anioEleccion: z.coerce.number().int().min(2000).max(2100).optional(),
+    },
+  },
 ];

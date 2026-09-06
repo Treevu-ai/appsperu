@@ -1,0 +1,21 @@
+name: autoridades-electas
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: autoridades_electas
+      POSTGRES_PASSWORD: autoridades_electas
+      POSTGRES_DB: autoridades_electas
+    ports:
+      - "127.0.0.1:5452:5432"
+    volumes:
+      - autoridades_electas_pgdata:/var/lib/postgresql/data
+
+volumes:
+  autoridades_electas_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true
