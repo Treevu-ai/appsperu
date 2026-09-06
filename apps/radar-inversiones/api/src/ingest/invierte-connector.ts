@@ -93,17 +93,21 @@ async function persistInvestmentRows(client: PoolClient, rows: readonly Canonica
       provincia: row.provincia, distrito: row.distrito, monto_viable: row.montoViable,
       costo_actualizado: row.costoActualizado, funcion: row.funcion, tipo_inversion: row.tipoInversion,
       fecha_registro: row.fechaRegistro, fecha_viabilidad: row.fechaViabilidad,
+      num_habitantes_benef: row.numHabitantesBenef, avance_ejecucion: row.avanceEjecucion,
+      fecha_fin_ejecucion: row.fechaFinEjecucion,
     }));
     await client.query(
       `INSERT INTO investments
-         (cui,codigo_snip,nombre,sec_ejec,nombre_uep,entidad,sector,nivel,estado,situacion,ubigeo,departamento,provincia,distrito,monto_viable,costo_actualizado,funcion,tipo_inversion,fecha_registro,fecha_viabilidad,source_batch_id)
+         (cui,codigo_snip,nombre,sec_ejec,nombre_uep,entidad,sector,nivel,estado,situacion,ubigeo,departamento,provincia,distrito,monto_viable,costo_actualizado,funcion,tipo_inversion,fecha_registro,fecha_viabilidad,num_habitantes_benef,avance_ejecucion,fecha_fin_ejecucion,source_batch_id)
        SELECT x.cui,x.codigo_snip,x.nombre,x.sec_ejec,x.nombre_uep,x.entidad,x.sector,x.nivel,x.estado,x.situacion,x.ubigeo,x.departamento,x.provincia,x.distrito,x.monto_viable,x.costo_actualizado,x.funcion,x.tipo_inversion,
-              CASE WHEN x.fecha_registro ~ '^\\d{4}-\\d{2}-\\d{2}$' THEN x.fecha_registro::date ELSE NULL END,
-              CASE WHEN x.fecha_viabilidad ~ '^\\d{4}-\\d{2}-\\d{2}$' THEN x.fecha_viabilidad::date ELSE NULL END,
+              CASE WHEN x.fecha_registro ~ '^\\d{4}-\\d{2}-\\d{2}' THEN left(x.fecha_registro,10)::date ELSE NULL END,
+              CASE WHEN x.fecha_viabilidad ~ '^\\d{4}-\\d{2}-\\d{2}' THEN left(x.fecha_viabilidad,10)::date ELSE NULL END,
+              x.num_habitantes_benef,x.avance_ejecucion,
+              CASE WHEN x.fecha_fin_ejecucion ~ '^\\d{4}-\\d{2}-\\d{2}' THEN left(x.fecha_fin_ejecucion,10)::date ELSE NULL END,
               $2
        FROM jsonb_to_recordset($1::jsonb) AS x(
-         cui text,codigo_snip text,nombre text,sec_ejec text,nombre_uep text,entidad text,sector text,nivel text,estado text,situacion text,ubigeo text,departamento text,provincia text,distrito text,monto_viable numeric,costo_actualizado numeric,funcion text,tipo_inversion text,fecha_registro text,fecha_viabilidad text)
-       ON CONFLICT (cui) DO UPDATE SET estado=EXCLUDED.estado,situacion=EXCLUDED.situacion,monto_viable=EXCLUDED.monto_viable,costo_actualizado=EXCLUDED.costo_actualizado,source_batch_id=EXCLUDED.source_batch_id`,
+         cui text,codigo_snip text,nombre text,sec_ejec text,nombre_uep text,entidad text,sector text,nivel text,estado text,situacion text,ubigeo text,departamento text,provincia text,distrito text,monto_viable numeric,costo_actualizado numeric,funcion text,tipo_inversion text,fecha_registro text,fecha_viabilidad text,num_habitantes_benef integer,avance_ejecucion numeric,fecha_fin_ejecucion text)
+       ON CONFLICT (cui) DO UPDATE SET estado=EXCLUDED.estado,situacion=EXCLUDED.situacion,monto_viable=EXCLUDED.monto_viable,costo_actualizado=EXCLUDED.costo_actualizado,fecha_registro=EXCLUDED.fecha_registro,fecha_viabilidad=EXCLUDED.fecha_viabilidad,num_habitantes_benef=EXCLUDED.num_habitantes_benef,avance_ejecucion=EXCLUDED.avance_ejecucion,fecha_fin_ejecucion=EXCLUDED.fecha_fin_ejecucion,source_batch_id=EXCLUDED.source_batch_id`,
       [JSON.stringify(payload), batchId]
     );
   }

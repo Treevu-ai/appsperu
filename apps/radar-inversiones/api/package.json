@@ -9,6 +9,8 @@
     "ingest:invierte": "tsx src/ingest/invierte-connector.ts",
     "ingest:invierte:full": "tsx src/ingest/run-invierte-full.ts",
     "ingest:libertad": "INVIERTE_DEPARTAMENTOS=LA LIBERTAD tsx src/ingest/run-invierte-full.ts",
+    "ingest:invierte-desactivadas": "tsx src/ingest/invierte-desactivadas-connector.ts",
+    "ingest:invierte-desactivadas:full": "tsx src/ingest/run-invierte-desactivadas-full.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

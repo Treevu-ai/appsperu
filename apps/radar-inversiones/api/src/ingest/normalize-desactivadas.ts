@@ -1,16 +1,19 @@
 /**
- * Columnas confirmadas el 2026-08-17 contra el diccionario oficial
- * (Detalle_Inversiones_Diccionario.csv) y una fila real de muestra del CSV
- * (ver docs/data-contracts/invierte-detalle-inversiones.md). A diferencia
- * del CSV de presupuesto del MEF, esta fuente ya viene una fila por
- * inversión — no requiere agregación.
+ * Columnas confirmadas el 2026-09-06 contra una fila real de
+ * `INVERSIONES_DESACTIVADAS.csv` (ver
+ * docs/data-contracts/invierte-inversiones-desactivadas.md). El diccionario
+ * y los nombres de columna de este archivo NO coinciden con los de
+ * `DETALLE_INVERSIONES.csv` (activo) — en particular `COD_SNIP` (no
+ * `CODIGO_SNIP`), `NOM_UEP` (no `NOMBRE_UEP`), y **no existe `SEC_EJEC`**:
+ * una inversión desactivada nunca llegó a tener código de ejecución
+ * presupuestal, así que el cruce por `sec_ejec` contra radar-ejecucion no
+ * aplica a este dataset — se deja siempre `null`, no es un dato faltante.
  */
 
-export interface CanonicalInvestmentRow {
+export interface CanonicalDeactivatedInvestmentRow {
   cui: string;
   codigoSnip: string | null;
   nombre: string;
-  secEjec: string | null;
   nombreUep: string | null;
   entidad: string | null;
   sector: string | null;
@@ -27,20 +30,17 @@ export interface CanonicalInvestmentRow {
   tipoInversion: string | null;
   fechaRegistro: string | null;
   fechaViabilidad: string | null;
-  /** Beneficiarios declarados por el MEF para la inversión (columna oficial, no una cifra de prensa). */
   numHabitantesBenef: number | null;
-  avanceEjecucion: number | null;
-  fechaFinEjecucion: string | null;
 }
 
-export interface RejectedInvestment {
+export interface RejectedDeactivatedInvestment {
   raw: Record<string, unknown>;
   reason: string;
 }
 
-export interface NormalizeResult {
-  rows: CanonicalInvestmentRow[];
-  rejected: RejectedInvestment[];
+export interface NormalizeDeactivatedResult {
+  rows: CanonicalDeactivatedInvestmentRow[];
+  rejected: RejectedDeactivatedInvestment[];
 }
 
 function toNumber(value: unknown): number | null {
@@ -58,14 +58,15 @@ function toText(value: unknown): string | null {
 }
 
 /**
- * Transforma filas crudas del CSV de inversiones al modelo canónico. Cada
- * fila ya representa una inversión (CUI) — no hay agregación, a diferencia
- * del conector de presupuesto. Una fila individual mala se aísla en
- * `rejected` con su motivo; nunca se lanza por una fila.
+ * Transforma filas crudas de inversiones desactivadas al modelo canónico.
+ * Una fila mala se aísla en `rejected` con su motivo; nunca se lanza por
+ * una fila.
  */
-export function normalizeInvestmentRows(rawRows: Record<string, unknown>[]): NormalizeResult {
-  const rows: CanonicalInvestmentRow[] = [];
-  const rejected: RejectedInvestment[] = [];
+export function normalizeDeactivatedInvestmentRows(
+  rawRows: Record<string, unknown>[]
+): NormalizeDeactivatedResult {
+  const rows: CanonicalDeactivatedInvestmentRow[] = [];
+  const rejected: RejectedDeactivatedInvestment[] = [];
   const seenCui = new Set<string>();
 
   for (const raw of rawRows) {
@@ -88,10 +89,9 @@ export function normalizeInvestmentRows(rawRows: Record<string, unknown>[]): Nor
 
     rows.push({
       cui,
-      codigoSnip: toText(raw["CODIGO_SNIP"]),
+      codigoSnip: toText(raw["COD_SNIP"]),
       nombre,
-      secEjec: toText(raw["SEC_EJEC"]),
-      nombreUep: toText(raw["NOMBRE_UEP"]),
+      nombreUep: toText(raw["NOM_UEP"]),
       entidad: toText(raw["ENTIDAD"]),
       sector: toText(raw["SECTOR"]),
       nivel: toText(raw["NIVEL"]),
@@ -108,8 +108,6 @@ export function normalizeInvestmentRows(rawRows: Record<string, unknown>[]): Nor
       fechaRegistro: toText(raw["FECHA_REGISTRO"]),
       fechaViabilidad: toText(raw["FECHA_VIABILIDAD"]),
       numHabitantesBenef: toNumber(raw["NUM_HABITANTES_BENEF"]),
-      avanceEjecucion: toNumber(raw["AVANCE_EJECUCION"]),
-      fechaFinEjecucion: toText(raw["FEC_FIN_EJECUCION"]),
     });
   }
 

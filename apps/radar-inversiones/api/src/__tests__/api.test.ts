@@ -168,3 +168,61 @@ describe("GET /api/investments/:cui", () => {
     expect(res.body.nombreUep).toMatch(/OLLANTAYTAMBO/);
   });
 });
+
+describe("GET /api/investments-desactivadas", () => {
+  it("returns the list with numHabitantesBenef and the desactivadas dataset label", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "1" }] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            cui: "2539202",
+            codigo_snip: "2539202",
+            nombre: "PROYECTO DESACTIVADO DE PRUEBA",
+            nombre_uep: "MUNICIPALIDAD X",
+            entidad: "MUNICIPALIDAD X",
+            sector: "GOBIERNOS LOCALES",
+            nivel: "GL",
+            estado: "DESACTIVADO PERMANENTE",
+            situacion: "EN FORMULACION",
+            departamento: "LA LIBERTAD",
+            provincia: "TRUJILLO",
+            distrito: "TRUJILLO",
+            monto_viable: null,
+            costo_actualizado: null,
+            funcion: "TRANSPORTE",
+            tipo_inversion: "PROYECTO DE INVERSION",
+            fecha_registro: "2020-01-01",
+            fecha_viabilidad: null,
+            num_habitantes_benef: "5000",
+            fetched_at: "2026-09-06T00:00:00.000Z",
+          },
+        ],
+      });
+
+    const app = createApp();
+    const res = await request(app).get("/api/investments-desactivadas").query({ departamento: "LA LIBERTAD" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ total: 1, limit: 1000, offset: 0, hasMore: false });
+    expect(res.body.resultados[0]).toMatchObject({
+      cui: "2539202",
+      estado: "DESACTIVADO PERMANENTE",
+      situacion: "EN FORMULACION",
+      numHabitantesBenef: 5000,
+    });
+    expect(res.body.resultados[0].fuente.dataset).toMatch(/desactivadas/);
+  });
+});
+
+describe("GET /api/investments-desactivadas/:cui", () => {
+  it("returns 404 when the deactivated investment was not ingested", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+
+    const app = createApp();
+    const res = await request(app).get("/api/investments-desactivadas/nope");
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/no encontrada/);
+  });
+});

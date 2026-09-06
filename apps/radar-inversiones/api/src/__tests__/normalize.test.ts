@@ -24,6 +24,9 @@ function realRow(overrides: Record<string, unknown> = {}) {
     TIPO_INVERSION: "PROYECTO DE INVERSION",
     FECHA_REGISTRO: "2022-01-05",
     FECHA_VIABILIDAD: "2022-03-10",
+    NUM_HABITANTES_BENEF: "416115",
+    AVANCE_EJECUCION: "0.0",
+    FEC_FIN_EJECUCION: "2035-05-26 00:00:00",
     ...overrides,
   };
 }
@@ -49,7 +52,16 @@ describe("normalizeInvestmentRows", () => {
       ubigeo: "080910",
       montoViable: 1853953.5,
       costoActualizado: 1853953.5,
+      numHabitantesBenef: 416115,
+      avanceEjecucion: 0,
+      fechaFinEjecucion: "2035-05-26 00:00:00",
     });
+  });
+
+  it("returns null for numHabitantesBenef/avanceEjecucion when blank, without throwing", () => {
+    const { rows } = normalizeInvestmentRows([realRow({ NUM_HABITANTES_BENEF: "", AVANCE_EJECUCION: "" })]);
+    expect(rows[0].numHabitantesBenef).toBeNull();
+    expect(rows[0].avanceEjecucion).toBeNull();
   });
 
   it("rejects rows with missing CUI instead of throwing", () => {
