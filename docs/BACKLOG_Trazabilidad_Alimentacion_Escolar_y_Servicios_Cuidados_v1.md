@@ -13,7 +13,7 @@
 | SC-04–05 | Hecho | Migración idempotente: lote/contrato/fuente obligatorios; RUC solo admite 11 dígitos y no se deduce desde el nombre. |
 | SC-06 | Modelo hecho; datos bloqueados | Catálogo exige código modular; no se materializó ningún colegio sin padrón oficial verificable. |
 | SC-07 | Hecho, cohorte parcial | Tres lotes documentados de 35 ítems publicados; numerador, denominador y límite se entregan por API/CLI. |
-| SC-08 | Modelo hecho; evidencia pendiente | No hay acta/guía vinculada a colegio en la cohorte, por lo que no se crea una entrega ficticia. |
+| SC-08 | Modelo hecho; evidencia pendiente, ahora registrada explícitamente | No hay acta/guía vinculada a colegio en la cohorte, por lo que no se crea una entrega ficticia. **Verificación en vivo 2026-09-05**: los tres lotes materializados (Guadalupe, Paiján, Casa Grande) no tenían ninguna fila `ENTREGA_SIN_ACTA` en la cola de revisión — el vacío quedaba implícito. Se buscó evidencia nueva en prensa/fuentes oficiales de Wasi Mikuna La Libertad, no se encontró acta por colegio, y se registró el vacío formalmente para los tres lotes (candidato + evento `NEEDS_EVIDENCE`). Ver `apps/radar-ejecucion/api/src/db/migrations/019_if_sc_verificacion_2026-09-05.sql`. |
 | SC-09 | Hecho con alcance agregado | Se registra un control territorial agregado separado de la entrega, sin atribuirlo a proveedor, lote o colegio. |
 | SC-10 | Código listo; datos bloqueados | La consulta por cumplimiento solo acepta RUC exacto; aún no existe uno en los lotes materializados. |
 | SC-11 | Preexistente | La regla CUI→obra exacta sigue en el registro de infraestructura; no se amplió por título. |
