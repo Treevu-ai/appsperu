@@ -24,6 +24,7 @@ export const APP_KEYS = [
   "informes-control",
   "mindef",
   "mimp",
+  "renamu",
 ] as const;
 
 export type AppKey = (typeof APP_KEYS)[number];
@@ -49,6 +50,7 @@ const DEFAULT_PORTS: Record<AppKey, number> = {
   "informes-control": 4017,
   mindef: 4018,
   mimp: 4019,
+  renamu: 4020,
 };
 
 function envVarFor(app: AppKey): string {
