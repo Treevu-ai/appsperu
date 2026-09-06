@@ -62,6 +62,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
   mimp: ["mimp_cem_casos", "mimp_chat100_consultas"],
   renamu: ["renamu_municipalidades", "renamu_equipamiento"],
   "autoridades-electas": ["autoridades_electas_autoridades"],
+  "instituciones-educativas": ["instituciones_educativas_instituciones", "instituciones_educativas_resumen"],
   "identidad-fiscal": [
     "identidad_fiscal_contribuyente_by_ruc",
     "identidad_fiscal_contribuyentes",

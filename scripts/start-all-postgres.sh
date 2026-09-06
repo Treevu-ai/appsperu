@@ -35,6 +35,7 @@ ALL_APPS=(
   mimp
   renamu
   autoridades-electas
+  instituciones-educativas
 )
 
 if [ "$#" -gt 0 ]; then

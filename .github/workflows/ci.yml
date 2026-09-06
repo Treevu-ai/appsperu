@@ -23,6 +23,7 @@ jobs:
           - apps/identidad-fiscal/api
           - apps/informes-control/api
           - apps/infobras/api
+          - apps/instituciones-educativas/api
           - apps/mindef/api
           - apps/mimp/api
           - apps/programas-sociales/api

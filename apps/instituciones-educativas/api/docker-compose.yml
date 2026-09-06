@@ -1,0 +1,21 @@
+name: instituciones-educativas
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: instituciones_educativas
+      POSTGRES_PASSWORD: instituciones_educativas
+      POSTGRES_DB: instituciones_educativas
+    ports:
+      - "127.0.0.1:5453:5432"
+    volumes:
+      - instituciones_educativas_pgdata:/var/lib/postgresql/data
+
+volumes:
+  instituciones_educativas_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true
