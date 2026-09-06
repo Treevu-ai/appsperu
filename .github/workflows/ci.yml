@@ -33,6 +33,7 @@ jobs:
           - apps/radar-inversiones/api
           - apps/red-vial-subnacional/api
           - apps/renamu/api
+          - apps/residuos-solidos/api
           - apps/salud-institucional/api
           - apps/seguridad-ciudadana/api
           - apps/servicios-salud/api
