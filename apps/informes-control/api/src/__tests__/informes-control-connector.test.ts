@@ -130,4 +130,21 @@ describe("ingestInformesControl", () => {
     vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: false, status: 500 } as Response)));
     await expect(ingestInformesControl(2026)).rejects.toThrow(/500/);
   });
+
+  it("propaga el filtro pDepartamento cuando se pasa, y lo omite cuando no", async () => {
+    let capturedUrl = "";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        capturedUrl = url;
+        return Promise.resolve(jsonResponse([makeRow("COD-1")]));
+      })
+    );
+
+    await ingestInformesControl(2026, "LA LIBERTAD");
+    expect(new URL(capturedUrl).searchParams.get("pDepartamento")).toBe("LA LIBERTAD");
+
+    await ingestInformesControl(2026);
+    expect(new URL(capturedUrl).searchParams.has("pDepartamento")).toBe(false);
+  });
 });

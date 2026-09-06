@@ -6,6 +6,9 @@ const queryMock = vi.fn();
 vi.mock("../db/pool.js", () => ({
   pool: { query: queryMock },
 }));
+vi.mock("../db/ejecucion-pool.js", () => ({
+  ejecucionPool: { query: vi.fn().mockResolvedValue({ rows: [] }) },
+}));
 
 const { createApp } = await import("../app.js");
 

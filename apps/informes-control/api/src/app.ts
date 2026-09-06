@@ -1,5 +1,6 @@
 import express, { type ErrorRequestHandler } from "express";
 import { informesRouter } from "./routes/informes.js";
+import { crossrefRouter } from "./routes/crossref.js";
 import { pool } from "./db/pool.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 
@@ -26,6 +27,7 @@ export function createApp() {
 
   app.use("/api", apiRateLimit);
   app.use("/api/informes", informesRouter);
+  app.use("/api/crossref", crossrefRouter);
 
   app.use(errorHandler);
 

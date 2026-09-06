@@ -23,12 +23,16 @@ que un nombre real no sobrevive a la normalización.
 
 ## 2. Alcance funcional
 
-- **Conector** (`informes-control-connector.ts`): pagina la API por año (`PageSize=500`,
-  cortesía 300ms), normaliza cada fila descartando campos de persona natural, upsert por
-  `codigo_informe`.
+- **Conector** (`informes-control-connector.ts`): pagina la API por año y opcionalmente por
+  departamento (`PageSize=500`, cortesía 300ms), normaliza cada fila descartando campos de
+  persona natural, upsert por `codigo_informe`.
 - **Lectura** (`GET /api/informes`): filtros por entidad (parcial), departamento, período,
   `esConResponsabilidad` (booleano).
-- **MCP**: tool `informes_control_informes`.
+- **Cruce** (`GET /api/crossref`): empareja por nombre de entidad (fuzzy, `@appsperu/entity-matcher`
+  — la fuente no da un código de entidad compartido) contra `entities` de `radar-ejecucion`,
+  agregando total de informes, informes con responsabilidad (conteo, nunca nombre) y devengado
+  total (`LATEST_BUDGET_CTE`, `@appsperu/shared-queries`).
+- **MCP**: tools `informes_control_informes`, `informes_control_crossref`.
 
 ## 3. Verificado en vivo
 
@@ -40,10 +44,18 @@ que un nombre real no sobrevive a la normalización.
 - Test explícito: una fila con `Funcionarios` poblado con un nombre no aparece en ningún parámetro
   del `INSERT` real ni en el objeto normalizado.
 
-## 4. Fuera de este PRD
+## 4. Verificado en vivo — cruce
 
-- Backfill histórico completo (363,971 filas) — se decide aparte si vale la pena el volumen.
+La Libertad, período 2023 (2,239 informes reales ingeridos vía `pDepartamento`): 130 entidades
+MEF, 150 nombres de entidad distintos en Contraloría. Caso real: "PROYECTO ESPECIAL
+CHAVIMOCHIC" — 30 informes, **3 con hallazgo de responsabilidad**, S/ 66,039,145 de devengado
+agregado — sin exponer el nombre de ninguna persona involucrada.
+
+## 5. Fuera de este PRD
+
+- Backfill histórico nacional completo (363,971 filas) — se decide aparte si vale la pena el
+  volumen; el filtro `pDepartamento` ya permite ingestas acotadas por región mientras tanto.
 - Contenido de los PDF individuales de cada informe.
 - Cualquier acción de la misma API distinta de `loadInformesElastic`.
-- Cruces contra otras apps (candidato natural: `entity_crosswalk` para vincular con ejecución
-  presupuestal/obras) — no implementado en este PRD.
+- Cruce contra `infobras`/obras específicas (solo se cruza contra ejecución presupuestal
+  agregada de `radar-ejecucion` en este PRD).

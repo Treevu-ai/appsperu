@@ -24,7 +24,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchPage(periodo: number, pageNumber: number): Promise<RawInforme[]> {
+async function fetchPage(periodo: number, pageNumber: number, departamento?: string): Promise<RawInforme[]> {
   const url = new URL(API_URL);
   url.searchParams.set("ActionPage", "TransportType");
   url.searchParams.set("Action", "loadInformesElastic");
@@ -32,6 +32,10 @@ async function fetchPage(periodo: number, pageNumber: number): Promise<RawInform
   url.searchParams.set("PageNumber", String(pageNumber));
   url.searchParams.set("pGeneral", "");
   url.searchParams.set("pAnio", String(periodo));
+  // Confirmado en vivo (2026-09-05): el mismo filtro que usa el buscador
+  // web para su selector de región. Opcional — sin esto, la ingesta es
+  // nacional (363,971 informes históricos en total, confirmado en vivo).
+  if (departamento) url.searchParams.set("pDepartamento", departamento);
 
   const res = await fetch(url, {
     headers: { "User-Agent": USER_AGENT, "X-Requested-With": "XMLHttpRequest" },
@@ -54,7 +58,7 @@ export interface InformesControlIngestSummary {
   filasSinCodigo: number;
 }
 
-export async function ingestInformesControl(periodo: number): Promise<InformesControlIngestSummary> {
+export async function ingestInformesControl(periodo: number, departamento?: string): Promise<InformesControlIngestSummary> {
   let pageNumber = 1;
   let totalRowsFuente: number | null = null;
   let filasInsertadas = 0;
@@ -62,7 +66,7 @@ export async function ingestInformesControl(periodo: number): Promise<InformesCo
   let paginasProcesadas = 0;
 
   for (;;) {
-    const rows = await fetchPage(periodo, pageNumber);
+    const rows = await fetchPage(periodo, pageNumber, departamento);
     if (rows.length === 0) break;
 
     if (totalRowsFuente === null) totalRowsFuente = extractTotalRows(rows);
@@ -157,7 +161,8 @@ export async function ingestInformesControl(periodo: number): Promise<InformesCo
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const periodo = Number(process.argv[2] ?? new Date().getFullYear());
-  ingestInformesControl(periodo)
+  const departamento = process.argv[3];
+  ingestInformesControl(periodo, departamento)
     .then((summary) => {
       console.log(JSON.stringify(summary, null, 2));
       return pool.end();

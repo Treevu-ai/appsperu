@@ -1074,5 +1074,16 @@
       "esConResponsabilidad"
     ],
     "sinScheduler": true
+  },
+  {
+    "name": "informes_control_crossref",
+    "app": "informes-control",
+    "description": "Cruce por nombre de entidad (fuzzy — la fuente no da un código de entidad compartido) entre informes de auditoría de Contraloría y ejecución presupuestal de radar-ejecucion. Devuelve cuántos informes tiene una entidad y cuántos de esos tienen un hallazgo de responsabilidad (conteo agregado, nunca un nombre de persona) junto a su devengado total. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/crossref",
+    "pathParams": [],
+    "queryParams": [
+      "departamento"
+    ],
+    "sinScheduler": true
   }
 ]

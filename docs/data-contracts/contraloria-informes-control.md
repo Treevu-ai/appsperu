@@ -48,13 +48,16 @@ de responsabilidad en el informe, sin decir *de quién*. Es una señal legítima
 (¿este informe tiene un hallazgo de responsabilidad o no?) que no requiere saber el nombre de la
 persona para ser útil.
 
-### Alcance de la ingesta: por período (año), no todo el histórico de una vez
+### Alcance de la ingesta: por período (año) y, opcionalmente, por departamento
 
 Confirmado en vivo: **363,971 informes en total** desde el inicio del registro hasta 2026. El
-conector ingiere **un año por corrida** (`npm run ingest:informes -- <año>`, default: año
-actual) — mismo patrón que `mincetur-hospedaje-connector.ts`. Un backfill completo de todos los
-años es una decisión de producto aparte (¿vale la pena el volumen para el caso de uso de
-Rastro?), no algo que este ticket decida unilateralmente.
+conector ingiere **un año por corrida** (`npm run ingest:informes -- <año> [departamento]`,
+default: año actual, departamento opcional) — mismo patrón de año-por-corrida que
+`mincetur-hospedaje-connector.ts`. El filtro `pDepartamento` (confirmado en vivo: 2,239 informes
+para LA LIBERTAD en 2023, vs. 58,950 nacional) es el mismo que usa el selector de región del
+buscador web. Un backfill nacional completo de todos los años es una decisión de producto aparte
+(¿vale la pena el volumen para el caso de uso de Rastro?), no algo que este ticket decida
+unilateralmente.
 
 Volumen confirmado en vivo por año: 2015 → 2 informes, 2023 (sin filtro adicional) → 58,950,
 2026 → 24,256. La cortesía entre requests (300ms) es la misma que ya usa
@@ -80,6 +83,21 @@ en este ticket).
 Fechas vienen como `"YYYY/MM/DD"` (con `/`, no `-`) — se normalizan a `YYYY-MM-DD`. Booleanos
 vienen como `"S"`/`"N"` (confirmado en `EsReconstruccion`/`EsCovid`/`EsConResponsabilidad`), no
 como `true`/`false` nativos de JSON.
+
+### Cruce (`GET /api/crossref`) — verificado en vivo, sin ID compartido
+
+`CodigoEntidad` viene `null` en la fuente real (confirmado, no es un dato faltante ocasional —
+ninguna fila de la muestra lo trajo poblado), así que el cruce contra `entities` de
+`radar-ejecucion` es **fuzzy por nombre**, reutilizando `@appsperu/entity-matcher` (mismo
+paquete que `identidad-fiscal/crossref/entidades`) — sin construir un matcher nuevo. El
+adaptador (`src/crossref/match.ts`, `matchEntitiesToInformes`) sigue el mismo patrón de traducir
+shapes que ya usan los otros 3 adaptadores del monorepo.
+
+Verificado en vivo contra La Libertad 2023 (2,239 informes reales ingeridos): 130 entidades MEF,
+150 nombres de entidad distintos en Contraloría, con matches reales confirmados y candidatos —
+ej. "PROYECTO ESPECIAL CHAVIMOCHIC" (radar-ejecucion) ~ "PROYECTO ESPECIAL CHAVIMOCHIC"
+(Contraloría), 30 informes, **3 con hallazgo de responsabilidad**, S/ 66,039,145 de devengado
+agregado. El conteo de responsabilidad es la señal — nunca el nombre de quién.
 
 ## Cautelas
 

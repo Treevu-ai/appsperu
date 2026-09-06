@@ -1205,4 +1205,18 @@ export const TOOL_CATALOG: ToolSpec[] = [
       esConResponsabilidad: z.enum(["true", "false"]).optional(),
     },
   },
+  {
+    name: "informes_control_crossref",
+    app: "informes-control",
+    description:
+      "Cruce por nombre de entidad (fuzzy — la fuente no da un código de entidad compartido) entre informes de " +
+      "auditoría de Contraloría y ejecución presupuestal de radar-ejecucion. Devuelve cuántos informes tiene una " +
+      "entidad y cuántos de esos tienen un hallazgo de responsabilidad (conteo agregado, nunca un nombre de " +
+      "persona) junto a su devengado total. " + SIN_SCHEDULER,
+    pathTemplate: "/api/crossref",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Por defecto LA LIBERTAD."),
+    },
+  },
 ];

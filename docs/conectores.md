@@ -482,7 +482,7 @@ duplicar lógica entre los tres.
 | **Frecuencia** | Manual (`npm run ingest:informes -- <año>` en `apps/informes-control/api`, default año actual). Un año por corrida — no hace backfill automático de todo el histórico (363,971 informes totales confirmados en vivo). |
 | **Fuente de datos** | `buscadorinformes.contraloria.gob.pe/BuscadorCGR/Informes/` — Contraloría General de la República, endpoint no documentado públicamente pero accesible sin autenticación. |
 | **Cobertura real ingerida** | Nacional, por año (verificado en vivo: 2015 → 2 informes, 2026 → 24,256). |
-| **Cruces** | Ninguno implementado todavía — candidato natural: cruzar `entidad`/`codigo_entidad` contra `entity_crosswalk` para vincular hallazgos de auditoría con ejecución presupuestal/obras de la misma entidad. |
+| **Cruces** | `GET /api/crossref` empareja entidades de [radar-ejecucion](#radar-ejecucion) contra el nombre de entidad de cada informe (`CodigoEntidad` viene `null` en la fuente — no hay ID compartido), reutilizando `@appsperu/entity-matcher` (mismo matcher difuso que `identidad-fiscal/crossref/entidades`) y `LATEST_BUDGET_CTE` para el devengado agregado. Responde cuántos informes tiene una entidad y cuántos de esos tienen un hallazgo de responsabilidad (conteo agregado, nunca un nombre) junto a su ejecución presupuestal. Verificado en vivo: Proyecto Especial Chavimochic — 30 informes (3 con responsabilidad), S/ 66M de devengado. |
 | **Detalle completo** | [`docs/data-contracts/contraloria-informes-control.md`](data-contracts/contraloria-informes-control.md) |
 
 ---
@@ -514,6 +514,7 @@ mantiene su **propio** `entity_crosswalk`, no es una tabla compartida entre apps
 | [servicios-salud](#servicios-salud) | radar-inversiones | `GET /api/crossref` | UBIGEO + FUNCION IN (SALUD, SALUD Y SANEAMIENTO) | Exacto |
 | [programas-sociales](#programas-sociales) | radar-inversiones | `GET /api/crossref` | UBIGEO + FUNCION IN (PROTECCIÓN SOCIAL, ASISTENCIA Y PREVISION SOCIAL) | Exacto |
 | [actividad-empresarial](#actividad-empresarial) | radar-inversiones | `GET /api/crossref` | UBIGEO (sin filtro de función — cruce descriptivo, sin "punto ciego") | Exacto |
+| [informes-control](#informes-control) | radar-ejecucion | `GET /api/crossref` | nombre de entidad (`CodigoEntidad` es `null` en la fuente) | Fuzzy |
 
 **Gap cerrado (CX-01, 2026-09-02)**: hasta esa fecha, los crossref de `identidad-fiscal` y
 `proveedores-sancionados` solo leían `awards` (poblada por `oece-connector.ts` /
