@@ -826,6 +826,22 @@ export const TOOL_CATALOG: ToolSpec[] = [
       soloInhabilitados: z.enum(["true", "false"]).optional(),
     },
   },
+  {
+    name: "proveedores_sancionados_personas",
+    app: "proveedores-sancionados",
+    description:
+      "Cruce persona-a-persona (2026-09-06): ¿una persona sancionada directamente (RUC-10, persona natural) es " +
+      "también socio/representante/miembro del órgano de administración de una empresa activa " +
+      "(supplier_conformacion, compras-publicas)? El DNI solo se usa como clave de cruce interno — nunca se " +
+      "expone completo, `dniEnmascarado` trae solo los últimos 3 dígitos. El nombre sí se expone (ya es público " +
+      "en el buscador del RNP y en GET /api/sanciones). `soloVigentes=true` filtra solo personas con una sanción " +
+      "vigente hoy. " + SIN_SCHEDULER,
+    pathTemplate: "/api/crossref/personas-sancionadas",
+    pathParams: [],
+    querySchema: {
+      soloVigentes: z.enum(["true", "false"]).optional(),
+    },
+  },
 
   // ---- salud-institucional (agregador, sin base propia) ----
   {

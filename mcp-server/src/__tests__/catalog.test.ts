@@ -83,7 +83,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "inversion_privada_projects",
   ],
   "programas-sociales": ["programas_sociales_cobertura", "programas_sociales_crossref"],
-  "proveedores-sancionados": ["proveedores_sancionados_crossref", "proveedores_sancionados_sanciones"],
+  "proveedores-sancionados": ["proveedores_sancionados_crossref", "proveedores_sancionados_personas", "proveedores_sancionados_sanciones"],
   "radar-ejecucion": [
     "radar_ejecucion_benchmark",
     "radar_ejecucion_budget_movement",

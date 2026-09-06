@@ -289,6 +289,7 @@ Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distrito
 | **Cobertura real ingerida** | Universo nacional completo — 17,919 filas (11,208 inhabilitaciones + 6,681 multas tras dedup), 1 sola rechazada en la corrida verificada. |
 | **Caveat importante** | "Vigente hoy" no equivale a "vigente al momento de la adjudicación" — ver detalle. |
 | **Detalle completo** | [`docs/data-contracts/proveedores-sancionados.md`](data-contracts/proveedores-sancionados.md) |
+| **Cruce persona-a-persona (2026-09-06)** | `GET /api/crossref/personas-sancionadas` — el RUC-10 (persona natural) de una sanción trae el DNI incrustado (dígitos 3-10, formato peruano); una migración lo extrae como columna generada (`dni`, nunca escrita a mano, siempre recalculada desde `ruc`) y lo cruza contra `numero_documento` de `supplier_conformacion` (compras-publicas) para detectar personas sancionadas que son socio/representante/miembro del órgano de administración de una empresa activa. El DNI se usa solo como clave de cruce interno — la respuesta nunca lo expone completo (`dniEnmascarado`, últimos 3 dígitos). El nombre sí se expone, porque ya es público en el buscador del RNP y en `GET /api/sanciones`. Verificado en vivo: 3,211 DNI distintos de persona sancionada, 9 con vínculo empresarial real encontrado (uno con 3 roles simultáneos en la misma empresa). |
 
 ---
 
