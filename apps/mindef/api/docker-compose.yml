@@ -1,0 +1,21 @@
+name: mindef
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: mindef
+      POSTGRES_PASSWORD: mindef
+      POSTGRES_DB: mindef
+    ports:
+      - "127.0.0.1:5449:5432"
+    volumes:
+      - mindef_pgdata:/var/lib/postgresql/data
+
+volumes:
+  mindef_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true

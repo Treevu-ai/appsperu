@@ -489,6 +489,54 @@ duplicar lógica entre los tres.
 
 ---
 
+<a id="mindef"></a>
+## mindef — Ministerio de Defensa (datos abiertos)
+
+Investigado 2026-09-06 tras una pregunta directa del usuario ("¿y MINDEF? ¿y MIMP?"). No es un
+"hueco oculto" al estilo MEF/SEACE (dato que ya teníamos parcialmente) — es un sector nuevo, sin
+conector previo. Se descartaron explícitamente otros datasets de MINDEF (créditos financieros de
+personal pensionista, PEA por tipo de pensión) por ser administrativos/RRHH sin relación con
+gestión pública. Los tres que sí se ingieren son agregados/institucionales, sin nombre de persona.
+
+### `offset-connector.ts`, `training-abroad-connector.ts`, `peace-missions-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Convenios de compensación industrial/social offset ligados a contratos de defensa; personal militar capacitado en el exterior (conteo por curso, no nombres); personal de las FF.AA. desplegado en misiones de paz de la ONU (conteo por misión/año, no nombres). |
+| **Qué hace** | Tres conectores independientes, uno por dataset — dos XLSX y un CSV, esquemas verificados en vivo fila por fila antes de escribir el parser. |
+| **Cómo lo hace** | Descarga HTTP directa (mismo WAF CloudWAF que el resto de `gob.pe`, requiere User-Agent de navegador). Offset y capacitación son XLSX (parseados con `exceljs`, encabezado en la fila 2); misiones de paz es CSV delimitado por `;`. |
+| **Frecuencia** | Manual (`npm run ingest:all` en `apps/mindef/api`). Los tres son datasets pequeños (8, 21 y 20 filas confirmadas en vivo) — no requieren Range ni paginación. |
+| **Fuente de datos** | `datosabiertos.gob.pe` — tres datasets separados de MINDEF, URLs de archivo sin versión estable (hay que revisar el catálogo periódicamente). |
+| **Cobertura real ingerida** | Completa — los tres datasets son pequeños y se descargan enteros en cada corrida. |
+| **Detalle completo** | Ver el modelo en `apps/mindef/api/src/db/migrations/001_init.sql` (incluye el razonamiento de qué se descartó y por qué). |
+
+---
+
+<a id="mimp"></a>
+## mimp — Ministerio de la Mujer y Poblaciones Vulnerables (datos abiertos)
+
+Investigado 2026-09-06 junto con MINDEF. **Se investigó un tercer dataset de MIMP y se descartó
+explícitamente**: "Servicio de Acogimiento Residencial para Niñas, Niños y Adolescentes" es
+individual (código de usuario pseudónimo + fecha de nacimiento exacta + centro + tipología de
+ingreso por abuso/trata/explotación) sobre menores en protección estatal — la categoría de dato
+más sensible que este proyecto puede tocar. No se ingiere bajo ninguna circunstancia, sin importar
+que el código de usuario no sea un nombre literal. Los dos datasets que sí se ingieren son
+agregados verificados columna por columna contra su fuente real antes de construir el conector.
+
+### `cem-connector.ts`, `chat100-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Casos atendidos por violencia contra la mujer e integrantes del grupo familiar, por Centro Emergencia Mujer (CEM) — agregado por centro/año, desglosado por sexo y tipo de violencia. Consultas atendidas por el servicio Chat 100 — agregado nacional anual por sexo, sin desagregación territorial en la fuente. |
+| **Qué hace** | Descarga el CSV más reciente de cada dataset (sin URL estable entre cortes — hay que revisar el catálogo), normaliza y hace upsert. |
+| **Cómo lo hace** | Descarga HTTP directa, decodificación Latin-1 (igual que INFOMIDIS). **Bug real encontrado y corregido durante la construcción**: la fuente usa "N°" (signo de grado, U+00B0) en sus encabezados, no "Nº" (ordinal, U+00BA) — confundir los dos hacía que todas las columnas numéricas quedaran `NULL` en silencio, sin ningún error. Corregido antes de mergear; el test de normalización usa el carácter real para evitar una regresión. |
+| **Frecuencia** | Manual (`npm run ingest:all` en `apps/mimp/api`). CEM: ~4,700 filas (nacional, histórico 2013-2025). Chat100: 6 filas (una por año, 2016-2021). |
+| **Fuente de datos** | `datosabiertos.gob.pe` — dos datasets de MIMP. |
+| **Cobertura real ingerida** | Completa para ambos — nacional, histórico completo del corte publicado. |
+| **Detalle completo** | Ver el modelo en `apps/mimp/api/src/db/migrations/001_init.sql` (incluye el razonamiento de qué se descartó y por qué). |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada
@@ -564,4 +612,9 @@ OCDS); esos resultados devuelven `valorMoneda: null` en vez de asumir soles.
 | `infomidis-connector.ts` | programas-sociales | MIDIS INFOMIDIS (datosabiertos.gob.pe) | Descarga CSV, maneja WAF, resuelve recurso por `created` (no por nombre de archivo) | Manual | Completa (nacional) |
 | `mtpe-distrital-connector.ts` | actividad-empresarial | MTPE (www2.trabajo.gob.pe, portal propio) | Scraping HTML + descarga .7z + descompresión + parseo XLSX | Manual | Completa (nacional, año más reciente: 2025) |
 | `informes-control-connector.ts` | informes-control | Contraloría (buscadorinformes.contraloria.gob.pe) | Reverse engineering de API JSON no documentada, mismo patrón que OECE — descarta campos de persona natural en el parseo | Manual | Completa (nacional, por año) |
+| `offset-connector.ts` | mindef | MINDEF (datosabiertos.gob.pe) | Descarga XLSX, maneja WAF | Manual | Completa (8 filas) |
+| `training-abroad-connector.ts` | mindef | MINDEF (datosabiertos.gob.pe) | Descarga XLSX, maneja WAF | Manual | Completa (21 filas) |
+| `peace-missions-connector.ts` | mindef | MINDEF (datosabiertos.gob.pe) | Descarga CSV, maneja WAF | Manual | Completa (20 filas) |
+| `cem-connector.ts` | mimp | MIMP (datosabiertos.gob.pe) | Descarga CSV Latin-1, maneja WAF | Manual | Completa (nacional, ~4,700 filas) |
+| `chat100-connector.ts` | mimp | MIMP (datosabiertos.gob.pe) | Descarga CSV Latin-1, maneja WAF | Manual | Completa (nacional, 6 filas) |
 
