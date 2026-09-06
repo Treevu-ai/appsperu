@@ -1,0 +1,21 @@
+name: programas-sociales
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: programassociales
+      POSTGRES_PASSWORD: programassociales
+      POSTGRES_DB: programas_sociales
+    ports:
+      - "127.0.0.1:5446:5432"
+    volumes:
+      - programas_sociales_pgdata:/var/lib/postgresql/data
+
+volumes:
+  programas_sociales_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true

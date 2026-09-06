@@ -14,17 +14,21 @@ jobs:
       matrix:
         package:
           - apps/actividad-agraria/api
+          - apps/actividad-empresarial/api
           - apps/bcrp-comercio-exterior/api
           - apps/ceplan-estrategico/api
           - apps/ceplan-geo/api
           - apps/compras-publicas/api
           - apps/identidad-fiscal/api
+          - apps/informes-control/api
           - apps/infobras/api
+          - apps/programas-sociales/api
           - apps/proveedores-sancionados/api
           - apps/radar-ejecucion/api
           - apps/radar-inversiones/api
           - apps/salud-institucional/api
           - apps/seguridad-ciudadana/api
+          - apps/servicios-salud/api
           - mcp-server
     defaults:
       run:

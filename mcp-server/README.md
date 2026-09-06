@@ -52,11 +52,12 @@ Nombres de env var por app: `RADAR_EJECUCION_API_URL`, `COMPRAS_PUBLICAS_API_URL
 `RADAR_INVERSIONES_API_URL`, `INFOBRAS_API_URL`, `CEPLAN_ESTRATEGICO_API_URL`, `CEPLAN_GEO_API_URL`,
 `IDENTIDAD_FISCAL_API_URL`, `SALUD_INSTITUCIONAL_API_URL`, `PROVEEDORES_SANCIONADOS_API_URL`,
 `ACTIVIDAD_AGRARIA_API_URL`, `SEGURIDAD_CIUDADANA_API_URL`, `BCRP_COMERCIO_EXTERIOR_API_URL`,
-`INVERSION_PRIVADA_API_URL`, `BCRP_LA_LIBERTAD_API_URL`.
+`INVERSION_PRIVADA_API_URL`, `BCRP_LA_LIBERTAD_API_URL`, `SERVICIOS_SALUD_API_URL`,
+`PROGRAMAS_SOCIALES_API_URL`, `ACTIVIDAD_EMPRESARIAL_API_URL`, `INFORMES_CONTROL_API_URL`.
 
 ## Catálogo de tools
 
-83 tools (14 apps), uno por endpoint `GET /api/*` real de las 14 apps (`src/catalog.ts` es la fuente de
+91 tools (18 apps), uno por endpoint `GET /api/*` real de las 18 apps (`src/catalog.ts` es la fuente de
 verdad — cada entrada mapea 1:1 a un `routes/*.ts` existente, sin inventar parámetros). Nombrados
 `<app>_<recurso>`, ej. `radar_ejecucion_execution`, `compras_publicas_suppliers`,
 `salud_institucional_score`.

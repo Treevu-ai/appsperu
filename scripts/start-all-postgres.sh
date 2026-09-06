@@ -27,6 +27,10 @@ ALL_APPS=(
   bcrp-comercio-exterior
   inversion-privada
   bcrp-la-libertad
+  servicios-salud
+  programas-sociales
+  actividad-empresarial
+  informes-control
 )
 
 if [ "$#" -gt 0 ]; then

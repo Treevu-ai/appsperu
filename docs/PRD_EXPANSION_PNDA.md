@@ -1,8 +1,16 @@
 # PRD: Expansión de Rastro - Módulo de Servicios Públicos (PNDA)
 
-**Estado:** Borrador / Para Revisión
+**Estado:** Borrador / Para Revisión — **alcance de Salud y Social reemplazado**
 **Fecha:** 2026-09-04
 **Responsable:** Equipo Rastro / Treevu
+
+> **Nota de reemplazo (2026-09-05):** el spike de [`ADR-0018`](adr/0018-research-spike-pnda-educacion-salud-social.md)
+> encontró que los supuestos de este borrador para Salud y Social no sobrevivieron a la
+> verificación en vivo (fuente de IPRESS desactualizada, decisión de PII de Pensión 65
+> innecesaria porque MIDIS ya publica agregado). El alcance ejecutable de esas dos secciones
+> vive ahora en [`PRD_Servicios_Salud_Programas_Sociales_v1.md`](PRD_Servicios_Salud_Programas_Sociales_v1.md).
+> Este documento se conserva como registro histórico de la propuesta original — no usar como
+> fuente de verdad para Salud/Social. Educación sigue sin PRD ejecutable (ver el mismo ADR).
 
 ---
 
@@ -45,7 +53,7 @@ Integrar datos estructurados de servicios públicos para permitir el cruce entre
 - **Cálculo de Brecha:** Generar un score de "Efectividad de Inversión" (Inversión realizada vs. Estado del servicio).
 
 ### 4.3 Capa de Lectura (Frontend & MCP)
-- **Fichas de Sector:** Nuevas vistas en astro.fyi para Salud y Educación.
+- **Fichas de Sector:** Nuevas vistas en rastro.fyi para Salud y Educación.
 - **Visualización de Brechas:** Indicador visual que muestre si una zona con alta inversión tiene servicios deficientes.
 - **Tools MCP:** Nuevos endpoints para que la IA pueda consultar el estado de servicios públicos.
 
@@ -72,4 +80,4 @@ Integrar datos estructurados de servicios públicos para permitir el cruce entre
 
 - **Fase 1 (Semanas 1-2):** Desarrollo del PndaConnector y setup de las 3 nuevas apps backend.
 - **Fase 2 (Semanas 3-4):** Ingesta de datos y desarrollo de los matchers de cruce (UBIGEO $\rightarrow$ CUI).
-- **Fase 3 (Semanas 5-6):** Implementación de vistas en astro.fyi y herramientas en el servidor MCP.
+- **Fase 3 (Semanas 5-6):** Implementación de vistas en rastro.fyi y herramientas en el servidor MCP.

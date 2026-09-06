@@ -18,6 +18,10 @@ export const APP_KEYS = [
   "bcrp-comercio-exterior",
   "inversion-privada",
   "bcrp-la-libertad",
+  "servicios-salud",
+  "programas-sociales",
+  "actividad-empresarial",
+  "informes-control",
 ] as const;
 
 export type AppKey = (typeof APP_KEYS)[number];
@@ -37,6 +41,10 @@ const DEFAULT_PORTS: Record<AppKey, number> = {
   "bcrp-comercio-exterior": 4011,
   "inversion-privada": 4012,
   "bcrp-la-libertad": 4013,
+  "servicios-salud": 4014,
+  "programas-sociales": 4015,
+  "actividad-empresarial": 4016,
+  "informes-control": 4017,
 };
 
 function envVarFor(app: AppKey): string {

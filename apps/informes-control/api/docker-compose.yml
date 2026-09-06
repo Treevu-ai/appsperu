@@ -1,0 +1,21 @@
+name: informes-control
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: informescontrol
+      POSTGRES_PASSWORD: informescontrol
+      POSTGRES_DB: informes_control
+    ports:
+      - "127.0.0.1:5448:5432"
+    volumes:
+      - informes_control_pgdata:/var/lib/postgresql/data
+
+volumes:
+  informes_control_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true
