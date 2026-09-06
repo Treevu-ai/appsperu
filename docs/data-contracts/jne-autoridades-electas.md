@@ -1,8 +1,10 @@
 # Data contract — JNE (Autoridades Electas)
 
-> Ficha técnica del conector: pendiente de construir (app propuesta `autoridades-electas` o
-> nombre similar — decisión de arquitectura pendiente). Fase 0 registrada en la conversación de
-> sesión 2026-09-06.
+> Ficha técnica del conector: [`docs/conectores.md#autoridades-electas`](../conectores.md#autoridades-electas).
+> **Construido y verificado en vivo el 2026-09-06** — app standalone `autoridades-electas` (API
+> puerto 4021, Postgres 5452). Este documento se mantiene como registro de la Fase 0 original
+> más las correcciones encontradas durante la construcción; ver "Actualización
+> post-construcción" al final.
 
 Investigación en vivo: 2026-09-06.
 
@@ -114,3 +116,49 @@ coincidencia de región/provincia como señal adicional de confianza, similar al
    contenido varía mucho de tamaño entre cortes, a investigar antes de asumir snapshot completo
    vs. incremental.
 5. Sin WAF detectado en la descarga directa desde `datosabiertos.gob.pe` en esta pasada.
+
+## Actualización post-construcción (2026-09-06)
+
+1. **Ambigüedad candidato vs. electo: RESUELTA, son electos reales.** Se leyó el `.xls` real con
+   `xlsx` (SheetJS, no exceljs — no soporta el formato binario legado `.xls`) en vez de confiar en
+   el resumen textual de un fetch genérico. `TXPRONUNCIAMIENTO` trae actas de proclamación reales
+   (ej. "ACTA PROCLAMACIÓN N° 00001") y `FEINICIOVIGENCIA`/`FEFINVIGENCIA` traen un periodo de
+   mandato real (2026-07-28 a 2031-07-27 en el corte verificado) — no hay ninguna señal de
+   candidatura sin proclamar en este recurso. La mención de "candidato" en la exploración inicial
+   fue una imprecisión del resumen automático de un fetch genérico sobre contenido binario, no un
+   dato real del archivo.
+2. **Diccionario de datos decodificado por completo** (`Formato_Diccionario Datos_AutoridadesElectas.xlsx`,
+   leído con `exceljs` — este sí es `.xlsx` real): 22 variables documentadas. Confirma que
+   `DOCUMENTOIDENTIDAD` es parte del **esquema general** del dataset del JNE — pero, hallazgo
+   crítico de la construcción, **el recurso "actual" que se decidió ingerir NO trae esa columna en
+   absoluto** (verificado contra el header real del `.xls`: 21 columnas, sin
+   `TXDOCUMENTOIDENTIDAD` ni equivalente). El documento de identidad solo aparece en el **otro**
+   recurso del mismo dataset (el histórico fechado `Autoridades_Electas_20251113.xls`), que tiene
+   un esquema completamente distinto (sin prefijo `TX`, `DOCUMENTOIDENTIDAD` sin enmascarar,
+   39,342 filas 2014-2022 de autoridades regionales/municipales) — **deliberadamente no
+   ingerido** en esta versión. Ver el comentario de alcance completo en
+   `apps/autoridades-electas/api/src/db/migrations/001_init.sql`.
+3. **Matcher de nombre: no construido en esta versión.** Sigue siendo trabajo futuro — el cruce
+   con `supplier_conformacion`/`proveedores-sancionados` solo tendría cobertura territorial útil
+   (La Libertad) una vez que el corte "actual" incluya autoridades regionales/municipales (se
+   espera con las Elecciones Regionales y Municipales de octubre 2026); hoy el corte disponible es
+   100% nacional.
+4. **Confirmado**: no hay corte histórico consolidado en el recurso "actual" — cada actualización
+   del JNE **reemplaza** el contenido del mismo recurso (no acumula), consistente con que sea
+   pequeño (208 filas, 102.5 KB) pese a cubrir un proceso electoral completo. El archivo de
+   noviembre 2025 (13.37 MB) no es una versión anterior del mismo recurso — es el otro dataset
+   histórico de esquema distinto (punto 2).
+5. Confirmado sin WAF: la descarga real desde el conector (`User-Agent` de navegador) funcionó
+   sin bloqueo.
+
+**Hallazgos adicionales no anticipados en la Fase 0**:
+- El endpoint `package_show` de CKAN para este dataset específico devuelve `result` como un
+  **array** (`result: [...]`), no como objeto directo — distinto del patrón que usan otros
+  `package_show` ya consumidos en el catálogo (`renipress-connector.ts`/`infomidis-connector.ts`).
+  El conector maneja ambas formas.
+- El campo `format` de cada recurso en la respuesta de CKAN reporta `.xlsx` para el recurso
+  "actual" — pero el archivo real es un `.xls` binario legado (Composite Document File V2),
+  confirmado por firma de archivo. El conector no filtra por `format`, solo por título de
+  recurso, precisamente por esta inconsistencia de metadato.
+- Verificado en vivo: 208 filas ingeridas, 0 rechazadas, todas de ámbito NACIONAL (Presidencia,
+  Senado, Diputados, Parlamento Andino) del proceso "Elecciones Generales 2026".

@@ -34,6 +34,7 @@ ALL_APPS=(
   mindef
   mimp
   renamu
+  autoridades-electas
 )
 
 if [ "$#" -gt 0 ]; then

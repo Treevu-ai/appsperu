@@ -563,6 +563,31 @@ recursos operativos para gestionar. Encuesta censal anual del INEI, universo nac
 
 ---
 
+<a id="autoridades-electas"></a>
+## autoridades-electas — Autoridades proclamadas (JNE, datos abiertos)
+
+Investigado y construido 2026-09-06, junto con `renamu`, tras el inventario "entidad por
+entidad" del catálogo. Hallazgo central que cambió el alcance planeado en la Fase 0: el dataset
+del JNE en la PNDA existe en **dos variantes con esquema distinto** — se auditaron ambas antes de
+elegir cuál ingerir.
+
+### `autoridades-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Autoridades proclamadas por el JNE — nombre, cargo, organización política, ubigeo, periodo de mandato. Verificado en vivo que **no son candidatos**: `pronunciamiento` es un acta de proclamación oficial real (ej. "ACTA PROCLAMACIÓN N° 00001"), con `fecha_inicio_vigencia`/`fecha_fin_vigencia` de mandato real (2026-2031 en el corte verificado) — la ambigüedad "candidato vs. electo" marcada como crítica en la Fase 0 quedó resuelta leyendo el archivo real, no el snippet de búsqueda que la había originado. |
+| **Qué hace** | Resuelve el recurso "actual" del dataset vía CKAN `package_show` (filtrando por título de recurso, no por nombre de archivo — el nombre de archivo cambia de fecha en cada corte), lo descarga y hace upsert en `autoridades_electas`. |
+| **Decisión de alcance: dos variantes del mismo dataset, se ingiere solo una** | El JNE publica el mismo tipo de dato en dos recursos con esquema incompatible: (1) el recurso "actual" (`Dataset Reporte Autoridades Electas JNE (actualizado al <fecha>)`), esquema con columnas `TX*`/`NU*`/`FE*`, **sin documento de identidad** — verificado en vivo 2026-09-06: 208 filas, autoridades nacionales (Presidencia, Senado, Diputados, Parlamento Andino) de "Elecciones Generales 2026"; (2) un recurso histórico fechado (`Autoridades Electas actualizado al 13 de noviembre del 2025`), esquema sin prefijo `TX` (`NOMBRES`, `CARGO`, etc.), **con `DOCUMENTOIDENTIDAD` (DNI) sin enmascarar**, 39,342 filas históricas 2014-2022 de autoridades regionales/municipales (ej. "REGIDOR DISTRITAL"). Se ingiere únicamente el recurso (1) — el (2) queda fuera de esta versión por su mayor riesgo de PII (DNI sin enmascarar) y por requerir un normalizador de esquema distinto; no se toca hasta tener su propia revisión de enmascarado, mismo estándar que ya aplican `perfilprov-conformacion` y el cruce por DNI de `proveedores-sancionados`. |
+| **Cómo lo hace** | CKAN `package_show?id=autoridades-electas-jne` (nota real: `result` es un **array** en este dataset, no un objeto — distinto de otros `package_show` del catálogo; y el campo `format` del recurso reporta `.xlsx` para un archivo que en realidad es un `.xls` binario legado, confirmado por firma de archivo — no confiar en ese campo, filtrar por título). Descarga y parseo con `xlsx` (SheetJS, único conector del catálogo que necesita leer `.xls` legado además del ZIP de `identidad-fiscal` — `exceljs`, usado en `mindef`/`actividad-empresarial`, no soporta el formato binario antiguo). |
+| **Frecuencia** | Manual (`npm run ingest:autoridades` en `apps/autoridades-electas/api`). Snapshot completo del recurso "actual" en cada corrida — la fuente lo reemplaza (no acumula) en cada actualización del JNE. |
+| **Fuente de datos** | `datosabiertos.gob.pe`, dataset `autoridades-electas-jne` (JNE) — no la SPA de Infogob (`infogob.jne.gob.pe`), que no devuelve contenido a un fetch sin ejecutar JavaScript. |
+| **Cobertura real ingerida** | Verificado en vivo 2026-09-06: 208 filas, 0 rechazadas — universo completo del corte actual (solo autoridades **nacionales**; se espera que incluya regionales/municipales cuando se proclamen las de las Elecciones Regionales y Municipales de octubre 2026, sin cambio de conector necesario). |
+| **Limitación conocida** | Sin DNI en el esquema ingerido, la clave de upsert es `(nombres, apellido_paterno, apellido_materno, cargo, proceso_electoral, ubigeo)` — riesgo real, aunque improbable, de colisión por homonimia. |
+| **Detalle completo** | [`docs/data-contracts/jne-autoridades-electas.md`](data-contracts/jne-autoridades-electas.md) |
+| **Cruces** | Ninguno implementado — el cruce originalmente hipotetizado (autoridad electa ↔ proveedor del Estado / persona sancionada, por nombre) requiere un matcher de personas naturales que no existe hoy en el catálogo (`@appsperu/entity-matcher` está diseñado para nombres de entidad, no de persona), y solo tendría cobertura territorial útil (La Libertad) una vez que el corte "actual" incluya autoridades regionales/municipales. |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada
@@ -644,4 +669,5 @@ OCDS); esos resultados devuelven `valorMoneda: null` en vez de asumir soles.
 | `cem-connector.ts` | mimp | MIMP (datosabiertos.gob.pe) | Descarga CSV Latin-1, maneja WAF | Manual | Completa (nacional, ~4,700 filas) |
 | `chat100-connector.ts` | mimp | MIMP (datosabiertos.gob.pe) | Descarga CSV Latin-1, maneja WAF | Manual | Completa (nacional, 6 filas) |
 | `renamu-connector.ts` | renamu | INEI RENAMU (inei.gob.pe) | Descarga ZIP, extrae CSV en memoria | Manual | Parcial por diseño (solo Módulo II: vehículos/telefonía/internet; Módulo I con PII del alcalde excluido; Módulos III-V no explorados) — universo nacional completo dentro de ese alcance (1,891 municipalidades) |
+| `autoridades-connector.ts` | autoridades-electas | JNE Autoridades Electas (datosabiertos.gob.pe) | Resuelve recurso vía `package_show`, descarga XLS, parsea con `xlsx` | Manual | Parcial por diseño (solo el recurso sin DNI, solo autoridades nacionales en el corte actual — el recurso histórico con DNI de autoridades regionales/municipales 2014-2022 no se ingiere) |
 
