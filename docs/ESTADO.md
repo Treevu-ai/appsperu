@@ -2,7 +2,46 @@
 
 Última actualización: 2026-09-06.
 
-Dieciocho apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+Diecinueve apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+
+## MINEDU/ESCALE — padrón nacional de instituciones educativas, 180,826 filas (2026-09-06)
+
+Continuación del barrido INEI/JNE/MINEDU/MTC. La primera pasada de Fase 0 sobre MINEDU había
+encontrado solo un dataset chico y desactualizado (educación especial, cifras de 2015) — a
+pedido explícito de profundizar con foco en La Libertad (departamento, provincias y distritos),
+se encontró la fuente flagship real: el **padrón nacional completo de instituciones y programas
+educativos** (`escale.minedu.gob.pe/listadosrie/`), con la frecuencia de actualización más alta
+de cualquier dataset ya evaluado en el catálogo (cortes nuevos cada ~1 semana).
+
+**App nueva `instituciones-educativas`** (puerto 4022, Postgres 5453): único conector del
+catálogo en formato **DBF** (dBase) con encoding **`cp850`** — ningún otro usa ese formato ni
+ese encoding. Trae nombre, nivel/modalidad, gestión, dirección, ubigeo, **coordenadas lat/lon
+por establecimiento individual** (único conector con georreferenciación a ese nivel de detalle),
+UGEL, RUC/razón social del operador (privadas) y estado operativo.
+
+**Exclusión de PII deliberada**: la fuente real trae `DIRECTOR` (nombre completo del director/a
+de la IE), `TELEFONO`, `EMAIL` y `PROMOTOR` — estas 4 columnas nunca se leen del objeto crudo,
+mismo patrón que `informes-control`. `NRORUC`/`RZSOCIAL` sí se ingieren (identidad de entidad,
+no de persona).
+
+**Dos hallazgos de ingeniería reales durante la construcción**: (1) el HTML del portal codifica
+algunos enlaces como entidades hexadecimales (`&#x3a;`) en vez de `href` planos — un regex
+directo nunca encontraba nada hasta decodificar primero; (2) el DBF rellena algunos campos de
+texto con bytes NUL (`\0`) en vez de espacios — Postgres rechazó la ingesta a mitad de camino
+(`invalid byte sequence for encoding "UTF8": 0x00`, fila ~120,000 de 180,828) hasta agregar
+limpieza explícita de bytes NUL, con test de regresión.
+
+Verificado en vivo: **180,826 filas insertadas, 2 rechazadas, 0 errores** — universo nacional
+censal completo. **La Libertad: 9,391 instituciones, 12 provincias, 84 distritos** — cuadra
+exacto con el conteo de la Fase 0. Suma 2 tools MCP nuevas (99→101 tools, 19 apps). Detalle
+completo en [`docs/conectores.md#instituciones-educativas`](conectores.md#instituciones-educativas)
+y [`docs/data-contracts/minedu-padron-iiee.md`](data-contracts/minedu-padron-iiee.md).
+
+**MTC queda pendiente**: Fase 0 parcial (un dataset departamental confirmado pero desactualizado
+y sin desagregado provincial/distrital; un dataset más prometedor — "Intervenciones en Redes
+Viales Subnacionales", gestionado por Provías Descentralizado, el nivel correcto para provincia/
+distrito — identificado por título pero sin confirmar su descarga real por fricción del portal
+en esta pasada). Sin construir todavía.
 
 ## JNE/Autoridades Electas — segunda app del barrido INEI/JNE, hallazgo de dos esquemas incompatibles (2026-09-06)
 
@@ -230,6 +269,7 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `mimp` | Violencia contra la mujer (CEM) y consultas Chat 100 (MIMP) | 4019 | 5450 | Construida, probada, verificada |
 | `renamu` | Capacidad institucional municipal: vehículos, telefonía, internet (INEI) | 4020 | 5451 | Construida, probada, verificada (parcial por diseño: solo Módulo II) |
 | `autoridades-electas` | Autoridades proclamadas por proceso electoral, sin DNI (JNE) | 4021 | 5452 | Construida, probada, verificada (parcial por diseño: solo el recurso sin DNI, hoy solo nacional) |
+| `instituciones-educativas` | Padrón nacional de instituciones educativas, con ubicación (MINEDU/ESCALE) | 4022 | 5453 | Construida, probada, verificada (180,826 filas, La Libertad: 9,391/12 provincias/84 distritos) |
 
 ## `bcrp-la-libertad` — ingesta manual, distinto a todo el resto del proyecto (2026-08-28)
 
@@ -266,11 +306,12 @@ automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incl
 `mcp-server/README.md`, sección "Alcance actual y lo que falta", antes de exponerlo fuera de
 `localhost`).
 
-99 tools (18 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA + OxI + GIS (`inversion-privada`);
+101 tools (19 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA + OxI + GIS (`inversion-privada`);
 nueva app `bcrp-la-libertad` (ingesta manual, ver sección dedicada arriba). Ampliación 2026-09-05:
 `mindef` y `mimp` (+5 tools), cruce persona-a-persona por DNI en `proveedores-sancionados`
 (ver sección "Barrido de calidad de datos + MINDEF/MIMP + cruce por DNI" arriba). Ampliación
-2026-09-06: `renamu` (+2 tools) y `autoridades-electas` (+1 tool), ver secciones dedicadas arriba.
+2026-09-06: `renamu` (+2 tools), `autoridades-electas` (+1 tool) e `instituciones-educativas`
+(+2 tools), ver secciones dedicadas arriba.
 
 ## Cruces entre apps (todos verificados con datos reales)
 

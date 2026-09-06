@@ -588,6 +588,32 @@ elegir cuál ingerir.
 
 ---
 
+<a id="instituciones-educativas"></a>
+## instituciones-educativas — Padrón de Instituciones y Programas Educativos (MINEDU/ESCALE)
+
+Investigado y construido 2026-09-06, a pedido explícito de profundizar el hallazgo parcial de
+la Fase 0 inicial de MINEDU. A diferencia de esa primera pasada (un dataset chico y
+desactualizado de educación especial), esta es la fuente flagship real: el padrón nacional
+completo, censal, con la frecuencia de actualización más alta de cualquier fuente del catálogo.
+
+### `padron-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Padrón nacional de instituciones y programas educativos — nombre, nivel/modalidad, gestión, dirección, ubigeo, coordenadas (lat/lon), UGEL, RUC/razón social del operador (privadas), estado operativo. |
+| **Qué hace** | Resuelve el corte más reciente listando `escale.minedu.gob.pe/listadosrie/`, descarga el ZIP, extrae el DBF a un archivo temporal (287 MB descomprimido, no cabe cómodo en memoria — mismo criterio que `padron-connector.ts` de `identidad-fiscal`), lo lee con `dbffile` en streaming y hace upsert en lotes de 1000 filas, con commit por lote (no una transacción gigante) — mismo patrón que el Padrón RUC de SUNAT. |
+| **Único conector en formato DBF (dBase) del catálogo** | Todos los demás son CSV/XLSX/JSON/PDF. Encoding real confirmado: **`cp850`** (code page DOS/OEM) — ningún otro conector usa este encoding (el resto es UTF-8 BOM o Latin-1/ISO-8859-1). |
+| **Exclusión de PII deliberada** | La fuente real trae `DIRECTOR` (nombre completo del director/a), `TELEFONO`, `EMAIL` y `PROMOTOR` — estas 4 columnas **nunca se leen del objeto crudo**, mismo patrón que `informes-control-connector.ts` (exclusión en el parseo, no solo en la respuesta de la API). `NRORUC`/`RZSOCIAL` sí se ingieren (identidad de entidad operadora, mismo tratamiento que proveedores en `compras-publicas`/`identidad-fiscal`). |
+| **Cómo lo hace** | El listado (`listadosrie/`) no enlaza el ZIP directamente — cada corte es una página intermedia de Liferay cuyo `id` numérico es creciente en el tiempo; se toma el mayor como "más reciente" y se sigue un segundo salto para extraer el link real del ZIP. **Hallazgo real**: el HTML de ese portal codifica algunos enlaces como entidades hexadecimales (`&#x3a;` = `:`, etc.) en vez de `href` planos — el conector decodifica antes de aplicar cualquier regex, si no el link nunca matchea. |
+| **Bug real encontrado y corregido durante la construcción (2026-09-06)** | El DBF rellena algunos campos de texto de ancho fijo con bytes NUL (`\0`) en vez de espacios — Postgres rechazó la ingesta a mitad de camino (`invalid byte sequence for encoding "UTF8": 0x00`, fila ~120,000 de 180,828) hasta que se agregó limpieza explícita de bytes NUL en el normalizador, no solo `trim()`. |
+| **Frecuencia** | Manual (`npm run ingest:padron` en `apps/instituciones-educativas/api`). La fuente publica un corte nuevo cada ~1 semana — la mayor frecuencia de refresco de cualquier dataset ya evaluado en el catálogo. |
+| **Fuente de datos** | `escale.minedu.gob.pe/documents/10156/958881/Padron_web_<fecha>.zip` (Unidad de Estadística Educativa, MINEDU) — no usar el buscador web `escale.minedu.gob.pe/padron-de-iiee`, que exige correo electrónico para exportar resultados masivos. |
+| **Cobertura real ingerida** | Verificado en vivo 2026-09-06: **180,826 filas insertadas, 2 rechazadas, 0 errores** — universo nacional censal completo (no muestra). La Libertad: **9,391 instituciones, 12 provincias, 84 distritos** — confirmado en vivo, cuadra exacto con lo verificado en la Fase 0. |
+| **Detalle completo** | [`docs/data-contracts/minedu-padron-iiee.md`](data-contracts/minedu-padron-iiee.md) |
+| **Cruces** | Ninguno implementado — candidato natural: por UBIGEO contra `radar-ejecucion` (`FUNCION = EDUCACIÓN`), mismo patrón exacto ya usado por `servicios-salud`/`programas-sociales` contra `radar-inversiones`. |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada
@@ -670,4 +696,5 @@ OCDS); esos resultados devuelven `valorMoneda: null` en vez de asumir soles.
 | `chat100-connector.ts` | mimp | MIMP (datosabiertos.gob.pe) | Descarga CSV Latin-1, maneja WAF | Manual | Completa (nacional, 6 filas) |
 | `renamu-connector.ts` | renamu | INEI RENAMU (inei.gob.pe) | Descarga ZIP, extrae CSV en memoria | Manual | Parcial por diseño (solo Módulo II: vehículos/telefonía/internet; Módulo I con PII del alcalde excluido; Módulos III-V no explorados) — universo nacional completo dentro de ese alcance (1,891 municipalidades) |
 | `autoridades-connector.ts` | autoridades-electas | JNE Autoridades Electas (datosabiertos.gob.pe) | Resuelve recurso vía `package_show`, descarga XLS, parsea con `xlsx` | Manual | Parcial por diseño (solo el recurso sin DNI, solo autoridades nacionales en el corte actual — el recurso histórico con DNI de autoridades regionales/municipales 2014-2022 no se ingiere) |
+| `padron-connector.ts` | instituciones-educativas | MINEDU/ESCALE Padrón Web (escale.minedu.gob.pe) | Resuelve corte más reciente por scraping HTML, descarga ZIP, extrae DBF, parsea con `dbffile` (encoding cp850) | Manual | Completa (nacional censal, 180,826 filas; La Libertad 9,391/12 provincias/84 distritos) |
 

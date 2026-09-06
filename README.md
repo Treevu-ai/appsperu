@@ -5,11 +5,11 @@
 
 Repo: https://github.com/Treevu-ai/appsperu
 
-Monorepo con 22 apps backend (APIs Express + Postgres por app) que exponen datos abiertos
+Monorepo con 23 apps backend (APIs Express + Postgres por app) que exponen datos abiertos
 del Estado peruano (presupuesto, contrataciones, inversiones, obras públicas) cruzados por
 claves compartidas o matching difuso de nombres de entidad. La capa de lectura pública para
 humanos y agentes IA es **Rastro** (`apps/rastro-web/`, publicada en `rastro.fyi`); el
-servidor MCP (`mcp-server/`) expone las 22 APIs como tools de solo lectura para Claude Code,
+servidor MCP (`mcp-server/`) expone las 23 APIs como tools de solo lectura para Claude Code,
 Claude Desktop, Cursor, Windsurf, Cline y Continue.dev.
 
 Rastro es una plataforma de inteligencia que ayuda a equipos y organizaciones a encontrar, conectar y entender las señales que importan. Transformamos información dispersa en contexto accionable, con foco en trazabilidad, claridad y decisiones más seguras. Porque detrás de cada cambio, oportunidad o riesgo hay un rastro, y verlo a tiempo cambia lo que viene después.
@@ -40,6 +40,7 @@ Rastro es una plataforma de inteligencia que ayuda a equipos y organizaciones a 
 | `mimp` | Casos de violencia contra la mujer (CEM) y consultas Chat 100 — solo agregados (MIMP) | 4019 |
 | `renamu` | Capacidad institucional municipal: vehículos, telefonía e internet (RENAMU/INEI) | 4020 |
 | `autoridades-electas` | Autoridades proclamadas por proceso electoral, sin datos de identidad (JNE) | 4021 |
+| `instituciones-educativas` | Padrón nacional de instituciones educativas, con ubicación (MINEDU/ESCALE) | 4022 |
 
 ## Levantar una app
 
@@ -56,7 +57,7 @@ de las otras bases y `npm run dev`.
 
 ## Servidor MCP (Model Context Protocol)
 
-[`mcp-server/`](mcp-server/) expone las 22 APIs como **99 tools de solo lectura** para
+[`mcp-server/`](mcp-server/) expone las 23 APIs como **101 tools de solo lectura** para
 agentes IA vía MCP (transporte stdio). Compatible con Claude Code, Claude Desktop,
 Cursor, Windsurf, Cline y Continue.dev. Una vez conectado, el agente encadena los
 tools, razona sobre los resultados y entrega respuestas con citas verificables.

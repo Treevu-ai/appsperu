@@ -1369,4 +1369,42 @@ export const TOOL_CATALOG: ToolSpec[] = [
       anioEleccion: z.coerce.number().int().min(2000).max(2100).optional(),
     },
   },
+
+  // ---- instituciones-educativas (MINEDU/ESCALE, Padrón Web) ----
+  {
+    name: "instituciones_educativas_instituciones",
+    app: "instituciones-educativas",
+    description:
+      "Padrón nacional de instituciones y programas educativos (MINEDU/ESCALE) — nombre, nivel/modalidad, " +
+      "gestión, dirección, ubigeo, coordenadas (lat/lon, único conector del catálogo con georreferenciación " +
+      "por establecimiento individual), UGEL, estado operativo. Universo censal completo (180,828 " +
+      "instituciones verificadas, no muestra), corte 2026-08-28. Sin datos de persona natural: `DIRECTOR`, " +
+      "`TELEFONO`, `EMAIL` y `PROMOTOR` de la fuente real nunca se leen ni persisten — solo `NRORUC`/" +
+      "`RZSOCIAL` de instituciones privadas (identidad de entidad, no de persona). " + SIN_SCHEDULER,
+    pathTemplate: "/api/instituciones",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+      ubigeo: z.string().regex(/^\d{6}$/).optional(),
+      estado: z.string().min(1).optional().describe("Ej. 'Activo'."),
+      gestion: z.string().min(1).optional(),
+      nombre: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+    },
+  },
+  {
+    name: "instituciones_educativas_resumen",
+    app: "instituciones-educativas",
+    description:
+      "Cobertura educativa agregada por provincia y distrito de un departamento (total de instituciones y " +
+      "cuántas están activas) — pensado para no forzar paginar miles de filas de `instituciones_educativas_" +
+      "instituciones` cuando lo que se necesita es la cobertura territorial completa. Por defecto LA LIBERTAD " +
+      "(84 distritos, 12 provincias, 9,391 instituciones verificadas en vivo). " + SIN_SCHEDULER,
+    pathTemplate: "/api/resumen",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Por defecto LA LIBERTAD."),
+    },
+  },
 ];
