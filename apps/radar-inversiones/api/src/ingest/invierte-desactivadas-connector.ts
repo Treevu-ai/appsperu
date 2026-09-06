@@ -137,7 +137,7 @@ async function persistDeactivatedRows(
               $2
        FROM jsonb_to_recordset($1::jsonb) AS x(
          cui text,codigo_snip text,nombre text,nombre_uep text,entidad text,sector text,nivel text,estado text,situacion text,ubigeo text,departamento text,provincia text,distrito text,monto_viable numeric,costo_actualizado numeric,funcion text,tipo_inversion text,fecha_registro text,fecha_viabilidad text,num_habitantes_benef integer)
-       ON CONFLICT (cui) DO UPDATE SET estado=EXCLUDED.estado,situacion=EXCLUDED.situacion,monto_viable=EXCLUDED.monto_viable,costo_actualizado=EXCLUDED.costo_actualizado,num_habitantes_benef=EXCLUDED.num_habitantes_benef,source_batch_id=EXCLUDED.source_batch_id`,
+       ON CONFLICT (cui) DO UPDATE SET codigo_snip=EXCLUDED.codigo_snip,nombre=EXCLUDED.nombre,nombre_uep=EXCLUDED.nombre_uep,entidad=EXCLUDED.entidad,sector=EXCLUDED.sector,nivel=EXCLUDED.nivel,estado=EXCLUDED.estado,situacion=EXCLUDED.situacion,ubigeo=EXCLUDED.ubigeo,departamento=EXCLUDED.departamento,provincia=EXCLUDED.provincia,distrito=EXCLUDED.distrito,monto_viable=EXCLUDED.monto_viable,costo_actualizado=EXCLUDED.costo_actualizado,funcion=EXCLUDED.funcion,tipo_inversion=EXCLUDED.tipo_inversion,fecha_registro=EXCLUDED.fecha_registro,fecha_viabilidad=EXCLUDED.fecha_viabilidad,num_habitantes_benef=EXCLUDED.num_habitantes_benef,source_batch_id=EXCLUDED.source_batch_id`,
       [JSON.stringify(payload), batchId]
     );
   }
