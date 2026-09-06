@@ -2,7 +2,38 @@
 
 Última actualización: 2026-09-06.
 
-Veintiuna apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+Veintidós apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+
+## MINAM — serie histórica real 2019-2024, ANA queda pendiente (2026-09-06)
+
+Continuación del barrido: tras OEFA y MTC, se investigó MINAM y ANA en paralelo. **MINAM
+confirmado y construido de inmediato**; **ANA quedó parcial** — solo tiene un dataset registrado
+en el portal nacional ("Puntos Críticos", riesgo de inundación en ríos/quebradas) y no se logró
+resolver su enlace de descarga real en esta pasada (ni por scraping ni adivinando patrones de
+nombre de archivo). Los derechos de uso de agua (506,998 licencias otorgadas a nivel nacional)
+existen pero viven en el sistema operacional de ANA (SNIRH), no en un dataset descargable
+confirmado del portal nacional — queda como pendiente para una sesión futura.
+
+**App nueva `residuos-solidos`** (puerto 4025, Postgres 5456): generación anual de residuos
+sólidos domiciliarios y municipales por distrito (SIGERSOL/MINAM) — población INEI, generación
+per cápita, toneladas/día y toneladas/año. **Único conector del catálogo con serie histórica
+real multi-año verificada** (2019-2024, 6 años) — el resto de fuentes recientes son snapshot del
+corte más reciente únicamente.
+
+Bug real corregido durante la construcción: `FECHA_CORTE` de 8 dígitos con **orden inconsistente
+entre filas** — algunas traen `DDMMAAAA`, otras `AAAAMMDD` (confirmado con una fila real que
+Postgres rechazó: `date/time field value out of range`, porque leída como DDMMAAAA daba mes 24).
+Se corrigió probando ambas lecturas y validando cuál produce una fecha de calendario real —
+un chequeo ingenuo de "¿el año está en rango?" no bastaba, porque una fecha DDMMAAAA real
+también puede tener primeros 4 dígitos que parecen un año plausible. Mismo problema de UBIGEO sin
+cero inicial para departamentos 01-09 que ya se documentó en SIDPOL/`seguridad-ciudadana` — La
+Libertad (departamento 13) nunca lo sufre.
+
+Verificado en vivo: 11,310 filas insertadas, 0 rechazadas, serie 2019-2024 completa. **La
+Libertad: 500 filas (83-84 distritos × 6 años), 12 provincias.** Suma 1 tool MCP nueva (103→104
+tools, 22 apps). Detalle completo en
+[`docs/conectores.md#residuos-solidos`](conectores.md#residuos-solidos) y
+[`docs/data-contracts/minam-residuos-solidos.md`](data-contracts/minam-residuos-solidos.md).
 
 ## OEFA + MTC — dos apps más, foco explícito en La Libertad (2026-09-06)
 
@@ -312,6 +343,7 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `instituciones-educativas` | Padrón nacional de instituciones educativas, con ubicación (MINEDU/ESCALE) | 4022 | 5453 | Construida, probada, verificada (180,826 filas, La Libertad: 9,391/12 provincias/84 distritos) |
 | `infracciones-ambientales` | Registro de infractores ambientales sancionados (OEFA/RUIAS) | 4023 | 5454 | Construida, probada, verificada (14,724 filas, La Libertad: 610/12 provincias) |
 | `red-vial-subnacional` | Intervenciones viales departamentales/vecinales (MTC/Provías Descentralizado) | 4024 | 5455 | Construida, probada, verificada (12,536 filas, La Libertad: 461/12 provincias) |
+| `residuos-solidos` | Generación anual de residuos sólidos por distrito, serie 2019-2024 (MINAM/SIGERSOL) | 4025 | 5456 | Construida, probada, verificada (11,310 filas, La Libertad: 500/12 provincias) |
 
 ## `bcrp-la-libertad` — ingesta manual, distinto a todo el resto del proyecto (2026-08-28)
 
@@ -348,13 +380,13 @@ automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incl
 `mcp-server/README.md`, sección "Alcance actual y lo que falta", antes de exponerlo fuera de
 `localhost`).
 
-103 tools (21 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA + OxI + GIS (`inversion-privada`);
+104 tools (22 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA + OxI + GIS (`inversion-privada`);
 nueva app `bcrp-la-libertad` (ingesta manual, ver sección dedicada arriba). Ampliación 2026-09-05:
 `mindef` y `mimp` (+5 tools), cruce persona-a-persona por DNI en `proveedores-sancionados`
 (ver sección "Barrido de calidad de datos + MINDEF/MIMP + cruce por DNI" arriba). Ampliación
 2026-09-06: `renamu` (+2 tools), `autoridades-electas` (+1 tool), `instituciones-educativas`
-(+2 tools), `infracciones-ambientales` (+1 tool) y `red-vial-subnacional` (+1 tool), ver
-secciones dedicadas arriba.
+(+2 tools), `infracciones-ambientales` (+1 tool), `red-vial-subnacional` (+1 tool) y
+`residuos-solidos` (+1 tool), ver secciones dedicadas arriba.
 
 ## Cruces entre apps (todos verificados con datos reales)
 

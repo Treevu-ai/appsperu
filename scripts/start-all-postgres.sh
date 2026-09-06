@@ -38,6 +38,7 @@ ALL_APPS=(
   instituciones-educativas
   infracciones-ambientales
   red-vial-subnacional
+  residuos-solidos
 )
 
 if [ "$#" -gt 0 ]; then

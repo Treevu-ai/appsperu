@@ -1450,4 +1450,25 @@ export const TOOL_CATALOG: ToolSpec[] = [
       codigoRuta: z.string().min(1).optional(),
     },
   },
+
+  // ---- residuos-solidos (MINAM, SIGERSOL) ----
+  {
+    name: "residuos_solidos_residuos",
+    app: "residuos-solidos",
+    description:
+      "Generación anual de residuos sólidos domiciliarios y municipales por distrito (MINAM/SIGERSOL) — " +
+      "población INEI, generación per cápita, toneladas/día y toneladas/año. Serie histórica real 2019-2024 " +
+      "(6 años), a diferencia de la mayoría de fuentes del catálogo (snapshot único) — permite ver evolución " +
+      "temporal por distrito. 11,310 filas nacionales verificadas (500 en La Libertad, 12 provincias, 2019-2024). " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/residuos",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+      ubigeo: z.string().regex(/^\d{6}$/).optional(),
+      anio: z.coerce.number().int().min(2000).max(2100).optional(),
+    },
+  },
 ];

@@ -660,6 +660,29 @@ browser normal y compartió el enlace directo, que sí resolvió.
 
 ---
 
+<a id="residuos-solidos"></a>
+## residuos-solidos — Generación anual de residuos sólidos (MINAM/SIGERSOL)
+
+Investigado y construido 2026-09-06, continuando el barrido tras `infracciones-ambientales`
+(OEFA) y `red-vial-subnacional` (MTC). Único conector del catálogo con **serie histórica real
+multi-año** (2019-2024) verificada, no solo un snapshot del corte más reciente.
+
+### `residuos-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Generación anual de residuos sólidos domiciliarios y municipales por distrito — población INEI, generación per cápita, toneladas/día y toneladas/año. Datos reportados por municipalidades a SIGERSOL (Sistema de Información para la Gestión de Residuos Sólidos), administrado por MINAM. |
+| **Qué hace** | Descarga el CSV directo, normaliza y hace upsert en `residuos_solidos_municipales`, en lotes de 1000. Clave natural real: `(ubigeo, anio)` — a diferencia de RUIAS/PVD, no requirió hash de contenido. |
+| **Bug real encontrado y corregido durante la construcción** | `FECHA_CORTE` de 8 dígitos, pero **el orden no es consistente entre filas** — algunas traen `DDMMAAAA` (ej. "18122025"), otras `AAAAMMDD` (ej. "20240410", que leído ingenuamente como DDMMAAAA da un mes 24 inválido y Postgres rechaza la fila con `date/time field value out of range`). Se prueban ambas lecturas y se usa la que produce una fecha de calendario real (validación de mes 1-12, día 1-31 con round-trip) — un chequeo ingenuo de "¿el año está en rango 2000-2100?" no basta, porque una fecha DDMMAAAA como "20122025" (20 dic 2025) también tiene primeros 4 dígitos que parecen un año plausible ("2012"). |
+| **Otro hallazgo real** | `UBIGEO` pierde el cero inicial para departamentos 01-09 en la fuente (mismo problema ya documentado en `seguridad-ciudadana`/SIDPOL) — se reconstruye a 6 dígitos con padding. La Libertad (departamento 13) nunca tiene este problema. |
+| **Frecuencia** | Manual (`npm run ingest:residuos` en `apps/residuos-solidos/api`). |
+| **Fuente de datos** | `datosabiertos.gob.pe/sites/default/files/1. Dataset Generación anual de residuos sólidos domiciliarios y municipales.csv` (MINAM). |
+| **Cobertura real ingerida** | Verificado en vivo 2026-09-06: **11,310 filas insertadas, 0 rechazadas** — serie 2019-2024 completa. La Libertad: **500 filas (83-84 distritos × 6 años), 12 provincias**. |
+| **Detalle completo** | [`docs/data-contracts/minam-residuos-solidos.md`](data-contracts/minam-residuos-solidos.md) |
+| **Cruces** | Ninguno implementado — candidato natural: por UBIGEO contra `radar-ejecucion` (`FUNCION = SANEAMIENTO`) y contra `renamu` (¿la municipalidad con más generación de residuos tiene camión recolector de basura operativo?). |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada
@@ -745,4 +768,5 @@ OCDS); esos resultados devuelven `valorMoneda: null` en vez de asumir soles.
 | `padron-connector.ts` | instituciones-educativas | MINEDU/ESCALE Padrón Web (escale.minedu.gob.pe) | Resuelve corte más reciente por scraping HTML, descarga ZIP, extrae DBF, parsea con `dbffile` (encoding cp850) | Manual | Completa (nacional censal, 180,826 filas; La Libertad 9,391/12 provincias/84 distritos) |
 | `ruias-connector.ts` | infracciones-ambientales | OEFA RUIAS (datosabiertos.gob.pe) | Descarga CSV directo, hash de contenido como clave (sin clave natural única) | Manual | Completa (nacional, 14,724 filas únicas; La Libertad 610/12 provincias) |
 | `pvd-connector.ts` | red-vial-subnacional | MTC/Provías Descentralizado (datosabiertos.gob.pe) | Descarga CSV directo (Latin-1), hash de contenido como clave | Manual | Completa (nacional, 12,536 filas; La Libertad 461/12 provincias) |
+| `residuos-connector.ts` | residuos-solidos | MINAM/SIGERSOL (datosabiertos.gob.pe) | Descarga CSV directo, clave natural (ubigeo, anio) | Manual | Completa (nacional, 11,310 filas, serie 2019-2024; La Libertad 500/12 provincias) |
 

@@ -65,6 +65,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
   "instituciones-educativas": ["instituciones_educativas_instituciones", "instituciones_educativas_resumen"],
   "infracciones-ambientales": ["infracciones_ambientales_infracciones"],
   "red-vial-subnacional": ["red_vial_subnacional_intervenciones"],
+  "residuos-solidos": ["residuos_solidos_residuos"],
   "identidad-fiscal": [
     "identidad_fiscal_contribuyente_by_ruc",
     "identidad_fiscal_contribuyentes",

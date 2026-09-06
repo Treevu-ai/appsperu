@@ -1,0 +1,21 @@
+name: residuos-solidos
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: residuos_solidos
+      POSTGRES_PASSWORD: residuos_solidos
+      POSTGRES_DB: residuos_solidos
+    ports:
+      - "127.0.0.1:5456:5432"
+    volumes:
+      - residuos_solidos_pgdata:/var/lib/postgresql/data
+
+volumes:
+  residuos_solidos_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true
