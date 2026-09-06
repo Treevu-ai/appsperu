@@ -1,0 +1,21 @@
+name: mimp
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: mimp
+      POSTGRES_PASSWORD: mimp
+      POSTGRES_DB: mimp
+    ports:
+      - "127.0.0.1:5450:5432"
+    volumes:
+      - mimp_pgdata:/var/lib/postgresql/data
+
+volumes:
+  mimp_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true

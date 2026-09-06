@@ -31,6 +31,8 @@ ALL_APPS=(
   programas-sociales
   actividad-empresarial
   informes-control
+  mindef
+  mimp
 )
 
 if [ "$#" -gt 0 ]; then

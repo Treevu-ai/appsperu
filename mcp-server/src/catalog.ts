@@ -1219,4 +1219,77 @@ export const TOOL_CATALOG: ToolSpec[] = [
       departamento: z.string().min(1).optional().describe("Por defecto LA LIBERTAD."),
     },
   },
+
+  // ---- mindef (Ministerio de Defensa, datos abiertos) ----
+  {
+    name: "mindef_offset_agreements",
+    app: "mindef",
+    description:
+      "Convenios Específicos de Compensaciones Industriales y Sociales Offset del MINDEF: obligaciones de " +
+      "compensación que un proveedor extranjero asume como parte de un contrato de defensa (institución, " +
+      "entidad contraparte, año de inicio). Dataset pequeño (8 filas confirmadas en vivo) — es todo lo que " +
+      "MINDEF publica hoy sobre offsets. " + SIN_SCHEDULER,
+    pathTemplate: "/api/offset-agreements",
+    pathParams: [],
+    querySchema: {
+      entidadContraparte: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+    },
+  },
+  {
+    name: "mindef_training_abroad",
+    app: "mindef",
+    description:
+      "Personal militar capacitado en el exterior (institución, curso, país, fechas). `personalCantidad` es un " +
+      "conteo por curso, nunca una lista de nombres — el dataset del MEF/MINDEF no publica identificadores " +
+      "individuales. " + SIN_SCHEDULER,
+    pathTemplate: "/api/training-abroad",
+    pathParams: [],
+    querySchema: {
+      pais: z.string().min(1).optional(),
+    },
+  },
+  {
+    name: "mindef_peace_missions",
+    app: "mindef",
+    description:
+      "Personal de las FF.AA. desplegado en Misiones de Paz, Observadores Militares y Contingentes Militares " +
+      "(misión, institución, país, año, cantidad). `cantidad` es un conteo agregado por misión/año, no una lista " +
+      "de nombres. " + SIN_SCHEDULER,
+    pathTemplate: "/api/peace-missions",
+    pathParams: [],
+    querySchema: {
+      anio: z.coerce.number().int().min(2000).max(2100).optional(),
+      pais: z.string().min(1).optional(),
+    },
+  },
+
+  // ---- mimp (Ministerio de la Mujer y Poblaciones Vulnerables, datos abiertos) ----
+  {
+    name: "mimp_cem_casos",
+    app: "mimp",
+    description:
+      "Casos atendidos por violencia contra la mujer e integrantes del grupo familiar, por Centro Emergencia " +
+      "Mujer (CEM) — agregado por centro/año/departamento, desglosado por sexo y tipo de violencia. NUNCA un " +
+      "registro individual: se descartó explícitamente el dataset de acogimiento residencial de MIMP por ser " +
+      "individual (código de usuario + fecha de nacimiento + tipología de ingreso) sobre menores en protección " +
+      "estatal — no se ingiere bajo ninguna circunstancia. " + SIN_SCHEDULER,
+    pathTemplate: "/api/cem",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      anio: z.coerce.number().int().min(2000).max(2100).optional(),
+    },
+  },
+  {
+    name: "mimp_chat100_consultas",
+    app: "mimp",
+    description:
+      "Consultas atendidas por el servicio Chat 100 (línea contra la violencia familiar y sexual) — agregado " +
+      "nacional anual por sexo, sin desagregación territorial ni individual en la fuente. " + SIN_SCHEDULER,
+    pathTemplate: "/api/chat100",
+    pathParams: [],
+    querySchema: {
+      anio: z.coerce.number().int().min(2000).max(2100).optional(),
+    },
+  },
 ];

@@ -1,6 +1,6 @@
 # appsperu-mcp-server
 
-Servidor MCP que expone las 14 APIs de este repo (`apps/*/api`) como tools de solo lectura para
+Servidor MCP que expone las 20 APIs de este repo (`apps/*/api`) como tools de solo lectura para
 un agente Claude. No transforma los datos: cada tool hace un `GET` 1:1 contra el endpoint REST
 ya existente y devuelve `{ status, body }` tal cual. Ver el plan de diseño y el catálogo completo
 de tools en [`docs/conectores.md`](../docs/conectores.md) (cada `description` de tool se deriva
@@ -8,7 +8,7 @@ de esa ficha técnica).
 
 ## Requisito previo
 
-Las 14 APIs deben estar corriendo (ver [`docs/ESTADO.md`](../docs/ESTADO.md) — `docker compose up
+Las 20 APIs deben estar corriendo (ver [`docs/ESTADO.md`](../docs/ESTADO.md) — `docker compose up
 -d` + `npm run dev` en cada `apps/<nombre>/api`). Este servidor no las levanta ni las reemplaza,
 solo las agrega detrás de una interfaz MCP. Si una app no está corriendo, sus tools devuelven un
 error de conectividad explícito (`isError: true`) en vez de fallar en silencio o tumbar el
@@ -53,11 +53,12 @@ Nombres de env var por app: `RADAR_EJECUCION_API_URL`, `COMPRAS_PUBLICAS_API_URL
 `IDENTIDAD_FISCAL_API_URL`, `SALUD_INSTITUCIONAL_API_URL`, `PROVEEDORES_SANCIONADOS_API_URL`,
 `ACTIVIDAD_AGRARIA_API_URL`, `SEGURIDAD_CIUDADANA_API_URL`, `BCRP_COMERCIO_EXTERIOR_API_URL`,
 `INVERSION_PRIVADA_API_URL`, `BCRP_LA_LIBERTAD_API_URL`, `SERVICIOS_SALUD_API_URL`,
-`PROGRAMAS_SOCIALES_API_URL`, `ACTIVIDAD_EMPRESARIAL_API_URL`, `INFORMES_CONTROL_API_URL`.
+`PROGRAMAS_SOCIALES_API_URL`, `ACTIVIDAD_EMPRESARIAL_API_URL`, `INFORMES_CONTROL_API_URL`,
+`MINDEF_API_URL`, `MIMP_API_URL`.
 
 ## Catálogo de tools
 
-91 tools (18 apps), uno por endpoint `GET /api/*` real de las 18 apps (`src/catalog.ts` es la fuente de
+96 tools (20 apps), uno por endpoint `GET /api/*` real de las 20 apps (`src/catalog.ts` es la fuente de
 verdad — cada entrada mapea 1:1 a un `routes/*.ts` existente, sin inventar parámetros). Nombrados
 `<app>_<recurso>`, ej. `radar_ejecucion_execution`, `compras_publicas_suppliers`,
 `salud_institucional_score`.
@@ -70,9 +71,9 @@ como si fuera completo.
 
 ## Alcance actual y lo que falta
 
-- **Transporte**: solo stdio (uso local, agente y las 14 APIs en la misma máquina). Streamable
+- **Transporte**: solo stdio (uso local, agente y las 20 APIs en la misma máquina). Streamable
   HTTP para exponerlo remoto es un paso posterior, no implementado.
-- **Sin autenticación**: igual que las 14 APIs que agrega (`helmet` + `cors` + rate limit, sin auth
+- **Sin autenticación**: igual que las 20 APIs que agrega (`helmet` + `cors` + rate limit, sin auth
   — confirmado en cada `app.ts`). Aceptable para stdio local; **no exponer este servidor ni las
   APIs subyacentes fuera de `localhost` sin resolver auth primero**.
 - **No incluye las ingestas** (`npm run ingest:*`) — este servidor es de solo lectura. Disparar
@@ -80,4 +81,4 @@ como si fuera completo.
   Postgres) que se dejó fuera de alcance a propósito.
 - Validado manualmente: registro de tools, llamada con query params reales, manejo de error de
   conectividad cuando la app de destino no responde, y test automatizado del catálogo
-  (`src/__tests__/catalog.test.ts`). No hay suite contra las 14 APIs reales corriendo en CI.
+  (`src/__tests__/catalog.test.ts`). No hay suite contra las 20 APIs reales corriendo en CI.

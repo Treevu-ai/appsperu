@@ -58,6 +58,8 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "compras_publicas_suppliers",
   ],
   "informes-control": ["informes_control_crossref", "informes_control_informes"],
+  mindef: ["mindef_offset_agreements", "mindef_peace_missions", "mindef_training_abroad"],
+  mimp: ["mimp_cem_casos", "mimp_chat100_consultas"],
   "identidad-fiscal": [
     "identidad_fiscal_contribuyente_by_ruc",
     "identidad_fiscal_contribuyentes",
