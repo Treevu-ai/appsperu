@@ -90,9 +90,13 @@ async function insertBatch(
          nom_acto_baja, codigo_patrimonial, denominacion_bien, ejercicio
        )
      ON CONFLICT (codigo_patrimonial) DO UPDATE SET
+       ruc_entidad = EXCLUDED.ruc_entidad,
+       nom_entidad = EXCLUDED.nom_entidad,
        nro_resolucion_baja = EXCLUDED.nro_resolucion_baja,
        fecha_resolucion_baja = EXCLUDED.fecha_resolucion_baja,
        nom_acto_baja = EXCLUDED.nom_acto_baja,
+       denominacion_bien = EXCLUDED.denominacion_bien,
+       ejercicio = EXCLUDED.ejercicio,
        source_batch_id = EXCLUDED.source_batch_id`,
     [...params, batchId]
   );

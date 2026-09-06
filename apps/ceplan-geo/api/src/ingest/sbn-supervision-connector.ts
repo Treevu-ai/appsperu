@@ -120,8 +120,17 @@ export async function ingestSbnSupervision(): Promise<SbnSupervisionIngestSummar
            resultado_supervision, titular_predio, zona_playa_protegida, source_batch_id
          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
          ON CONFLICT (numero_informe, cus) DO UPDATE SET
+           item = EXCLUDED.item,
+           tipo_informe = EXCLUDED.tipo_informe,
+           fecha_emision = EXCLUDED.fecha_emision,
+           actividad = EXCLUDED.actividad,
+           departamento = EXCLUDED.departamento,
+           provincia = EXCLUDED.provincia,
+           distrito = EXCLUDED.distrito,
            resultado_supervision = EXCLUDED.resultado_supervision,
            area_supervisada_m2 = EXCLUDED.area_supervisada_m2,
+           titular_predio = EXCLUDED.titular_predio,
+           zona_playa_protegida = EXCLUDED.zona_playa_protegida,
            source_batch_id = EXCLUDED.source_batch_id`,
         [
           r.item, r.tipoInforme, r.numeroInforme, r.fechaEmision, r.actividad,
