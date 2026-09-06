@@ -1,5 +1,6 @@
 import express, { type ErrorRequestHandler } from "express";
 import { procurementRouter } from "./routes/procurement.js";
+import { unsuccessfulTendersRouter } from "./routes/unsuccessful-tenders.js";
 import { crossrefRouter } from "./routes/crossref.js";
 import { suppliersRouter } from "./routes/suppliers.js";
 import biddersRouter from "./routes/bidders.js";
@@ -33,6 +34,7 @@ export function createApp() {
 
   app.use("/api", apiRateLimit);
   app.use("/api/procurement", procurementRouter);
+  app.use("/api/procurement-sin-adjudicar", unsuccessfulTendersRouter);
   app.use("/api/crossref", crossrefRouter);
   app.use("/api/suppliers", suppliersRouter);
   app.use("/api/bidders", biddersRouter);
