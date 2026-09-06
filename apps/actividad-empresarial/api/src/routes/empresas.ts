@@ -45,7 +45,7 @@ empresasRouter.get("/", asyncHandler(async (req, res) => {
   );
 
   res.json({
-    cobertura: "MTPE (datosabiertos.gob.pe) es un registro nacional; no está acotado a La Libertad. Único año disponible confirmado: 2022 — no hay corte más reciente publicado por MTPE bajo este dataset.",
+    cobertura: "MTPE (www2.trabajo.gob.pe, portal propio) es un registro nacional; no está acotado a La Libertad. La ingesta resuelve el año más reciente publicado en cada corrida (2014-2025 confirmado en vivo) — no asumir un año fijo, filtrar por `anio` si se necesita un corte específico.",
     resultados: rows.map((r) => ({
       ubigeo: r.ubigeo,
       distrito: r.distrito,

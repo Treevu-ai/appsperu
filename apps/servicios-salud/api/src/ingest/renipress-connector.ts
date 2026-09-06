@@ -1,13 +1,9 @@
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
+import { fetchCkanResources } from "@appsperu/ckan-client";
 import { pool } from "../db/pool.js";
-import {
-  parseDecimal,
-  parseRenipressCsv,
-  pickLatestRenipressResource,
-  textOrNull,
-  type CkanResource,
-} from "./renipress-parse.js";
+import { parseDecimal, parseRenipressCsv, pickLatestRenipressResource, textOrNull } from "./renipress-parse.js";
+import type { CkanResource } from "./renipress-parse.js";
 
 /**
  * El WAF de datosabiertos.gob.pe (CloudWAF) devuelve HTTP 418 al user-agent
@@ -21,38 +17,44 @@ const USER_AGENT =
 const CKAN_BASE = "https://www.datosabiertos.gob.pe";
 const DATASET_SLUG = "registro-nacional-de-entidades-prestadoras-de-servicios-de-salud-renipress";
 
-interface CkanPackageShowResult {
-  resources?: CkanResource[];
-}
-
-interface CkanPackageShowResponse {
-  success: boolean;
-  result: CkanPackageShowResult | CkanPackageShowResult[];
-}
-
 async function fetchLatestResource(): Promise<CkanResource> {
-  const url = `${CKAN_BASE}/api/3/action/package_show?id=${encodeURIComponent(DATASET_SLUG)}`;
-  const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, Accept: "application/json" } });
-  if (!res.ok) {
-    throw new Error(`CKAN package_show devolvió ${res.status} para el dataset RENIPRESS.`);
-  }
-
-  const data = (await res.json()) as CkanPackageShowResponse;
-  if (!data.success) {
-    throw new Error("CKAN package_show no tuvo éxito para el dataset RENIPRESS.");
-  }
-
-  const result = Array.isArray(data.result) ? data.result[0] : data.result;
-  if (!result) {
-    throw new Error("CKAN package_show devolvió un resultado vacío para el dataset RENIPRESS.");
-  }
-
-  return pickLatestRenipressResource(result.resources ?? []);
+  const resources = await fetchCkanResources({ ckanBase: CKAN_BASE, datasetSlug: DATASET_SLUG, userAgent: USER_AGENT });
+  return pickLatestRenipressResource(resources);
 }
 
 function checksumOf(text: string): string {
   return createHash("sha256").update(text).digest("hex");
 }
+
+/**
+ * `cod_ipress` es la clave de conflicto — no aparece en `UPSERT_COLUMNS`
+ * porque nunca se reasigna en el UPDATE. El resto de columnas, en el orden
+ * exacto en que se pasan como parámetros más abajo, define tanto la lista de
+ * columnas del INSERT como el SET del ON CONFLICT.
+ */
+const UPSERT_COLUMNS = [
+  "institucion",
+  "nombre",
+  "clasificacion",
+  "tipo_establecimiento",
+  "departamento",
+  "provincia",
+  "distrito",
+  "ubigeo",
+  "direccion",
+  "categoria",
+  "estado",
+  "norte",
+  "este",
+  "source_batch_id",
+] as const;
+
+const INSERT_COLUMNS = ["cod_ipress", ...UPSERT_COLUMNS];
+const UPSERT_QUERY = `INSERT INTO ipress (${INSERT_COLUMNS.join(", ")}, updated_at)
+   VALUES (${INSERT_COLUMNS.map((_, i) => `$${i + 1}`).join(",")}, now())
+   ON CONFLICT (cod_ipress) DO UPDATE SET
+     ${UPSERT_COLUMNS.map((c) => `${c} = EXCLUDED.${c}`).join(",\n     ")},
+     updated_at = now()`;
 
 export interface RenipressIngestSummary {
   resourceUrl: string;
@@ -104,27 +106,8 @@ export async function ingestRenipress(): Promise<RenipressIngestSummary> {
       if (!ubigeo) sinUbigeo += 1;
 
       await client.query(
-        `INSERT INTO ipress (
-           cod_ipress, institucion, nombre, clasificacion, tipo_establecimiento,
-           departamento, provincia, distrito, ubigeo, direccion, categoria, estado,
-           norte, este, source_batch_id, updated_at
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, now())
-         ON CONFLICT (cod_ipress) DO UPDATE SET
-           institucion = EXCLUDED.institucion,
-           nombre = EXCLUDED.nombre,
-           clasificacion = EXCLUDED.clasificacion,
-           tipo_establecimiento = EXCLUDED.tipo_establecimiento,
-           departamento = EXCLUDED.departamento,
-           provincia = EXCLUDED.provincia,
-           distrito = EXCLUDED.distrito,
-           ubigeo = EXCLUDED.ubigeo,
-           direccion = EXCLUDED.direccion,
-           categoria = EXCLUDED.categoria,
-           estado = EXCLUDED.estado,
-           norte = EXCLUDED.norte,
-           este = EXCLUDED.este,
-           source_batch_id = EXCLUDED.source_batch_id,
-           updated_at = now()`,
+        UPSERT_QUERY,
+        // Orden alineado a mano con INSERT_COLUMNS ($1=cod_ipress, luego UPSERT_COLUMNS en orden).
         [
           codIpress,
           textOrNull(row.INSTITUCION),

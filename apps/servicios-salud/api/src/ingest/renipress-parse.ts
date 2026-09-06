@@ -1,11 +1,7 @@
 import { parse } from "csv-parse/sync";
+import type { CkanResource } from "@appsperu/ckan-client";
 
-export interface CkanResource {
-  id: string;
-  name: string;
-  format: string;
-  url: string;
-}
+export type { CkanResource };
 
 /**
  * El nombre del archivo trae la fecha de corte (RENIPRESS_31-08-2026.csv).

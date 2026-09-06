@@ -43,12 +43,66 @@ async function fetchPage(periodo: number, pageNumber: number, departamento?: str
   if (!res.ok) {
     throw new Error(`Contraloría devolvió ${res.status} al pedir la página ${pageNumber} del período ${periodo}`);
   }
-  return (await res.json()) as RawInforme[];
+
+  const body: unknown = await res.json();
+  // Endpoint no documentado — no se garantiza que siempre devuelva un
+  // array (ej. podría devolver un objeto de error con la misma forma que
+  // un 200 OK). Falla explícito acá en vez de un TypeError confuso más
+  // abajo al leer `rows.length`.
+  if (!Array.isArray(body)) {
+    throw new Error(
+      `Contraloría devolvió una respuesta con forma inesperada (no es un array) para la página ${pageNumber} del período ${periodo}.`
+    );
+  }
+  return body as RawInforme[];
 }
 
 function checksumOf(rows: RawInforme[]): string {
   return createHash("sha256").update(JSON.stringify(rows)).digest("hex");
 }
+
+/**
+ * `codigo_informe` es la clave de conflicto — no aparece en `UPSERT_COLUMNS`
+ * porque nunca se reasigna en el UPDATE. El resto de columnas, en el orden
+ * exacto en que se pasan como parámetros más abajo, define tanto la lista de
+ * columnas del INSERT como el SET del ON CONFLICT, para no mantener las tres
+ * listas sincronizadas a mano.
+ */
+const UPSERT_COLUMNS = [
+  "numero_informe",
+  "ciac_codigo",
+  "entidad",
+  "codigo_entidad",
+  "sector",
+  "codigo_sector",
+  "nivel_gobierno",
+  "departamento",
+  "provincia",
+  "distrito",
+  "descripcion",
+  "modalidad_servicio",
+  "servicio_control",
+  "tipo_informe",
+  "periodo",
+  "fecha_emision",
+  "fecha_publicacion",
+  "fecha_fin_ejecucion",
+  "es_con_responsabilidad",
+  "total_recomendaciones",
+  "es_covid",
+  "es_reconstruccion",
+  "url_resumen_ejecutivo",
+  "url_resumen_informe",
+  "url_informe_completo",
+  "source_batch_id",
+] as const;
+
+const INSERT_COLUMNS = ["codigo_informe", ...UPSERT_COLUMNS];
+const UPSERT_QUERY = `INSERT INTO informes_control (${INSERT_COLUMNS.join(", ")}, updated_at)
+   VALUES (${INSERT_COLUMNS.map((_, i) => `$${i + 1}`).join(",")}, now())
+   ON CONFLICT (codigo_informe) DO UPDATE SET
+     ${UPSERT_COLUMNS.map((c) => `${c} = EXCLUDED.${c}`).join(",\n     ")},
+     updated_at = now()`;
 
 export interface InformesControlIngestSummary {
   periodo: number;
@@ -85,50 +139,15 @@ export async function ingestInformesControl(periodo: number, departamento?: stri
       const batchId = batchResult.rows[0].id;
 
       for (const raw of rows) {
-        let informe;
-        try {
-          informe = normalizeInforme(raw);
-        } catch {
+        const informe = normalizeInforme(raw);
+        if (!informe) {
           filasSinCodigo += 1;
           continue;
         }
 
         await client.query(
-          `INSERT INTO informes_control (
-             codigo_informe, numero_informe, ciac_codigo, entidad, codigo_entidad, sector, codigo_sector,
-             nivel_gobierno, departamento, provincia, distrito, descripcion, modalidad_servicio,
-             servicio_control, tipo_informe, periodo, fecha_emision, fecha_publicacion, fecha_fin_ejecucion,
-             es_con_responsabilidad, total_recomendaciones, es_covid, es_reconstruccion,
-             url_resumen_ejecutivo, url_resumen_informe, url_informe_completo, source_batch_id, updated_at
-           ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27, now())
-           ON CONFLICT (codigo_informe) DO UPDATE SET
-             numero_informe = EXCLUDED.numero_informe,
-             ciac_codigo = EXCLUDED.ciac_codigo,
-             entidad = EXCLUDED.entidad,
-             codigo_entidad = EXCLUDED.codigo_entidad,
-             sector = EXCLUDED.sector,
-             codigo_sector = EXCLUDED.codigo_sector,
-             nivel_gobierno = EXCLUDED.nivel_gobierno,
-             departamento = EXCLUDED.departamento,
-             provincia = EXCLUDED.provincia,
-             distrito = EXCLUDED.distrito,
-             descripcion = EXCLUDED.descripcion,
-             modalidad_servicio = EXCLUDED.modalidad_servicio,
-             servicio_control = EXCLUDED.servicio_control,
-             tipo_informe = EXCLUDED.tipo_informe,
-             periodo = EXCLUDED.periodo,
-             fecha_emision = EXCLUDED.fecha_emision,
-             fecha_publicacion = EXCLUDED.fecha_publicacion,
-             fecha_fin_ejecucion = EXCLUDED.fecha_fin_ejecucion,
-             es_con_responsabilidad = EXCLUDED.es_con_responsabilidad,
-             total_recomendaciones = EXCLUDED.total_recomendaciones,
-             es_covid = EXCLUDED.es_covid,
-             es_reconstruccion = EXCLUDED.es_reconstruccion,
-             url_resumen_ejecutivo = EXCLUDED.url_resumen_ejecutivo,
-             url_resumen_informe = EXCLUDED.url_resumen_informe,
-             url_informe_completo = EXCLUDED.url_informe_completo,
-             source_batch_id = EXCLUDED.source_batch_id,
-             updated_at = now()`,
+          UPSERT_QUERY,
+          // Orden alineado a mano con INSERT_COLUMNS ($1=codigo_informe, luego UPSERT_COLUMNS en orden).
           [
             informe.codigoInforme, informe.numeroInforme, informe.ciacCodigo, informe.entidad, informe.codigoEntidad,
             informe.sector, informe.codigoSector, informe.nivelGobierno, informe.departamento, informe.provincia,

@@ -123,4 +123,21 @@ describe("ingestInfomidis", () => {
     expect(clientQueryMock).toHaveBeenCalledWith("ROLLBACK");
     expect(client.release).toHaveBeenCalled();
   });
+
+  it("propaga un error explícito si package_show devuelve un status distinto de 2xx", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: false, status: 503 } as Response)));
+    await expect(ingestInfomidis()).rejects.toThrow(/503/);
+  });
+
+  it("propaga un error explícito si la descarga del CSV devuelve un status distinto de 2xx", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("package_show")) return Promise.resolve(jsonResponse(PACKAGE_SHOW_BODY));
+        if (url.includes("ABRIL_2026.csv")) return Promise.resolve({ ok: false, status: 500 } as Response);
+        throw new Error(`fetch inesperado: ${url}`);
+      })
+    );
+    await expect(ingestInfomidis()).rejects.toThrow(/500/);
+  });
 });

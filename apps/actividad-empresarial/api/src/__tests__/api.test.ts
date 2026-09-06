@@ -50,7 +50,7 @@ describe("GET /api/empresas", () => {
     const res = await request(createApp()).get("/api/empresas").query({ ubigeo: "130101" });
 
     expect(res.status).toBe(200);
-    expect(res.body.cobertura).toMatch(/2022/);
+    expect(res.body.cobertura).toMatch(/año más reciente/);
     expect(res.body.resultados[0]).toMatchObject({ ubigeo: "130101", numeroEmpresas: 10660 });
     expect(queryMock).toHaveBeenCalledWith(expect.stringContaining("ubigeo = $1"), ["130101"]);
   });

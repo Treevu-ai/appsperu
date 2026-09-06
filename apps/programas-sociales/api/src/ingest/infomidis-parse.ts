@@ -1,13 +1,7 @@
 import { parse } from "csv-parse/sync";
+import type { CkanResource } from "@appsperu/ckan-client";
 
-export interface CkanResource {
-  id: string;
-  name: string;
-  format: string;
-  url: string;
-  created?: string;
-  last_modified?: string;
-}
+export type { CkanResource };
 
 /**
  * El nombre de archivo de INFOMIDIS es demasiado inconsistente para usarlo

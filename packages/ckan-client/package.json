@@ -1,0 +1,22 @@
+{
+  "name": "@appsperu/ckan-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Resolución de recursos de un dataset CKAN/DKAN (datosabiertos.gob.pe) vía `package_show` — consolidado de dos copias casi idénticas que existían en `apps/servicios-salud/api/src/ingest/renipress-connector.ts` y `apps/programas-sociales/api/src/ingest/infomidis-connector.ts` (PR #79, revisión de código). No incluye la lógica de 'elegir el recurso más reciente' — eso sigue siendo específico de cada dataset (nombre de archivo vs. `created`, ver `*-parse.ts` de cada app).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "typescript": "^5.5.3",
+    "vitest": "^4.1.10"
+  }
+}

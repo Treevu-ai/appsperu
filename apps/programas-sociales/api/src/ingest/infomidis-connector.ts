@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
+import { fetchCkanResources } from "@appsperu/ckan-client";
 import { pool } from "../db/pool.js";
 import {
   buildHeaderIndex,
@@ -8,8 +9,8 @@ import {
   parseInfomidisCsv,
   parseInfomidisNumber,
   pickLatestInfomidisResource,
-  type CkanResource,
 } from "./infomidis-parse.js";
+import type { CkanResource } from "./infomidis-parse.js";
 
 /**
  * Mismo WAF, mismo requisito de User-Agent que RENIPRESS (ver
@@ -22,38 +23,43 @@ const USER_AGENT =
 const CKAN_BASE = "https://www.datosabiertos.gob.pe";
 const DATASET_SLUG = "cobertura-de-los-programas-sociales-adscritos-al-midis-ministerio-de-desarrollo-e-inclusión";
 
-interface CkanPackageShowResult {
-  resources?: CkanResource[];
-}
-
-interface CkanPackageShowResponse {
-  success: boolean;
-  result: CkanPackageShowResult | CkanPackageShowResult[];
-}
-
 async function fetchLatestResource(): Promise<CkanResource> {
-  const url = `${CKAN_BASE}/api/3/action/package_show?id=${encodeURIComponent(DATASET_SLUG)}`;
-  const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, Accept: "application/json" } });
-  if (!res.ok) {
-    throw new Error(`CKAN package_show devolvió ${res.status} para el dataset INFOMIDIS.`);
-  }
-
-  const data = (await res.json()) as CkanPackageShowResponse;
-  if (!data.success) {
-    throw new Error("CKAN package_show no tuvo éxito para el dataset INFOMIDIS.");
-  }
-
-  const result = Array.isArray(data.result) ? data.result[0] : data.result;
-  if (!result) {
-    throw new Error("CKAN package_show devolvió un resultado vacío para el dataset INFOMIDIS.");
-  }
-
-  return pickLatestInfomidisResource(result.resources ?? []);
+  const resources = await fetchCkanResources({ ckanBase: CKAN_BASE, datasetSlug: DATASET_SLUG, userAgent: USER_AGENT });
+  return pickLatestInfomidisResource(resources);
 }
 
 function checksumOf(text: string): string {
   return createHash("sha256").update(text).digest("hex");
 }
+
+/**
+ * `ubigeo`/`fecha_corte` son la clave de conflicto — no aparecen en
+ * `UPSERT_COLUMNS` porque nunca se reasignan en el UPDATE. El resto de
+ * columnas, en el orden exacto en que se pasan como parámetros más abajo,
+ * define tanto la lista de columnas del INSERT como el SET del ON CONFLICT.
+ */
+const UPSERT_COLUMNS = [
+  "cunamas_cuidado_diurno",
+  "cunamas_acompanamiento_familias",
+  "juntos_hogares_afiliados",
+  "juntos_hogares_abonados",
+  "foncodes_usuarios_estimados",
+  "qaliwarma_ninos_atendidos",
+  "qaliwarma_iiee",
+  "pension65_usuarios",
+  "contigo_usuarios",
+  "pais_tambos",
+  "pais_atenciones",
+  "pais_beneficiarios",
+  "source_batch_id",
+] as const;
+
+const INSERT_COLUMNS = ["ubigeo", "fecha_corte", ...UPSERT_COLUMNS];
+const UPSERT_QUERY = `INSERT INTO cobertura_social (${INSERT_COLUMNS.join(", ")}, updated_at)
+   VALUES (${INSERT_COLUMNS.map((_, i) => `$${i + 1}`).join(",")}, now())
+   ON CONFLICT (ubigeo, fecha_corte) DO UPDATE SET
+     ${UPSERT_COLUMNS.map((c) => `${c} = EXCLUDED.${c}`).join(",\n     ")},
+     updated_at = now()`;
 
 /** Columnas esperadas, como conjuntos alternativos de tokens normalizados
  * (ver `findColumnValueAny`). Si ninguna alternativa calza en un corte
@@ -151,27 +157,8 @@ export async function ingestInfomidis(): Promise<InfomidisIngestSummary> {
       }
 
       await client.query(
-        `INSERT INTO cobertura_social (
-           ubigeo, fecha_corte, cunamas_cuidado_diurno, cunamas_acompanamiento_familias,
-           juntos_hogares_afiliados, juntos_hogares_abonados, foncodes_usuarios_estimados,
-           qaliwarma_ninos_atendidos, qaliwarma_iiee, pension65_usuarios, contigo_usuarios,
-           pais_tambos, pais_atenciones, pais_beneficiarios, source_batch_id, updated_at
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, now())
-         ON CONFLICT (ubigeo, fecha_corte) DO UPDATE SET
-           cunamas_cuidado_diurno = EXCLUDED.cunamas_cuidado_diurno,
-           cunamas_acompanamiento_familias = EXCLUDED.cunamas_acompanamiento_familias,
-           juntos_hogares_afiliados = EXCLUDED.juntos_hogares_afiliados,
-           juntos_hogares_abonados = EXCLUDED.juntos_hogares_abonados,
-           foncodes_usuarios_estimados = EXCLUDED.foncodes_usuarios_estimados,
-           qaliwarma_ninos_atendidos = EXCLUDED.qaliwarma_ninos_atendidos,
-           qaliwarma_iiee = EXCLUDED.qaliwarma_iiee,
-           pension65_usuarios = EXCLUDED.pension65_usuarios,
-           contigo_usuarios = EXCLUDED.contigo_usuarios,
-           pais_tambos = EXCLUDED.pais_tambos,
-           pais_atenciones = EXCLUDED.pais_atenciones,
-           pais_beneficiarios = EXCLUDED.pais_beneficiarios,
-           source_batch_id = EXCLUDED.source_batch_id,
-           updated_at = now()`,
+        UPSERT_QUERY,
+        // Orden alineado a mano con INSERT_COLUMNS ($1=ubigeo, $2=fecha_corte, luego UPSERT_COLUMNS en orden).
         [
           ubigeo,
           fechaCorte,

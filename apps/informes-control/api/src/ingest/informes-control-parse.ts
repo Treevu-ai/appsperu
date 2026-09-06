@@ -84,11 +84,18 @@ function parseFecha(value: unknown): string | null {
  * Mapea una fila cruda de la API a la forma que se persiste — únicamente
  * campos de entidad/informe. Los campos en `CAMPOS_PERSONALES_EXCLUIDOS`
  * ni siquiera se leen de `raw` acá, deliberadamente.
+ *
+ * Devuelve `null` (no lanza) cuando falta `CodigoInforme` — es el único
+ * caso esperado de "fila no persistible" (sin clave primaria). Cualquier
+ * otra excepción real (ej. un cambio de forma en la API) debe propagarse
+ * sin capturarse, para no confundirse con este caso documentado — ver
+ * el `continue` explícito en `informes-control-connector.ts` que consume
+ * este `null`, en vez de un `try/catch` genérico alrededor de esta función.
  */
-export function normalizeInforme(raw: RawInforme): InformeNormalizado {
+export function normalizeInforme(raw: RawInforme): InformeNormalizado | null {
   const codigoInforme = textOrNull(raw.CodigoInforme);
   if (!codigoInforme) {
-    throw new Error("Fila sin CodigoInforme — no se puede persistir sin la clave primaria.");
+    return null;
   }
 
   return {
