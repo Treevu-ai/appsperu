@@ -1,8 +1,22 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-09-02.
+Última actualización: 2026-09-05.
 
-Doce apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+Dieciséis apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+
+## Barrido de calidad de datos + MINDEF/MIMP + cruce por DNI (2026-09-05)
+
+**Procesos de contratación desiertos y nulos en `compras-publicas` (PR #84)**: `normalizeAwards` descartaba en silencio cualquier record OCDS sin `awards`, sin distinguir "aún en trámite" de "concluido sin adjudicar". Confirmado en vivo que `tender.items[].statusDetails` trae el estado real por ítem (muestra de 60 records/4 meses de 2026: ~29% de los ítems terminaron sin adjudicar — DESIERTO/NULO — invisibles hasta ahora). Nuevo `normalize-unsuccessful-tenders.ts` reutiliza los records que el conector ya trae (sin llamadas extra) y expone `GET /api/procurement-sin-adjudicar`. Deliberadamente no se clasifican `RETROTRAIDO_POR_RESOLUCION` ni `PENDIENTE_DE_REGISTRO_DE_EFECTO` por falta de evidencia de su significado operacional.
+
+**Dos apps nuevas tras investigación en vivo — MINDEF y MIMP (PR #85)**: a pedido directo del usuario ("¿y mindef? ¿mimp? ¿y demás?"), sector nuevo no cubierto antes (a diferencia de MEF/SEACE, que era dato escondido en algo ya cubierto). Fase 0 (verificar en vivo antes de construir) para ambos:
+- **`mindef`** (puerto 4018, Postgres 5449): convenios de compensación offset ligados a contratos de defensa, personal capacitado en el exterior, personal en misiones de paz de la ONU — datasets agregados/institucionales, sin PII. Verificado: 49 filas / 0 rechazos.
+- **`mimp`** (puerto 4019, Postgres 5450): CEM (violencia contra la mujer por centro/año) y Chat 100 (consultas nacionales anuales). Se investigó y **descartó explícitamente** un tercer dataset ("Servicio de Acogimiento Residencial para NNA") por ser individual sobre menores en protección estatal (código de usuario + fecha de nacimiento exacta + tipología de ingreso por abuso/trata/explotación) — no se ingiere bajo ninguna circunstancia. Verificado: 4,704 filas / 1 rechazo.
+- Bug real encontrado en `mimp`: la fuente usa "N°" (signo de grado, U+00B0) en encabezados, no "Nº" (ordinal, U+00BA) — la confusión dejaba todas las columnas numéricas en NULL silencioso. Test de normalización usa el carácter real para evitar la regresión.
+- Suma 5 tools MCP nuevas (91→96 tools, 16 apps).
+
+**Cruce persona-a-persona por DNI en `proveedores-sancionados` (PR #86)**: pedido del usuario para cruzar personas sancionadas contra representantes/socios de empresas por DNI (no por nombre). El RUC-10 (persona natural) ya trae el DNI incrustado (dígitos 3-10) desde que el conector existe — se extrae como columna generada, nunca escrita a mano. `GET /api/crossref/personas-sancionadas` cruza contra `numero_documento` de `supplier_conformacion` (compras-publicas, cross-DB). El DNI nunca se expone completo (`dniEnmascarado`, últimos 3 dígitos); el nombre sí, porque ya es público en el RNP. Verificado: 3,211 DNI distintos de persona sancionada, 9 con vínculo empresarial real (un caso con 3 roles simultáneos en la misma empresa).
+
+**Auditoría de `ON CONFLICT DO UPDATE SET` en los 35 conectores del monorepo (PRs #87, #88)**: hallazgo — un `ON CONFLICT ... DO UPDATE SET` que omite una columna presente en el `INSERT` deja esa columna congelada en el primer valor visto para esa fila, aunque la fuente cambie en un re-ingest posterior. Encontrado primero en `radar-inversiones/invierte-connector.ts` (13-16 columnas descriptivas nunca se refrescaban), verificado en vivo corrompiendo manualmente un campo y confirmando que un re-ingest lo restauraba. Extendido a 6 conectores más tras auditar los 35: `radar-ejecucion` (bienes-muebles-baja, airhsp, mincetur-hospedaje), `ceplan-geo` (sbn-supervision), `compras-publicas` (seace-public-minor-contracts, legacy-seace-orders — este último incluía `normalizer_version`/`data_version`, sin lo cual un upgrade del normalizador nunca se reflejaba en filas ya ingeridas). Se descartaron los gaps que eran insert-only intencional (`first_seen`) o falsos positivos (`updated_at=now()` con literal en vez de `EXCLUDED.updated_at`, que sí se actualiza). Se agregó un test de regresión por app que parsea el SQL fuente y falla si alguna columna del INSERT queda fuera del SET.
 
 ## Dashboard INFOBRAS + tema Cursor + diagnóstico UX + corte semanal explícito (2026-09-02)
 
@@ -140,6 +154,8 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `bcrp-comercio-exterior` | Comercio exterior agregado nacional (BCRP PN38714–PN38723) | 4011 | 5442 | Construida (API) |
 | `inversion-privada` | Cartera APP/PA + OxI + GIS PROINVERSIÓN (VERTIX / investinperu.pe) | 4012 | 5443 | Construida, probada, verificada |
 | `bcrp-la-libertad` | Síntesis de Actividad Económica regional (BCRP Sucursal Trujillo) — ingesta manual | 4013 | 5444 | Construida, probada, verificada (parcial: 7/10 anexos) |
+| `mindef` | Convenios offset, capacitación en el exterior y misiones de paz ONU (MINDEF) | 4018 | 5449 | Construida, probada, verificada |
+| `mimp` | Violencia contra la mujer (CEM) y consultas Chat 100 (MIMP) | 4019 | 5450 | Construida, probada, verificada |
 
 ## `bcrp-la-libertad` — ingesta manual, distinto a todo el resto del proyecto (2026-08-28)
 
@@ -176,8 +192,10 @@ automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incl
 `mcp-server/README.md`, sección "Alcance actual y lo que falta", antes de exponerlo fuera de
 `localhost`).
 
-77 tools (14 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA + OxI + GIS (`inversion-privada`);
-nueva app `bcrp-la-libertad` (ingesta manual, ver sección dedicada arriba).
+96 tools (16 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA + OxI + GIS (`inversion-privada`);
+nueva app `bcrp-la-libertad` (ingesta manual, ver sección dedicada arriba). Ampliación 2026-09-05:
+`mindef` y `mimp` (+5 tools), cruce persona-a-persona por DNI en `proveedores-sancionados`
+(ver sección "Barrido de calidad de datos + MINDEF/MIMP + cruce por DNI" arriba).
 
 ## Cruces entre apps (todos verificados con datos reales)
 
