@@ -538,6 +538,31 @@ agregados verificados columna por columna contra su fuente real antes de constru
 
 ---
 
+<a id="renamu"></a>
+## renamu — Registro Nacional de Municipalidades (INEI, datos abiertos)
+
+Investigado 2026-09-06 (Fase 0) y construido el mismo día. Único conector del catálogo que mide
+**capacidad institucional declarada por la propia municipalidad**, no ejecución de gasto — todas
+las demás apps miden presupuesto/obras/compras, ninguna mide si la municipalidad tiene los
+recursos operativos para gestionar. Encuesta censal anual del INEI, universo nacional completo
+(1,891 municipalidades, no una muestra).
+
+### `renamu-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Identificación de municipalidades (ubigeo, departamento, provincia, distrito, tipo) y su equipamiento operativo: vehículos (ambulancia, volquete, camión recolector de basura, camión cisterna, grupo electrógeno, panel solar, etc.) con conteo de unidades operativas/no operativas, y conectividad (líneas telefónicas fijas/móviles, internet, tipo de conexión). |
+| **Qué hace** | Descarga el ZIP anual, extrae el único CSV que contiene, hace upsert en `renamu_municipalidades` (identificación) y en dos tablas relacionadas: `renamu_vehiculos` (formato largo, un registro por municipalidad × tipo de bien) y `renamu_conectividad` (un registro por municipalidad). |
+| **Alcance deliberadamente parcial (decisión de diseño, no de tiempo)** | El diccionario de variables real (52 páginas, formato de tabla que se linealiza fuera de orden al extraer texto de PDF) reveló que el **Módulo I completo** de la fuente (datos generales) mezcla campos institucionales con datos de **persona natural del alcalde** (nombres, apellido paterno, apellido materno, sexo, teléfono móvil personal, correo electrónico personal) en el mismo bloque de columnas (`P04`-`P10`). No fue posible mapear con certeza qué código exacto corresponde a cada campo del alcalde a partir del PDF — en vez de arriesgar ingerir PII sin saberlo con certeza, **se excluyó el módulo completo**, nunca se leyó ni se persistió. Solo se ingiere el Módulo II (equipamiento y TIC), y dentro de este solo los bloques de vehículos (`P11A`), telefonía (`P12`) e internet (`P14`) — se dejó fuera maquinaria pesada (`P11B`), computadoras por tipo de procesador (`P13`) y equipos de oficina (`P15`) para la primera versión. Módulos III (Recursos Humanos), IV (Competencias) y V (Servicios Públicos) no explorados todavía. |
+| **Cómo lo hace** | Descarga HTTP directa de `inei.gob.pe/media/DATOS_ABIERTOS/RENAMU/DATA/<año>.zip` (patrón distinto al resto del catálogo, que usa `datosabiertos.gob.pe/sites/default/files/...`) con `User-Agent` de navegador. El ZIP se descomprime en memoria (`unzipper`, mismo paquete que ya usa `identidad-fiscal` para el Padrón RUC) buscando el primer `.csv` — el nombre de la carpeta interna cambia entre años, no se asume una ruta fija. CSV delimitado por `;`, BOM UTF-8. **Hallazgo de ingeniería real**: una lectura ingenua del diccionario de variables sugería que `P14A_1` era el tipo de conexión a internet y `P14A_2` la cantidad de computadoras — verificado contra filas reales del CSV 2026-09-06, el orden es el inverso (`P14A_1` = cantidad de computadoras, `P14A_2` = código de tipo de conexión). El diccionario en PDF no es una fuente confiable para el orden exacto de columnas relacionadas; solo los datos reales lo son. |
+| **Frecuencia** | Manual (`npm run ingest:renamu -- <año>`, por defecto el año-2 respecto al actual). Snapshot completo del año pedido en cada corrida — la fuente publica un corte anual, con rezago de varios meses. |
+| **Fuente de datos** | `datosabiertos.gob.pe` (dataset `registro-nacional-de-municipalidades-renamu-<año>-...`, publicador INEI) para el metadato/diccionario; descarga real del ZIP vía `inei.gob.pe/media/DATOS_ABIERTOS/RENAMU/DATA/<año>.zip`. |
+| **Cobertura real ingerida** | Verificado en vivo 2026-09-06 contra el año 2024: **1,891 municipalidades, 0 filas rechazadas** — universo nacional completo (una fila por municipalidad provincial/distrital/centro poblado). |
+| **Detalle completo** | [`docs/data-contracts/inei-renamu-municipalidades.md`](data-contracts/inei-renamu-municipalidades.md) |
+| **Cruces** | Ninguno implementado — candidato natural: por UBIGEO contra `budget_execution` de [`radar-ejecucion`](#radar-ejecucion), comparando capacidad institucional declarada (¿tiene la municipalidad vehículos, internet?) contra ejecución presupuestal real. Ningún conector actual mide esta dimensión. |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada
@@ -618,4 +643,5 @@ OCDS); esos resultados devuelven `valorMoneda: null` en vez de asumir soles.
 | `peace-missions-connector.ts` | mindef | MINDEF (datosabiertos.gob.pe) | Descarga CSV, maneja WAF | Manual | Completa (20 filas) |
 | `cem-connector.ts` | mimp | MIMP (datosabiertos.gob.pe) | Descarga CSV Latin-1, maneja WAF | Manual | Completa (nacional, ~4,700 filas) |
 | `chat100-connector.ts` | mimp | MIMP (datosabiertos.gob.pe) | Descarga CSV Latin-1, maneja WAF | Manual | Completa (nacional, 6 filas) |
+| `renamu-connector.ts` | renamu | INEI RENAMU (inei.gob.pe) | Descarga ZIP, extrae CSV en memoria | Manual | Parcial por diseño (solo Módulo II: vehículos/telefonía/internet; Módulo I con PII del alcalde excluido; Módulos III-V no explorados) — universo nacional completo dentro de ese alcance (1,891 municipalidades) |
 

@@ -33,6 +33,7 @@ ALL_APPS=(
   informes-control
   mindef
   mimp
+  renamu
 )
 
 if [ "$#" -gt 0 ]; then

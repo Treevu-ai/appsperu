@@ -28,6 +28,7 @@ jobs:
           - apps/proveedores-sancionados/api
           - apps/radar-ejecucion/api
           - apps/radar-inversiones/api
+          - apps/renamu/api
           - apps/salud-institucional/api
           - apps/seguridad-ciudadana/api
           - apps/servicios-salud/api

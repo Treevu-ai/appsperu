@@ -1,8 +1,43 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-09-05.
+Última actualización: 2026-09-06.
 
-Dieciséis apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+Diecisiete apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+
+## RENAMU/INEI — primer conector que mide capacidad institucional, no ejecución (2026-09-06)
+
+Tras hacer inventario "entidad por entidad" de qué se ingiere hoy, se identificaron INEI y
+JNE/Infogob como los huecos de mayor valor no explorados. Fase 0 (investigación en vivo) para
+ambos; se construyó primero RENAMU, quedando JNE/Autoridades Electas con su data contract listo
+(`docs/data-contracts/jne-autoridades-electas.md`) pero sin construir todavía.
+
+**App nueva `renamu`** (puerto 4020, Postgres 5451): ingiere el Registro Nacional de
+Municipalidades del INEI — encuesta censal anual (no muestra) a las 1,891 municipalidades del
+país. Es el primer conector del catálogo que mide **capacidad institucional declarada por la
+propia municipalidad** (¿tiene vehículos, internet, telefonía?) en vez de ejecución de gasto —
+ninguna de las otras 16 apps mide esta dimensión.
+
+Alcance deliberadamente parcial, por una razón de gobierno de dato, no de tiempo: el diccionario
+de variables real (52 páginas, extraído con `pdf-parse`) reveló que el **Módulo I** de la fuente
+(datos generales) mezcla campos institucionales con datos de **persona natural del alcalde**
+(nombres, apellidos, sexo, teléfono y correo personal) en el mismo bloque de columnas, y el
+layout de tabla del PDF se linealiza fuera de orden al extraer texto — no fue posible mapear con
+certeza qué código exacto corresponde a cada campo del alcalde. Se excluyó el módulo completo,
+nunca leído ni persistido. Solo se ingirió el Módulo II (equipamiento y TIC), y dentro de este
+solo vehículos (ambulancia, volquete, camión recolector de basura, camión cisterna, grupo
+electrógeno, panel solar, etc.), telefonía e internet — maquinaria pesada, computadoras por tipo
+de procesador y equipos de oficina quedan para una versión futura, mismo patrón de "cierre
+parcial documentado" que ya usa `bcrp-la-libertad` (7/10 anexos).
+
+Hallazgo de ingeniería real: una lectura ingenua del diccionario sugería que `P14A_1` era el tipo
+de conexión a internet y `P14A_2` la cantidad de computadoras — verificado contra filas reales
+del CSV 2024, el orden es el inverso. El diccionario en PDF no fue confiable para el orden exacto
+de columnas relacionadas; solo los datos reales lo fueron.
+
+Verificado en vivo: 1,891 municipalidades, 0 filas rechazadas (año 2024, el corte más reciente
+publicado). Suma 2 tools MCP nuevas (96→98 tools, 17 apps). Detalle completo en
+[`docs/conectores.md#renamu`](conectores.md#renamu) y
+[`docs/data-contracts/inei-renamu-municipalidades.md`](data-contracts/inei-renamu-municipalidades.md).
 
 ## Barrido de calidad de datos + MINDEF/MIMP + cruce por DNI (2026-09-05)
 
@@ -156,6 +191,7 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `bcrp-la-libertad` | Síntesis de Actividad Económica regional (BCRP Sucursal Trujillo) — ingesta manual | 4013 | 5444 | Construida, probada, verificada (parcial: 7/10 anexos) |
 | `mindef` | Convenios offset, capacitación en el exterior y misiones de paz ONU (MINDEF) | 4018 | 5449 | Construida, probada, verificada |
 | `mimp` | Violencia contra la mujer (CEM) y consultas Chat 100 (MIMP) | 4019 | 5450 | Construida, probada, verificada |
+| `renamu` | Capacidad institucional municipal: vehículos, telefonía, internet (INEI) | 4020 | 5451 | Construida, probada, verificada (parcial por diseño: solo Módulo II) |
 
 ## `bcrp-la-libertad` — ingesta manual, distinto a todo el resto del proyecto (2026-08-28)
 
@@ -192,10 +228,11 @@ automatizado del catálogo (`mcp-server/src/__tests__/catalog.test.ts`). No incl
 `mcp-server/README.md`, sección "Alcance actual y lo que falta", antes de exponerlo fuera de
 `localhost`).
 
-96 tools (16 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA + OxI + GIS (`inversion-privada`);
+98 tools (17 apps). Ampliación 2026-08-28: cartera VERTIX APP/PA + OxI + GIS (`inversion-privada`);
 nueva app `bcrp-la-libertad` (ingesta manual, ver sección dedicada arriba). Ampliación 2026-09-05:
 `mindef` y `mimp` (+5 tools), cruce persona-a-persona por DNI en `proveedores-sancionados`
-(ver sección "Barrido de calidad de datos + MINDEF/MIMP + cruce por DNI" arriba).
+(ver sección "Barrido de calidad de datos + MINDEF/MIMP + cruce por DNI" arriba). Ampliación
+2026-09-06: `renamu` (+2 tools, ver sección dedicada arriba).
 
 ## Cruces entre apps (todos verificados con datos reales)
 

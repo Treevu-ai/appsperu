@@ -1,0 +1,21 @@
+name: renamu
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: renamu
+      POSTGRES_PASSWORD: renamu
+      POSTGRES_DB: renamu
+    ports:
+      - "127.0.0.1:5451:5432"
+    volumes:
+      - renamu_pgdata:/var/lib/postgresql/data
+
+volumes:
+  renamu_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true

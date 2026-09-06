@@ -1308,4 +1308,41 @@ export const TOOL_CATALOG: ToolSpec[] = [
       anio: z.coerce.number().int().min(2000).max(2100).optional(),
     },
   },
+
+  // ---- renamu (Registro Nacional de Municipalidades, INEI, datos abiertos) ----
+  {
+    name: "renamu_municipalidades",
+    app: "renamu",
+    description:
+      "Identificación de municipalidades (RENAMU/INEI, encuesta censal anual, 1,891 municipalidades) — " +
+      "ubigeo, departamento, provincia, distrito, tipo (Provincial/Distrital/Centro Poblado). Alcance " +
+      "deliberadamente parcial: el Módulo I completo de la fuente (datos generales) se excluyó por mezclar " +
+      "campos institucionales con datos de persona natural del alcalde (nombre, teléfono y correo personal) " +
+      "que no se pudieron mapear con certeza contra el diccionario de variables — nunca se ingirió PII. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/municipalidades",
+    pathParams: [],
+    querySchema: {
+      anio: z.coerce.number().int().min(2000).max(2100).optional(),
+      departamento: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      ubigeo: z.string().regex(/^\d{6}$/).optional(),
+    },
+  },
+  {
+    name: "renamu_equipamiento",
+    app: "renamu",
+    description:
+      "Capacidad institucional de una municipalidad por ubigeo (RENAMU/INEI, Módulo II: equipamiento y TIC) — " +
+      "vehículos (auto, ambulancia, volquete, camión recolector de basura, camión cisterna, grupo electrógeno, " +
+      "panel solar) con conteo de unidades operativas/no operativas, y conectividad (líneas fijas/móviles, " +
+      "internet, tipo de conexión). Único conector del catálogo que mide capacidad de gestión declarada por la " +
+      "propia municipalidad, en vez de ejecución de gasto. No incluye maquinaria pesada, computadoras por tipo " +
+      "de procesador ni equipos de oficina en esta primera versión (ver data contract). " + SIN_SCHEDULER,
+    pathTemplate: "/api/equipamiento",
+    pathParams: [],
+    querySchema: {
+      ubigeo: z.string().regex(/^\d{6}$/),
+      anio: z.coerce.number().int().min(2000).max(2100).optional(),
+    },
+  },
 ];

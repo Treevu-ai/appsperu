@@ -60,6 +60,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
   "informes-control": ["informes_control_crossref", "informes_control_informes"],
   mindef: ["mindef_offset_agreements", "mindef_peace_missions", "mindef_training_abroad"],
   mimp: ["mimp_cem_casos", "mimp_chat100_consultas"],
+  renamu: ["renamu_municipalidades", "renamu_equipamiento"],
   "identidad-fiscal": [
     "identidad_fiscal_contribuyente_by_ruc",
     "identidad_fiscal_contribuyentes",
