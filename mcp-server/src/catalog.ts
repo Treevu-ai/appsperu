@@ -345,6 +345,83 @@ export const TOOL_CATALOG: ToolSpec[] = [
       limit: z.string().regex(/^\d+$/).optional(),
     },
   },
+  {
+    name: "radar_ejecucion_proyectos",
+    app: "radar-ejecucion",
+    description:
+      "Nombre real de proyecto/actividad/obra por entidad+función — el nivel de detalle que responde 'qué " +
+      "construye' una entidad, no solo bajo qué función/genérica cae. " + SIN_SCHEDULER,
+    pathTemplate: "/api/proyectos",
+    pathParams: [],
+    querySchema: {
+      entityCode: z.string().min(1).optional(),
+      funcion: z.string().min(1).optional(),
+      anio: z.string().regex(/^\d{4}$/).optional(),
+      metaDepartamento: z.string().min(1).optional(),
+    },
+  },
+  {
+    name: "radar_ejecucion_personal",
+    app: "radar-ejecucion",
+    description:
+      "Dotación de personal del Estado (MEF/AIRHSP) agregada por pliego/unidad ejecutora/régimen laboral/grupo " +
+      "ocupacional — cantidad y costo total anual. Agregación institucional, no personal identificable; sin " +
+      "ubigeo en la fuente, filtrar por texto sobre PLIEGO/UNIDAD_EJECUTORA. " + SIN_SCHEDULER,
+    pathTemplate: "/api/personal",
+    pathParams: [],
+    querySchema: {
+      entidad: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE) sobre pliego o unidad ejecutora."),
+      ejercicio: z.string().regex(/^\d{4}$/).optional(),
+    },
+  },
+  {
+    name: "radar_ejecucion_patrimonio_bienes_muebles_baja",
+    app: "radar-ejecucion",
+    description:
+      "Activos patrimoniales dados de baja (desincorporados) por entidad del Estado (MEF) — resolución, acto de " +
+      "baja y bien. Solo activos dados de baja, NO es el inventario completo de bienes muebles del Estado (esa " +
+      "fuente no tiene un dataset público estructurado conocido). " + SIN_SCHEDULER,
+    pathTemplate: "/api/patrimonio/bienes-muebles-baja",
+    pathParams: [],
+    querySchema: {
+      entidad: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE) sobre nombre de entidad."),
+      ejercicio: z.string().regex(/^\d{4}$/).optional(),
+    },
+  },
+  {
+    name: "radar_ejecucion_patrimonio_bienes_muebles_baja_por_distrito",
+    app: "radar-ejecucion",
+    description:
+      "Bajas patrimoniales agregadas por distrito, SOLO para municipalidades (el resto del universo — " +
+      "ministerios, gobiernos regionales, UGEL, empresas de agua/luz — queda excluido porque su RUC resuelve al " +
+      "domicilio fiscal en Lima, no al lugar donde se usó el bien; para una municipalidad, el domicilio fiscal sí " +
+      "es una aproximación razonable a su distrito). Cruce en vivo entre esta app, identidad-fiscal (RUC->ubigeo) " +
+      "y ceplan-geo (ubigeo->departamento/provincia/distrito), no persistido. " + SIN_SCHEDULER,
+    pathTemplate: "/api/patrimonio/bienes-muebles-baja/por-distrito",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      ejercicio: z.string().regex(/^\d{4}$/).optional(),
+    },
+  },
+  {
+    name: "radar_ejecucion_burocracia_inversion",
+    app: "radar-ejecucion",
+    description:
+      "Ratio gasto-en-planilla vs. gasto-en-inversión por entidad/distrito (genérica de gasto '1' = personal, " +
+      "'6' = adquisición de activos no financieros). Excluye gasto de Gobierno Nacional dirigido a un " +
+      "departamento (meta_departamento) y filas sin GENERICA clasificada — no se tratan como cero, se excluyen " +
+      "de ambos sumandos. `ratioIndefinido=true` cuando el devengado en inversión es cero (no se puede dividir). " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/burocracia-inversion",
+    pathParams: [],
+    querySchema: {
+      anio: z.string().regex(/^\d{4}$/).optional(),
+      departamento: z.string().min(1).optional(),
+      nivel: z.string().min(1).optional().describe("Nivel de gobierno de la entidad ejecutora."),
+      entityCode: z.string().min(1).optional(),
+    },
+  },
 
   // ---- compras-publicas (OECE/OCDS) ----
   {
@@ -703,6 +780,32 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathTemplate: "/api/crossref",
     pathParams: [],
     querySchema: { departamento: z.string().min(1).optional() },
+  },
+  {
+    name: "radar_inversiones_investments_desactivadas",
+    app: "radar-inversiones",
+    description:
+      "Inversiones DESACTIVADAS del Banco de Inversiones (MEF) — la mitad del Banco que `radar_inversiones_investments` " +
+      "no cubre. `situacion` conserva el estado que tenía la inversión al desactivarse (ej. 'EN FORMULACION' " +
+      "cuando nunca obtuvo declaratoria de viabilidad). La fuente no publica un código de motivo por fila; esta " +
+      "tool no infiere uno. Paginado real con `total`/`hasMore`, no un LIMIT fijo silencioso. " + SIN_SCHEDULER,
+    pathTemplate: "/api/investments-desactivadas",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      situacion: z.string().min(1).optional(),
+      funcion: z.string().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(5000).optional().describe("Default 1000, máximo 5000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "radar_inversiones_investment_desactivada_by_cui",
+    app: "radar-inversiones",
+    description: "Detalle de una inversión desactivada específica por su CUI.",
+    pathTemplate: "/api/investments-desactivadas/{cui}",
+    pathParams: ["cui"],
+    querySchema: {},
   },
 
   // ---- infobras (Contraloría) ----
@@ -1067,6 +1170,22 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: [],
     querySchema: { departamento: z.string().min(1).optional() },
   },
+  {
+    name: "ceplan_geo_patrimonio_predios",
+    app: "ceplan-geo",
+    description:
+      "Predios estatales supervisados por SBN (Superintendencia Nacional de Bienes Estatales) — resultado de " +
+      "supervisión, titular, área y si es zona de playa protegida. Cobertura PARCIAL: solo predios efectivamente " +
+      "supervisados, NO el universo completo del registro SINABIP (se publica solo como enlace de Google Drive, " +
+      "actualmente roto).",
+    pathTemplate: "/api/patrimonio/predios",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+    },
+  },
 
   // ---- proveedores-sancionados (RNP/OECE, Tribunal de Contrataciones) ----
   {
@@ -1109,6 +1228,24 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: [],
     querySchema: {
       soloVigentes: z.enum(["true", "false"]).optional(),
+    },
+  },
+  {
+    name: "proveedores_sancionados_redes_proveedores",
+    app: "proveedores-sancionados",
+    description:
+      "Proveedores de contrataciones menores (compras-publicas/SEACE) que ganan en varias municipalidades " +
+      "distintas de un departamento — señal de red o concentración territorial, NO una conclusión de " +
+      "irregularidad. Solo cuenta municipalidades reales (`official_name ILIKE 'MUNICIPALIDAD%'`), excluyendo " +
+      "ministerios/gobiernos regionales/UGEL que también aparecen en el universo de compradores. " +
+      "`soloSancionados=true` filtra solo proveedores con inhabilitación VIGENTE hoy (no al momento de cada " +
+      "contrato). Default: LA LIBERTAD.",
+    pathTemplate: "/api/crossref/redes-proveedores",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Default LA LIBERTAD."),
+      minMunicipios: z.coerce.number().int().min(1).optional().describe("Default 2."),
+      soloSancionados: z.enum(["true", "false"]).optional(),
     },
   },
 
