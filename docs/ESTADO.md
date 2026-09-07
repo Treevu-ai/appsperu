@@ -4,6 +4,35 @@
 
 Veintisiete apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
 
+## CX-15 — chequeo automatizado catálogo MCP ↔ rutas Express reales (2026-09-07)
+
+A pedido del usuario ("empieza con CX-15", ver `docs/PRD_Consolidacion_Logica_Compartida_y_
+Rigor_Temporal_v1.md`), se implementó el ticket que quedó abierto tras la auditoría del catálogo
+MCP de esta misma semana: un chequeo que compara `TOOL_CATALOG` contra las rutas `GET` reales de
+las 27 apps, en vez de depender solo de `EXPECTED_TOOLS_BY_APP` (una lista mantenida a mano que
+nunca hubiera detectado el gap de `compras-publicas`).
+
+`mcp-server/src/route-introspection.ts` parsea como texto `app.ts` (imports + `app.use`) y cada
+`routes/*.ts` (`.get(...)`) de una app, sin necesitar las 27 APIs corriendo — mismo patrón de
+"parsear como texto, no importar" que ya usa `apps/rastro-web/scripts/generate-mcp-catalog.mjs`
+sobre `catalog.ts`. Caso especial resuelto: 3 archivos de `actividad-agraria`
+(`wage.ts`/`tractor-rental.ts`/`yunta-rental.ts`) no declaran `.get(` directamente — reexportan
+un router construido por una factory compartida (`regional-monthly.ts`); el parser sigue el
+import local en ese caso.
+
+`mcp-server/src/__tests__/routes-vs-catalog.test.ts` (27 tests, uno por app) compara ambos sets
+normalizados (cualquier `:param`/`{param}` se reduce a un token fijo, ya que el nombre puede
+diferir legítimamente entre la ruta real y el catálogo). Validado con el mismo criterio que
+cerró CX-11: mutar temporalmente un `pathTemplate` real y confirmar que el test falla en la app
+exacta con el path exacto en el mensaje, en ambas direcciones, antes de revertir.
+
+**La primera corrida encontró 5 gaps reales nuevos**, ninguno relacionado con `compras-publicas`
+(ya cerrado): `radar-ejecucion` (`/api/sectores/entidades/{entityCode}/ficha`,
+`/api/servicios-cuidados/{serviceId}`), `ceplan-geo` (`/api/denominadores/benchmark-ejecucion`),
+`inversion-privada` (`/api/oxi/{oxiId}`), `bcrp-la-libertad` (`/api/meta/sources`). Las 5 tools
+se agregaron y verificaron en vivo (Postgres levantado para `ceplan-geo`/`bcrp-la-libertad`, que
+no estaban corriendo, y detenido después). Catálogo total: **142 tools, 27 apps** (antes 137).
+
 ## Auditoría del catálogo MCP + cierre de gaps en `compras-publicas` (2026-09-07)
 
 A pedido del usuario ("revisa las mcp tools, son óptimas, hay gaps"), se auditó el catálogo

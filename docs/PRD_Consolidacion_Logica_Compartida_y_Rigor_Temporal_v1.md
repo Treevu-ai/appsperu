@@ -1,6 +1,6 @@
 # PRD — Consolidación de lógica compartida y rigor temporal en cruces
 
-**Estado:** CX-07, CX-08, CX-09, CX-10, CX-11, CX-12, CX-13 cerrados (2026-09-05); CX-14 (nuevo, hallazgo de CX-10) propuesto, requiere acceso a datos en vivo; CX-15 (nuevo, hallazgo de una auditoría posterior a CX-11) propuesto (2026-09-07)
+**Estado:** CX-07, CX-08, CX-09, CX-10, CX-11, CX-12, CX-13, CX-15 cerrados (CX-15 el 2026-09-07, el resto el 2026-09-05); CX-14 (nuevo, hallazgo de CX-10) propuesto, requiere acceso a datos en vivo
 **Fecha:** 2026-09-04
 **Ámbito:** `apps/*/api/src/routes/*.ts`, `apps/*/api/src/lib/`, `packages/`, `mcp-server/src/catalog.ts`, `package.json` raíz
 **Horizonte:** dos sprints cortos; sin fecha comprometida ni owner asignado
@@ -142,24 +142,27 @@ La carpeta `.worktrees/` (usada por `git worktree` para desarrollo en paralelo) 
 
 `ceplan-geo` queda **fuera de este ticket**: tiene la misma copia duplicada, pero no está en `workspaces` hoy, y no tiene matrix en `.github/workflows/ci.yml` — sumarla habría significado abrir el mismo trabajo de CX-08/CX-09 (quitar lockfile, extender CI) dentro de un ticket que se pensó como "conectar un paquete ya empezado". Queda documentada como duplicación conocida para cuando `ceplan-geo` entre al workspace por otro ticket (mismo criterio incremental de ADR-0019).
 
-### CX-15 — Automatizar `catalog.test.ts` contra las rutas Express reales, no una lista versionada a mano (nuevo, hallazgo de una auditoría posterior a CX-11)
+### CX-15 — Automatizar `catalog.test.ts` contra las rutas Express reales, no una lista versionada a mano (nuevo, hallazgo de una auditoría posterior a CX-11) — ✅ CERRADO (2026-09-07)
 
 **Prioridad:** P1 · **Esfuerzo:** M (requiere introspección de las 27 apps, hoy 13 más que cuando se abrió CX-11) · **Dependencias:** ninguna
 
 Confirmado con evidencia real (ver actualización de CX-11 arriba): `EXPECTED_TOOLS_BY_APP` protege contra que el catálogo se desincronice *de sí mismo* (un tool renombrado/borrado sin querer), pero no contra que quede *incompleto desde el principio* — un gap de 20 tools en `compras-publicas` pasó inadvertido con el test en verde durante semanas. El punto ya estaba anotado como fuera de alcance en §9 de este PRD ("sería un chequeo más robusto pero de mayor esfuerzo"); esta auditoría confirma que el esfuerzo ya no es solo teórico.
 
-Alcance propuesto: un chequeo (test o script de CI) que levante o introspeccione las rutas `GET` reales de cada `apps/*/api/src/routes/*.ts` (por ejemplo parseando los `router.get(...)` registrados, sin necesitar las apps corriendo) y las compare contra `pathTemplate` de `TOOL_CATALOG`, fallando con un mensaje accionable si hay una ruta real sin tool o un tool sin ruta real. No reemplaza `EXPECTED_TOOLS_BY_APP` (que sigue siendo la forma barata de detectar un rename accidental) sino que lo complementa.
+**Resuelto**: `mcp-server/src/route-introspection.ts` (`getRealRoutesForApp()`) parsea como texto `apps/<app>/api/src/app.ts` (imports `./routes/*.js` + `app.use("<prefix>", <var>)`) y cada `routes/*.ts` (`.get("<path>"`), combinando prefijo + path y normalizando cualquier parámetro (`:id`, `:kind(a|b|c)`, `{id}`) a un token fijo — el nombre del parámetro puede diferir legítimamente entre la ruta Express y el `pathTemplate` del catálogo sin que eso sea un gap real. Caso especial encontrado y manejado: 3 archivos de `actividad-agraria` (`wage.ts`, `tractor-rental.ts`, `yunta-rental.ts`) no declaran `.get(` directamente — re-exportan un router construido por una factory compartida (`regional-monthly.ts`); el parser sigue el import local y lee los paths ahí.
 
-Criterio de aceptación: introducir deliberadamente un endpoint nuevo en cualquier app sin agregar su tool correspondiente debe hacer fallar este chequeo en CI, no solo quedar como una nota en `docs/ESTADO.md` de la próxima auditoría manual.
+`mcp-server/src/__tests__/routes-vs-catalog.test.ts` compara, por cada una de las 27 apps, el set de rutas reales contra el set de `pathTemplate` del catálogo — 27 tests, uno por app, con mensaje accionable listando exactamente qué endpoint le falta tool o qué tool ya no tiene endpoint.
+
+**Validación real** (mismo criterio que dejó CX-11): mutué temporalmente un `pathTemplate` real y confirmé que el test falla en la app exacta con el path exacto en el mensaje, en ambas direcciones (endpoint sin tool, tool sin endpoint), antes de revertir.
+
+**La primera corrida encontró 5 gaps reales nuevos** (ninguno relacionado con `compras-publicas`, ya cerrado en CX-11-actualización): `radar-ejecucion` (`/api/sectores/entidades/{entityCode}/ficha` — ficha de una entidad específica, distinta de la ficha de sector completo; `/api/servicios-cuidados/{serviceId}` — detalle de un servicio con evidencia de proveedores/entregas), `ceplan-geo` (`/api/denominadores/benchmark-ejecucion` — ejecución PIM/devengado por distrito vs. población INEI), `inversion-privada` (`/api/oxi/{oxiId}` — detalle de un proyecto OxI), `bcrp-la-libertad` (`/api/meta/sources` — metadata de ingesta manual, mismo patrón que el resto del catálogo). Las 5 tools nuevas se agregaron y verificaron en vivo contra las 4 apps reales corriendo (Postgres levantado para `ceplan-geo` y `bcrp-la-libertad`, que no estaban corriendo, y removido después de verificar). Catálogo total: 137→**142 tools, 27 apps**.
 
 ## 6. Priorización y secuencia
 
 | Fase | Entregables | Resultado que desbloquea |
 |---|---|---|
 | **Hecho** | CX-07, CX-08, CX-09, CX-10, CX-11, CX-12, CX-13 | Decidido dónde vive la lógica compartida (ADR-0019); `LATEST_BUDGET_CTE` consolidada (11 copias → 1, 6 apps sumadas al workspace); `extractRuc()`/`temporal-status` consolidados (`proveedores-sancionados` sumado al workspace); `costDriftPct`/umbral de sobrecosto consolidados en `packages/shared-signals` (ADR-0020); `catalog.test.ts` del MCP extendido de 1 a 14 apps; housekeeping de `.worktrees/`; `packages/http-client` conectado (`compras-publicas`). |
-| **Hecho (fuera del plan original, auditoría 2026-09-07)** | — | Catálogo MCP corregido y ampliado a mano (107→137 tools, 27 apps: bug de filtros, gap de `compras-publicas`, 5 gaps menores, naming `bcrp_*`, paginación real en 10 endpoints) — ver actualización de CX-11. No sustituye a CX-15. |
+| **Hecho (fuera del plan original, auditoría 2026-09-07)** | CX-15 | Catálogo MCP corregido y ampliado a mano (107→137 tools: bug de filtros, gap de `compras-publicas`, 5 gaps menores, naming `bcrp_*`, paginación real en 10 endpoints — ver actualización de CX-11) más CX-15 (chequeo automatizado catálogo↔rutas reales, `route-introspection.ts`, encontró 5 gaps más). Catálogo final: 142 tools, 27 apps. |
 | **Pendiente (bloqueado)** | CX-14 | Análisis de distribución real de `costDriftPct` — requiere acceso a datos en vivo, no ejecutable en esta sesión. |
-| **Pendiente (nuevo, sin bloqueo)** | CX-15 | Chequeo automatizado catálogo↔rutas reales — evita que un gap como el de `compras-publicas` vuelva a pasar inadvertido con el test en verde. |
 
 ## 7. Requisitos no funcionales
 

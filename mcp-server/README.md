@@ -60,7 +60,7 @@ Nombres de env var por app: `RADAR_EJECUCION_API_URL`, `COMPRAS_PUBLICAS_API_URL
 
 ## Catálogo de tools
 
-137 tools (27 apps), uno por endpoint `GET /api/*` real de las 27 apps (`src/catalog.ts` es la fuente de
+142 tools (27 apps), uno por endpoint `GET /api/*` real de las 27 apps (`src/catalog.ts` es la fuente de
 verdad — cada entrada mapea 1:1 a un `routes/*.ts` existente, sin inventar parámetros). Nombrados
 `<app>_<recurso>`, ej. `radar_ejecucion_execution`, `compras_publicas_suppliers`,
 `salud_institucional_score`.
@@ -75,12 +75,17 @@ como si fuera completo.
 
 - **Transporte**: solo stdio (uso local, agente y las 20 APIs en la misma máquina). Streamable
   HTTP para exponerlo remoto es un paso posterior, no implementado.
-- **Sin autenticación**: igual que las 20 APIs que agrega (`helmet` + `cors` + rate limit, sin auth
+- **Sin autenticación**: igual que las 27 APIs que agrega (`helmet` + `cors` + rate limit, sin auth
   — confirmado en cada `app.ts`). Aceptable para stdio local; **no exponer este servidor ni las
   APIs subyacentes fuera de `localhost` sin resolver auth primero**.
 - **No incluye las ingestas** (`npm run ingest:*`) — este servidor es de solo lectura. Disparar
   ingestas desde un agente es una superficie de riesgo distinta (ejecución de scripts contra
   Postgres) que se dejó fuera de alcance a propósito.
 - Validado manualmente: registro de tools, llamada con query params reales, manejo de error de
-  conectividad cuando la app de destino no responde, y test automatizado del catálogo
-  (`src/__tests__/catalog.test.ts`). No hay suite contra las 20 APIs reales corriendo en CI.
+  conectividad cuando la app de destino no responde, y dos tests automatizados del catálogo:
+  `src/__tests__/catalog.test.ts` (`EXPECTED_TOOLS_BY_APP`, detecta un tool renombrado/borrado sin
+  querer) y `src/__tests__/routes-vs-catalog.test.ts` (CX-15, `src/route-introspection.ts` —
+  compara `TOOL_CATALOG` contra los `router.get(...)` reales de `apps/*/api/src/routes/*.ts` vía
+  parseo de texto, sin levantar las 27 APIs; detecta un endpoint sin tool o un tool sin endpoint
+  real, el gap que dejó pasar `compras-publicas` antes de la auditoría de 2026-09-07). Ninguno de
+  los dos hace requests HTTP contra las APIs corriendo — son chequeos estáticos, no integración.

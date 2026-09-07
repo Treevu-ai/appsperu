@@ -87,6 +87,20 @@
     "sinScheduler": true
   },
   {
+    "name": "radar_ejecucion_sector_entidad_ficha",
+    "app": "radar-ejecucion",
+    "description": "Ficha de UNA entidad específica (por entity_code), distinta de `radar_ejecucion_sector_ficha` (que trae todas las entidades verificadas de un sector completo) — mismo detalle (PIA/PIM/devengado, inversiones, obras, contrataciones) pero acotado a una sola entidad. No sustituye reglas territoriales ni atribuye gasto a CUI por nombre. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/sectores/entidades/{entityCode}/ficha",
+    "pathParams": [
+      "entityCode"
+    ],
+    "queryParams": [
+      "anio",
+      "departamento"
+    ],
+    "sinScheduler": true
+  },
+  {
     "name": "radar_ejecucion_sector_comparativo",
     "app": "radar-ejecucion",
     "description": "Comparativo descriptivo de entidades sectoriales verificadas. Mantiene separadas la responsabilidad nacional dirigida al departamento y la ejecución regional por sede; no genera score ni suma ambos universos como si fueran uno solo. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
@@ -120,6 +134,19 @@
     "pathParams": [],
     "queryParams": [
       "tipo",
+      "departamento"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_care_service_by_id",
+    "app": "radar-ejecucion",
+    "description": "Detalle de un servicio específico del registro `radar_ejecucion_care_services` por su serviceId — incluye proveedores vinculados (RUC, lote) y evidencia de entrega por colegio, cuando existen. Mismo criterio de evidencia que la lista: la ausencia de un dato es un vacío de evidencia, no una conclusión de incumplimiento. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/servicios-cuidados/{serviceId}",
+    "pathParams": [
+      "serviceId"
+    ],
+    "queryParams": [
       "departamento"
     ],
     "sinScheduler": true
@@ -1023,6 +1050,18 @@
     "sinScheduler": true
   },
   {
+    "name": "ceplan_geo_denominadores_benchmark_ejecucion",
+    "app": "ceplan-geo",
+    "description": "Ejecución presupuestal (PIM/devengado, solo GOBIERNOS LOCALES) por distrito dentro de una provincia, junto con población INEI 2017, para comparar avance de ejecución entre distritos de una misma provincia (evita comparar peras con manzanas contra el resto del país). Nunca mezcla gasto nacional dirigido a un departamento (`metaDepartamento`) con ejecución por sede — mismo criterio que `ceplan_geo_crossref_ejecucion`. PIM=0 con devengado>0 es un caso real de la fuente (visto en Municipalidad Provincial de Trujillo): se expone `avancePct: null` + `avancePctIndefinido: true`, nunca una división por cero. Requiere radar-ejecucion. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/denominadores/benchmark-ejecucion",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "provincia"
+    ],
+    "sinScheduler": true
+  },
+  {
     "name": "identidad_fiscal_contribuyentes",
     "app": "identidad-fiscal",
     "description": "Busca contribuyentes en el Padrón RUC de SUNAT (personas jurídicas, RUC-20) por razón social, estado o ubigeo. Cobertura nacional completa (~2.3M filas) — paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`, no asumas que `resultados` es el universo completo sin revisarlo.  La fuente SUNAT se actualiza a diario; este conector no está automatizado para seguir ese ritmo.Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
@@ -1302,6 +1341,17 @@
     "sinScheduler": true
   },
   {
+    "name": "inversion_privada_oxi_by_id",
+    "app": "inversion-privada",
+    "description": "Detalle de un proyecto OxI específico por su Id numérico interno (`oxiId`).",
+    "pathTemplate": "/api/oxi/{oxiId}",
+    "pathParams": [
+      "oxiId"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
     "name": "inversion_privada_oxi_crossref_invierte",
     "app": "inversion-privada",
     "description": "Cruce OxI <-> radar-inversiones (Invierte.pe) por codigo_snip exacto (sin fuzzy). Solo confirma lo que efectivamente matchea — una fila sin match no implica que el proyecto no exista en Invierte.pe, solo que su código en OxI no coincidió. Incluye resumen con tasa de match real. Default LA LIBERTAD.",
@@ -1346,6 +1396,15 @@
       "anio",
       "mes"
     ],
+    "sinScheduler": false
+  },
+  {
+    "name": "bcrp_la_libertad_meta_sources",
+    "app": "bcrp-la-libertad",
+    "description": "Metadata de los últimos 10 lotes de ingesta manual (PDF por PDF, ver `bcrp_la_libertad_indicadores`) y desglose de filas por anexo — útil para confirmar qué anexos/periodos ya se ingirieron sin tener que consultar `indicadores` directamente.",
+    "pathTemplate": "/api/meta/sources",
+    "pathParams": [],
+    "queryParams": [],
     "sinScheduler": false
   },
   {
