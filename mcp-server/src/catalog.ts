@@ -1471,4 +1471,58 @@ export const TOOL_CATALOG: ToolSpec[] = [
       anio: z.coerce.number().int().min(2000).max(2100).optional(),
     },
   },
+
+  // ---- infraestructura-mtc (MTC: terminales portuarios, aeródromos, peajes) ----
+  {
+    name: "infraestructura_mtc_terminales_portuarios",
+    app: "infraestructura-mtc",
+    description:
+      "Catálogo de terminales portuarios y embarcaderos (MTC) — ubicación, ámbito (marítimo/fluvial/" +
+      "lacustre), tipo, uso, tráfico, estado de conservación, titularidad y administrador. Snapshot anual " +
+      "acumulado 2022-2025 (una fila por terminal por corte, no solo el más reciente). 507 filas nacionales " +
+      "verificadas (9 en La Libertad, 3 terminales: TP Multipropósito Salaverry, TP Multiboyas Salaverry, " +
+      "TP Chicama/Malabrigo). " + SIN_SCHEDULER,
+    pathTemplate: "/api/terminales-portuarios",
+    pathParams: [],
+    querySchema: {
+      idDepartamento: z.string().min(1).optional().describe("Código UBIGEO de departamento, ej. '13' para La Libertad."),
+      ambito: z.string().min(1).optional(),
+      estado: z.string().min(1).optional(),
+    },
+  },
+  {
+    name: "infraestructura_mtc_aerodromos",
+    app: "infraestructura-mtc",
+    description:
+      "Catálogo de infraestructura aeroportuaria/aeródromos (MTC) — ubicación, tipo, código OACI, escala, " +
+      "estado, jerarquía, titularidad y administrador. Snapshot anual acumulado 2022-2025. La columna ID " +
+      "original de la fuente viene con el literal '#¡REF!' (error de fórmula de Excel) en el corte 2025 — " +
+      "no se usa; la clave real es codigoAerodromo. 595 filas nacionales verificadas (36 en La Libertad, 9 " +
+      "aeródromos: incluye el Aeropuerto Internacional Cap. FAP Carlos Martínez de Pinillos en Trujillo y 8 " +
+      "aeródromos rurales/mineros/municipales en Pataz, Virú, Sánchez Carrión, Santiago de Chuco y Pacasmayo). " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/aerodromos",
+    pathParams: [],
+    querySchema: {
+      idDepartamento: z.string().min(1).optional().describe("Código UBIGEO de departamento, ej. '13' para La Libertad."),
+      provincia: z.string().min(1).optional(),
+      tipoAerodromo: z.string().min(1).optional(),
+    },
+  },
+  {
+    name: "infraestructura_mtc_peajes",
+    app: "infraestructura-mtc",
+    description:
+      "Catálogo de unidades de peaje de la red vial nacional (MTC) — ubicación, código de ruta, km de inicio, " +
+      "titularidad, administrador y estado operativo. El corte más reciente del catálogo (2025-12-31, más " +
+      "fresco que red_vial_subnacional_intervenciones). 233 features nacionales verificadas (15 en La " +
+      "Libertad, 5 unidades: Menocucho, Virú, Pacanguilla, Chicama, Ciudad de Dios). " + SIN_SCHEDULER,
+    pathTemplate: "/api/peajes",
+    pathParams: [],
+    querySchema: {
+      idDepartamento: z.string().min(1).optional().describe("Código UBIGEO de departamento, ej. '13' para La Libertad."),
+      codigoRuta: z.string().min(1).optional(),
+      estado: z.string().min(1).optional(),
+    },
+  },
 ];
