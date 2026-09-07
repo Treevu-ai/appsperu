@@ -1,4 +1,8 @@
 // Cómo funciona — 5 pasos de la cadena de evidencia + JSON de muestra
+import counts from "../../data/catalog-counts.json" with { type: "json" };
+import { APP_CATALOG } from "../../lib/types.js";
+
+const INTEGRADAS_HOY = Object.keys(APP_CATALOG).length;
 
 type Paso = {
   n: string;
@@ -11,7 +15,7 @@ const PASOS: Paso[] = [
   {
     n: "01",
     titulo: "Recolectamos",
-    desc: "Traemos la información pública de 10 fuentes oficiales del Estado: presupuesto, obras, contratistas, sanciones y más. La actualizamos a mano, en tandas — no en vivo — y siempre decimos cuándo fue la última vez.",
+    desc: `Traemos la información pública de ${counts.appCount} fuentes de datos oficiales del Estado: presupuesto, obras, contratistas, sanciones y más — ${INTEGRADAS_HOY} con vista propia en este sitio hoy, el resto vía el catálogo MCP (/docs/api). La actualizamos a mano, en tandas — no en vivo — y siempre decimos cuándo fue la última vez.`,
     icon: (
       <svg className="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -80,9 +84,10 @@ export function ComoFunciona() {
           Ningún dato aparece solo — siempre con su origen y su fecha.
         </h2>
         <p className="mt-4 text-fg-soft leading-relaxed text-sm md:text-base">
-          Juntamos la información de 10 fuentes oficiales del Estado peruano en un solo lugar, fácil de revisar.
-          Nuestro propio sistema no deja publicar un número si no dice de dónde salió, qué tan completo está y a
-          qué fecha corresponde.
+          Juntamos la información de {counts.appCount} fuentes de datos oficiales del Estado peruano en un
+          catálogo único — {INTEGRADAS_HOY} con vista propia en este sitio hoy, el resto vía el catálogo MCP
+          (/docs/api). Nuestro propio sistema no deja publicar un número si no dice de dónde salió, qué tan
+          completo está y a qué fecha corresponde.
         </p>
       </div>
 

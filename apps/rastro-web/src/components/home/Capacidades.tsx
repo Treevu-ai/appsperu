@@ -1,4 +1,8 @@
 // Capacidades — 1 capacidad núcleo + 4 capacidades secundarias
+import counts from "../../data/catalog-counts.json" with { type: "json" };
+import { APP_CATALOG } from "../../lib/types.js";
+
+const INTEGRADAS_HOY = Object.keys(APP_CATALOG).length;
 
 type Cap = {
   titulo: string;
@@ -7,8 +11,8 @@ type Cap = {
 };
 
 const NUCLEO: Cap = {
-  titulo: "10 fuentes oficiales, un solo lugar",
-  desc: "Juntamos presupuesto (MEF), inversión pública (Invierte.pe), contrataciones (OECE/RNP), obras (INFOBRAS), planeamiento (CEPLAN), identidad fiscal (SUNAT), agro (MIDAGRI), economía (BCRP), seguridad (MININTER) e inversión privada (PROINVERSIÓN). Actualizamos a mano, en tandas — cada página muestra la fecha exacta de su último corte.",
+  titulo: `${counts.appCount} fuentes de datos oficiales, un solo catálogo`,
+  desc: `Presupuesto (MEF), inversión pública (Invierte.pe), contrataciones (OECE/RNP), obras (INFOBRAS), planeamiento (CEPLAN), identidad fiscal (SUNAT), agro (MIDAGRI), economía (BCRP), seguridad (MININTER), inversión privada (PROINVERSIÓN) y más. ${INTEGRADAS_HOY} tienen vista propia en este sitio hoy; las ${counts.appCount} completas están en el catálogo de tools MCP (/docs/api). Actualizamos a mano, en tandas — cada página muestra la fecha exacta de su último corte.`,
   icon: (
     <svg className="w-6 h-6 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />

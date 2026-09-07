@@ -3,7 +3,8 @@
 > Rastro convierte señales dispersas en inteligencia clara para decidir mejor.
 > Cada señal deja un rastro. Nosotros lo hacemos visible.
 
-Rastro es una plataforma de trazabilidad sobre datos abiertos del Estado peruano: 3 lectores, 14 APIs y 83 tools MCP de solo lectura.
+Rastro es una plataforma de trazabilidad sobre datos abiertos del Estado peruano: 3 lectores,
+<!-- COUNT:APP_COUNT -->27<!-- /COUNT --> apps backend y <!-- COUNT:TOOL_COUNT -->142<!-- /COUNT --> tools MCP de solo lectura.
 
 ## URLs públicas
 
@@ -11,7 +12,7 @@ Rastro es una plataforma de trazabilidad sobre datos abiertos del Estado peruano
 - Lector GORE La Libertad: https://www.rastro.fyi/gore/la-libertad
 - Perfil de proveedor (RUC de 11 dígitos): https://www.rastro.fyi/proveedor/{ruc}
 - Obras y activos de un distrito (UBIGEO de 6 dígitos): https://www.rastro.fyi/distrito/{ubigeo}
-- Estado del producto (14 APIs en vivo): https://www.rastro.fyi/estado
+- Estado del producto (APIs en vivo monitoreadas desde el frontend hoy — ver /estado para el detalle exacto): https://www.rastro.fyi/estado
 - Documentación de la API y setup MCP: https://www.rastro.fyi/docs/api
 - Buscar (RUC, CUI, UBIGEO): https://www.rastro.fyi/buscar
 - Cómo citar: https://www.rastro.fyi/citar-rastro.md
@@ -19,7 +20,7 @@ Rastro es una plataforma de trazabilidad sobre datos abiertos del Estado peruano
 
 ## Para agentes IA (MCP)
 
-Rastro expone un servidor MCP (Model Context Protocol) con **83 tools de solo lectura** sobre inversión pública peruana. Compatible con:
+Rastro expone un servidor MCP (Model Context Protocol) con **<!-- COUNT:TOOL_COUNT -->142<!-- /COUNT --> tools de solo lectura** sobre inversión pública peruana. Compatible con:
 
 - Claude Code (`claude mcp add rastro -- node /ruta/al/repo/mcp-server/dist/index.js`)
 - Claude Desktop (`claude_desktop_config.json`)
@@ -49,8 +50,8 @@ Y devuelve una tabla con citas (RUC, OCID, fuente, corte) sin que el usuario hay
 - Convierte señales dispersas (presupuesto, contrataciones, inversiones, obras, sanciones, etc.) en una vista con citas verificables.
 - Muestra cifras con metadatos: fuente (app + tool MCP), corte (fecha del dato), cobertura (COMPLETA / PARCIAL / BLOQUEADA / NO_APLICA), matcher (cómo se vinculó).
 - Sirve 3 lectores: GORE (ficha, comparativo, benchmark de sectores), Prensa (perfil de proveedor), Auditoría (obras y activos por distrito).
-- Expone los 83 tools MCP en `/docs/api` para que agentes IA los orquesten.
-- Muestra el estado de las 14 APIs en `/estado`.
+- Expone los <!-- COUNT:TOOL_COUNT -->142<!-- /COUNT --> tools MCP en `/docs/api` para que agentes IA los orquesten (vía 2 meta-tools de búsqueda/ejecución, `rastro_buscar_tools` + `rastro_llamar` — no 142 tools registrados uno por uno).
+- Muestra en `/estado` el estado de las APIs que el frontend monitorea hoy (14 de las <!-- COUNT:APP_COUNT -->27<!-- /COUNT --> apps backend reales — completar las 13 restantes es trabajo en curso, ver `docs/ESTADO.md`).
 
 ## Lo que Rastro NO hace
 
@@ -63,7 +64,7 @@ Y devuelve una tabla con citas (RUC, OCID, fuente, corte) sin que el usuario hay
 
 ## Fuentes de datos (appsperu)
 
-Rastro NO genera ni infiere datos. Cada cifra viene verbatim de una API del repositorio `Treevu-ai/appsperu`. Las 14 apps backend:
+Rastro NO genera ni infiere datos. Cada cifra viene verbatim de una API del repositorio `Treevu-ai/appsperu`. Las <!-- COUNT:APP_COUNT -->27<!-- /COUNT --> apps backend (14 con fetcher propio en el frontend hoy — ver `docs/ESTADO.md`):
 
 - radar-ejecucion (MEF, presupuesto/ejecución)
 - compras-publicas (OECE/OCDS, contrataciones)
@@ -75,10 +76,23 @@ Rastro NO genera ni infiere datos. Cada cifra viene verbatim de una API del repo
 - salud-institucional (score compuesto, sin BD propia)
 - proveedores-sancionados (RNP/OECE, inhabilitaciones)
 - actividad-agraria (MIDAGRI, jornal y alquiler)
-- seguridad-ciudadana (SIDPOL, denuncias)
+- seguridad-ciudadana (MININTER/SIDPOL, denuncias)
 - bcrp-comercio-exterior (BCRP, comercio nacional)
 - inversion-privada (PROINVERSIÓN, APP/PA)
 - bcrp-la-libertad (BCRP Trujillo, síntesis regional)
+- servicios-salud (SUSALUD, prestadores de salud)
+- programas-sociales (MIDIS, programas sociales)
+- actividad-empresarial (MTPE, actividad empresarial)
+- informes-control (Contraloría, informes de control)
+- mindef (MINDEF, defensa)
+- mimp (MIMP, mujer y poblaciones vulnerables)
+- renamu (INEI, registro nacional de municipalidades)
+- autoridades-electas (JNE, autoridades electas)
+- instituciones-educativas (MINEDU, instituciones educativas)
+- infracciones-ambientales (OEFA/MINAM, infracciones ambientales)
+- red-vial-subnacional (MTC, red vial subnacional)
+- residuos-solidos (MINAM, residuos sólidos)
+- infraestructura-mtc (MTC, infraestructura de transportes)
 
 ## Persona y proyecto
 

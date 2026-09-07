@@ -3,6 +3,7 @@ import { ElProblema } from "../components/home/ElProblema.js";
 import { ComoFunciona } from "../components/home/ComoFunciona.js";
 import { Capacidades } from "../components/home/Capacidades.js";
 import { ParaQuien } from "../components/home/ParaQuien.js";
+import counts from "../data/catalog-counts.json" with { type: "json" };
 
 export function Home() {
   return (
@@ -85,13 +86,14 @@ export function Home() {
         <div className="card border-accent/30">
           <div className="flex items-center gap-3 flex-wrap">
             <p className="text-xs text-accent font-mono">PARA AGENTES IA</p>
-            <span className="text-xs text-muted">MCP · 83 tools · stdio · local</span>
+            <span className="text-xs text-muted">MCP · {counts.toolCount} tools · stdio · local</span>
           </div>
-          <h2 className="text-fg font-semibold text-lg mt-2">Una sola query. Ochenta y tres tools a tu disposición.</h2>
+          <h2 className="text-fg font-semibold text-lg mt-2">Una sola query. {counts.toolCount} tools a tu disposición.</h2>
           <p className="text-fg-soft mt-3">
-            Rastro expone un servidor MCP (Model Context Protocol) con 83 herramientas de solo lectura. Compatible con
-            Claude Code, Claude Desktop, Cursor, Windsurf, Cline y Continue.dev. Las APIs corren en localhost; el MCP las
-            agrega para tu agente.
+            Rastro expone un servidor MCP (Model Context Protocol) con {counts.toolCount} herramientas de solo lectura,
+            buscables desde 2 meta-tools (<code className="text-fg">rastro_buscar_tools</code> +{" "}
+            <code className="text-fg">rastro_llamar</code>). Compatible con Claude Code, Claude Desktop, Cursor,
+            Windsurf, Cline y Continue.dev. Las APIs corren en localhost; el MCP las agrega para tu agente.
           </p>
 
           <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -132,7 +134,7 @@ concentración. Cita cada RUC y cada OCID."`}</code>
 
           <div className="mt-6 flex flex-wrap gap-3">
             <Link to="/docs/api" className="btn-ghost">
-              Ver los 83 tools
+              Ver los {counts.toolCount} tools
             </Link>
             <a
               href="https://github.com/Treevu-ai/appsperu/tree/master/mcp-server"
