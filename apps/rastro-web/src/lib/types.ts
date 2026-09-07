@@ -9,6 +9,12 @@
 
 export type Cobertura = "COMPLETA" | "PARCIAL" | "BLOQUEADA" | "NO_APLICA";
 
+/** Mandato legal (ficha ROF en docs/normas/) de la entidad dueña de una fuente. */
+export interface MandatoLegal {
+  entidad: string;
+  url: string;
+}
+
 /**
  * Metadatos obligatorios que deben acompañar a cada cifra visible en la UI.
  *
@@ -17,6 +23,8 @@ export type Cobertura = "COMPLETA" | "PARCIAL" | "BLOQUEADA" | "NO_APLICA";
  * - `cobertura`: estado de cobertura declarado por la API.
  * - `matcher`: cómo se vinculó (clave exacta, fuzzy, etc.) — opcional pero recomendado.
  * - `restriccion`: nota textual del tool si la hubiera.
+ * - `mandatoLegal`: entidad + ROF que autoriza a publicar este dato (ver `lib/entidad-normas.ts`)
+ *   — `metaNumber()` lo deriva automáticamente de `fuente` si no se pasa explícito.
  */
 export interface WithMetadata<T> {
   value: T;
@@ -25,6 +33,7 @@ export interface WithMetadata<T> {
   cobertura: Cobertura;
   matcher?: string;
   restriccion?: string;
+  mandatoLegal?: MandatoLegal;
 }
 
 /** Estado de error tipado que el api-client puede devolver. */
