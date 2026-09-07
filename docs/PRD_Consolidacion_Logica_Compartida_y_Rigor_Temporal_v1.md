@@ -1,6 +1,6 @@
 # PRD — Consolidación de lógica compartida y rigor temporal en cruces
 
-**Estado:** CX-07, CX-08, CX-09, CX-10, CX-11, CX-12, CX-13, CX-15 cerrados (CX-15 el 2026-09-07, el resto el 2026-09-05); CX-14 (nuevo, hallazgo de CX-10) propuesto, requiere acceso a datos en vivo
+**Estado:** Los nueve issues cerrados — CX-07 a CX-13 el 2026-09-05, CX-14 y CX-15 el 2026-09-07
 **Fecha:** 2026-09-04
 **Ámbito:** `apps/*/api/src/routes/*.ts`, `apps/*/api/src/lib/`, `packages/`, `mcp-server/src/catalog.ts`, `package.json` raíz
 **Horizonte:** dos sprints cortos; sin fecha comprometida ni owner asignado
@@ -110,11 +110,13 @@ Verificado: `tsc --noEmit` limpio y tests en verde — identidad-fiscal 9/9, pro
 
 Verificado: `tsc --noEmit` limpio y tests en verde en `infobras` (82/82) y `salud-institucional` (8/8) tras el refactor.
 
-### CX-14 — Analizar distribución real de `costDriftPct` y decidir umbral con evidencia (nuevo, hallazgo de CX-10)
+### CX-14 — Analizar distribución real de `costDriftPct` y decidir umbral con evidencia (nuevo, hallazgo de CX-10) — ✅ CERRADO (2026-09-07)
 
 **Prioridad:** P2 · **Esfuerzo:** S (una vez con acceso a datos) · **Dependencias:** CX-10 (cerrado)
 
-No ejecutable en esta sesión (requiere consultar las bases de producción/staging ya ingeridas). Calcular la distribución real (percentiles, no solo promedio) de `costDriftPct` sobre obras/inversiones de La Libertad, y decidir con esa evidencia si `SOBRECOSTO_UMBRAL_PCT` debería subir de 0. Si cambia, actualizar `packages/shared-signals` y la condición SQL de `salud-institucional/routes/score.ts` en el mismo PR — el comentario dejado en CX-10 indica exactamente qué tocar. Si el umbral se mantiene en 0, cerrar documentando por qué la evidencia no lo justificó.
+**Corrección sobre la premisa original**: el bloqueo anotado ("no ejecutable en esta sesión, requiere bases de producción/staging") era de acceso a datos de la sesión que escribió este PRD, no un bloqueo estructural — esta sesión sí tuvo acceso a las bases locales ya ingeridas (mismo Docker Postgres por app usado en toda la investigación de esta semana) y pudo ejecutar el análisis completo.
+
+**Resuelto — detalle completo en la actualización 2026-09-07 de [ADR-0020](adr/0020-umbral-sobrecosto-unificado.md)**: dos hallazgos. (1) La fuente original de `costDriftPct` (`infobras`/INFOBRAS) resultó **degenerada** en el corte ingerido — `costo_actualizado` viene en `0.00` para el 100% de las 10,134 obras, casi seguro porque ese campo solo se popula ante una reformulación presupuestal formal que la mayoría de obras nunca tuvo (no es un bug de este proyecto). (2) La fuente que sí sirve — `radar-inversiones`/Invierte.pe, la que efectivamente consume `salud-institucional` — dio una distribución real y accionable sobre 7,985 inversiones de La Libertad: mediana 0%, p75 13.6%, p90 60.7%, p99 398.5%. Con esa evidencia delante, decisión con el usuario: **se mantiene `SOBRECOSTO_UMBRAL_PCT = 0`** — subirlo no filtra ruido de forma significativa (~130 de 3,124 casos positivos caen en la banda 0%-1%), solo excluiría sobrecostos reales aunque pequeños. El refactor condicional de `salud-institucional/routes/score.ts` (calcular el % fila por fila en vez del booleano SQL) no se ejecuta porque el umbral no cambió — la comparación `costo_actualizado > monto_viable` sigue siendo exactamente equivalente a `costDriftPct > 0`.
 
 ### CX-11 — Extender `catalog.test.ts` del mcp-server a las 14 apps — ✅ CERRADO
 
@@ -161,8 +163,7 @@ Confirmado con evidencia real (ver actualización de CX-11 arriba): `EXPECTED_TO
 | Fase | Entregables | Resultado que desbloquea |
 |---|---|---|
 | **Hecho** | CX-07, CX-08, CX-09, CX-10, CX-11, CX-12, CX-13 | Decidido dónde vive la lógica compartida (ADR-0019); `LATEST_BUDGET_CTE` consolidada (11 copias → 1, 6 apps sumadas al workspace); `extractRuc()`/`temporal-status` consolidados (`proveedores-sancionados` sumado al workspace); `costDriftPct`/umbral de sobrecosto consolidados en `packages/shared-signals` (ADR-0020); `catalog.test.ts` del MCP extendido de 1 a 14 apps; housekeeping de `.worktrees/`; `packages/http-client` conectado (`compras-publicas`). |
-| **Hecho (fuera del plan original, auditoría 2026-09-07)** | CX-15 | Catálogo MCP corregido y ampliado a mano (107→137 tools: bug de filtros, gap de `compras-publicas`, 5 gaps menores, naming `bcrp_*`, paginación real en 10 endpoints — ver actualización de CX-11) más CX-15 (chequeo automatizado catálogo↔rutas reales, `route-introspection.ts`, encontró 5 gaps más). Catálogo final: 142 tools, 27 apps. |
-| **Pendiente (bloqueado)** | CX-14 | Análisis de distribución real de `costDriftPct` — requiere acceso a datos en vivo, no ejecutable en esta sesión. |
+| **Hecho (fuera del plan original, auditoría 2026-09-07)** | CX-14, CX-15 | Catálogo MCP corregido y ampliado a mano (107→137 tools: bug de filtros, gap de `compras-publicas`, 5 gaps menores, naming `bcrp_*`, paginación real en 10 endpoints — ver actualización de CX-11) más CX-15 (chequeo automatizado catálogo↔rutas reales, `route-introspection.ts`, encontró 5 gaps más; catálogo final 142 tools, 27 apps). CX-14 ejecutado con acceso a las bases locales ya ingeridas — `SOBRECOSTO_UMBRAL_PCT` confirmado en 0% con evidencia real (mediana 0%, p75 13.6%, p90 60.7% sobre 7,985 inversiones de La Libertad), y se documentó que la fuente original de `infobras` está degenerada (`costo_actualizado=0` en el 100% de las obras). |
 
 ## 7. Requisitos no funcionales
 
