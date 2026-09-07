@@ -1,8 +1,40 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-09-06.
+Última actualización: 2026-09-07.
 
 Veintisiete apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+
+## Auditoría del catálogo MCP + cierre de gaps en `compras-publicas` (2026-09-07)
+
+A pedido del usuario ("revisa las mcp tools, son óptimas, hay gaps"), se auditó el catálogo
+completo de `mcp-server/src/catalog.ts` contra las rutas Express reales de las 27 apps. Dos
+hallazgos accionados de inmediato:
+
+1. **Bug real (corregido, PR #98)**: `buildQuery()` en `mcp-server/src/index.ts` solo aceptaba
+   valores `string`. Varias tools declaran `querySchema` con `z.coerce.number()`/`z.coerce.boolean()`
+   (`anio`, `mes`, `estricto`, etc.) — el cliente MCP envía el tipo declarado, no un string, así
+   que el filtro se descartaba **sin ningún error visible**. Un agente que pedía "residuos del
+   2024" recibía en silencio el histórico completo. Fix: aceptar también `number`/`boolean` y
+   normalizar con `String(value)`, con test de regresión.
+
+2. **Gap grande de cobertura en `compras-publicas` (cerrado, esta entrada)**: el catálogo
+   exponía solo 5 tools (`procurement`, `procurement_by_ocid`, `suppliers`, `supplier_by_id`,
+   `crossref`) cuando la app real monta ~25 endpoints `GET`. El `EXPECTED_TOOLS_BY_APP` del test
+   nunca lo detectó porque se genera a mano desde el propio catálogo, no desde las rutas reales
+   — comparar contra las rutas reales es el chequeo pendiente (ver "Pendientes" abajo). Se
+   agregaron **20 tools nuevas**, verificadas en vivo contra la API real corriendo (no solo
+   compilación): `bidders` (por OCID, por proveedor, competencia, co-participación),
+   `entity_profile`, `identities`, `conformacion` (vínculos societarios y por RUC),
+   `unsuccessful_tenders` (procesos DESIERTO/NULO), y todo el sub-sistema "observatory" de
+   contrataciones menores SEACE (`minor_contracts`, `municipalities`, `signals` S01-S13,
+   `semantic_review_queue`/`clusters`, `freshness`, `analytics_territorial`, `analytics` por
+   tipo). Catálogo total: **128 tools, 27 apps** (antes 107).
+
+**Pendiente de la auditoría, no accionado todavía**: otros 5 gaps menores confirmados
+(`radar-ejecucion`: proyectos/personal/patrimonio-bienes-muebles-baja/burocracia-inversion;
+`radar-inversiones`: investments-desactivadas; `ceplan-geo`: patrimonio; `proveedores-
+sancionados`: crossref/redes-proveedores), paginación con `LIMIT` fijo sin señal de
+truncamiento, y el naming `bcrp_trade`/`bcrp_meta_sources` que rompe el patrón `<app>_<recurso>`.
 
 ## `infraestructura-mtc` — terminales portuarios, aeródromos y peajes (2026-09-06)
 

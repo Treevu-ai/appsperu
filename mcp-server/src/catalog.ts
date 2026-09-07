@@ -399,6 +399,275 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: [],
     querySchema: { confidence: z.enum(["confirmada", "candidata"]).optional() },
   },
+  {
+    name: "compras_publicas_unsuccessful_tenders",
+    app: "compras-publicas",
+    description:
+      "Ítems de contratación pública declarados DESIERTO o NULO (dinero convocado, no gastado) — la mitad de " +
+      "los procesos OCDS que `compras_publicas_procurement` (adjudicaciones) nunca cubre. No incluye estados " +
+      "ambiguos de la fuente (RETROTRAIDO_POR_RESOLUCION, PENDIENTE_DE_REGISTRO_DE_EFECTO, CONVOCADO). " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/procurement-sin-adjudicar",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      statusDetails: z.enum(["DESIERTO", "NULO"]).optional(),
+      buyerId: z.string().min(1).optional(),
+    },
+  },
+  {
+    name: "compras_publicas_bidders_by_ocid",
+    app: "compras-publicas",
+    description:
+      "Participantes (postores) de un proceso de contratación específico por su OCID, con el ganador si lo " +
+      "hay. 'Participante' significa que figura en el registro OCDS — no equivale por sí solo a una cotización, " +
+      "oferta válida ni comportamiento competitivo.",
+    pathTemplate: "/api/bidders/{ocid}",
+    pathParams: ["ocid"],
+    querySchema: {},
+  },
+  {
+    name: "compras_publicas_bidders_by_provider",
+    app: "compras-publicas",
+    description:
+      "Historial de participaciones de un proveedor como postor (no solo como ganador) — total de procesos, " +
+      "victorias y win rate. Cobertura parcial de registros OCDS disponibles en las corridas locales; las tasas " +
+      "son descriptivas, no una medición de desempeño o comportamiento.",
+    pathTemplate: "/api/bidders/provider/{providerId}",
+    pathParams: ["providerId"],
+    querySchema: {},
+  },
+  {
+    name: "compras_publicas_bidders_competition",
+    app: "compras-publicas",
+    description:
+      "Top 10 proveedores por victorias, con participaciones/victorias/descalificaciones observadas en la " +
+      "muestra ingerida. Resumen descriptivo — no mide competencia, desempeño ni irregularidad. " + SIN_SCHEDULER,
+    pathTemplate: "/api/bidders/analytics/competition",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
+    name: "compras_publicas_bidders_coparticipation",
+    app: "compras-publicas",
+    description:
+      "Pares de proveedores con co-participación repetida (>=3 veces) en los mismos procesos, dentro de la " +
+      "muestra disponible. La co-participación puede responder a rubro, zona o periodo compartido — NO " +
+      "determina coordinación ni colusión, es solo una descripción de la muestra para investigar con más " +
+      "contexto. " + SIN_SCHEDULER,
+    pathTemplate: "/api/bidders/analytics/co-participation",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
+    name: "compras_publicas_entity_profile",
+    app: "compras-publicas",
+    description:
+      "Ficha transversal de una entidad compradora OCDS: resumen de procesos por categoría, adjudicaciones por " +
+      "año/moneda, participación de postores por proceso, estado de reconciliación OCID exacto, y si tiene " +
+      "contratos menores (SEACE) materializados. Una adjudicación publicada no equivale a contrato firmado, " +
+      "pago ejecutado ni entrega recibida — la ficha describe solo el universo materializado, no certifica " +
+      "cobertura completa ni ejecución presupuestal.",
+    pathTemplate: "/api/entities/{buyerId}/profile",
+    pathParams: ["buyerId"],
+    querySchema: {},
+  },
+  {
+    name: "compras_publicas_identities",
+    app: "compras-publicas",
+    description:
+      "Relaciones de identidad entre RUC/nombres/identificadores vinculados a una entidad o persona " +
+      "(`entity_identity_links`) — busca por cualquier identificador (subject_id o valor origen/destino). Una " +
+      "relación candidata no equivale a identidad confirmada; solo las verificadas (`soloVerificadas=true`) " +
+      "deberían alimentar cruces automáticos.",
+    pathTemplate: "/api/identities",
+    pathParams: [],
+    querySchema: {
+      identifier: z.string().min(1).describe("RUC, subject_id o identificador origen/destino a buscar. Requerido."),
+      soloVerificadas: z.enum(["true", "false"]).optional(),
+    },
+  },
+  {
+    name: "compras_publicas_conformacion_vinculos",
+    app: "compras-publicas",
+    description:
+      "Personas naturales (DNI enmascarado a los últimos 3 dígitos) que aparecen como socio/representante en " +
+      "más de un RUC distinto, y esos RUCs distintos ganaron adjudicaciones en más de una entidad convocante " +
+      "distinta. Cruce interno OSCE perfilprov (conformación societaria) + OCDS/menor a 8 UIT. NO implica " +
+      "irregularidad por sí solo — es legal que una persona controle o represente varias empresas; es una " +
+      "hipótesis para investigar con más contexto, no una conclusión.",
+    pathTemplate: "/api/conformacion/vinculos",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
+    name: "compras_publicas_conformacion_by_ruc",
+    app: "compras-publicas",
+    description:
+      "Conformación societaria de un RUC específico (OSCE — Buscador de Proveedores del Estado): socios, " +
+      "representantes y órganos de administración, con DNI/CE enmascarado a los últimos 3 dígitos. Un RUC sin " +
+      "socios registrados suele ser un consorcio (Contrato de Colaboración Empresarial), que no tiene " +
+      "accionistas en el sentido societario que expone este endpoint — no es un vacío de datos.",
+    pathTemplate: "/api/conformacion/{ruc}",
+    pathParams: ["ruc"],
+    querySchema: {},
+  },
+  {
+    name: "compras_publicas_minor_contracts",
+    app: "compras-publicas",
+    description:
+      "Contrataciones menores a 8 UIT de municipalidades de La Libertad (SEACE, reconstrucción de evidencia " +
+      "pública, no el buscador oficial completo) — objeto, monto estimado/adjudicado, cotizaciones recibidas, " +
+      "municipalidad y proveedor ganador. Filtra por `signalType` para traer solo contratos con una señal de " +
+      "revisión detectada. La ausencia de un dato no prueba incumplimiento. " + SIN_SCHEDULER,
+    pathTemplate: "/api/contracts",
+    pathParams: [],
+    querySchema: {
+      year: z.coerce.number().int().min(2026).max(2100).optional(),
+      municipalityId: z.string().min(1).optional(),
+      supplierId: z.string().min(1).optional(),
+      category: z.enum(["goods", "services"]).optional(),
+      minAmount: z.coerce.number().min(0).optional(),
+      maxAmount: z.coerce.number().min(0).optional().describe("Tope legal vigente: contrataciones menores a 8 UIT."),
+      quotationCount: z.coerce.number().int().min(0).optional(),
+      signalType: z.enum(["S01", "S02", "S03", "S04", "S05", "S06", "S07", "S08", "S09", "S10", "S11", "S12", "S13"]).optional(),
+      q: z.string().min(2).max(200).optional().describe("Búsqueda parcial por objeto, municipalidad, proveedor, RUC u OCID."),
+      limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 100."),
+    },
+  },
+  {
+    name: "compras_publicas_minor_contract_by_id",
+    app: "compras-publicas",
+    description:
+      "Detalle completo de una contratación menor SEACE: cotizaciones recibidas, eventos, documentos, " +
+      "evidencia recolectada y señales de revisión detectadas, con las versiones de normalizador/modelo que " +
+      "las generó. La evidencia no localizada en las fuentes consultadas no equivale a incumplimiento.",
+    pathTemplate: "/api/contracts/{id}",
+    pathParams: ["id"],
+    querySchema: {},
+  },
+  {
+    name: "compras_publicas_municipalities",
+    app: "compras-publicas",
+    description:
+      "Municipalidades de La Libertad con contratos menores SEACE materializados — total de contratos, monto " +
+      "y proveedores distintos por municipalidad. Búsqueda parcial por nombre/RUC/distrito con `q`.",
+    pathTemplate: "/api/municipalities",
+    pathParams: [],
+    querySchema: {
+      q: z.string().min(2).max(200).optional(),
+      limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 100."),
+    },
+  },
+  {
+    name: "compras_publicas_municipality_by_id",
+    app: "compras-publicas",
+    description:
+      "Ficha de una municipalidad: métricas agregadas de contratos menores, desglose por categoría, top 20 " +
+      "proveedores y conteo de señales de revisión detectadas. Las señales son patrones para revisión y no " +
+      "determinan irregularidad.",
+    pathTemplate: "/api/municipalities/{id}",
+    pathParams: ["id"],
+    querySchema: {},
+  },
+  {
+    name: "compras_publicas_signals",
+    app: "compras-publicas",
+    description:
+      "Señales de revisión detectadas sobre contrataciones menores SEACE (S01-S13: patrones de fraccionamiento, " +
+      "objetos similares, proveedor recurrente, etc.), de la corrida más reciente salvo que se indique " +
+      "`signalRunId`. Una señal identifica evidencia y patrones observables — NO determina corrupción, " +
+      "favorecimiento, fraccionamiento ni incumplimiento por sí sola.",
+    pathTemplate: "/api/signals",
+    pathParams: [],
+    querySchema: {
+      signalType: z.enum(["S01", "S02", "S03", "S04", "S05", "S06", "S07", "S08", "S09", "S10", "S11", "S12", "S13"]).optional(),
+      municipalityId: z.string().min(1).optional(),
+      supplierId: z.string().min(1).optional(),
+      contractingId: z.string().min(1).optional(),
+      signalRunId: z.string().uuid().optional(),
+      limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 100."),
+    },
+  },
+  {
+    name: "compras_publicas_signal_by_id",
+    app: "compras-publicas",
+    description:
+      "Detalle de una señal de revisión específica: evidencia recolectada y decisiones de revisión humana " +
+      "(aprobada/descartada) ya registradas. Identifica un patrón que merece revisión; no determina " +
+      "corrupción, favorecimiento, fraccionamiento ni incumplimiento.",
+    pathTemplate: "/api/signals/{id}",
+    pathParams: ["id"],
+    querySchema: {},
+  },
+  {
+    name: "compras_publicas_semantic_review_queue",
+    app: "compras-publicas",
+    description:
+      "Bandeja de pares de contratos comparables por similitud semántica (señales S12/S13) para revisión " +
+      "humana, deduplicada por par y priorizada (S13 antes que S12 porque añade el mismo proveedor). Una " +
+      "similitud semántica NO determina misma necesidad, favorecimiento, fraccionamiento ni direccionamiento " +
+      "— es solo una priorización de qué revisar primero.",
+    pathTemplate: "/api/semantic-review-queue",
+    pathParams: [],
+    querySchema: {
+      municipalityId: z.string().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(200).optional().describe("Default 50."),
+    },
+  },
+  {
+    name: "compras_publicas_semantic_review_clusters",
+    app: "compras-publicas",
+    description:
+      "Agrupa señales S12/S13 en clusters de contratos relacionados entre sí (unión de pares transitivos), con " +
+      "monto total y similitud máxima del cluster. Igual que la cola de revisión: un cluster resume objetos " +
+      "comparables para organizar revisión documental, no determina misma necesidad ni conducta irregular.",
+    pathTemplate: "/api/semantic-review-clusters",
+    pathParams: [],
+    querySchema: { limit: z.coerce.number().int().min(1).max(100).optional().describe("Default 50.") },
+  },
+  {
+    name: "compras_publicas_freshness",
+    app: "compras-publicas",
+    description:
+      "Metadata de frescura por fuente ingerida (OECE/OCDS y SEACE contratos menores): fecha de la última " +
+      "corrida, filas totales, id del último batch y filas rechazadas en ese batch. `rejectedInLatestBatch: " +
+      "null` significa que esa fuente no trackea rechazos por lote persistido — no que no haya rechazos. Usar " +
+      "esto antes de asumir que el dato está al día. " + SIN_SCHEDULER,
+    pathTemplate: "/api/meta/freshness",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
+    name: "compras_publicas_analytics_territorial",
+    app: "compras-publicas",
+    description:
+      "Agregados de contratos menores SEACE de La Libertad por provincia y distrito: total de contratos, " +
+      "monto, proveedores distintos, y concentración de mercado (CR1/CR3: % del monto que se lleva el " +
+      "proveedor top-1 / top-3). `dateBasis` importa: `source_year` (año declarado en la fuente) y " +
+      "`publication_year` (año de publicación) NO son equivalentes.",
+    pathTemplate: "/api/analytics/territorial",
+    pathParams: [],
+    querySchema: {
+      year: z.coerce.number().int().min(2020).max(2100).optional().describe("Default 2026."),
+      category: z.enum(["goods", "services"]).optional(),
+      dateBasis: z.enum(["source_year", "publication_year"]).optional().describe("Default source_year."),
+    },
+  },
+  {
+    name: "compras_publicas_analytics",
+    app: "compras-publicas",
+    description:
+      "Indicadores descriptivos y reproducibles sobre contratos menores SEACE, según `kind`: " +
+      "'concentration' (proveedores distintos y monto por municipalidad), 'competition' (promedio de " +
+      "cotizaciones y contratos con solo 1 cotización válida por municipalidad), 'near-threshold' (contratos " +
+      "adjudicados por encima del 90% del tope legal de 8 UIT), 'recurrence' (pares municipalidad-proveedor " +
+      "con 2+ contratos), 'evidence' (conteo de evidencia recolectada vs. esperada por contrato). Ninguno " +
+      "constituye una conclusión jurídica.",
+    pathTemplate: "/api/analytics/{kind}",
+    pathParams: ["kind"],
+    querySchema: {},
+  },
 
   // ---- radar-inversiones (Invierte.pe) ----
   {
