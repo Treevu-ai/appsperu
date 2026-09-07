@@ -24,6 +24,7 @@ jobs:
           - apps/informes-control/api
           - apps/infobras/api
           - apps/infracciones-ambientales/api
+          - apps/infraestructura-mtc/api
           - apps/instituciones-educativas/api
           - apps/mindef/api
           - apps/mimp/api

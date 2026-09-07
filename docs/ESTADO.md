@@ -2,7 +2,41 @@
 
 Última actualización: 2026-09-06.
 
-Veintidós apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+Veintisiete apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
+
+## `infraestructura-mtc` — terminales portuarios, aeródromos y peajes (2026-09-06)
+
+Segunda pasada sobre MTC a pedido del usuario ("revisa MTC de nuevo"), después de confirmar que
+`red-vial-subnacional` sigue al día (mismo corte 30-06-2026, semestral, sin uno más nuevo
+publicado). Se buscaron datasets de MTC no explorados fuera de vías: puertos, aeropuertos y
+peajes. Los tres existían y los tres tenían un corte más reciente que lo ya ingerido en el
+catálogo — construidos en una sola app nueva (justificación de agruparlos: mismo publicador,
+mismo nivel de detalle puntual, volumen pequeño cada uno).
+
+**Hallazgo de proceso repetido**: los slugs de dataset de MTC en `datosabiertos.gob.pe` cambian
+de versión en versión (`...-2022-y-2023` → `...-2022-2024` → `...-2022-2025`) sin que la versión
+vieja desaparezca del buscador — reconstruir la URL a mano a partir de un título de WebSearch dio
+el shell genérico del portal dos veces seguidas. La única forma confiable de encontrarla fue
+listar el grupo del publicador MTC y tomar el href real de la página resultante.
+
+**Bug real en la fuente (no de nuestro parseo)**: el CSV de aeródromos publica el literal
+`#¡REF!` en la columna `ID` para todas las filas del corte 2025 (error de fórmula de Excel
+arrastrado al archivo publicado) — se usa `CODIGO_AERODROMO` como identificador, no la columna ID.
+
+Verificado en vivo 2026-09-06, los tres con clave natural `(código, fecha_corte)` confirmada
+única contra las filas reales (sin necesidad de hash de contenido, a diferencia de RUIAS/PVD):
+
+| Dataset | Corte más reciente | Filas nacional | Filas La Libertad | Detalle La Libertad |
+|---|---|---|---|---|
+| Terminales portuarios | 2025-12-31 | 507 (2022-2025) | 9 | 3 terminales: TP Multipropósito Salaverry, TP Multiboyas Salaverry, TP Chicama/Malabrigo |
+| Aeródromos | 2025-12-31 | 595 (2022-2025) | 36 | 9 aeródromos: Aeropuerto Internacional de Trujillo + 8 rurales/mineros/municipales (Pataz, Virú, Sánchez Carrión, Santiago de Chuco, Pacasmayo) |
+| Peajes | 2025-12-31 | 233 (2024-2025) | 15 | 5 unidades: Menocucho, Virú, Pacanguilla, Chicama, Ciudad de Dios |
+
+Las tres ingestas corrieron 100% limpias (0 filas rechazadas en los tres). App nueva en puerto
+4026 / Postgres 5457, con las 3 tools MCP correspondientes agregadas al catálogo (104→107 tools,
+27 apps). Detalle completo en
+[`docs/data-contracts/mtc-infraestructura-puntual.md`](data-contracts/mtc-infraestructura-puntual.md)
+y [`docs/conectores.md#infraestructura-mtc`](conectores.md#infraestructura-mtc).
 
 ## Auditoría de frescura de datos — todas las apps (2026-09-06)
 

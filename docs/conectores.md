@@ -683,6 +683,33 @@ multi-año** (2019-2024) verificada, no solo un snapshot del corte más reciente
 
 ---
 
+<a id="infraestructura-mtc"></a>
+## infraestructura-mtc — Terminales portuarios, aeródromos y peajes (MTC)
+
+Investigado y construido 2026-09-06, en una segunda pasada sobre MTC (la primera dio
+`red-vial-subnacional`). Agrupa **tres datasets** del mismo publicador en una sola app: son
+catálogos de infraestructura puntual (un punto geográfico = una fila), de volumen pequeño
+(500-600 filas), sin overlap con `red-vial-subnacional` (que mide intervenciones en vías, no
+terminales/aeródromos/peajes) — separarlos en 3 apps habría triplicado el overhead operativo sin
+beneficio real.
+
+### `infraestructura-mtc-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Tres catálogos de infraestructura puntual del MTC: terminales portuarios/embarcaderos, aeródromos, y unidades de peaje de la red vial nacional — ubicación, tipo, estado, titularidad y administrador de cada instalación. |
+| **Qué hace** | Tres funciones de ingesta independientes (`ingest:puertos`, `ingest:aerodromos`, `ingest:peajes`), cada una descarga su fuente, normaliza y hace upsert con clave natural `(código, fecha_corte)` — confirmada única contra las filas reales de los tres datasets (507/595/233), sin necesidad de hash de contenido. |
+| **Hallazgo real: URLs de dataset inestables entre versiones** | Los tres datasets cambian de slug en cada actualización (`...-2022-y-2023` → `...-2022-2024` → `...-2022-2025`) sin que la versión vieja desaparezca del buscador — reconstruir la URL a mano a partir de un título de búsqueda dio el shell genérico del portal dos veces. La forma confiable de encontrar la URL vigente es listar el grupo del publicador (`/group/ministerio-de-transportes-y-comunicaciones?search_api_views_fulltext=<término>`) y tomar el href real de la página. |
+| **Bug real encontrado en la fuente (aeródromos)** | La columna `ID_AERODROMO` viene con el literal `#¡REF!` en el corte 2025 (error de fórmula de Excel arrastrado al CSV publicado, no un artefacto de nuestro parseo) — no se usa como clave; `CODIGO_AERODROMO` es el identificador estable entre años. |
+| **Encoding** | Terminales portuarios y aeródromos: CSV `;`, **Latin-1** (mismo patrón que `red-vial-subnacional`). Peajes: GeoJSON, UTF-8. |
+| **Frecuencia** | Manual (`npm run ingest:puertos` / `ingest:aerodromos` / `ingest:peajes` en `apps/infraestructura-mtc/api`). |
+| **Fuente de datos** | `datosabiertos.gob.pe/sites/default/files/Infraestructura_portuaria_terminales_embarcaderos_2022-2025.csv`, `.../Infraestructura_aeroportuaria_aerodromos_2022-2025.csv`, `.../unidades_peaje_2024-2025.geojson` (MTC). |
+| **Cobertura real ingerida** | Verificado en vivo 2026-09-06: **507/595/233 filas insertadas, 0 rechazadas** en los tres. La Libertad: **9 filas de terminales** (3 terminales: TP Multipropósito Salaverry, TP Multiboyas Salaverry, TP Chicama/Malabrigo), **36 filas de aeródromos** (9 aeródromos, incluye el Aeropuerto Internacional de Trujillo), **15 filas de peajes** (5 unidades: Menocucho, Virú, Pacanguilla, Chicama, Ciudad de Dios). El corte de peajes (2025-12-31) es el más reciente de los tres datasets de esta pasada. |
+| **Detalle completo** | [`docs/data-contracts/mtc-infraestructura-puntual.md`](data-contracts/mtc-infraestructura-puntual.md) |
+| **Cruces** | Ninguno implementado — candidato natural: por UBIGEO contra `radar-ejecucion` (`FUNCION = TRANSPORTE`) y contra `inversion-privada` (Puerto Salaverry ha tenido inversión APP reciente). |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada

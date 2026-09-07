@@ -5,11 +5,11 @@
 
 Repo: https://github.com/Treevu-ai/appsperu
 
-Monorepo con 26 apps backend (APIs Express + Postgres por app) que exponen datos abiertos
+Monorepo con 27 apps backend (APIs Express + Postgres por app) que exponen datos abiertos
 del Estado peruano (presupuesto, contrataciones, inversiones, obras públicas) cruzados por
 claves compartidas o matching difuso de nombres de entidad. La capa de lectura pública para
 humanos y agentes IA es **Rastro** (`apps/rastro-web/`, publicada en `rastro.fyi`); el
-servidor MCP (`mcp-server/`) expone las 26 APIs como tools de solo lectura para Claude Code,
+servidor MCP (`mcp-server/`) expone las 27 APIs como tools de solo lectura para Claude Code,
 Claude Desktop, Cursor, Windsurf, Cline y Continue.dev.
 
 Rastro es una plataforma de inteligencia que ayuda a equipos y organizaciones a encontrar, conectar y entender las señales que importan. Transformamos información dispersa en contexto accionable, con foco en trazabilidad, claridad y decisiones más seguras. Porque detrás de cada cambio, oportunidad o riesgo hay un rastro, y verlo a tiempo cambia lo que viene después.
@@ -44,6 +44,7 @@ Rastro es una plataforma de inteligencia que ayuda a equipos y organizaciones a 
 | `infracciones-ambientales` | Registro de infractores ambientales sancionados (OEFA/RUIAS) | 4023 |
 | `red-vial-subnacional` | Intervenciones en redes viales departamentales/vecinales (MTC/Provías Descentralizado) | 4024 |
 | `residuos-solidos` | Generación anual de residuos sólidos por distrito, serie 2019-2024 (MINAM/SIGERSOL) | 4025 |
+| `infraestructura-mtc` | Terminales portuarios, aeródromos y peajes de la red vial nacional (MTC) | 4026 |
 
 ## Levantar una app
 

@@ -39,6 +39,7 @@ ALL_APPS=(
   infracciones-ambientales
   red-vial-subnacional
   residuos-solidos
+  infraestructura-mtc
 )
 
 if [ "$#" -gt 0 ]; then
