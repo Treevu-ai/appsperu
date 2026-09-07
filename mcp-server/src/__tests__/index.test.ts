@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { buildPath, buildQuery } from "../index.js";
-import type { ToolSpec } from "../catalog.js";
+import { describe, expect, it, vi } from "vitest";
+import { buildPath, buildQuery, findTool, invokeTool, runRastroLlamar } from "../index.js";
+import { TOOL_CATALOG, type ToolSpec } from "../catalog.js";
 import { z } from "zod";
 
 function makeTool(overrides: Partial<ToolSpec> = {}): ToolSpec {
@@ -50,5 +50,79 @@ describe("buildPath", () => {
   it("throws with an actionable message when a required path param is missing", () => {
     const tool = makeTool({ pathTemplate: "/api/execution/{entityCode}", pathParams: ["entityCode"] });
     expect(() => buildPath(tool, {})).toThrow(/entityCode/);
+  });
+});
+
+describe("findTool", () => {
+  it("finds a real tool from the catalog by its exact name", () => {
+    const [first] = TOOL_CATALOG;
+    expect(findTool(first.name)).toEqual(first);
+  });
+
+  it("returns undefined for a name not in the catalog", () => {
+    expect(findTool("no_existe_este_tool")).toBeUndefined();
+  });
+});
+
+describe("invokeTool", () => {
+  it("returns the API body pass-through on a successful call", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ status: 200, headers: new Headers({ "content-type": "application/json" }), json: async () => ({ ok: true }) })
+    );
+    const tool = makeTool({ pathTemplate: "/api/recurso", pathParams: [] });
+    const result = await invokeTool(tool, {});
+    expect(result.isError).toBe(false);
+    expect(result.content[0].text).toContain('"ok": true');
+    vi.unstubAllGlobals();
+  });
+
+  it("marks a 5xx response as isError", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ status: 503, headers: new Headers({ "content-type": "application/json" }), json: async () => ({ error: "down" }) })
+    );
+    const tool = makeTool({ pathTemplate: "/api/recurso", pathParams: [] });
+    const result = await invokeTool(tool, {});
+    expect(result.isError).toBe(true);
+    vi.unstubAllGlobals();
+  });
+
+  it("does not mark a domain 404 as isError", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ status: 404, headers: new Headers({ "content-type": "application/json" }), json: async () => ({ error: "no encontrado" }) })
+    );
+    const tool = makeTool({ pathTemplate: "/api/recurso", pathParams: [] });
+    const result = await invokeTool(tool, {});
+    expect(result.isError).toBe(false);
+    vi.unstubAllGlobals();
+  });
+
+  it("reports a missing required path param as isError instead of throwing", async () => {
+    const tool = makeTool({ pathTemplate: "/api/execution/{entityCode}", pathParams: ["entityCode"] });
+    const result = await invokeTool(tool, {});
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/entityCode/);
+  });
+});
+
+describe("runRastroLlamar", () => {
+  it("returns an actionable error for a tool name not in the catalog", async () => {
+    const result = await runRastroLlamar("no_existe_este_tool");
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/No existe un tool llamado "no_existe_este_tool"/);
+    expect(result.content[0].text).toMatch(/rastro_buscar_tools/);
+  });
+
+  it("invokes a real catalog tool by exact name", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ status: 200, headers: new Headers({ "content-type": "application/json" }), json: async () => ({ ok: true }) })
+    );
+    const [first] = TOOL_CATALOG;
+    const result = await runRastroLlamar(first.name, {});
+    expect(result.isError).toBe(false);
+    vi.unstubAllGlobals();
   });
 });

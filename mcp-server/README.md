@@ -1,10 +1,24 @@
 # appsperu-mcp-server
 
-Servidor MCP que expone las 20 APIs de este repo (`apps/*/api`) como tools de solo lectura para
-un agente Claude. No transforma los datos: cada tool hace un `GET` 1:1 contra el endpoint REST
-ya existente y devuelve `{ status, body }` tal cual. Ver el plan de diseño y el catálogo completo
-de tools en [`docs/conectores.md`](../docs/conectores.md) (cada `description` de tool se deriva
-de esa ficha técnica).
+Servidor MCP que expone las 27 APIs de este repo (`apps/*/api`) como datos de solo lectura para
+un agente Claude, vía **2 meta-tools** — no un tool por endpoint. Ver el plan de diseño y el
+catálogo completo de tools en [`docs/conectores.md`](../docs/conectores.md) (cada `description`
+de tool se deriva de esa ficha técnica).
+
+## Interfaz: 2 meta-tools, no 142
+
+En vez de registrar un tool MCP por cada una de las 142 entradas del catálogo (costo de contexto
+fijo por sesión aunque el cliente use 2 o 3), el servidor expone:
+
+- **`rastro_buscar_tools(query?, app?, limit?)`** — busca en `src/catalog.ts` por palabra clave
+  y/o app, devuelve nombre + descripción + params de los que matchean. Úsalo primero.
+- **`rastro_llamar(tool, args?)`** — ejecuta el nombre exacto encontrado con `rastro_buscar_tools`
+  contra la API real de su app (`GET` 1:1, pass-through de `{ status, body }`, sin transformar
+  el shape de la respuesta).
+
+Onboardear una app nueva es solo agregar filas a `TOOL_CATALOG` (`src/catalog.ts`) — no crece la
+cantidad de tools que un cliente MCP carga por adelantado en cada sesión. Ver `src/search.ts`
+(implementación de la búsqueda) y `src/index.ts` (`registerMetaTools`).
 
 ## Requisito previo
 
@@ -60,10 +74,11 @@ Nombres de env var por app: `RADAR_EJECUCION_API_URL`, `COMPRAS_PUBLICAS_API_URL
 
 ## Catálogo de tools
 
-142 tools (27 apps), uno por endpoint `GET /api/*` real de las 27 apps (`src/catalog.ts` es la fuente de
-verdad — cada entrada mapea 1:1 a un `routes/*.ts` existente, sin inventar parámetros). Nombrados
-`<app>_<recurso>`, ej. `radar_ejecucion_execution`, `compras_publicas_suppliers`,
-`salud_institucional_score`.
+142 entradas (27 apps) en `src/catalog.ts` — la fuente de verdad, cada una mapea 1:1 a un
+`routes/*.ts` existente, sin inventar parámetros. Nombradas `<app>_<recurso>`, ej.
+`radar_ejecucion_execution`, `compras_publicas_suppliers`, `salud_institucional_score`. Desde la
+reingeniería del catálogo, esto ya **no** son 142 tools MCP registrados individualmente — son
+filas que `rastro_buscar_tools` busca y `rastro_llamar` ejecuta (ver sección anterior).
 
 Cada `description` incluye, cuando aplica: si la cobertura ingerida es parcial (ej. La Libertad,
 no todo el país) y que **ninguna app tiene scheduler** — toda ingesta es manual, así que los
@@ -81,8 +96,10 @@ como si fuera completo.
 - **No incluye las ingestas** (`npm run ingest:*`) — este servidor es de solo lectura. Disparar
   ingestas desde un agente es una superficie de riesgo distinta (ejecución de scripts contra
   Postgres) que se dejó fuera de alcance a propósito.
-- Validado manualmente: registro de tools, llamada con query params reales, manejo de error de
-  conectividad cuando la app de destino no responde, y dos tests automatizados del catálogo:
+- Validado manualmente: `tools/list` (expone exactamente `rastro_buscar_tools` + `rastro_llamar`,
+  no 142), `rastro_buscar_tools` con query/app real, `rastro_llamar` con un nombre inexistente
+  (error explícito, no crash) y con query params reales, manejo de error de conectividad cuando
+  la app de destino no responde, y dos tests automatizados del catálogo:
   `src/__tests__/catalog.test.ts` (`EXPECTED_TOOLS_BY_APP`, detecta un tool renombrado/borrado sin
   querer) y `src/__tests__/routes-vs-catalog.test.ts` (CX-15, `src/route-introspection.ts` —
   compara `TOOL_CATALOG` contra los `router.get(...)` reales de `apps/*/api/src/routes/*.ts` vía
