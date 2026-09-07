@@ -42,14 +42,32 @@ conectores ya están diseñados para traer "lo más reciente disponible" en cada
 snapshot en base de datos simplemente tiene la antigüedad de la última vez que se corrieron. No
 requieren cambio de código, solo volver a ejecutarlos si se quiere el dato más fresco posible.
 
-**Pendiente de una pasada más profunda**: no se auditaron en esta pasada `radar-ejecucion`
-(¿está ingerido el año fiscal 2026 completo para La Libertad?), `informes-control` (¿se ha vuelto
-a correr 2026 desde que se cerró ese año parcialmente?), `infracciones-ambientales` (RUIAS —
-el propio recurso de OEFA en la PNDA muestra `FECHA_CORTE = 2024-04-30`, es decir el dato está
-desactualizado **del lado de la fuente**, no por un error de nuestro conector — OEFA dice
-actualizar RUIAS trimestralmente pero el export público no lo refleja), y `residuos-solidos`
-(MINAM) confirmado que **no** tiene corte 2025 todavía (el dataset real solo cubre 2014-2024) —
-no es un hueco nuestro, es el techo real de la fuente hoy.
+**Corregido de inmediato — `radar-ejecucion`**: verificado en vivo, **ya tenía el año fiscal 2026
+cargado** (2,828 filas, S/ 4,989.99M devengado para La Libertad) — sin brecha, no requirió acción.
+
+**Corregido de inmediato — `informes-control`**: hallazgo real y grande — la base local solo
+tenía los periodos **2023 (2,239 filas) y 2015 (2 filas)** ingeridos; **2024, 2025 y 2026 nunca se
+habían corrido**, pese a que `docs/ESTADO.md` mencionaba "2026 → 24,256 informes" de una sesión
+anterior (ese número existía como referencia documental, pero nunca había quedado persistido en
+esta base local). Se corrieron los tres años faltantes:
+
+| Periodo | Filas nacional | La Libertad | Con responsabilidad (La Libertad) |
+|---|---|---|---|
+| 2024 | 65,747 | 2,596 | 148 |
+| 2025 | 46,976 | 1,887 | 49 |
+| 2026 (parcial, año en curso) | 24,256 | 977 | 18 |
+
+Total ahora en base: 2015 (2) + 2023 (2,239) + 2024 (65,747) + 2025 (46,976) + 2026 (24,256) =
+**139,220 informes**, cubriendo el histórico reciente completo en vez de solo un año suelto
+(2023) más un año viejo aislado (2015). Nota de rendimiento: el conector inserta fila por fila
+sin batching (a diferencia de conectores más recientes del catálogo) — cada año grande (60-65K
+filas) tomó ~45-50 minutos en correr; funciona correctamente, solo es lento.
+
+**Confirmado limitado del lado de la fuente, no un bug nuestro**: `infracciones-ambientales`
+(RUIAS — el propio recurso de OEFA en la PNDA muestra `FECHA_CORTE = 2024-04-30`; OEFA dice
+actualizar RUIAS trimestralmente pero el export público no lo refleja) y `residuos-solidos`
+(MINAM, confirmado que el dataset real **no** tiene corte 2025 todavía, solo cubre 2014-2024) —
+no son huecos nuestros, son el techo real de lo que publican las fuentes hoy.
 
 ## MINAM — serie histórica real 2019-2024, ANA queda pendiente (2026-09-06)
 
