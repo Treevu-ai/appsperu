@@ -24,7 +24,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "actividad_agraria_wage",
     "actividad_agraria_yunta_rental",
   ],
-  "bcrp-comercio-exterior": ["bcrp_meta_sources", "bcrp_trade"],
+  "bcrp-comercio-exterior": ["bcrp_comercio_exterior_meta_sources", "bcrp_comercio_exterior_trade"],
   "bcrp-la-libertad": ["bcrp_la_libertad_indicadores"],
   "ceplan-estrategico": [
     "ceplan_estrategico_crossref",
