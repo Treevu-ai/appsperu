@@ -52,3 +52,15 @@ Estos ROF se descargaron de la fuente oficial vigente pero resultaron ser escane
 extraíble — su resumen `.md` se basa en conocimiento institucional público, anotado
 explícitamente en cada archivo: **MEF**, **PROINVERSIÓN**, **MTPE**, **MINDEF**. El resto (16 de
 20) tiene texto real citado literalmente del PDF.
+
+## Otros documentos de esta carpeta (no ROF)
+
+- [`marco-legal-gobierno-subnacional.md`](marco-legal-gobierno-subnacional.md) — Ley Orgánica de
+  Gobiernos Regionales (Ley 27867) y Ley Orgánica de Municipalidades (Ley 27972): el marco legal
+  que rige a los gobiernos regional/provincial/distrital en sí (nivel distinto a las 20 entidades
+  nacionales de arriba), más los instrumentos propios del Gobierno Regional de La Libertad.
+- [`inventario-pesem-pei-poi-2025-2026.md`](inventario-pesem-pei-poi-2025-2026.md) — inventario de
+  Planes Estratégicos Sectoriales Multianuales (PESEM), Planes Estratégicos Institucionales (PEI) y
+  Planes Operativos Institucionales (POI) vigentes para 2025/2026, de las 20 entidades de arriba +
+  el Gobierno Regional de La Libertad. Varios quedaron como vacío de evidencia explícito (no
+  localizados en esa pasada) — ver el propio documento para el detalle.
