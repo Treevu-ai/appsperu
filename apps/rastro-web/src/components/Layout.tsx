@@ -2,12 +2,16 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { DataFreshnessBar } from "./DataFreshnessBar.js";
 
+// "/catalogo" (índice nacional de datosabiertos.gob.pe, PNDA) y "/docs/api"
+// (los 142 tools MCP propios de Rastro) son contenidos sin relación entre
+// sí — "Catálogo" a secas en el nav confundía cuál es cuál. El label deja
+// claro que este es el índice externo, no el catálogo de Rastro.
 const NAV = [
   { to: "/gore/la-libertad", label: "GORE La Libertad" },
   { to: "/buscar", label: "Buscar" },
   { to: "/prensa/proveedores", label: "Proveedores" },
   { to: "/auditoria/entidades-infobras", label: "Auditoría" },
-  { to: "/catalogo", label: "Catálogo" },
+  { to: "/catalogo", label: "Datos abiertos PE" },
 ];
 
 const FOOTER_LINKS = [

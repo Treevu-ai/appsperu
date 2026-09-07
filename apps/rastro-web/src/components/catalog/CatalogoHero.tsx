@@ -1,5 +1,6 @@
 // CatalogoHero — Lede de la página /catalogo
 
+import { Link } from "react-router-dom";
 import { NumberWithMetadata, metaNumber } from "../NumberWithMetadata.js";
 import { CATALOG_COBERTURA, CATALOG_FUENTE } from "../../lib/catalog-types.js";
 
@@ -50,6 +51,13 @@ export function CatalogoHero({
           ↗ Fuente original (PNDA)
         </a>
       </div>
+      <p className="mt-6 text-xs text-muted">
+        ¿Buscas los tools MCP propios de Rastro (presupuesto, obras, contratistas)? Eso está en{" "}
+        <Link to="/docs/api" className="text-accent underline-offset-2 hover:underline">
+          /docs/api
+        </Link>
+        , no acá — este catálogo es el índice nacional de datos abiertos, sin relación con las apps de Rastro.
+      </p>
     </section>
   );
 }
