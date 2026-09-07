@@ -680,7 +680,7 @@ export function getSeguridadCiudadanaDenuncias(
   });
 }
 
-/** bcrp_trade — comercio exterior agregado nacional (BCRP), sin desagregación territorial. */
+/** bcrp_comercio_exterior_trade — comercio exterior agregado nacional (BCRP), sin desagregación territorial. */
 export interface TradeRow {
   series_code: string;
   series_key: string;

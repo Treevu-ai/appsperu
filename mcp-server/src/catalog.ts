@@ -1375,7 +1375,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
 
   // ---- bcrp-comercio-exterior (BCRP, balanza comercial nacional) ----
   {
-    name: "bcrp_trade",
+    name: "bcrp_comercio_exterior_trade",
     app: "bcrp-comercio-exterior",
     description:
       "Comercio exterior agregado nacional (millones US$ FOB) — exportaciones, importaciones y balanza comercial " +
@@ -1392,7 +1392,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
   {
-    name: "bcrp_meta_sources",
+    name: "bcrp_comercio_exterior_meta_sources",
     app: "bcrp-comercio-exterior",
     description: "Metadata de los últimos 10 lotes de ingesta BCRP (series, rango, checksum).",
     pathTemplate: "/api/meta/sources",

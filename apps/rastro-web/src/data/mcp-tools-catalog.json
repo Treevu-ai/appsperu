@@ -319,6 +319,70 @@
     "sinScheduler": false
   },
   {
+    "name": "radar_ejecucion_proyectos",
+    "app": "radar-ejecucion",
+    "description": "Nombre real de proyecto/actividad/obra por entidad+función — el nivel de detalle que responde 'qué construye' una entidad, no solo bajo qué función/genérica cae. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/proyectos",
+    "pathParams": [],
+    "queryParams": [
+      "entityCode",
+      "funcion",
+      "anio",
+      "metaDepartamento"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_personal",
+    "app": "radar-ejecucion",
+    "description": "Dotación de personal del Estado (MEF/AIRHSP) agregada por pliego/unidad ejecutora/régimen laboral/grupo ocupacional — cantidad y costo total anual. Agregación institucional, no personal identificable; sin ubigeo en la fuente, filtrar por texto sobre PLIEGO/UNIDAD_EJECUTORA. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/personal",
+    "pathParams": [],
+    "queryParams": [
+      "entidad",
+      "ejercicio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_patrimonio_bienes_muebles_baja",
+    "app": "radar-ejecucion",
+    "description": "Activos patrimoniales dados de baja (desincorporados) por entidad del Estado (MEF) — resolución, acto de baja y bien. Solo activos dados de baja, NO es el inventario completo de bienes muebles del Estado (esa fuente no tiene un dataset público estructurado conocido). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/patrimonio/bienes-muebles-baja",
+    "pathParams": [],
+    "queryParams": [
+      "entidad",
+      "ejercicio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_patrimonio_bienes_muebles_baja_por_distrito",
+    "app": "radar-ejecucion",
+    "description": "Bajas patrimoniales agregadas por distrito, SOLO para municipalidades (el resto del universo — ministerios, gobiernos regionales, UGEL, empresas de agua/luz — queda excluido porque su RUC resuelve al domicilio fiscal en Lima, no al lugar donde se usó el bien; para una municipalidad, el domicilio fiscal sí es una aproximación razonable a su distrito). Cruce en vivo entre esta app, identidad-fiscal (RUC->ubigeo) y ceplan-geo (ubigeo->departamento/provincia/distrito), no persistido. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/patrimonio/bienes-muebles-baja/por-distrito",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "ejercicio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_burocracia_inversion",
+    "app": "radar-ejecucion",
+    "description": "Ratio gasto-en-planilla vs. gasto-en-inversión por entidad/distrito (genérica de gasto '1' = personal, '6' = adquisición de activos no financieros). Excluye gasto de Gobierno Nacional dirigido a un departamento (meta_departamento) y filas sin GENERICA clasificada — no se tratan como cero, se excluyen de ambos sumandos. `ratioIndefinido=true` cuando el devengado en inversión es cero (no se puede dividir). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/burocracia-inversion",
+    "pathParams": [],
+    "queryParams": [
+      "anio",
+      "departamento",
+      "nivel",
+      "entityCode"
+    ],
+    "sinScheduler": true
+  },
+  {
     "name": "compras_publicas_procurement",
     "app": "compras-publicas",
     "description": "Procesos de contratación pública (releases OCDS) ingeridos desde OECE. Cobertura PARCIAL: cada corrida trae hasta 10 páginas más recientes, no el histórico completo. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
@@ -376,6 +440,239 @@
     "sinScheduler": false
   },
   {
+    "name": "compras_publicas_unsuccessful_tenders",
+    "app": "compras-publicas",
+    "description": "Ítems de contratación pública declarados DESIERTO o NULO (dinero convocado, no gastado) — la mitad de los procesos OCDS que `compras_publicas_procurement` (adjudicaciones) nunca cubre. No incluye estados ambiguos de la fuente (RETROTRAIDO_POR_RESOLUCION, PENDIENTE_DE_REGISTRO_DE_EFECTO, CONVOCADO). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/procurement-sin-adjudicar",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "statusDetails",
+      "buyerId"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "compras_publicas_bidders_by_ocid",
+    "app": "compras-publicas",
+    "description": "Participantes (postores) de un proceso de contratación específico por su OCID, con el ganador si lo hay. 'Participante' significa que figura en el registro OCDS — no equivale por sí solo a una cotización, oferta válida ni comportamiento competitivo.",
+    "pathTemplate": "/api/bidders/{ocid}",
+    "pathParams": [
+      "ocid"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "compras_publicas_bidders_by_provider",
+    "app": "compras-publicas",
+    "description": "Historial de participaciones de un proveedor como postor (no solo como ganador) — total de procesos, victorias y win rate. Cobertura parcial de registros OCDS disponibles en las corridas locales; las tasas son descriptivas, no una medición de desempeño o comportamiento.",
+    "pathTemplate": "/api/bidders/provider/{providerId}",
+    "pathParams": [
+      "providerId"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "compras_publicas_bidders_competition",
+    "app": "compras-publicas",
+    "description": "Top 10 proveedores por victorias, con participaciones/victorias/descalificaciones observadas en la muestra ingerida. Resumen descriptivo — no mide competencia, desempeño ni irregularidad. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/bidders/analytics/competition",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "compras_publicas_bidders_coparticipation",
+    "app": "compras-publicas",
+    "description": "Pares de proveedores con co-participación repetida (>=3 veces) en los mismos procesos, dentro de la muestra disponible. La co-participación puede responder a rubro, zona o periodo compartido — NO determina coordinación ni colusión, es solo una descripción de la muestra para investigar con más contexto. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/bidders/analytics/co-participation",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "compras_publicas_entity_profile",
+    "app": "compras-publicas",
+    "description": "Ficha transversal de una entidad compradora OCDS: resumen de procesos por categoría, adjudicaciones por año/moneda, participación de postores por proceso, estado de reconciliación OCID exacto, y si tiene contratos menores (SEACE) materializados. Una adjudicación publicada no equivale a contrato firmado, pago ejecutado ni entrega recibida — la ficha describe solo el universo materializado, no certifica cobertura completa ni ejecución presupuestal.",
+    "pathTemplate": "/api/entities/{buyerId}/profile",
+    "pathParams": [
+      "buyerId"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "compras_publicas_identities",
+    "app": "compras-publicas",
+    "description": "Relaciones de identidad entre RUC/nombres/identificadores vinculados a una entidad o persona (`entity_identity_links`) — busca por cualquier identificador (subject_id o valor origen/destino). Una relación candidata no equivale a identidad confirmada; solo las verificadas (`soloVerificadas=true`) deberían alimentar cruces automáticos.",
+    "pathTemplate": "/api/identities",
+    "pathParams": [],
+    "queryParams": [
+      "identifier",
+      "soloVerificadas"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "compras_publicas_conformacion_vinculos",
+    "app": "compras-publicas",
+    "description": "Personas naturales (DNI enmascarado a los últimos 3 dígitos) que aparecen como socio/representante en más de un RUC distinto, y esos RUCs distintos ganaron adjudicaciones en más de una entidad convocante distinta. Cruce interno OSCE perfilprov (conformación societaria) + OCDS/menor a 8 UIT. NO implica irregularidad por sí solo — es legal que una persona controle o represente varias empresas; es una hipótesis para investigar con más contexto, no una conclusión.",
+    "pathTemplate": "/api/conformacion/vinculos",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "compras_publicas_conformacion_by_ruc",
+    "app": "compras-publicas",
+    "description": "Conformación societaria de un RUC específico (OSCE — Buscador de Proveedores del Estado): socios, representantes y órganos de administración, con DNI/CE enmascarado a los últimos 3 dígitos. Un RUC sin socios registrados suele ser un consorcio (Contrato de Colaboración Empresarial), que no tiene accionistas en el sentido societario que expone este endpoint — no es un vacío de datos.",
+    "pathTemplate": "/api/conformacion/{ruc}",
+    "pathParams": [
+      "ruc"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "compras_publicas_minor_contracts",
+    "app": "compras-publicas",
+    "description": "Contrataciones menores a 8 UIT de municipalidades de La Libertad (SEACE, reconstrucción de evidencia pública, no el buscador oficial completo) — objeto, monto estimado/adjudicado, cotizaciones recibidas, municipalidad y proveedor ganador. Filtra por `signalType` para traer solo contratos con una señal de revisión detectada. La ausencia de un dato no prueba incumplimiento. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/contracts",
+    "pathParams": [],
+    "queryParams": [
+      "year",
+      "municipalityId",
+      "supplierId",
+      "category",
+      "minAmount",
+      "maxAmount",
+      "quotationCount",
+      "signalType",
+      "q",
+      "limit"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "compras_publicas_minor_contract_by_id",
+    "app": "compras-publicas",
+    "description": "Detalle completo de una contratación menor SEACE: cotizaciones recibidas, eventos, documentos, evidencia recolectada y señales de revisión detectadas, con las versiones de normalizador/modelo que las generó. La evidencia no localizada en las fuentes consultadas no equivale a incumplimiento.",
+    "pathTemplate": "/api/contracts/{id}",
+    "pathParams": [
+      "id"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "compras_publicas_municipalities",
+    "app": "compras-publicas",
+    "description": "Municipalidades de La Libertad con contratos menores SEACE materializados — total de contratos, monto y proveedores distintos por municipalidad. Búsqueda parcial por nombre/RUC/distrito con `q`.",
+    "pathTemplate": "/api/municipalities",
+    "pathParams": [],
+    "queryParams": [
+      "q",
+      "limit"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "compras_publicas_municipality_by_id",
+    "app": "compras-publicas",
+    "description": "Ficha de una municipalidad: métricas agregadas de contratos menores, desglose por categoría, top 20 proveedores y conteo de señales de revisión detectadas. Las señales son patrones para revisión y no determinan irregularidad.",
+    "pathTemplate": "/api/municipalities/{id}",
+    "pathParams": [
+      "id"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "compras_publicas_signals",
+    "app": "compras-publicas",
+    "description": "Señales de revisión detectadas sobre contrataciones menores SEACE (S01-S13: patrones de fraccionamiento, objetos similares, proveedor recurrente, etc.), de la corrida más reciente salvo que se indique `signalRunId`. Una señal identifica evidencia y patrones observables — NO determina corrupción, favorecimiento, fraccionamiento ni incumplimiento por sí sola.",
+    "pathTemplate": "/api/signals",
+    "pathParams": [],
+    "queryParams": [
+      "signalType",
+      "municipalityId",
+      "supplierId",
+      "contractingId",
+      "signalRunId",
+      "limit"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "compras_publicas_signal_by_id",
+    "app": "compras-publicas",
+    "description": "Detalle de una señal de revisión específica: evidencia recolectada y decisiones de revisión humana (aprobada/descartada) ya registradas. Identifica un patrón que merece revisión; no determina corrupción, favorecimiento, fraccionamiento ni incumplimiento.",
+    "pathTemplate": "/api/signals/{id}",
+    "pathParams": [
+      "id"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "compras_publicas_semantic_review_queue",
+    "app": "compras-publicas",
+    "description": "Bandeja de pares de contratos comparables por similitud semántica (señales S12/S13) para revisión humana, deduplicada por par y priorizada (S13 antes que S12 porque añade el mismo proveedor). Una similitud semántica NO determina misma necesidad, favorecimiento, fraccionamiento ni direccionamiento — es solo una priorización de qué revisar primero.",
+    "pathTemplate": "/api/semantic-review-queue",
+    "pathParams": [],
+    "queryParams": [
+      "municipalityId",
+      "limit"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "compras_publicas_semantic_review_clusters",
+    "app": "compras-publicas",
+    "description": "Agrupa señales S12/S13 en clusters de contratos relacionados entre sí (unión de pares transitivos), con monto total y similitud máxima del cluster. Igual que la cola de revisión: un cluster resume objetos comparables para organizar revisión documental, no determina misma necesidad ni conducta irregular.",
+    "pathTemplate": "/api/semantic-review-clusters",
+    "pathParams": [],
+    "queryParams": [
+      "limit"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "compras_publicas_freshness",
+    "app": "compras-publicas",
+    "description": "Metadata de frescura por fuente ingerida (OECE/OCDS y SEACE contratos menores): fecha de la última corrida, filas totales, id del último batch y filas rechazadas en ese batch. `rejectedInLatestBatch: null` significa que esa fuente no trackea rechazos por lote persistido — no que no haya rechazos. Usar esto antes de asumir que el dato está al día. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/meta/freshness",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "compras_publicas_analytics_territorial",
+    "app": "compras-publicas",
+    "description": "Agregados de contratos menores SEACE de La Libertad por provincia y distrito: total de contratos, monto, proveedores distintos, y concentración de mercado (CR1/CR3: % del monto que se lleva el proveedor top-1 / top-3). `dateBasis` importa: `source_year` (año declarado en la fuente) y `publication_year` (año de publicación) NO son equivalentes.",
+    "pathTemplate": "/api/analytics/territorial",
+    "pathParams": [],
+    "queryParams": [
+      "year",
+      "category",
+      "dateBasis"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "compras_publicas_analytics",
+    "app": "compras-publicas",
+    "description": "Indicadores descriptivos y reproducibles sobre contratos menores SEACE, según `kind`: 'concentration' (proveedores distintos y monto por municipalidad), 'competition' (promedio de cotizaciones y contratos con solo 1 cotización válida por municipalidad), 'near-threshold' (contratos adjudicados por encima del 90% del tope legal de 8 UIT), 'recurrence' (pares municipalidad-proveedor con 2+ contratos), 'evidence' (conteo de evidencia recolectada vs. esperada por contrato). Ninguno constituye una conclusión jurídica.",
+    "pathTemplate": "/api/analytics/{kind}",
+    "pathParams": [
+      "kind"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
     "name": "radar_inversiones_investments",
     "app": "radar-inversiones",
     "description": "Proyectos de inversión pública (Invierte.pe) — costos, estado, entidad responsable. Cobertura PARCIAL: snapshot por ventana de bytes del CSV, no el archivo completo. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
@@ -409,6 +706,32 @@
     "queryParams": [
       "departamento"
     ],
+    "sinScheduler": false
+  },
+  {
+    "name": "radar_inversiones_investments_desactivadas",
+    "app": "radar-inversiones",
+    "description": "Inversiones DESACTIVADAS del Banco de Inversiones (MEF) — la mitad del Banco que `radar_inversiones_investments` no cubre. `situacion` conserva el estado que tenía la inversión al desactivarse (ej. 'EN FORMULACION' cuando nunca obtuvo declaratoria de viabilidad). La fuente no publica un código de motivo por fila; esta tool no infiere uno. Paginado real con `total`/`hasMore`, no un LIMIT fijo silencioso. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/investments-desactivadas",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "situacion",
+      "funcion",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_inversiones_investment_desactivada_by_cui",
+    "app": "radar-inversiones",
+    "description": "Detalle de una inversión desactivada específica por su CUI.",
+    "pathTemplate": "/api/investments-desactivadas/{cui}",
+    "pathParams": [
+      "cui"
+    ],
+    "queryParams": [],
     "sinScheduler": false
   },
   {
@@ -747,6 +1070,19 @@
     "sinScheduler": false
   },
   {
+    "name": "ceplan_geo_patrimonio_predios",
+    "app": "ceplan-geo",
+    "description": "Predios estatales supervisados por SBN (Superintendencia Nacional de Bienes Estatales) — resultado de supervisión, titular, área y si es zona de playa protegida. Cobertura PARCIAL: solo predios efectivamente supervisados, NO el universo completo del registro SINABIP (se publica solo como enlace de Google Drive, actualmente roto).",
+    "pathTemplate": "/api/patrimonio/predios",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "provincia",
+      "distrito"
+    ],
+    "sinScheduler": false
+  },
+  {
     "name": "proveedores_sancionados_sanciones",
     "app": "proveedores-sancionados",
     "description": "Inhabilitaciones y multas del Tribunal de Contrataciones para un RUC específico (requerido). 'Vigente hoy' no equivale a 'vigente al momento de la adjudicación' — revisar fechas `desde`/`hasta` de cada registro antes de concluir algo sobre un contrato pasado. Cobertura nacional completa (~17.9K filas). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
@@ -766,6 +1102,30 @@
     "queryParams": [
       "departamento",
       "soloInhabilitados"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "proveedores_sancionados_personas",
+    "app": "proveedores-sancionados",
+    "description": "Cruce persona-a-persona (2026-09-06): ¿una persona sancionada directamente (RUC-10, persona natural) es también socio/representante/miembro del órgano de administración de una empresa activa (supplier_conformacion, compras-publicas)? El DNI solo se usa como clave de cruce interno — nunca se expone completo, `dniEnmascarado` trae solo los últimos 3 dígitos. El nombre sí se expone (ya es público en el buscador del RNP y en GET /api/sanciones). `soloVigentes=true` filtra solo personas con una sanción vigente hoy. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/crossref/personas-sancionadas",
+    "pathParams": [],
+    "queryParams": [
+      "soloVigentes"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "proveedores_sancionados_redes_proveedores",
+    "app": "proveedores-sancionados",
+    "description": "Proveedores de contrataciones menores (compras-publicas/SEACE) que ganan en varias municipalidades distintas de un departamento — señal de red o concentración territorial, NO una conclusión de irregularidad. Solo cuenta municipalidades reales (`official_name ILIKE 'MUNICIPALIDAD%'`), excluyendo ministerios/gobiernos regionales/UGEL que también aparecen en el universo de compradores. `soloSancionados=true` filtra solo proveedores con inhabilitación VIGENTE hoy (no al momento de cada contrato). Default: LA LIBERTAD.",
+    "pathTemplate": "/api/crossref/redes-proveedores",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "minMunicipios",
+      "soloSancionados"
     ],
     "sinScheduler": false
   },
@@ -868,7 +1228,7 @@
     "sinScheduler": false
   },
   {
-    "name": "bcrp_trade",
+    "name": "bcrp_comercio_exterior_trade",
     "app": "bcrp-comercio-exterior",
     "description": "Comercio exterior agregado nacional (millones US$ FOB) — exportaciones, importaciones y balanza comercial mensual, series PN38714BM–PN38723BM. Sin desagregación territorial ni por empresa; indicador macro de contexto. Cobertura nacional completa desde 2012. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/trade",
@@ -882,7 +1242,7 @@
     "sinScheduler": true
   },
   {
-    "name": "bcrp_meta_sources",
+    "name": "bcrp_comercio_exterior_meta_sources",
     "app": "bcrp-comercio-exterior",
     "description": "Metadata de los últimos 10 lotes de ingesta BCRP (series, rango, checksum).",
     "pathTemplate": "/api/meta/sources",
@@ -1083,6 +1443,214 @@
     "pathParams": [],
     "queryParams": [
       "departamento"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "mindef_offset_agreements",
+    "app": "mindef",
+    "description": "Convenios Específicos de Compensaciones Industriales y Sociales Offset del MINDEF: obligaciones de compensación que un proveedor extranjero asume como parte de un contrato de defensa (institución, entidad contraparte, año de inicio). Dataset pequeño (8 filas confirmadas en vivo) — es todo lo que MINDEF publica hoy sobre offsets. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/offset-agreements",
+    "pathParams": [],
+    "queryParams": [
+      "entidadContraparte"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "mindef_training_abroad",
+    "app": "mindef",
+    "description": "Personal militar capacitado en el exterior (institución, curso, país, fechas). `personalCantidad` es un conteo por curso, nunca una lista de nombres — el dataset del MEF/MINDEF no publica identificadores individuales. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/training-abroad",
+    "pathParams": [],
+    "queryParams": [
+      "pais"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "mindef_peace_missions",
+    "app": "mindef",
+    "description": "Personal de las FF.AA. desplegado en Misiones de Paz, Observadores Militares y Contingentes Militares (misión, institución, país, año, cantidad). `cantidad` es un conteo agregado por misión/año, no una lista de nombres. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/peace-missions",
+    "pathParams": [],
+    "queryParams": [
+      "anio",
+      "pais"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "mimp_cem_casos",
+    "app": "mimp",
+    "description": "Casos atendidos por violencia contra la mujer e integrantes del grupo familiar, por Centro Emergencia Mujer (CEM) — agregado por centro/año/departamento, desglosado por sexo y tipo de violencia. NUNCA un registro individual: se descartó explícitamente el dataset de acogimiento residencial de MIMP por ser individual (código de usuario + fecha de nacimiento + tipología de ingreso) sobre menores en protección estatal — no se ingiere bajo ninguna circunstancia. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/cem",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "anio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "mimp_chat100_consultas",
+    "app": "mimp",
+    "description": "Consultas atendidas por el servicio Chat 100 (línea contra la violencia familiar y sexual) — agregado nacional anual por sexo, sin desagregación territorial ni individual en la fuente. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/chat100",
+    "pathParams": [],
+    "queryParams": [
+      "anio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "renamu_municipalidades",
+    "app": "renamu",
+    "description": "Identificación de municipalidades (RENAMU/INEI, encuesta censal anual, 1,891 municipalidades) — ubigeo, departamento, provincia, distrito, tipo (Provincial/Distrital/Centro Poblado). Alcance deliberadamente parcial: el Módulo I completo de la fuente (datos generales) se excluyó por mezclar campos institucionales con datos de persona natural del alcalde (nombre, teléfono y correo personal) que no se pudieron mapear con certeza contra el diccionario de variables — nunca se ingirió PII. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/municipalidades",
+    "pathParams": [],
+    "queryParams": [
+      "anio",
+      "departamento",
+      "ubigeo"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "renamu_equipamiento",
+    "app": "renamu",
+    "description": "Capacidad institucional de una municipalidad por ubigeo (RENAMU/INEI, Módulo II: equipamiento y TIC) — vehículos (auto, ambulancia, volquete, camión recolector de basura, camión cisterna, grupo electrógeno, panel solar) con conteo de unidades operativas/no operativas, y conectividad (líneas fijas/móviles, internet, tipo de conexión). Único conector del catálogo que mide capacidad de gestión declarada por la propia municipalidad, en vez de ejecución de gasto. No incluye maquinaria pesada, computadoras por tipo de procesador ni equipos de oficina en esta primera versión (ver data contract). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/equipamiento",
+    "pathParams": [],
+    "queryParams": [
+      "ubigeo",
+      "anio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "autoridades_electas_autoridades",
+    "app": "autoridades-electas",
+    "description": "Autoridades proclamadas por el JNE (nombre, cargo, organización política, ubigeo, periodo de mandato) — no candidatos: `pronunciamiento` es un acta de proclamación oficial real, verificada contra el corte 2026-07-30 (Presidencia, Senado, Diputados, Parlamento Andino de Elecciones Generales 2026). Sin documento de identidad — este conector ingiere deliberadamente solo el recurso del JNE sin DNI; el recurso histórico distinto que sí trae DNI sin enmascarar (autoridades regionales/municipales 2014-2022) NO se ingiere en esta versión. Sin clave única de persona (no hay DNI): el match es por nombre completo + cargo + proceso electoral + ubigeo, con riesgo real de colisión por homonimia. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/autoridades",
+    "pathParams": [],
+    "queryParams": [
+      "nombre",
+      "cargo",
+      "organizacionPolitica",
+      "ubigeo",
+      "anioEleccion"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "instituciones_educativas_instituciones",
+    "app": "instituciones-educativas",
+    "description": "Padrón nacional de instituciones y programas educativos (MINEDU/ESCALE) — nombre, nivel/modalidad, gestión, dirección, ubigeo, coordenadas (lat/lon, único conector del catálogo con georreferenciación por establecimiento individual), UGEL, estado operativo. Universo censal completo (180,828 instituciones verificadas, no muestra), corte 2026-08-28. Sin datos de persona natural: `DIRECTOR`, `TELEFONO`, `EMAIL` y `PROMOTOR` de la fuente real nunca se leen ni persisten — solo `NRORUC`/`RZSOCIAL` de instituciones privadas (identidad de entidad, no de persona). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/instituciones",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "provincia",
+      "distrito",
+      "ubigeo",
+      "estado",
+      "gestion",
+      "nombre"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "instituciones_educativas_resumen",
+    "app": "instituciones-educativas",
+    "description": "Cobertura educativa agregada por provincia y distrito de un departamento (total de instituciones y cuántas están activas) — pensado para no forzar paginar miles de filas de `instituciones_educativas_instituciones` cuando lo que se necesita es la cobertura territorial completa. Por defecto LA LIBERTAD (84 distritos, 12 provincias, 9,391 instituciones verificadas en vivo). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/resumen",
+    "pathParams": [],
+    "queryParams": [
+      "departamento"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "infracciones_ambientales_infracciones",
+    "app": "infracciones-ambientales",
+    "description": "Registro Único de Infractores Ambientales Sancionados (OEFA) — administrado sancionado, subsector económico (minería, industria, hidrocarburos, agricultura, pesquería, residuos sólidos, electricidad, consultoras ambientales), ubicación, expediente/resolución, detalle de la infracción, monto de multa. `numeroDocumento` se enmascara (últimos 3 dígitos) cuando el administrado es persona natural (D.N.I.) — para R.U.C. se expone completo. 14,724 filas nacionales verificadas (610 en La Libertad, 12 provincias). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/infracciones",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "provincia",
+      "distrito",
+      "subsectorEconomico",
+      "administrado"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "red_vial_subnacional_intervenciones",
+    "app": "red-vial-subnacional",
+    "description": "Intervenciones en redes viales departamentales/vecinales (Provías Descentralizado, MTC) — código de ruta, tramo, longitud en km, estado de conservación (Bueno/Regular/Malo), tipo de superficie, tipo de intervención (mantenimiento/mejoramiento/conservación), responsable. Nivel de detalle: ruta/tramo dentro de una provincia, no distrito exacto (una ruta puede cruzar más de uno). Nombres de provincia con tildes inconsistentes en la fuente real (ej. 'VIRU' y 'VIRÚ' como valores distintos) — no normalizado. 12,536 filas nacionales verificadas (461 en La Libertad, 12 provincias). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/intervenciones",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "provincia",
+      "estado",
+      "codigoRuta"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "residuos_solidos_residuos",
+    "app": "residuos-solidos",
+    "description": "Generación anual de residuos sólidos domiciliarios y municipales por distrito (MINAM/SIGERSOL) — población INEI, generación per cápita, toneladas/día y toneladas/año. Serie histórica real 2019-2024 (6 años), a diferencia de la mayoría de fuentes del catálogo (snapshot único) — permite ver evolución temporal por distrito. 11,310 filas nacionales verificadas (500 en La Libertad, 12 provincias, 2019-2024). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/residuos",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "provincia",
+      "distrito",
+      "ubigeo",
+      "anio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "infraestructura_mtc_terminales_portuarios",
+    "app": "infraestructura-mtc",
+    "description": "Catálogo de terminales portuarios y embarcaderos (MTC) — ubicación, ámbito (marítimo/fluvial/lacustre), tipo, uso, tráfico, estado de conservación, titularidad y administrador. Snapshot anual acumulado 2022-2025 (una fila por terminal por corte, no solo el más reciente). 507 filas nacionales verificadas (9 en La Libertad, 3 terminales: TP Multipropósito Salaverry, TP Multiboyas Salaverry, TP Chicama/Malabrigo). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/terminales-portuarios",
+    "pathParams": [],
+    "queryParams": [
+      "idDepartamento",
+      "ambito",
+      "estado"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "infraestructura_mtc_aerodromos",
+    "app": "infraestructura-mtc",
+    "description": "Catálogo de infraestructura aeroportuaria/aeródromos (MTC) — ubicación, tipo, código OACI, escala, estado, jerarquía, titularidad y administrador. Snapshot anual acumulado 2022-2025. La columna ID original de la fuente viene con el literal '#¡REF!' (error de fórmula de Excel) en el corte 2025 — no se usa; la clave real es codigoAerodromo. 595 filas nacionales verificadas (36 en La Libertad, 9 aeródromos: incluye el Aeropuerto Internacional Cap. FAP Carlos Martínez de Pinillos en Trujillo y 8 aeródromos rurales/mineros/municipales en Pataz, Virú, Sánchez Carrión, Santiago de Chuco y Pacasmayo). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/aerodromos",
+    "pathParams": [],
+    "queryParams": [
+      "idDepartamento",
+      "provincia",
+      "tipoAerodromo"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "infraestructura_mtc_peajes",
+    "app": "infraestructura-mtc",
+    "description": "Catálogo de unidades de peaje de la red vial nacional (MTC) — ubicación, código de ruta, km de inicio, titularidad, administrador y estado operativo. El corte más reciente del catálogo (2025-12-31, más fresco que red_vial_subnacional_intervenciones). 233 features nacionales verificadas (15 en La Libertad, 5 unidades: Menocucho, Virú, Pacanguilla, Chicama, Ciudad de Dios). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/peajes",
+    "pathParams": [],
+    "queryParams": [
+      "idDepartamento",
+      "codigoRuta",
+      "estado"
     ],
     "sinScheduler": true
   }

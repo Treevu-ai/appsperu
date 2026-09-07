@@ -43,11 +43,20 @@ hallazgos accionados de inmediato:
    en varias municipalidades — señal de red, no conclusión de irregularidad). Catálogo total:
    **137 tools, 27 apps** (antes 128).
 
+4. **Naming inconsistente corregido (2026-09-07)**: `bcrp_trade`/`bcrp_meta_sources` (app
+   `bcrp-comercio-exterior`) rompían el patrón `<app>_<recurso>` que sigue el resto del catálogo
+   y podían confundirse con `bcrp_la_libertad_indicadores` (nacional-agregado vs.
+   regional-Trujillo, mismo prefijo `bcrp`). Renombrados a `bcrp_comercio_exterior_trade` y
+   `bcrp_comercio_exterior_meta_sources` — regenerado también
+   `apps/rastro-web/src/data/mcp-tools-catalog.json` (`generate-mcp-catalog.mjs` deriva siempre
+   de `catalog.ts`, así que no puede quedar desincronizado). Es un rename disruptivo para
+   cualquier consumidor externo que ya haya invocado los nombres viejos — no hay tal consumidor
+   conocido hoy (catálogo publicado recién esta semana).
+
 **Pendiente de la auditoría, no accionado todavía**: paginación con `LIMIT` fijo sin señal de
 truncamiento en el resto del catálogo (`radar_inversiones_investments_desactivadas` ya lo tiene
-bien, es el único patrón a replicar), el naming `bcrp_trade`/`bcrp_meta_sources` que rompe el
-patrón `<app>_<recurso>`, y que `EXPECTED_TOOLS_BY_APP` sigue sin comparar contra las rutas Express
-reales (detecta desincronización interna del catálogo, no gaps de cobertura nuevos).
+bien, es el único patrón a replicar), y que `EXPECTED_TOOLS_BY_APP` sigue sin comparar contra las
+rutas Express reales (detecta desincronización interna del catálogo, no gaps de cobertura nuevos).
 
 ## `infraestructura-mtc` — terminales portuarios, aeródromos y peajes (2026-09-06)
 
