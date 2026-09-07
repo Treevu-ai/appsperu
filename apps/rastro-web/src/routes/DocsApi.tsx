@@ -53,6 +53,13 @@ export function DocsApi() {
         Compatible con Claude Code, Claude Desktop, Cursor, Windsurf, Cline y Continue.dev. Tu agente busca, encadena
         resultados, razona sobre ellos y entrega respuestas con citas verificables.
       </p>
+      <p className="text-xs text-muted mt-2 max-w-3xl">
+        ¿Buscas datasets abiertos del Estado peruano en general, no específicos de Rastro? Eso está en{" "}
+        <Link to="/catalogo" className="text-accent underline-offset-2 hover:underline">
+          /catalogo
+        </Link>{" "}
+        (índice nacional PNDA) — sin relación con este catálogo de {TOOLS.length} tools.
+      </p>
 
       <section className="mt-8 grid md:grid-cols-2 gap-4">
         <div className="card">
