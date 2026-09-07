@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { pathToFileURL } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -7,7 +8,7 @@ import { TOOL_CATALOG, type ToolSpec } from "./catalog.js";
 import { buildUrl, callApi } from "./http-client.js";
 import { serializeToolResponse } from "./tool-output.js";
 
-function buildPath(tool: ToolSpec, args: Record<string, unknown>): string {
+export function buildPath(tool: ToolSpec, args: Record<string, unknown>): string {
   let path = tool.pathTemplate;
   for (const param of tool.pathParams) {
     const value = args[param];
@@ -19,11 +20,15 @@ function buildPath(tool: ToolSpec, args: Record<string, unknown>): string {
   return path;
 }
 
-function buildQuery(tool: ToolSpec, args: Record<string, unknown>): Record<string, string | undefined> {
+export function buildQuery(tool: ToolSpec, args: Record<string, unknown>): Record<string, string | undefined> {
   const query: Record<string, string | undefined> = {};
   for (const key of Object.keys(tool.querySchema)) {
     const value = args[key];
-    query[key] = typeof value === "string" ? value : undefined;
+    // Varios querySchema usan z.coerce.number()/z.coerce.boolean() (ej. "anio", "mes") — el
+    // cliente MCP envía el tipo declarado (number/boolean), no un string. Antes esto se
+    // descartaba en silencio (typeof value === "string" fallaba), así que el filtro nunca
+    // llegaba a la API real sin ningún error visible para el agente.
+    query[key] = typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? String(value) : undefined;
   }
   return query;
 }
@@ -76,7 +81,9 @@ async function main(): Promise<void> {
   console.error(`appsperu-mcp-server: ${TOOL_CATALOG.length} tools registrados, esperando por stdio.`);
 }
 
-main().catch((err) => {
-  console.error("appsperu-mcp-server falló al iniciar:", err);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((err) => {
+    console.error("appsperu-mcp-server falló al iniciar:", err);
+    process.exit(1);
+  });
+}
