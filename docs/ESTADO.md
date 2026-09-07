@@ -4,6 +4,53 @@
 
 Veintidós apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
 
+## Auditoría de frescura de datos — todas las apps (2026-09-06)
+
+A pedido del usuario ("la data del 2024 no puede ser la única referencia"), se revisó en vivo si
+cada fuente tiene un corte más reciente (2025/2026) que el ya ingerido, en vez de asumir que el
+snapshot original sigue siendo el más nuevo disponible.
+
+**Corregido de inmediato — `renamu` (RENAMU/INEI)**: el corte 2025 ya estaba publicado y no se
+había ingerido. Al intentar ingerirlo se descubrió un problema más profundo que el simple atraso:
+**la URL de descarga no sigue el mismo patrón entre años** — 2024 vive en `inei.gob.pe/media/...`,
+2025 vive en un dominio y ruta completamente distintos (`proyectos.inei.gob.pe/iinei/srienaho/...`),
+y el slug de 2024 ni siquiera resuelve con el método `package_show` que sí funcionó para 2025. El
+conector se corrigió para usar un mapa explícito de URLs verificadas por año (`KNOWN_ZIP_URLS`)
+en vez de asumir una plantilla — falla con un error explícito y accionable en vez de adivinar una
+URL rota. Verificado en vivo: RENAMU 2025 ingerido, 1,891 filas, 0 rechazadas, mismo esquema que
+2024. La Libertad 2025: 84 municipalidades (sin cambio respecto a 2024, como se esperaría).
+
+**Confirmado bloqueado, no es un bug de código — `bcrp-la-libertad`**: la fuente (BCRP Sucursal
+Trujillo) ya publicó informes hasta agosto 2026 (confirmado por búsqueda en vivo — reportes de
+enero a octubre 2025 y enero 2026 accesibles), pero solo se ingirió el PDF de enero 2026. Se
+confirmó en vivo que el WAF (Incapsula) sigue bloqueando la descarga automatizada de los PDF más
+recientes (feb-ago 2026) — mismo bloqueo ya documentado en el ADR original, no un problema nuevo.
+Requiere que un humano descargue los PDF con su navegador para ingerirlos (`npm run ingest:pdf`).
+
+**Confirmado ya actualizado, sin acción necesaria**:
+- `seguridad-ciudadana` (SIDPOL): la fuente real solo llega hasta julio 2026 por ahora (confirmado
+  por búsqueda en vivo) — el dataset ya ingerido (Ene 2018-Jul 2026, 369,100 filas) está al día.
+- `actividad-empresarial` (MTPE): el conector ya descubre dinámicamente "el año más reciente
+  publicado" en cada corrida (migrado 2026-09-05 específicamente para esto) — no depende de un
+  año hardcodeado, se autoactualiza solo con volver a correrlo.
+
+**Categoría "re-ejecutar para refrescar" (no es un bug, es una fuente viva)**: `identidad-fiscal`
+(SUNAT actualiza el padrón a diario, pero solo se ingirió una vez el 2026-08-20), `proveedores-
+sancionados` (RNP, ingerido 2026-08-20), `compras-publicas`/OECE (API en vivo, solo trae las
+últimas páginas en cada corrida), `inversion-privada`/VERTIX (ingerido 2026-08-28) — estos
+conectores ya están diseñados para traer "lo más reciente disponible" en cada ejecución; el
+snapshot en base de datos simplemente tiene la antigüedad de la última vez que se corrieron. No
+requieren cambio de código, solo volver a ejecutarlos si se quiere el dato más fresco posible.
+
+**Pendiente de una pasada más profunda**: no se auditaron en esta pasada `radar-ejecucion`
+(¿está ingerido el año fiscal 2026 completo para La Libertad?), `informes-control` (¿se ha vuelto
+a correr 2026 desde que se cerró ese año parcialmente?), `infracciones-ambientales` (RUIAS —
+el propio recurso de OEFA en la PNDA muestra `FECHA_CORTE = 2024-04-30`, es decir el dato está
+desactualizado **del lado de la fuente**, no por un error de nuestro conector — OEFA dice
+actualizar RUIAS trimestralmente pero el export público no lo refleja), y `residuos-solidos`
+(MINAM) confirmado que **no** tiene corte 2025 todavía (el dataset real solo cubre 2014-2024) —
+no es un hueco nuestro, es el techo real de la fuente hoy.
+
 ## MINAM — serie histórica real 2019-2024, ANA queda pendiente (2026-09-06)
 
 Continuación del barrido: tras OEFA y MTC, se investigó MINAM y ANA en paralelo. **MINAM
