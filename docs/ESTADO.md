@@ -30,11 +30,24 @@ hallazgos accionados de inmediato:
    `semantic_review_queue`/`clusters`, `freshness`, `analytics_territorial`, `analytics` por
    tipo). Catálogo total: **128 tools, 27 apps** (antes 107).
 
-**Pendiente de la auditoría, no accionado todavía**: otros 5 gaps menores confirmados
-(`radar-ejecucion`: proyectos/personal/patrimonio-bienes-muebles-baja/burocracia-inversion;
-`radar-inversiones`: investments-desactivadas; `ceplan-geo`: patrimonio; `proveedores-
-sancionados`: crossref/redes-proveedores), paginación con `LIMIT` fijo sin señal de
-truncamiento, y el naming `bcrp_trade`/`bcrp_meta_sources` que rompe el patrón `<app>_<recurso>`.
+3. **Los 5 gaps menores restantes, cerrados (2026-09-07)**: 9 tools nuevas, verificadas en vivo
+   contra las 4 apps reales corriendo. `radar-ejecucion`: `radar_ejecucion_proyectos` (nombre
+   real de proyecto/obra por entidad), `radar_ejecucion_personal` (dotación MEF/AIRHSP),
+   `radar_ejecucion_patrimonio_bienes_muebles_baja` (+ variante `_por_distrito`, cruce en vivo
+   RUC→ubigeo→distrito solo para municipalidades), `radar_ejecucion_burocracia_inversion`
+   (ratio gasto-planilla vs. gasto-inversión). `radar-inversiones`:
+   `radar_inversiones_investments_desactivadas` (+ `_by_cui`) — la mitad del Banco de Inversiones
+   que la tool original no cubre, y la única de las 9 con paginación real (`total`/`hasMore`, no
+   un `LIMIT` fijo silencioso). `ceplan-geo`: `ceplan_geo_patrimonio_predios` (predios SBN).
+   `proveedores-sancionados`: `proveedores_sancionados_redes_proveedores` (proveedores que ganan
+   en varias municipalidades — señal de red, no conclusión de irregularidad). Catálogo total:
+   **137 tools, 27 apps** (antes 128).
+
+**Pendiente de la auditoría, no accionado todavía**: paginación con `LIMIT` fijo sin señal de
+truncamiento en el resto del catálogo (`radar_inversiones_investments_desactivadas` ya lo tiene
+bien, es el único patrón a replicar), el naming `bcrp_trade`/`bcrp_meta_sources` que rompe el
+patrón `<app>_<recurso>`, y que `EXPECTED_TOOLS_BY_APP` sigue sin comparar contra las rutas Express
+reales (detecta desincronización interna del catálogo, no gaps de cobertura nuevos).
 
 ## `infraestructura-mtc` — terminales portuarios, aeródromos y peajes (2026-09-06)
 
