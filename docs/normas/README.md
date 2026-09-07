@@ -21,7 +21,7 @@ relación con la(s) app(s) de Rastro que usan esta fuente).
 sin capa de texto (ej. MEF) — en esos casos el resumen se basa en conocimiento institucional
 público verificable, no en extracción literal del PDF, y se anota explícitamente.
 
-## Índice
+## Índice (20/20 entidades)
 
 | Entidad | Apps que la usan | Archivo |
 |---|---|---|
@@ -30,3 +30,25 @@ público verificable, no en extracción literal del PDF, y se anota explícitame
 | SUNAT (Superintendencia Nacional de Aduanas y de Administración Tributaria) | `identidad-fiscal` | [`sunat-rof.md`](sunat-rof.md) |
 | Contraloría General de la República | `infobras`, `informes-control` | [`contraloria-rof.md`](contraloria-rof.md) |
 | MINEDU (Ministerio de Educación) | `instituciones-educativas` | [`minedu-rof.md`](minedu-rof.md) |
+| MIDAGRI (Ministerio de Desarrollo Agrario y Riego) | `actividad-agraria` | [`midagri-rof.md`](midagri-rof.md) |
+| BCRP (Banco Central de Reserva del Perú) | `bcrp-comercio-exterior`, `bcrp-la-libertad` | [`bcrp-rof.md`](bcrp-rof.md) |
+| MININTER (Ministerio del Interior) | `seguridad-ciudadana` | [`mininter-rof.md`](mininter-rof.md) |
+| PROINVERSIÓN (Agencia de Promoción de la Inversión Privada) | `inversion-privada` | [`proinversion-rof.md`](proinversion-rof.md) |
+| SUSALUD (Superintendencia Nacional de Salud) | `servicios-salud` | [`susalud-rof.md`](susalud-rof.md) |
+| MIDIS (Ministerio de Desarrollo e Inclusión Social) | `programas-sociales` | [`midis-rof.md`](midis-rof.md) |
+| MTPE (Ministerio de Trabajo y Promoción del Empleo) | `actividad-empresarial` | [`mtpe-rof.md`](mtpe-rof.md) |
+| MINDEF (Ministerio de Defensa) | `mindef` | [`mindef-rof.md`](mindef-rof.md) |
+| MIMP (Ministerio de la Mujer y Poblaciones Vulnerables) | `mimp` | [`mimp-rof.md`](mimp-rof.md) |
+| INEI (Instituto Nacional de Estadística e Informática) | `renamu` | [`inei-rof.md`](inei-rof.md) |
+| JNE (Jurado Nacional de Elecciones) | `autoridades-electas` | [`jne-rof.md`](jne-rof.md) |
+| OEFA (Organismo de Evaluación y Fiscalización Ambiental) | `infracciones-ambientales` | [`oefa-rof.md`](oefa-rof.md) |
+| MTC (Ministerio de Transportes y Comunicaciones) | `red-vial-subnacional`, `infraestructura-mtc` | [`mtc-rof.md`](mtc-rof.md) |
+| MINAM (Ministerio del Ambiente) | `residuos-solidos`, (rectoría de `infracciones-ambientales`/OEFA) | [`minam-rof.md`](minam-rof.md) |
+| CEPLAN (Centro Nacional de Planeamiento Estratégico) | `ceplan-estrategico`, `ceplan-geo` | [`ceplan-rof.md`](ceplan-rof.md) |
+
+## Limitaciones por entidad (PDF sin capa de texto real)
+
+Estos ROF se descargaron de la fuente oficial vigente pero resultaron ser escaneos sin texto
+extraíble — su resumen `.md` se basa en conocimiento institucional público, anotado
+explícitamente en cada archivo: **MEF**, **PROINVERSIÓN**, **MTPE**, **MINDEF**. El resto (16 de
+20) tiene texto real citado literalmente del PDF.
