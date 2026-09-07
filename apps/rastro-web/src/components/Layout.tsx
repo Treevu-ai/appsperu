@@ -3,8 +3,10 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { DataFreshnessBar } from "./DataFreshnessBar.js";
 
 const NAV = [
+  { to: "/gore/la-libertad", label: "GORE La Libertad" },
   { to: "/buscar", label: "Buscar" },
   { to: "/prensa/proveedores", label: "Proveedores" },
+  { to: "/auditoria/entidades-infobras", label: "Auditoría" },
   { to: "/catalogo", label: "Catálogo" },
 ];
 
@@ -35,13 +37,18 @@ export function Layout() {
               height={32}
             />
             <span className="font-mono text-sm tracking-widest text-fg shrink-0">Rastro</span>
-            <span className="text-xs text-muted hidden md:inline truncate">
+            {/* Alterna junto con el nav desktop (lg), no antes — si aparece sola en 768-1023px
+                deja un hueco vacío entre ella y la hamburguesa. */}
+            <span className="text-xs text-muted hidden lg:inline truncate">
               / Trazabilidad de la inversión pública
             </span>
           </NavLink>
 
-          {/* Nav desktop: ≥ sm */}
-          <nav className="hidden sm:flex items-center gap-1 text-sm">
+          {/* Nav desktop: ≥ lg — a `sm` (640px) 5 ítems con "GORE La Libertad" desbordan
+              el header (confirmado visualmente, no solo en teoría); el corte sube a `lg`
+              (1024px) para que el rango 640-1023px use el menú hamburguesa en vez de
+              apretar 5 links en una fila sin wrap. */}
+          <nav className="hidden lg:flex items-center gap-1 text-sm">
             {NAV.map((item) => (
               <NavLink
                 key={item.to}
@@ -59,14 +66,14 @@ export function Layout() {
             ))}
           </nav>
 
-          {/* Botón hamburguesa: < sm */}
+          {/* Botón hamburguesa: < lg (ver comentario del nav desktop) */}
           <button
             type="button"
             onClick={() => setMenuOpen((v) => !v)}
             aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
             aria-expanded={menuOpen}
             aria-controls="mobile-nav"
-            className="sm:hidden p-2 rounded-md text-fg-soft hover:text-fg hover:bg-ink-800 transition"
+            className="lg:hidden p-2 rounded-md text-fg-soft hover:text-fg hover:bg-ink-800 transition"
           >
             {menuOpen ? (
               <svg
@@ -101,11 +108,11 @@ export function Layout() {
           </button>
         </div>
 
-        {/* Menú móvil: < sm */}
+        {/* Menú móvil: < lg */}
         {menuOpen && (
           <nav
             id="mobile-nav"
-            className="sm:hidden border-t border-line bg-ink-900/95 backdrop-blur"
+            className="lg:hidden border-t border-line bg-ink-900/95 backdrop-blur"
           >
             <div className="px-4 py-3 flex flex-col gap-1">
               {NAV.map((item) => (
