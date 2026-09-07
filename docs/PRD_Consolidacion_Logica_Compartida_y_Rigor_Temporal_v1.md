@@ -1,6 +1,6 @@
 # PRD — Consolidación de lógica compartida y rigor temporal en cruces
 
-**Estado:** CX-07, CX-08, CX-09, CX-10, CX-11, CX-12, CX-13 cerrados (2026-09-05); CX-14 (nuevo, hallazgo de CX-10) propuesto, requiere acceso a datos en vivo
+**Estado:** CX-07, CX-08, CX-09, CX-10, CX-11, CX-12, CX-13 cerrados (2026-09-05); CX-14 (nuevo, hallazgo de CX-10) propuesto, requiere acceso a datos en vivo; CX-15 (nuevo, hallazgo de una auditoría posterior a CX-11) propuesto (2026-09-07)
 **Fecha:** 2026-09-04
 **Ámbito:** `apps/*/api/src/routes/*.ts`, `apps/*/api/src/lib/`, `packages/`, `mcp-server/src/catalog.ts`, `package.json` raíz
 **Horizonte:** dos sprints cortos; sin fecha comprometida ni owner asignado
@@ -122,6 +122,8 @@ No ejecutable en esta sesión (requiere consultar las bases de producción/stagi
 
 **Resuelto**: `EXPECTED_TOOLS_BY_APP` (82 tools reales, 14 apps) versionada en el test; un `it()` por app más verificación de cobertura de `APP_KEYS` y de nombres duplicados en el catálogo — 17 tests en total. **Validación real, no solo "el test pasa"**: renombré temporalmente un tool en `catalog.ts` y confirmé que la suite falla exactamente en la app afectada con el nombre en conflicto en el mensaje, antes de revertir. `tsc --noEmit` limpio.
 
+**Actualización 2026-09-07 — el riesgo que este ticket dejó abierto se materializó**: una auditoría del catálogo completo (a pedido del usuario, "revisa las mcp tools") encontró que `compras-publicas` exponía solo 5 tools MCP cuando la app real montaba ~25 endpoints `GET` — un gap de cobertura real que `EXPECTED_TOOLS_BY_APP` **no detectó**, exactamente porque (como advierte el comentario del propio test) la lista se deriva a mano del catálogo declarado, no de las rutas Express reales. El test seguía en verde durante todo el tiempo que el gap existió. La auditoría completa (5 PRs: #98–#102) corrigió además un bug real en `buildQuery()` (filtros `z.coerce.number()`/`z.coerce.boolean()` descartados en silencio), cerró 5 gaps menores adicionales en otras apps, corrigió el naming `bcrp_trade`/`bcrp_meta_sources`, y agregó paginación real (`limit`/`offset`/`total`/`hasMore`) a los 10 endpoints con mayor riesgo de truncamiento silencioso — encontrando de paso un segundo bug real de truncamiento en un endpoint construido esa misma semana (`infraestructura_mtc_aerodromos`, 95 de 595 filas ocultas sin aviso). Catálogo resultante: 107→137 tools, 27 apps (detalle completo en `docs/ESTADO.md`). Ver **CX-15** para la corrección estructural pendiente.
+
 ### CX-12 — Housekeeping: `.gitignore` de `.worktrees/` — ✅ CERRADO
 
 **Prioridad:** P2 · **Esfuerzo:** XS · **Dependencias:** ninguna
@@ -140,12 +142,24 @@ La carpeta `.worktrees/` (usada por `git worktree` para desarrollo en paralelo) 
 
 `ceplan-geo` queda **fuera de este ticket**: tiene la misma copia duplicada, pero no está en `workspaces` hoy, y no tiene matrix en `.github/workflows/ci.yml` — sumarla habría significado abrir el mismo trabajo de CX-08/CX-09 (quitar lockfile, extender CI) dentro de un ticket que se pensó como "conectar un paquete ya empezado". Queda documentada como duplicación conocida para cuando `ceplan-geo` entre al workspace por otro ticket (mismo criterio incremental de ADR-0019).
 
+### CX-15 — Automatizar `catalog.test.ts` contra las rutas Express reales, no una lista versionada a mano (nuevo, hallazgo de una auditoría posterior a CX-11)
+
+**Prioridad:** P1 · **Esfuerzo:** M (requiere introspección de las 27 apps, hoy 13 más que cuando se abrió CX-11) · **Dependencias:** ninguna
+
+Confirmado con evidencia real (ver actualización de CX-11 arriba): `EXPECTED_TOOLS_BY_APP` protege contra que el catálogo se desincronice *de sí mismo* (un tool renombrado/borrado sin querer), pero no contra que quede *incompleto desde el principio* — un gap de 20 tools en `compras-publicas` pasó inadvertido con el test en verde durante semanas. El punto ya estaba anotado como fuera de alcance en §9 de este PRD ("sería un chequeo más robusto pero de mayor esfuerzo"); esta auditoría confirma que el esfuerzo ya no es solo teórico.
+
+Alcance propuesto: un chequeo (test o script de CI) que levante o introspeccione las rutas `GET` reales de cada `apps/*/api/src/routes/*.ts` (por ejemplo parseando los `router.get(...)` registrados, sin necesitar las apps corriendo) y las compare contra `pathTemplate` de `TOOL_CATALOG`, fallando con un mensaje accionable si hay una ruta real sin tool o un tool sin ruta real. No reemplaza `EXPECTED_TOOLS_BY_APP` (que sigue siendo la forma barata de detectar un rename accidental) sino que lo complementa.
+
+Criterio de aceptación: introducir deliberadamente un endpoint nuevo en cualquier app sin agregar su tool correspondiente debe hacer fallar este chequeo en CI, no solo quedar como una nota en `docs/ESTADO.md` de la próxima auditoría manual.
+
 ## 6. Priorización y secuencia
 
 | Fase | Entregables | Resultado que desbloquea |
 |---|---|---|
 | **Hecho** | CX-07, CX-08, CX-09, CX-10, CX-11, CX-12, CX-13 | Decidido dónde vive la lógica compartida (ADR-0019); `LATEST_BUDGET_CTE` consolidada (11 copias → 1, 6 apps sumadas al workspace); `extractRuc()`/`temporal-status` consolidados (`proveedores-sancionados` sumado al workspace); `costDriftPct`/umbral de sobrecosto consolidados en `packages/shared-signals` (ADR-0020); `catalog.test.ts` del MCP extendido de 1 a 14 apps; housekeeping de `.worktrees/`; `packages/http-client` conectado (`compras-publicas`). |
+| **Hecho (fuera del plan original, auditoría 2026-09-07)** | — | Catálogo MCP corregido y ampliado a mano (107→137 tools, 27 apps: bug de filtros, gap de `compras-publicas`, 5 gaps menores, naming `bcrp_*`, paginación real en 10 endpoints) — ver actualización de CX-11. No sustituye a CX-15. |
 | **Pendiente (bloqueado)** | CX-14 | Análisis de distribución real de `costDriftPct` — requiere acceso a datos en vivo, no ejecutable en esta sesión. |
+| **Pendiente (nuevo, sin bloqueo)** | CX-15 | Chequeo automatizado catálogo↔rutas reales — evita que un gap como el de `compras-publicas` vuelva a pasar inadvertido con el test en verde. |
 
 ## 7. Requisitos no funcionales
 
@@ -168,7 +182,6 @@ La carpeta `.worktrees/` (usada por `git worktree` para desarrollo en paralelo) 
 - Cualquier cambio a la lógica de negocio de los conectores de ingesta (dominio del PRD de Confiabilidad de Conectores).
 - Ampliar `packages/entity-matcher` más allá de su alcance de ADR-0017.
 - Cambios en `apps/rastro-web` salvo que CX-09 exponga un campo que el frontend deba consumir (evaluar como ticket de seguimiento si aplica, no incluido aquí).
-- Automatizar el chequeo de CX-11 contra las rutas Express reales en vez de una lista de referencia versionada (sería un chequeo más robusto pero de mayor esfuerzo — evaluable como ticket de seguimiento).
 
 ## 10. Definition of Done
 
