@@ -22,9 +22,16 @@ export function NumberWithMetadata({
   className?: string;
 }) {
   return (
-    <span className={`mono-num ${className ?? ""}`} title={`Fuente: ${data.fuente} · Corte: ${data.corte} · Cobertura: ${data.cobertura}`}>
-      {format(data.value)}
-      {suffix ? <span className="text-muted text-xs ml-1">{suffix}</span> : null}
+    // El "§" vive FUERA del <span> de abajo, no adentro: varios e2e (ej.
+    // e2e/distrito.spec.ts) matchean el número con getByText(exact: true) —
+    // si el link comparte el span, su texto se suma al del número y el
+    // match exacto deja de encontrar nada. Un fragment mantiene ambos
+    // visualmente adyacentes sin tocar el contenido de texto del span.
+    <>
+      <span className={`mono-num ${className ?? ""}`} title={`Fuente: ${data.fuente} · Corte: ${data.corte} · Cobertura: ${data.cobertura}`}>
+        {format(data.value)}
+        {suffix ? <span className="text-muted text-xs ml-1">{suffix}</span> : null}
+      </span>
       {data.mandatoLegal ? (
         <a
           href={data.mandatoLegal.url}
@@ -37,7 +44,7 @@ export function NumberWithMetadata({
           §
         </a>
       ) : null}
-    </span>
+    </>
   );
 }
 
