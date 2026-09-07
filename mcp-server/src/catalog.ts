@@ -125,6 +125,21 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
   {
+    name: "radar_ejecucion_sector_entidad_ficha",
+    app: "radar-ejecucion",
+    description:
+      "Ficha de UNA entidad específica (por entity_code), distinta de `radar_ejecucion_sector_ficha` (que trae " +
+      "todas las entidades verificadas de un sector completo) — mismo detalle (PIA/PIM/devengado, inversiones, " +
+      "obras, contrataciones) pero acotado a una sola entidad. No sustituye reglas territoriales ni atribuye " +
+      "gasto a CUI por nombre. " + SIN_SCHEDULER,
+    pathTemplate: "/api/sectores/entidades/{entityCode}/ficha",
+    pathParams: ["entityCode"],
+    querySchema: {
+      anio: z.string().regex(/^\d{4}$/).optional(),
+      departamento: z.string().min(1).optional(),
+    },
+  },
+  {
     name: "radar_ejecucion_sector_comparativo",
     app: "radar-ejecucion",
     description:
@@ -166,6 +181,18 @@ export const TOOL_CATALOG: ToolSpec[] = [
       tipo: z.enum(["INFRAESTRUCTURA", "ALIMENTACION"]).optional(),
       departamento: z.string().min(1).optional(),
     },
+  },
+  {
+    name: "radar_ejecucion_care_service_by_id",
+    app: "radar-ejecucion",
+    description:
+      "Detalle de un servicio específico del registro `radar_ejecucion_care_services` por su serviceId — incluye " +
+      "proveedores vinculados (RUC, lote) y evidencia de entrega por colegio, cuando existen. Mismo criterio de " +
+      "evidencia que la lista: la ausencia de un dato es un vacío de evidencia, no una conclusión de incumplimiento. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/servicios-cuidados/{serviceId}",
+    pathParams: ["serviceId"],
+    querySchema: { departamento: z.string().min(1).optional() },
   },
   {
     name: "radar_ejecucion_food_lots",
@@ -1120,6 +1147,24 @@ export const TOOL_CATALOG: ToolSpec[] = [
       metrica: z.enum(["denuncias"]).optional(),
     },
   },
+  {
+    name: "ceplan_geo_denominadores_benchmark_ejecucion",
+    app: "ceplan-geo",
+    description:
+      "Ejecución presupuestal (PIM/devengado, solo GOBIERNOS LOCALES) por distrito dentro de una provincia, junto " +
+      "con población INEI 2017, para comparar avance de ejecución entre distritos de una misma provincia (evita " +
+      "comparar peras con manzanas contra el resto del país). Nunca mezcla gasto nacional dirigido a un " +
+      "departamento (`metaDepartamento`) con ejecución por sede — mismo criterio que `ceplan_geo_crossref_ejecucion`. " +
+      "PIM=0 con devengado>0 es un caso real de la fuente (visto en Municipalidad Provincial de Trujillo): se " +
+      "expone `avancePct: null` + `avancePctIndefinido: true`, nunca una división por cero. Requiere radar-ejecucion. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/denominadores/benchmark-ejecucion",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+    },
+  },
 
   // ---- identidad-fiscal (SUNAT Padrón RUC) ----
   {
@@ -1457,6 +1502,14 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
   {
+    name: "inversion_privada_oxi_by_id",
+    app: "inversion-privada",
+    description: "Detalle de un proyecto OxI específico por su Id numérico interno (`oxiId`).",
+    pathTemplate: "/api/oxi/{oxiId}",
+    pathParams: ["oxiId"],
+    querySchema: {},
+  },
+  {
     name: "inversion_privada_oxi_crossref_invierte",
     app: "inversion-privada",
     description:
@@ -1511,6 +1564,17 @@ export const TOOL_CATALOG: ToolSpec[] = [
       anio: z.coerce.number().int().optional(),
       mes: z.coerce.number().int().min(1).max(12).optional(),
     },
+  },
+  {
+    name: "bcrp_la_libertad_meta_sources",
+    app: "bcrp-la-libertad",
+    description:
+      "Metadata de los últimos 10 lotes de ingesta manual (PDF por PDF, ver `bcrp_la_libertad_indicadores`) y " +
+      "desglose de filas por anexo — útil para confirmar qué anexos/periodos ya se ingirieron sin tener que " +
+      "consultar `indicadores` directamente.",
+    pathTemplate: "/api/meta/sources",
+    pathParams: [],
+    querySchema: {},
   },
 
   // ---- servicios-salud (RENIPRESS/SUSALUD, establecimientos de salud) ----
