@@ -39,37 +39,40 @@ describe("GET /readyz", () => {
 });
 
 describe("GET /api/instituciones", () => {
-  it("returns the list with coordinates and traceability", async () => {
-    queryMock.mockResolvedValueOnce({
-      rows: [
-        {
-          cod_mod: "0415547",
-          anexo: "0",
-          nombre: "123",
-          nivel_modalidad: "Inicial - Jardín",
-          gestion: "Pública de gestión directa",
-          direccion: "JIRON TERESA GONZALES DE FANNY 543",
-          ubigeo: "020105",
-          departamento: "ANCASH",
-          provincia: "HUARAZ",
-          distrito: "INDEPENDENCIA",
-          ugel: "UGEL HUARAZ",
-          latitud: -9.51885,
-          longitud: -77.53191,
-          turno: "Mañana",
-          ruc: null,
-          razon_social: null,
-          estado: "Activo",
-          fecha_actualizacion: "2026-08-28",
-          fetched_at: "2026-09-06T00:00:00.000Z",
-        },
-      ],
-    });
+  it("returns the list with coordinates, traceability and pagination metadata", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "1" }] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            cod_mod: "0415547",
+            anexo: "0",
+            nombre: "123",
+            nivel_modalidad: "Inicial - Jardín",
+            gestion: "Pública de gestión directa",
+            direccion: "JIRON TERESA GONZALES DE FANNY 543",
+            ubigeo: "020105",
+            departamento: "ANCASH",
+            provincia: "HUARAZ",
+            distrito: "INDEPENDENCIA",
+            ugel: "UGEL HUARAZ",
+            latitud: -9.51885,
+            longitud: -77.53191,
+            turno: "Mañana",
+            ruc: null,
+            razon_social: null,
+            estado: "Activo",
+            fecha_actualizacion: "2026-08-28",
+            fetched_at: "2026-09-06T00:00:00.000Z",
+          },
+        ],
+      });
 
     const app = createApp();
     const res = await request(app).get("/api/instituciones").query({ departamento: "LA LIBERTAD" });
 
     expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ total: 1, limit: 200, offset: 0, hasMore: false });
     expect(res.body.resultados[0]).toMatchObject({
       codModular: "0415547",
       coordenadas: { lat: -9.51885, lon: -77.53191 },
@@ -78,31 +81,33 @@ describe("GET /api/instituciones", () => {
   });
 
   it("returns null coordenadas when latitud/longitud are missing", async () => {
-    queryMock.mockResolvedValueOnce({
-      rows: [
-        {
-          cod_mod: "0415547",
-          anexo: "0",
-          nombre: "123",
-          nivel_modalidad: null,
-          gestion: null,
-          direccion: null,
-          ubigeo: null,
-          departamento: "ANCASH",
-          provincia: "HUARAZ",
-          distrito: "INDEPENDENCIA",
-          ugel: null,
-          latitud: null,
-          longitud: null,
-          turno: null,
-          ruc: null,
-          razon_social: null,
-          estado: null,
-          fecha_actualizacion: null,
-          fetched_at: "2026-09-06T00:00:00.000Z",
-        },
-      ],
-    });
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "1" }] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            cod_mod: "0415547",
+            anexo: "0",
+            nombre: "123",
+            nivel_modalidad: null,
+            gestion: null,
+            direccion: null,
+            ubigeo: null,
+            departamento: "ANCASH",
+            provincia: "HUARAZ",
+            distrito: "INDEPENDENCIA",
+            ugel: null,
+            latitud: null,
+            longitud: null,
+            turno: null,
+            ruc: null,
+            razon_social: null,
+            estado: null,
+            fecha_actualizacion: null,
+            fetched_at: "2026-09-06T00:00:00.000Z",
+          },
+        ],
+      });
     const app = createApp();
     const res = await request(app).get("/api/instituciones");
     expect(res.body.resultados[0].coordenadas).toBeNull();

@@ -6,10 +6,15 @@ import { parseQuery } from "../lib/validate-query.js";
 
 export const aerodromosRouter = Router();
 
+const DEFAULT_LIMIT = 500;
+const MAX_LIMIT = 1000;
+
 const QuerySchema = z.object({
   idDepartamento: z.string().min(1).optional().describe("Código UBIGEO de departamento, ej. '13' para La Libertad."),
   provincia: z.string().min(1).optional(),
   tipoAerodromo: z.string().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 aerodromosRouter.get(
@@ -17,7 +22,7 @@ aerodromosRouter.get(
   asyncHandler(async (req, res) => {
     const parsed = parseQuery(QuerySchema, req.query, res);
     if (!parsed) return;
-    const { idDepartamento, provincia, tipoAerodromo } = parsed;
+    const { idDepartamento, provincia, tipoAerodromo, limit, offset } = parsed;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -35,6 +40,12 @@ aerodromosRouter.get(
     }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
+    const { rows: countRows } = await pool.query<{ total: string }>(
+      `SELECT COUNT(*) AS total FROM aerodromos a ${where}`,
+      params
+    );
+    const total = Number(countRows[0].total);
+
     const { rows } = await pool.query(
       `SELECT a.codigo_aerodromo, a.nombre, a.departamento, a.provincia, a.distrito,
               a.tipo_aerodromo, a.codigo_oaci, a.escala, a.estado, a.administrador,
@@ -44,11 +55,15 @@ aerodromosRouter.get(
        JOIN raw_infraestructura_mtc_batches rb ON rb.id = a.source_batch_id
        ${where}
        ORDER BY a.fecha_corte DESC, a.codigo_aerodromo
-       LIMIT 500`,
-      params
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
     );
 
     res.json({
+      total,
+      limit,
+      offset,
+      hasMore: offset + rows.length < total,
       resultados: rows.map((r) => ({
         codigoAerodromo: r.codigo_aerodromo,
         nombre: r.nombre,

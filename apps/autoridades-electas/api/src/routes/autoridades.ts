@@ -6,6 +6,9 @@ import { parseQuery } from "../lib/validate-query.js";
 
 export const autoridadesRouter = Router();
 
+const DEFAULT_LIMIT = 200;
+const MAX_LIMIT = 1000;
+
 const AutoridadesQuerySchema = z.object({
   nombre: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE) sobre nombres + apellidos."),
   cargo: z.string().min(1).optional(),
@@ -15,6 +18,8 @@ const AutoridadesQuerySchema = z.object({
     .regex(/^\d{6}$/, "ubigeo debe tener 6 dígitos")
     .optional(),
   anioEleccion: z.coerce.number().int().min(2000).max(2100).optional(),
+  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 autoridadesRouter.get(
@@ -22,7 +27,7 @@ autoridadesRouter.get(
   asyncHandler(async (req, res) => {
     const parsed = parseQuery(AutoridadesQuerySchema, req.query, res);
     if (!parsed) return;
-    const { nombre, cargo, organizacionPolitica, ubigeo, anioEleccion } = parsed;
+    const { nombre, cargo, organizacionPolitica, ubigeo, anioEleccion, limit, offset } = parsed;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -50,6 +55,12 @@ autoridadesRouter.get(
     }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
+    const { rows: countRows } = await pool.query<{ total: string }>(
+      `SELECT COUNT(*) AS total FROM autoridades_electas a ${where}`,
+      params
+    );
+    const total = Number(countRows[0].total);
+
     const { rows } = await pool.query(
       `SELECT a.nombres, a.apellido_paterno, a.apellido_materno, a.organizacion_politica, a.cargo,
               a.region, a.provincia, a.distrito, a.ubigeo, a.fecha_inicio_vigencia, a.fecha_fin_vigencia,
@@ -58,11 +69,15 @@ autoridadesRouter.get(
        JOIN raw_autoridades_electas_batches rb ON rb.id = a.source_batch_id
        ${where}
        ORDER BY a.anio_eleccion DESC, a.apellido_paterno
-       LIMIT 200`,
-      params
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
     );
 
     res.json({
+      total,
+      limit,
+      offset,
+      hasMore: offset + rows.length < total,
       resultados: rows.map((r) => ({
         nombreCompleto: [r.nombres, r.apellido_paterno, r.apellido_materno].filter(Boolean).join(" "),
         organizacionPolitica: r.organizacion_politica,

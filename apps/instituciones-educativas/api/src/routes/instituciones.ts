@@ -6,6 +6,9 @@ import { parseQuery } from "../lib/validate-query.js";
 
 export const institucionesRouter = Router();
 
+const DEFAULT_LIMIT = 200;
+const MAX_LIMIT = 1000;
+
 const InstitucionesQuerySchema = z.object({
   departamento: z.string().min(1).optional(),
   provincia: z.string().min(1).optional(),
@@ -14,6 +17,8 @@ const InstitucionesQuerySchema = z.object({
   estado: z.string().min(1).optional().describe("Ej. 'Activo'."),
   gestion: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
   nombre: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE) sobre el nombre de la IE."),
+  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 institucionesRouter.get(
@@ -21,7 +26,7 @@ institucionesRouter.get(
   asyncHandler(async (req, res) => {
     const parsed = parseQuery(InstitucionesQuerySchema, req.query, res);
     if (!parsed) return;
-    const { departamento, provincia, distrito, ubigeo, estado, gestion, nombre } = parsed;
+    const { departamento, provincia, distrito, ubigeo, estado, gestion, nombre, limit, offset } = parsed;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -45,6 +50,12 @@ institucionesRouter.get(
     }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
+    const { rows: countRows } = await pool.query<{ total: string }>(
+      `SELECT COUNT(*) AS total FROM instituciones_educativas i ${where}`,
+      params
+    );
+    const total = Number(countRows[0].total);
+
     const { rows } = await pool.query(
       `SELECT i.cod_mod, i.anexo, i.nombre, i.nivel_modalidad, i.gestion, i.direccion,
               i.ubigeo, i.departamento, i.provincia, i.distrito, i.ugel, i.latitud, i.longitud,
@@ -53,11 +64,15 @@ institucionesRouter.get(
        JOIN raw_padron_batches rb ON rb.id = i.source_batch_id
        ${where}
        ORDER BY i.departamento, i.provincia, i.distrito, i.nombre
-       LIMIT 200`,
-      params
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
     );
 
     res.json({
+      total,
+      limit,
+      offset,
+      hasMore: offset + rows.length < total,
       resultados: rows.map((r) => ({
         codModular: r.cod_mod,
         anexo: r.anexo,

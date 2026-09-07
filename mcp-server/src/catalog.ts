@@ -1127,7 +1127,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
     app: "identidad-fiscal",
     description:
       "Busca contribuyentes en el Padrón RUC de SUNAT (personas jurídicas, RUC-20) por razón social, estado o " +
-      "ubigeo. Cobertura nacional completa (~2.3M filas). " +
+      "ubigeo. Cobertura nacional completa (~2.3M filas) — paginación real: usa `limit`/`offset`; la respuesta " +
+      "trae `total` y `hasMore`, no asumas que `resultados` es el universo completo sin revisarlo. " +
       SIN_SCHEDULER +
       " La fuente SUNAT se actualiza a diario; este conector no está automatizado para seguir ese ritmo.",
     pathTemplate: "/api/contribuyentes",
@@ -1136,6 +1137,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
       razonSocial: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE), no requiere coincidencia exacta."),
       estado: z.string().min(1).optional().describe("estado_contribuyente (ej. ACTIVO, BAJA)."),
       ubigeo: z.string().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
   {
@@ -1516,7 +1519,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
     app: "servicios-salud",
     description:
       "Establecimientos de salud (RENIPRESS/SUSALUD) con su estado operativo real (`ACTIVO` u otro valor tal cual " +
-      "lo declara SUSALUD, no normalizado a booleano). Cobertura nacional completa, no acotada a La Libertad. " +
+      "lo declara SUSALUD, no normalizado a booleano). Cobertura nacional completa, no acotada a La Libertad — " +
+      "paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. " +
       SIN_SCHEDULER,
     pathTemplate: "/api/ipress",
     pathParams: [],
@@ -1525,6 +1529,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
       departamento: z.string().min(1).optional(),
       distrito: z.string().min(1).optional(),
       estado: z.string().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(5000).optional().describe("Default 2000, máximo 5000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
   {
@@ -1617,7 +1623,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "Informes de auditoría/servicios de control de la Contraloría (entidad, ubicación, fechas, sector, si tiene " +
       "un hallazgo de responsabilidad). Por diseño, NUNCA expone nombres de funcionarios ni detalle individual de " +
       "responsabilidad — `esConResponsabilidad` es un booleano, no un nombre. Ingesta por año (no todo el histórico " +
-      "a la vez); usar `periodo` para acotar. " + SIN_SCHEDULER,
+      "a la vez); usar `periodo` para acotar. Un año puede superar el `limit` por defecto (hasta ~65K filas) — " +
+      "paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. " + SIN_SCHEDULER,
     pathTemplate: "/api/informes",
     pathParams: [],
     querySchema: {
@@ -1625,6 +1632,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
       departamento: z.string().min(1).optional(),
       periodo: z.string().regex(/^\d{4}$/).optional(),
       esConResponsabilidad: z.enum(["true", "false"]).optional(),
+      limit: z.coerce.number().int().min(1).max(5000).optional().describe("Default 1000, máximo 5000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
   {
@@ -1764,6 +1773,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "recurso histórico distinto que sí trae DNI sin enmascarar (autoridades regionales/municipales " +
       "2014-2022) NO se ingiere en esta versión. Sin clave única de persona (no hay DNI): el match es por " +
       "nombre completo + cargo + proceso electoral + ubigeo, con riesgo real de colisión por homonimia. " +
+      "Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. " +
       SIN_SCHEDULER,
     pathTemplate: "/api/autoridades",
     pathParams: [],
@@ -1773,6 +1783,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
       organizacionPolitica: z.string().min(1).optional(),
       ubigeo: z.string().regex(/^\d{6}$/).optional(),
       anioEleccion: z.coerce.number().int().min(2000).max(2100).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
 
@@ -1786,7 +1798,9 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "por establecimiento individual), UGEL, estado operativo. Universo censal completo (180,828 " +
       "instituciones verificadas, no muestra), corte 2026-08-28. Sin datos de persona natural: `DIRECTOR`, " +
       "`TELEFONO`, `EMAIL` y `PROMOTOR` de la fuente real nunca se leen ni persisten — solo `NRORUC`/" +
-      "`RZSOCIAL` de instituciones privadas (identidad de entidad, no de persona). " + SIN_SCHEDULER,
+      "`RZSOCIAL` de instituciones privadas (identidad de entidad, no de persona). Universo nacional de 180K+ " +
+      "filas supera ampliamente el `limit` por defecto sin un filtro territorial — paginación real: usa " +
+      "`limit`/`offset`; la respuesta trae `total` y `hasMore`. " + SIN_SCHEDULER,
     pathTemplate: "/api/instituciones",
     pathParams: [],
     querySchema: {
@@ -1797,6 +1811,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
       estado: z.string().min(1).optional().describe("Ej. 'Activo'."),
       gestion: z.string().min(1).optional(),
       nombre: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
   {
@@ -1824,7 +1840,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "consultoras ambientales), ubicación, expediente/resolución, detalle de la infracción, monto de multa. " +
       "`numeroDocumento` se enmascara (últimos 3 dígitos) cuando el administrado es persona natural (D.N.I.) — " +
       "para R.U.C. se expone completo. 14,724 filas nacionales verificadas (610 en La Libertad, 12 " +
-      "provincias). " + SIN_SCHEDULER,
+      "provincias). Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. " + SIN_SCHEDULER,
     pathTemplate: "/api/infracciones",
     pathParams: [],
     querySchema: {
@@ -1833,6 +1849,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
       distrito: z.string().min(1).optional(),
       subsectorEconomico: z.string().min(1).optional(),
       administrado: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
 
@@ -1846,7 +1864,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "intervención (mantenimiento/mejoramiento/conservación), responsable. Nivel de detalle: ruta/tramo dentro " +
       "de una provincia, no distrito exacto (una ruta puede cruzar más de uno). Nombres de provincia con tildes " +
       "inconsistentes en la fuente real (ej. 'VIRU' y 'VIRÚ' como valores distintos) — no normalizado. 12,536 " +
-      "filas nacionales verificadas (461 en La Libertad, 12 provincias). " + SIN_SCHEDULER,
+      "filas nacionales verificadas (461 en La Libertad, 12 provincias). Paginación real: usa `limit`/`offset`; " +
+      "la respuesta trae `total` y `hasMore`. " + SIN_SCHEDULER,
     pathTemplate: "/api/intervenciones",
     pathParams: [],
     querySchema: {
@@ -1854,6 +1873,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
       provincia: z.string().min(1).optional(),
       estado: z.string().min(1).optional().describe("Ej. 'BUENO', 'MALO'."),
       codigoRuta: z.string().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
 
@@ -1866,6 +1887,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "población INEI, generación per cápita, toneladas/día y toneladas/año. Serie histórica real 2019-2024 " +
       "(6 años), a diferencia de la mayoría de fuentes del catálogo (snapshot único) — permite ver evolución " +
       "temporal por distrito. 11,310 filas nacionales verificadas (500 en La Libertad, 12 provincias, 2019-2024). " +
+      "Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. " +
       SIN_SCHEDULER,
     pathTemplate: "/api/residuos",
     pathParams: [],
@@ -1875,6 +1897,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
       distrito: z.string().min(1).optional(),
       ubigeo: z.string().regex(/^\d{6}$/).optional(),
       anio: z.coerce.number().int().min(2000).max(2100).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
 
@@ -1887,13 +1911,16 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "lacustre), tipo, uso, tráfico, estado de conservación, titularidad y administrador. Snapshot anual " +
       "acumulado 2022-2025 (una fila por terminal por corte, no solo el más reciente). 507 filas nacionales " +
       "verificadas (9 en La Libertad, 3 terminales: TP Multipropósito Salaverry, TP Multiboyas Salaverry, " +
-      "TP Chicama/Malabrigo). " + SIN_SCHEDULER,
+      "TP Chicama/Malabrigo). El total nacional (507) puede superar el `limit` por defecto sin filtro — " +
+      "paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. " + SIN_SCHEDULER,
     pathTemplate: "/api/terminales-portuarios",
     pathParams: [],
     querySchema: {
       idDepartamento: z.string().min(1).optional().describe("Código UBIGEO de departamento, ej. '13' para La Libertad."),
       ambito: z.string().min(1).optional(),
       estado: z.string().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 500, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
   {
@@ -1906,6 +1933,9 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "no se usa; la clave real es codigoAerodromo. 595 filas nacionales verificadas (36 en La Libertad, 9 " +
       "aeródromos: incluye el Aeropuerto Internacional Cap. FAP Carlos Martínez de Pinillos en Trujillo y 8 " +
       "aeródromos rurales/mineros/municipales en Pataz, Virú, Sánchez Carrión, Santiago de Chuco y Pacasmayo). " +
+      "El total nacional (595) SUPERA el `limit` por defecto (500) sin filtro de departamento — confirmado en " +
+      "vivo que sin paginación esto truncaba 95 filas en silencio antes de exponer `total`/`hasMore`; usa " +
+      "`limit`/`offset` y revisa `hasMore` en vez de asumir que `resultados` trae el universo completo. " +
       SIN_SCHEDULER,
     pathTemplate: "/api/aerodromos",
     pathParams: [],
@@ -1913,6 +1943,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
       idDepartamento: z.string().min(1).optional().describe("Código UBIGEO de departamento, ej. '13' para La Libertad."),
       provincia: z.string().min(1).optional(),
       tipoAerodromo: z.string().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 500, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
   {

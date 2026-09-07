@@ -6,12 +6,17 @@ import { parseQuery } from "../lib/validate-query.js";
 
 export const infraccionesRouter = Router();
 
+const DEFAULT_LIMIT = 200;
+const MAX_LIMIT = 1000;
+
 const InfraccionesQuerySchema = z.object({
   departamento: z.string().min(1).optional(),
   provincia: z.string().min(1).optional(),
   distrito: z.string().min(1).optional(),
   subsectorEconomico: z.string().min(1).optional(),
   administrado: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE) sobre nombre del administrado."),
+  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 infraccionesRouter.get(
@@ -19,7 +24,7 @@ infraccionesRouter.get(
   asyncHandler(async (req, res) => {
     const parsed = parseQuery(InfraccionesQuerySchema, req.query, res);
     if (!parsed) return;
-    const { departamento, provincia, distrito, subsectorEconomico, administrado } = parsed;
+    const { departamento, provincia, distrito, subsectorEconomico, administrado, limit, offset } = parsed;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -35,6 +40,12 @@ infraccionesRouter.get(
     if (administrado) addIlike("i.nombre_administrado", administrado);
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
+    const { rows: countRows } = await pool.query<{ total: string }>(
+      `SELECT COUNT(*) AS total FROM infracciones_ambientales i ${where}`,
+      params
+    );
+    const total = Number(countRows[0].total);
+
     const { rows } = await pool.query(
       `SELECT i.nombre_administrado, i.tipo_doc, i.id_doc_administrado, i.id_doc_enmascarado,
               i.unidad_fiscalizable, i.subsector_economico, i.departamento, i.provincia, i.distrito,
@@ -45,11 +56,15 @@ infraccionesRouter.get(
        JOIN raw_ruias_batches rb ON rb.id = i.source_batch_id
        ${where}
        ORDER BY i.fecha_rd DESC NULLS LAST
-       LIMIT 200`,
-      params
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
     );
 
     res.json({
+      total,
+      limit,
+      offset,
+      hasMore: offset + rows.length < total,
       resultados: rows.map((r) => ({
         administrado: {
           nombre: r.nombre_administrado,

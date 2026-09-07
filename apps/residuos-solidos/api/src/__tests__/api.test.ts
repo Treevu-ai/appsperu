@@ -39,31 +39,34 @@ describe("GET /readyz", () => {
 });
 
 describe("GET /api/residuos", () => {
-  it("returns the list with traceability", async () => {
-    queryMock.mockResolvedValueOnce({
-      rows: [
-        {
-          ubigeo: "130101",
-          anio: 2024,
-          departamento: "LA LIBERTAD",
-          provincia: "TRUJILLO",
-          distrito: "TRUJILLO",
-          tipo_municipalidad: "PROVINCIAL",
-          poblacion_total: 300000,
-          generacion_percapita_dom: "0.65",
-          generacion_dom_urbana_tanio: "50000.12",
-          generacion_mun_tanio: "70000.5",
-          generacion_mun_tdia: "191.78",
-          fecha_corte: "2025-12-18",
-          fetched_at: "2026-09-06T00:00:00.000Z",
-        },
-      ],
-    });
+  it("returns the list with traceability and pagination metadata", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "1" }] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            ubigeo: "130101",
+            anio: 2024,
+            departamento: "LA LIBERTAD",
+            provincia: "TRUJILLO",
+            distrito: "TRUJILLO",
+            tipo_municipalidad: "PROVINCIAL",
+            poblacion_total: 300000,
+            generacion_percapita_dom: "0.65",
+            generacion_dom_urbana_tanio: "50000.12",
+            generacion_mun_tanio: "70000.5",
+            generacion_mun_tdia: "191.78",
+            fecha_corte: "2025-12-18",
+            fetched_at: "2026-09-06T00:00:00.000Z",
+          },
+        ],
+      });
 
     const app = createApp();
     const res = await request(app).get("/api/residuos").query({ departamento: "LA LIBERTAD", anio: 2024 });
 
     expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ total: 1, limit: 200, offset: 0, hasMore: false });
     expect(res.body.resultados[0]).toMatchObject({ ubigeo: "130101", generacionPerCapitaDomKgDia: 0.65 });
     expect(res.body.resultados[0].fuente.dataset).toMatch(/MINAM/);
   });
@@ -76,7 +79,7 @@ describe("GET /api/residuos", () => {
   });
 
   it("returns an empty list without filters", async () => {
-    queryMock.mockResolvedValueOnce({ rows: [] });
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "0" }] }).mockResolvedValueOnce({ rows: [] });
     const app = createApp();
     const res = await request(app).get("/api/residuos");
     expect(res.status).toBe(200);

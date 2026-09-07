@@ -53,10 +53,25 @@ hallazgos accionados de inmediato:
    cualquier consumidor externo que ya haya invocado los nombres viejos — no hay tal consumidor
    conocido hoy (catálogo publicado recién esta semana).
 
-**Pendiente de la auditoría, no accionado todavía**: paginación con `LIMIT` fijo sin señal de
-truncamiento en el resto del catálogo (`radar_inversiones_investments_desactivadas` ya lo tiene
-bien, es el único patrón a replicar), y que `EXPECTED_TOOLS_BY_APP` sigue sin comparar contra las
-rutas Express reales (detecta desincronización interna del catálogo, no gaps de cobertura nuevos).
+5. **Paginación real en los 10 endpoints de mayor riesgo de truncamiento (2026-09-07)**: de 38
+   archivos de rutas con `LIMIT` fijo en todo el monorepo, se acotó a los ~10 con riesgo real de
+   ocultar la mayoría de resultados sin aviso (tablas de miles/millones de filas), replicando el
+   patrón ya usado por `radar_inversiones_investments_desactivadas` (`limit`/`offset` reales,
+   respuesta con `total`/`hasMore`, en vez de un `LIMIT` fijo silencioso): `identidad_fiscal_
+   contribuyentes` (2.3M filas, `LIMIT 200`→paginado), `instituciones_educativas_instituciones`
+   (180K filas), `informes_control_informes`, `infracciones_ambientales_infracciones`,
+   `red_vial_subnacional_intervenciones`, `residuos_solidos_residuos`, `autoridades_electas_
+   autoridades`, `servicios_salud_ipress`, y `infraestructura_mtc_terminales_portuarios`/
+   `_aerodromos`. **Bug real encontrado y corregido de paso**: `infraestructura_mtc_aerodromos`
+   (construido esta misma semana, PR #97) truncaba en silencio 95 de 595 filas nacionales sin
+   filtro de departamento (`LIMIT 500` fijo) — confirmado en vivo antes y después del fix
+   (`hasMore: true` → paginar con `offset=500` trae las 95 restantes). Los 25 endpoints/archivos
+   restantes con `LIMIT` fijo (mayormente catálogos pequeños o de bajo riesgo real de
+   truncamiento silencioso) quedan sin tocar por decisión explícita de alcance.
+
+**Pendiente de la auditoría, no accionado todavía**: que `EXPECTED_TOOLS_BY_APP` sigue sin
+comparar contra las rutas Express reales (detecta desincronización interna del catálogo, no gaps
+de cobertura nuevos).
 
 ## `infraestructura-mtc` — terminales portuarios, aeródromos y peajes (2026-09-06)
 
