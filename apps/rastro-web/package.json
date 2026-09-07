@@ -9,7 +9,7 @@
     "export:snapshot": "node scripts/export-snapshot.mjs",
     "dev": "npm run generate:mcp-catalog && vite",
     "dev:local": "node scripts/ensure-env.mjs && npm run generate:mcp-catalog && vite --host",
-    "build": "npm run generate:mcp-catalog && tsc -b && vite build",
+    "build": "npm run generate:mcp-catalog && tsc -b && vite build && vite build --ssr src/entry-server.tsx --outDir dist-ssr && node scripts/prerender.mjs",
     "preview": "vite preview",
     "typecheck": "npm run generate:mcp-catalog && tsc -b --noEmit",
     "test": "npm run generate:mcp-catalog && vitest run",
