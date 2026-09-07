@@ -169,3 +169,25 @@ Validación: 41/41 pruebas aprobadas y `tsc` correcto. Se materializaron cargas 
 radar-ejecución se reconstruyó: 75 coincidencias confirmadas, 17 candidatas y 72 entidades
 INFOBRAS sin match. Las coincidencias candidatas no deben ser tratadas como identificadores
 exactos.
+
+## `Costo Actualizado de la inversión` está vacío en la fuente — confirmado en vivo (CX-14, 2026-09-07)
+
+La sección "Señales del PRD" de arriba listaba `Costo Actualizado de la inversión` como campo
+directamente disponible para Cost Drift, sin haber muestreado nunca sus valores reales en Sprint
+0. Investigando CX-14 (`docs/adr/0020-umbral-sobrecosto-unificado.md`) se confirmó, descargando
+y recorriendo el **export nacional completo** (191,180 filas, sin filtrar por departamento): el
+campo trae el literal `"0"` en el **100% de las filas, sin una sola excepción**. La columna
+adyacente (`Monto Viable/Aprobado`, índice 26) sí varía con normalidad, así que no es un bug de
+desplazamiento de índice — es casi seguro que INFOBRAS solo popula "Costo Actualizado" ante una
+reformulación presupuestal formal, y el export de Datos Abiertos no backfillea ese campo para el
+resto de obras.
+
+**Corrección aplicada**: `normalize.ts` (`parseCostoActualizado`) ahora convierte un valor
+parseado de exactamente `0` a `null` — un "0" real sería estadísticamente indistinguible de "no
+reportado" con esta evidencia (191,180/191,180). Migración `004_costo_actualizado_zero_as_null.sql`
+corrigió las filas ya persistidas. Efecto: `costDriftPct`/`esSobrecosto` (`packages/shared-signals`)
+ahora devuelven `null`/`false` con `costoActualizado: null` explícito, en vez de un `-100%`
+engañoso que sugería falsamente "sin sobrecosto" cuando en realidad no hay dato. La señal de
+Cost Drift queda **no disponible en la práctica para `infobras`** con la fuente actual — sigue
+funcionando correctamente para `radar-inversiones`/Invierte.pe, que sí reporta valores reales
+(ver actualización de ADR-0020).
