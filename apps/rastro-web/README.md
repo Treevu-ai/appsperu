@@ -7,11 +7,15 @@
 
 Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tiempo cambia lo que viene después.
 
-Esta web app (Vite + React Router 7 SPA) consume las **14 APIs de appsperu** y expone **83 tools MCP** para que agentes IA (Claude Code, Claude Desktop, Cursor, Windsurf, Cline, Continue.dev) encadenen consultas complejas con una sola query.
+Esta web app (Vite + React Router 7 SPA) consume APIs de appsperu (14 con fetcher propio en `api-client.ts`
+hoy, de <!-- COUNT:APP_COUNT -->27<!-- /COUNT --> reales — ver `docs/ESTADO.md`) y expone
+**<!-- COUNT:TOOL_COUNT -->142<!-- /COUNT --> tools MCP** para que agentes IA (Claude Code, Claude Desktop,
+Cursor, Windsurf, Cline, Continue.dev) encadenen consultas complejas con una sola query vía 2 meta-tools
+(`rastro_buscar_tools` + `rastro_llamar`, ver `mcp-server/README.md`).
 
 - **URL producción:** https://rastro.fyi/
 - **Stack:** Vite 8 + React 19 + TypeScript 6 + React Router 7 + Tailwind v4
-- **MCP:** 83 tools de solo lectura, transporte stdio
+- **MCP:** <!-- COUNT:TOOL_COUNT -->142<!-- /COUNT --> tools de solo lectura, transporte stdio
 - **Hosting:** Cloudflare Pages (proyecto `rastro`)
 
 ## Estructura

@@ -118,3 +118,60 @@ if (missingFields.length > 0) {
 fs.mkdirSync(path.dirname(outPath), { recursive: true });
 fs.writeFileSync(outPath, `${JSON.stringify(tools, null, 2)}\n`);
 console.log(`[generate-mcp-catalog] OK — ${tools.length} tools generados en ${path.relative(root, outPath)}.`);
+
+// ---------------------------------------------------------------------------
+// Conteos derivados (R1 del diagnóstico de rastro.fyi, 2026-09-07): el copy
+// de marketing (Home.tsx, index.html, README.md, llms.txt) tenía "10 fuentes"
+// / "83 tools" escritos a mano, desincronizados del catálogo real (142 tools,
+// 27 apps) desde que se agregaron apps nuevas sin tocar ese texto. Se deriva
+// UNA vez aquí — misma fuente que ya usa DocsApi.tsx — para que ningún otro
+// archivo vuelva a hardcodear el número.
+const appCount = new Set(tools.map((t) => t.app)).size;
+const counts = { appCount, toolCount: tools.length };
+const countsPath = path.join(path.dirname(outPath), "catalog-counts.json");
+fs.writeFileSync(countsPath, `${JSON.stringify(counts, null, 2)}\n`);
+console.log(`[generate-mcp-catalog] OK — ${appCount} apps / ${tools.length} tools en ${path.relative(root, countsPath)}.`);
+
+// Reescribe el conteo entre marcadores `<!-- COUNT:APP_COUNT -->...<!-- /COUNT -->`
+// (y su equivalente TOOL_COUNT) en archivos de texto plano que no pasan por el
+// bundle de Vite (README.md, public/llms.txt) — mismo principio, sin necesitar
+// que esos archivos "importen" el JSON.
+// Devuelve también qué claves NO tenían el marcador — un marcador ausente
+// (ej. borrado sin querer al editar el archivo a mano) debe fallar el build,
+// no quedar en silencio con el número viejo para siempre (mismo problema que
+// esta función existe para resolver, un nivel más abajo).
+function updateCountMarkers(filePath, replacements) {
+  let text = fs.readFileSync(filePath, "utf8");
+  let changed = false;
+  const missingKeys = [];
+  for (const [key, value] of Object.entries(replacements)) {
+    const re = new RegExp(`(<!-- COUNT:${key} -->)[^<]*(<!-- /COUNT -->)`, "g");
+    if (!re.test(text)) {
+      missingKeys.push(key);
+      continue;
+    }
+    re.lastIndex = 0;
+    const next = text.replace(re, `$1${value}$2`);
+    if (next !== text) changed = true;
+    text = next;
+  }
+  if (changed) fs.writeFileSync(filePath, text);
+  return { changed, missingKeys };
+}
+
+const markerReplacements = { APP_COUNT: appCount, TOOL_COUNT: tools.length };
+const markerFiles = [path.join(root, "apps/rastro-web/README.md"), path.join(root, "apps/rastro-web/public/llms.txt")];
+let anyMissingMarkers = false;
+for (const file of markerFiles) {
+  if (!fs.existsSync(file)) continue;
+  const { changed, missingKeys } = updateCountMarkers(file, markerReplacements);
+  if (changed) console.log(`[generate-mcp-catalog] Conteo actualizado en ${path.relative(root, file)}.`);
+  if (missingKeys.length > 0) {
+    anyMissingMarkers = true;
+    console.error(`[generate-mcp-catalog] ${path.relative(root, file)} no tiene el marcador de: ${missingKeys.join(", ")}.`);
+  }
+}
+if (anyMissingMarkers) {
+  console.error(`[generate-mcp-catalog] Restaura los marcadores <!-- COUNT:CLAVE -->...<!-- /COUNT --> — sin ellos el conteo de ese archivo puede quedar desincronizado en silencio.`);
+  process.exit(1);
+}

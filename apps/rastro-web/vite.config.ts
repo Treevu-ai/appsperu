@@ -1,7 +1,36 @@
 /// <reference types="vitest" />
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
+
+/**
+ * Reemplaza `__APP_COUNT__`/`__TOOL_COUNT__` en index.html (JSON-LD para AI
+ * crawlers) por los valores reales generados por `generate-mcp-catalog.mjs`
+ * en `src/data/catalog-counts.json` — mismo problema que resolvió AL3-15 para
+ * `DocsApi.tsx`, pero para el único HTML que un bot lee sin ejecutar JS.
+ * `catalog-counts.json` ya existe cuando este plugin corre porque `dev`/
+ * `build` siempre invocan `generate:mcp-catalog` antes de `vite`/`vite build`.
+ */
+function catalogCountsHtmlPlugin(): Plugin {
+  return {
+    name: "rastro-catalog-counts-html",
+    transformIndexHtml(html) {
+      const countsPath = fileURLToPath(new URL("./src/data/catalog-counts.json", import.meta.url));
+      let raw: string;
+      try {
+        raw = readFileSync(countsPath, "utf8");
+      } catch {
+        throw new Error(
+          `[rastro-catalog-counts-html] No existe ${countsPath}. Corre "npm run generate:mcp-catalog" antes de vite/vite build (los scripts de package.json ya lo hacen — si invocaste vite directamente, ejecuta ese script primero).`,
+        );
+      }
+      const { appCount, toolCount } = JSON.parse(raw) as { appCount: number; toolCount: number };
+      return html.replaceAll("__APP_COUNT__", String(appCount)).replaceAll("__TOOL_COUNT__", String(toolCount));
+    },
+  };
+}
 
 // Cada app de appsperu expone su API en un puerto distinto. La UI nunca
 // debe tener un valor por defecto "razonable" para una URL de backend: si
@@ -52,7 +81,7 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), catalogCountsHtmlPlugin()],
     server: {
       port: 5173,
       strictPort: false,
