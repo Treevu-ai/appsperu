@@ -39,40 +39,43 @@ describe("GET /readyz", () => {
 });
 
 describe("GET /api/terminales-portuarios", () => {
-  it("returns the list with traceability", async () => {
-    queryMock.mockResolvedValueOnce({
-      rows: [
-        {
-          codigo_puerto: "131SVY1",
-          nombre_terminal: "Multipropósito de Salaverry",
-          ambito: "Marítimo",
-          tipo_terminal: "Terminal Portuario",
-          alcance: "Nacional",
-          uso: "Público",
-          trafico: "General",
-          actividad: "Multipropósito",
-          estado: "Operativo",
-          estado_conservacion: "Bueno",
-          titularidad: "Público (Concesionado)",
-          administrador: "SALAVERRY TERMINAL INTERNACIONAL S.A.",
-          es_concesionado: true,
-          latitud: "-8.227368334",
-          longitud: "-78.98310972",
-          fecha_corte: "2025-12-31",
-          fetched_at: "2026-09-06T00:00:00.000Z",
-        },
-      ],
-    });
+  it("returns the list with traceability and pagination metadata", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "1" }] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            codigo_puerto: "131SVY1",
+            nombre_terminal: "Multipropósito de Salaverry",
+            ambito: "Marítimo",
+            tipo_terminal: "Terminal Portuario",
+            alcance: "Nacional",
+            uso: "Público",
+            trafico: "General",
+            actividad: "Multipropósito",
+            estado: "Operativo",
+            estado_conservacion: "Bueno",
+            titularidad: "Público (Concesionado)",
+            administrador: "SALAVERRY TERMINAL INTERNACIONAL S.A.",
+            es_concesionado: true,
+            latitud: "-8.227368334",
+            longitud: "-78.98310972",
+            fecha_corte: "2025-12-31",
+            fetched_at: "2026-09-06T00:00:00.000Z",
+          },
+        ],
+      });
 
     const res = await request(createApp()).get("/api/terminales-portuarios").query({ idDepartamento: "13" });
     expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ total: 1, limit: 500, offset: 0, hasMore: false });
     expect(res.body.resultados[0]).toMatchObject({ codigoPuerto: "131SVY1", esConcesionado: true });
     expect(res.body.resultados[0].ubicacion.latitud).toBeCloseTo(-8.227368334);
     expect(res.body.resultados[0].fuente.dataset).toMatch(/Portuaria/);
   });
 
   it("returns an empty list without filters", async () => {
-    queryMock.mockResolvedValueOnce({ rows: [] });
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "0" }] }).mockResolvedValueOnce({ rows: [] });
     const res = await request(createApp()).get("/api/terminales-portuarios");
     expect(res.status).toBe(200);
     expect(res.body.resultados).toEqual([]);
@@ -80,39 +83,42 @@ describe("GET /api/terminales-portuarios", () => {
 });
 
 describe("GET /api/aerodromos", () => {
-  it("returns the list with traceability", async () => {
-    queryMock.mockResolvedValueOnce({
-      rows: [
-        {
-          codigo_aerodromo: "1311TRU",
-          nombre: "Cap. FAP. Carlos Martinez de Pinillos",
-          departamento: "La Libertad",
-          provincia: "Trujillo",
-          distrito: "Huanchaco",
-          tipo_aerodromo: "Aeropuerto Internacional",
-          codigo_oaci: "SPRU",
-          escala: "Internacional",
-          estado: "Operativo",
-          administrador: "Aeropuertos del Perú S.A.",
-          jerarquia: "Nacional",
-          titularidad: "Pública (Concesionada)",
-          es_concesionado: true,
-          latitud: "-8.081708",
-          longitud: "-79.108644",
-          fecha_corte: "2025-12-31",
-          fetched_at: "2026-09-06T00:00:00.000Z",
-        },
-      ],
-    });
+  it("returns the list with traceability and pagination metadata", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "1" }] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            codigo_aerodromo: "1311TRU",
+            nombre: "Cap. FAP. Carlos Martinez de Pinillos",
+            departamento: "La Libertad",
+            provincia: "Trujillo",
+            distrito: "Huanchaco",
+            tipo_aerodromo: "Aeropuerto Internacional",
+            codigo_oaci: "SPRU",
+            escala: "Internacional",
+            estado: "Operativo",
+            administrador: "Aeropuertos del Perú S.A.",
+            jerarquia: "Nacional",
+            titularidad: "Pública (Concesionada)",
+            es_concesionado: true,
+            latitud: "-8.081708",
+            longitud: "-79.108644",
+            fecha_corte: "2025-12-31",
+            fetched_at: "2026-09-06T00:00:00.000Z",
+          },
+        ],
+      });
 
     const res = await request(createApp()).get("/api/aerodromos").query({ idDepartamento: "13" });
     expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ total: 1, limit: 500, offset: 0, hasMore: false });
     expect(res.body.resultados[0]).toMatchObject({ codigoAerodromo: "1311TRU", provincia: "Trujillo" });
     expect(res.body.resultados[0].fuente.dataset).toMatch(/Aeroportuaria/);
   });
 
   it("returns an empty list without filters", async () => {
-    queryMock.mockResolvedValueOnce({ rows: [] });
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "0" }] }).mockResolvedValueOnce({ rows: [] });
     const res = await request(createApp()).get("/api/aerodromos");
     expect(res.status).toBe(200);
     expect(res.body.resultados).toEqual([]);

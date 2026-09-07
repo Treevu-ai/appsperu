@@ -1025,13 +1025,15 @@
   {
     "name": "identidad_fiscal_contribuyentes",
     "app": "identidad-fiscal",
-    "description": "Busca contribuyentes en el Padrón RUC de SUNAT (personas jurídicas, RUC-20) por razón social, estado o ubigeo. Cobertura nacional completa (~2.3M filas).  La fuente SUNAT se actualiza a diario; este conector no está automatizado para seguir ese ritmo.Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "description": "Busca contribuyentes en el Padrón RUC de SUNAT (personas jurídicas, RUC-20) por razón social, estado o ubigeo. Cobertura nacional completa (~2.3M filas) — paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`, no asumas que `resultados` es el universo completo sin revisarlo.  La fuente SUNAT se actualiza a diario; este conector no está automatizado para seguir ese ritmo.Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/contribuyentes",
     "pathParams": [],
     "queryParams": [
       "razonSocial",
       "estado",
-      "ubigeo"
+      "ubigeo",
+      "limit",
+      "offset"
     ],
     "sinScheduler": true
   },
@@ -1349,14 +1351,16 @@
   {
     "name": "servicios_salud_ipress",
     "app": "servicios-salud",
-    "description": "Establecimientos de salud (RENIPRESS/SUSALUD) con su estado operativo real (`ACTIVO` u otro valor tal cual lo declara SUSALUD, no normalizado a booleano). Cobertura nacional completa, no acotada a La Libertad. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "description": "Establecimientos de salud (RENIPRESS/SUSALUD) con su estado operativo real (`ACTIVO` u otro valor tal cual lo declara SUSALUD, no normalizado a booleano). Cobertura nacional completa, no acotada a La Libertad — paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/ipress",
     "pathParams": [],
     "queryParams": [
       "ubigeo",
       "departamento",
       "distrito",
-      "estado"
+      "estado",
+      "limit",
+      "offset"
     ],
     "sinScheduler": true
   },
@@ -1424,14 +1428,16 @@
   {
     "name": "informes_control_informes",
     "app": "informes-control",
-    "description": "Informes de auditoría/servicios de control de la Contraloría (entidad, ubicación, fechas, sector, si tiene un hallazgo de responsabilidad). Por diseño, NUNCA expone nombres de funcionarios ni detalle individual de responsabilidad — `esConResponsabilidad` es un booleano, no un nombre. Ingesta por año (no todo el histórico a la vez); usar `periodo` para acotar. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "description": "Informes de auditoría/servicios de control de la Contraloría (entidad, ubicación, fechas, sector, si tiene un hallazgo de responsabilidad). Por diseño, NUNCA expone nombres de funcionarios ni detalle individual de responsabilidad — `esConResponsabilidad` es un booleano, no un nombre. Ingesta por año (no todo el histórico a la vez); usar `periodo` para acotar. Un año puede superar el `limit` por defecto (hasta ~65K filas) — paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/informes",
     "pathParams": [],
     "queryParams": [
       "entidad",
       "departamento",
       "periodo",
-      "esConResponsabilidad"
+      "esConResponsabilidad",
+      "limit",
+      "offset"
     ],
     "sinScheduler": true
   },
@@ -1531,7 +1537,7 @@
   {
     "name": "autoridades_electas_autoridades",
     "app": "autoridades-electas",
-    "description": "Autoridades proclamadas por el JNE (nombre, cargo, organización política, ubigeo, periodo de mandato) — no candidatos: `pronunciamiento` es un acta de proclamación oficial real, verificada contra el corte 2026-07-30 (Presidencia, Senado, Diputados, Parlamento Andino de Elecciones Generales 2026). Sin documento de identidad — este conector ingiere deliberadamente solo el recurso del JNE sin DNI; el recurso histórico distinto que sí trae DNI sin enmascarar (autoridades regionales/municipales 2014-2022) NO se ingiere en esta versión. Sin clave única de persona (no hay DNI): el match es por nombre completo + cargo + proceso electoral + ubigeo, con riesgo real de colisión por homonimia. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "description": "Autoridades proclamadas por el JNE (nombre, cargo, organización política, ubigeo, periodo de mandato) — no candidatos: `pronunciamiento` es un acta de proclamación oficial real, verificada contra el corte 2026-07-30 (Presidencia, Senado, Diputados, Parlamento Andino de Elecciones Generales 2026). Sin documento de identidad — este conector ingiere deliberadamente solo el recurso del JNE sin DNI; el recurso histórico distinto que sí trae DNI sin enmascarar (autoridades regionales/municipales 2014-2022) NO se ingiere en esta versión. Sin clave única de persona (no hay DNI): el match es por nombre completo + cargo + proceso electoral + ubigeo, con riesgo real de colisión por homonimia. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/autoridades",
     "pathParams": [],
     "queryParams": [
@@ -1539,14 +1545,16 @@
       "cargo",
       "organizacionPolitica",
       "ubigeo",
-      "anioEleccion"
+      "anioEleccion",
+      "limit",
+      "offset"
     ],
     "sinScheduler": true
   },
   {
     "name": "instituciones_educativas_instituciones",
     "app": "instituciones-educativas",
-    "description": "Padrón nacional de instituciones y programas educativos (MINEDU/ESCALE) — nombre, nivel/modalidad, gestión, dirección, ubigeo, coordenadas (lat/lon, único conector del catálogo con georreferenciación por establecimiento individual), UGEL, estado operativo. Universo censal completo (180,828 instituciones verificadas, no muestra), corte 2026-08-28. Sin datos de persona natural: `DIRECTOR`, `TELEFONO`, `EMAIL` y `PROMOTOR` de la fuente real nunca se leen ni persisten — solo `NRORUC`/`RZSOCIAL` de instituciones privadas (identidad de entidad, no de persona). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "description": "Padrón nacional de instituciones y programas educativos (MINEDU/ESCALE) — nombre, nivel/modalidad, gestión, dirección, ubigeo, coordenadas (lat/lon, único conector del catálogo con georreferenciación por establecimiento individual), UGEL, estado operativo. Universo censal completo (180,828 instituciones verificadas, no muestra), corte 2026-08-28. Sin datos de persona natural: `DIRECTOR`, `TELEFONO`, `EMAIL` y `PROMOTOR` de la fuente real nunca se leen ni persisten — solo `NRORUC`/`RZSOCIAL` de instituciones privadas (identidad de entidad, no de persona). Universo nacional de 180K+ filas supera ampliamente el `limit` por defecto sin un filtro territorial — paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/instituciones",
     "pathParams": [],
     "queryParams": [
@@ -1556,7 +1564,9 @@
       "ubigeo",
       "estado",
       "gestion",
-      "nombre"
+      "nombre",
+      "limit",
+      "offset"
     ],
     "sinScheduler": true
   },
@@ -1574,7 +1584,7 @@
   {
     "name": "infracciones_ambientales_infracciones",
     "app": "infracciones-ambientales",
-    "description": "Registro Único de Infractores Ambientales Sancionados (OEFA) — administrado sancionado, subsector económico (minería, industria, hidrocarburos, agricultura, pesquería, residuos sólidos, electricidad, consultoras ambientales), ubicación, expediente/resolución, detalle de la infracción, monto de multa. `numeroDocumento` se enmascara (últimos 3 dígitos) cuando el administrado es persona natural (D.N.I.) — para R.U.C. se expone completo. 14,724 filas nacionales verificadas (610 en La Libertad, 12 provincias). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "description": "Registro Único de Infractores Ambientales Sancionados (OEFA) — administrado sancionado, subsector económico (minería, industria, hidrocarburos, agricultura, pesquería, residuos sólidos, electricidad, consultoras ambientales), ubicación, expediente/resolución, detalle de la infracción, monto de multa. `numeroDocumento` se enmascara (últimos 3 dígitos) cuando el administrado es persona natural (D.N.I.) — para R.U.C. se expone completo. 14,724 filas nacionales verificadas (610 en La Libertad, 12 provincias). Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/infracciones",
     "pathParams": [],
     "queryParams": [
@@ -1582,28 +1592,32 @@
       "provincia",
       "distrito",
       "subsectorEconomico",
-      "administrado"
+      "administrado",
+      "limit",
+      "offset"
     ],
     "sinScheduler": true
   },
   {
     "name": "red_vial_subnacional_intervenciones",
     "app": "red-vial-subnacional",
-    "description": "Intervenciones en redes viales departamentales/vecinales (Provías Descentralizado, MTC) — código de ruta, tramo, longitud en km, estado de conservación (Bueno/Regular/Malo), tipo de superficie, tipo de intervención (mantenimiento/mejoramiento/conservación), responsable. Nivel de detalle: ruta/tramo dentro de una provincia, no distrito exacto (una ruta puede cruzar más de uno). Nombres de provincia con tildes inconsistentes en la fuente real (ej. 'VIRU' y 'VIRÚ' como valores distintos) — no normalizado. 12,536 filas nacionales verificadas (461 en La Libertad, 12 provincias). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "description": "Intervenciones en redes viales departamentales/vecinales (Provías Descentralizado, MTC) — código de ruta, tramo, longitud en km, estado de conservación (Bueno/Regular/Malo), tipo de superficie, tipo de intervención (mantenimiento/mejoramiento/conservación), responsable. Nivel de detalle: ruta/tramo dentro de una provincia, no distrito exacto (una ruta puede cruzar más de uno). Nombres de provincia con tildes inconsistentes en la fuente real (ej. 'VIRU' y 'VIRÚ' como valores distintos) — no normalizado. 12,536 filas nacionales verificadas (461 en La Libertad, 12 provincias). Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/intervenciones",
     "pathParams": [],
     "queryParams": [
       "departamento",
       "provincia",
       "estado",
-      "codigoRuta"
+      "codigoRuta",
+      "limit",
+      "offset"
     ],
     "sinScheduler": true
   },
   {
     "name": "residuos_solidos_residuos",
     "app": "residuos-solidos",
-    "description": "Generación anual de residuos sólidos domiciliarios y municipales por distrito (MINAM/SIGERSOL) — población INEI, generación per cápita, toneladas/día y toneladas/año. Serie histórica real 2019-2024 (6 años), a diferencia de la mayoría de fuentes del catálogo (snapshot único) — permite ver evolución temporal por distrito. 11,310 filas nacionales verificadas (500 en La Libertad, 12 provincias, 2019-2024). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "description": "Generación anual de residuos sólidos domiciliarios y municipales por distrito (MINAM/SIGERSOL) — población INEI, generación per cápita, toneladas/día y toneladas/año. Serie histórica real 2019-2024 (6 años), a diferencia de la mayoría de fuentes del catálogo (snapshot único) — permite ver evolución temporal por distrito. 11,310 filas nacionales verificadas (500 en La Libertad, 12 provincias, 2019-2024). Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/residuos",
     "pathParams": [],
     "queryParams": [
@@ -1611,33 +1625,39 @@
       "provincia",
       "distrito",
       "ubigeo",
-      "anio"
+      "anio",
+      "limit",
+      "offset"
     ],
     "sinScheduler": true
   },
   {
     "name": "infraestructura_mtc_terminales_portuarios",
     "app": "infraestructura-mtc",
-    "description": "Catálogo de terminales portuarios y embarcaderos (MTC) — ubicación, ámbito (marítimo/fluvial/lacustre), tipo, uso, tráfico, estado de conservación, titularidad y administrador. Snapshot anual acumulado 2022-2025 (una fila por terminal por corte, no solo el más reciente). 507 filas nacionales verificadas (9 en La Libertad, 3 terminales: TP Multipropósito Salaverry, TP Multiboyas Salaverry, TP Chicama/Malabrigo). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "description": "Catálogo de terminales portuarios y embarcaderos (MTC) — ubicación, ámbito (marítimo/fluvial/lacustre), tipo, uso, tráfico, estado de conservación, titularidad y administrador. Snapshot anual acumulado 2022-2025 (una fila por terminal por corte, no solo el más reciente). 507 filas nacionales verificadas (9 en La Libertad, 3 terminales: TP Multipropósito Salaverry, TP Multiboyas Salaverry, TP Chicama/Malabrigo). El total nacional (507) puede superar el `limit` por defecto sin filtro — paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/terminales-portuarios",
     "pathParams": [],
     "queryParams": [
       "idDepartamento",
       "ambito",
-      "estado"
+      "estado",
+      "limit",
+      "offset"
     ],
     "sinScheduler": true
   },
   {
     "name": "infraestructura_mtc_aerodromos",
     "app": "infraestructura-mtc",
-    "description": "Catálogo de infraestructura aeroportuaria/aeródromos (MTC) — ubicación, tipo, código OACI, escala, estado, jerarquía, titularidad y administrador. Snapshot anual acumulado 2022-2025. La columna ID original de la fuente viene con el literal '#¡REF!' (error de fórmula de Excel) en el corte 2025 — no se usa; la clave real es codigoAerodromo. 595 filas nacionales verificadas (36 en La Libertad, 9 aeródromos: incluye el Aeropuerto Internacional Cap. FAP Carlos Martínez de Pinillos en Trujillo y 8 aeródromos rurales/mineros/municipales en Pataz, Virú, Sánchez Carrión, Santiago de Chuco y Pacasmayo). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "description": "Catálogo de infraestructura aeroportuaria/aeródromos (MTC) — ubicación, tipo, código OACI, escala, estado, jerarquía, titularidad y administrador. Snapshot anual acumulado 2022-2025. La columna ID original de la fuente viene con el literal '#¡REF!' (error de fórmula de Excel) en el corte 2025 — no se usa; la clave real es codigoAerodromo. 595 filas nacionales verificadas (36 en La Libertad, 9 aeródromos: incluye el Aeropuerto Internacional Cap. FAP Carlos Martínez de Pinillos en Trujillo y 8 aeródromos rurales/mineros/municipales en Pataz, Virú, Sánchez Carrión, Santiago de Chuco y Pacasmayo). El total nacional (595) SUPERA el `limit` por defecto (500) sin filtro de departamento — confirmado en vivo que sin paginación esto truncaba 95 filas en silencio antes de exponer `total`/`hasMore`; usa `limit`/`offset` y revisa `hasMore` en vez de asumir que `resultados` trae el universo completo. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/aerodromos",
     "pathParams": [],
     "queryParams": [
       "idDepartamento",
       "provincia",
-      "tipoAerodromo"
+      "tipoAerodromo",
+      "limit",
+      "offset"
     ],
     "sinScheduler": true
   },

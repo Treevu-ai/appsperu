@@ -6,17 +6,22 @@ import { parseQuery } from "../lib/validate-query.js";
 
 export const informesRouter = Router();
 
+const DEFAULT_LIMIT = 1000;
+const MAX_LIMIT = 5000;
+
 const InformesQuerySchema = z.object({
   entidad: z.string().min(1).optional(),
   departamento: z.string().min(1).optional(),
   periodo: z.string().regex(/^\d{4}$/).optional(),
   esConResponsabilidad: z.enum(["true", "false"]).optional(),
+  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 informesRouter.get("/", asyncHandler(async (req, res) => {
   const parsed = parseQuery(InformesQuerySchema, req.query, res);
   if (!parsed) return;
-  const { entidad, departamento, periodo, esConResponsabilidad } = parsed;
+  const { entidad, departamento, periodo, esConResponsabilidad, limit, offset } = parsed;
 
   const conditions: string[] = [];
   const params: unknown[] = [];
@@ -40,6 +45,12 @@ informesRouter.get("/", asyncHandler(async (req, res) => {
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
+  const { rows: countRows } = await pool.query<{ total: string }>(
+    `SELECT COUNT(*) AS total FROM informes_control ${where}`,
+    params
+  );
+  const total = Number(countRows[0].total);
+
   const { rows } = await pool.query(
     `SELECT codigo_informe, numero_informe, entidad, sector, nivel_gobierno, departamento, provincia, distrito,
             descripcion, modalidad_servicio, servicio_control, tipo_informe, periodo, fecha_emision,
@@ -48,12 +59,16 @@ informesRouter.get("/", asyncHandler(async (req, res) => {
      FROM informes_control
      ${where}
      ORDER BY fecha_publicacion DESC NULLS LAST
-     LIMIT 1000`,
-    params
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, limit, offset]
   );
 
   res.json({
     cobertura: "Contraloría (buscadorinformes.contraloria.gob.pe), nacional. `esConResponsabilidad` es un indicador booleano — este endpoint nunca expone nombres de funcionarios ni detalle de responsabilidad individual, por diseño.",
+    total,
+    limit,
+    offset,
+    hasMore: offset + rows.length < total,
     resultados: rows.map((r) => ({
       codigoInforme: r.codigo_informe,
       numeroInforme: r.numero_informe,

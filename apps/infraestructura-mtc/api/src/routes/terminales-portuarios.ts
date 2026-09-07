@@ -6,10 +6,15 @@ import { parseQuery } from "../lib/validate-query.js";
 
 export const terminalesPortuariosRouter = Router();
 
+const DEFAULT_LIMIT = 500;
+const MAX_LIMIT = 1000;
+
 const QuerySchema = z.object({
   idDepartamento: z.string().min(1).optional().describe("Código UBIGEO de departamento, ej. '13' para La Libertad."),
   ambito: z.string().min(1).optional(),
   estado: z.string().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 terminalesPortuariosRouter.get(
@@ -17,7 +22,7 @@ terminalesPortuariosRouter.get(
   asyncHandler(async (req, res) => {
     const parsed = parseQuery(QuerySchema, req.query, res);
     if (!parsed) return;
-    const { idDepartamento, ambito, estado } = parsed;
+    const { idDepartamento, ambito, estado, limit, offset } = parsed;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -35,6 +40,12 @@ terminalesPortuariosRouter.get(
     }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
+    const { rows: countRows } = await pool.query<{ total: string }>(
+      `SELECT COUNT(*) AS total FROM terminales_portuarios t ${where}`,
+      params
+    );
+    const total = Number(countRows[0].total);
+
     const { rows } = await pool.query(
       `SELECT t.codigo_puerto, t.nombre_terminal, t.ambito, t.tipo_terminal, t.alcance, t.uso,
               t.trafico, t.actividad, t.estado, t.estado_conservacion, t.titularidad,
@@ -44,11 +55,15 @@ terminalesPortuariosRouter.get(
        JOIN raw_infraestructura_mtc_batches rb ON rb.id = t.source_batch_id
        ${where}
        ORDER BY t.fecha_corte DESC, t.codigo_puerto
-       LIMIT 500`,
-      params
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
     );
 
     res.json({
+      total,
+      limit,
+      offset,
+      hasMore: offset + rows.length < total,
       resultados: rows.map((r) => ({
         codigoPuerto: r.codigo_puerto,
         nombreTerminal: r.nombre_terminal,

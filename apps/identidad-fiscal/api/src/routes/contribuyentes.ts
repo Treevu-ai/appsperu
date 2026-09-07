@@ -6,16 +6,21 @@ import { parseQuery } from "../lib/validate-query.js";
 
 export const contribuyentesRouter = Router();
 
+const DEFAULT_LIMIT = 200;
+const MAX_LIMIT = 1000;
+
 const SearchQuerySchema = z.object({
   razonSocial: z.string().min(1).optional(),
   estado: z.string().min(1).optional(),
   ubigeo: z.string().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 contribuyentesRouter.get("/", asyncHandler(async (req, res) => {
   const parsed = parseQuery(SearchQuerySchema, req.query, res);
   if (!parsed) return;
-  const { razonSocial, estado, ubigeo } = parsed;
+  const { razonSocial, estado, ubigeo, limit, offset } = parsed;
 
   const conditions: string[] = [];
   const params: unknown[] = [];
@@ -35,17 +40,27 @@ contribuyentesRouter.get("/", asyncHandler(async (req, res) => {
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
+  const { rows: countRows } = await pool.query<{ total: string }>(
+    `SELECT COUNT(*) AS total FROM contribuyentes ${where}`,
+    params
+  );
+  const total = Number(countRows[0].total);
+
   const { rows } = await pool.query(
     `SELECT ruc, razon_social, estado_contribuyente, condicion_domicilio, ubigeo,
             tipo_via, nombre_via, numero
      FROM contribuyentes
      ${where}
      ORDER BY razon_social
-     LIMIT 200`,
-    params
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, limit, offset]
   );
 
   res.json({
+    total,
+    limit,
+    offset,
+    hasMore: offset + rows.length < total,
     resultados: rows.map((r) => ({
       ruc: r.ruc,
       razonSocial: r.razon_social,

@@ -6,17 +6,22 @@ import { parseQuery } from "../lib/validate-query.js";
 
 export const ipressRouter = Router();
 
+const DEFAULT_LIMIT = 2000;
+const MAX_LIMIT = 5000;
+
 const IpressQuerySchema = z.object({
   ubigeo: z.string().min(1).optional(),
   departamento: z.string().min(1).optional(),
   distrito: z.string().min(1).optional(),
   estado: z.string().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 ipressRouter.get("/", asyncHandler(async (req, res) => {
   const parsed = parseQuery(IpressQuerySchema, req.query, res);
   if (!parsed) return;
-  const { ubigeo, departamento, distrito, estado } = parsed;
+  const { ubigeo, departamento, distrito, estado, limit, offset } = parsed;
 
   const conditions: string[] = [];
   const params: unknown[] = [];
@@ -40,6 +45,12 @@ ipressRouter.get("/", asyncHandler(async (req, res) => {
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
+  const { rows: countRows } = await pool.query<{ total: string }>(
+    `SELECT COUNT(*) AS total FROM ipress ${where}`,
+    params
+  );
+  const total = Number(countRows[0].total);
+
   const { rows } = await pool.query(
     `SELECT cod_ipress, institucion, nombre, clasificacion, tipo_establecimiento,
             departamento, provincia, distrito, ubigeo, direccion, categoria, estado,
@@ -47,12 +58,16 @@ ipressRouter.get("/", asyncHandler(async (req, res) => {
      FROM ipress
      ${where}
      ORDER BY departamento, provincia, distrito, nombre
-     LIMIT 2000`,
-    params
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, limit, offset]
   );
 
   res.json({
     cobertura: "RENIPRESS es un registro nacional (SUSALUD); no está acotado a La Libertad.",
+    total,
+    limit,
+    offset,
+    hasMore: offset + rows.length < total,
     resultados: rows.map((r) => ({
       codIpress: r.cod_ipress,
       institucion: r.institucion,
