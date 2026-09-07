@@ -47,9 +47,11 @@ export function DocsApi() {
       <p className="text-xs text-accent font-mono">MCP · {TOOLS.length} TOOLS · SOLO LECTURA</p>
       <h1 className="font-serif text-3xl text-fg mt-2">Conectar Rastro desde un agente IA</h1>
       <p className="text-fg-soft mt-2 max-w-3xl">
-        Rastro expone un servidor MCP (Model Context Protocol) con {TOOLS.length} tools de solo lectura. Compatible con
-        Claude Code, Claude Desktop, Cursor, Windsurf, Cline y Continue.dev. Tu agente encadena los tools, razona sobre
-        los resultados y entrega respuestas con citas verificables.
+        Rastro expone un servidor MCP (Model Context Protocol) con {TOOLS.length} tools de solo lectura — buscables
+        desde 2 meta-tools, <code className="text-fg">rastro_buscar_tools</code> y{" "}
+        <code className="text-fg">rastro_llamar</code>, en vez de {TOOLS.length} tools registrados uno por uno.
+        Compatible con Claude Code, Claude Desktop, Cursor, Windsurf, Cline y Continue.dev. Tu agente busca, encadena
+        resultados, razona sobre ellos y entrega respuestas con citas verificables.
       </p>
 
       <section className="mt-8 grid md:grid-cols-2 gap-4">
@@ -91,15 +93,30 @@ claude mcp add rastro \\
       </section>
 
       <section className="mt-8 card border-accent/30">
-        <p className="text-xs text-accent font-mono mb-2">EJEMPLO · UNA SOLA QUERY</p>
+        <p className="text-xs text-accent font-mono mb-2">CÓMO LLAMA UN AGENTE A ESTOS TOOLS</p>
+        <p className="text-fg-soft text-sm">
+          No hay 142 tools registrados en tu cliente MCP — hay 2. Primero se busca el nombre exacto, después se
+          ejecuta con ese nombre:
+        </p>
+        <pre className="text-xs bg-ink-950 border border-line rounded-md p-3 overflow-x-auto text-fg-soft mt-3">
+          <code>{`rastro_buscar_tools({ query: "sanciones proveedores" })
+→ [{ name: "proveedores_sancionados_sanciones", ... }]
+
+rastro_llamar({
+  tool: "proveedores_sancionados_sanciones",
+  args: { estado: "VIGENTE" }
+})`}</code>
+        </pre>
+
+        <p className="text-xs text-accent font-mono mb-2 mt-6">EJEMPLO · UNA SOLA QUERY DE USUARIO</p>
         <p className="text-fg text-base">
           "Para los últimos 12 meses: lista proveedores sancionados por la OECE que también ganaron contratos del
           GORE La Libertad en el sector transporte, con valor total adjudicado y % de concentración. Cita cada RUC
           y cada OCID."
         </p>
         <p className="text-fg-soft text-sm mt-3">
-          Tu agente invocará secuencialmente:{" "}
-          <code className="text-accent">proveedores_sancionados_sanciones</code> →{" "}
+          Tu agente busca y llama, en orden:{" "}
+          <code className="text-accent">proveedores_sancionados_sanciones</code> (estado=VIGENTE) →{" "}
           <code className="text-accent">compras_publicas_suppliers</code> (filtrado por La Libertad) →{" "}
           <code className="text-accent">compras_publicas_supplier_by_id</code> (uno por cada RUC) →
           posiblemente <code className="text-accent">compras_publicas_procurement</code> para los OCID. Y te devuelve

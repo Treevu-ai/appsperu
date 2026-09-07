@@ -28,7 +28,11 @@ Rastro expone un servidor MCP (Model Context Protocol) con **<!-- COUNT:TOOL_COU
 - Windsurf
 - Cline / Continue.dev
 
-El servidor usa transporte **stdio**. Una vez conectado, tu agente encadena los tools, razona sobre los resultados y entrega respuestas con citas verificables por RUC, OCID, CUI, UBIGEO, SEC_EJEC.
+El servidor usa transporte **stdio** y expone solo 2 tools MCP —
+**`rastro_buscar_tools(query?, app?, limit?)`** busca por palabra clave/app entre las <!-- COUNT:TOOL_COUNT -->142<!-- /COUNT -->
+entradas del catálogo, **`rastro_llamar(tool, args?)`** ejecuta el nombre exacto encontrado — en vez de registrar
+los 142 tools individualmente (ver `mcp-server/README.md`). El agente busca, encadena resultados, razona sobre
+ellos y entrega respuestas con citas verificables por RUC, OCID, CUI, UBIGEO, SEC_EJEC.
 
 ### Ejemplo · una sola query
 
@@ -37,11 +41,12 @@ Tu usuario escribe:
 > "Para los últimos 12 meses: lista proveedores sancionados por la OECE que también ganaron contratos del GORE La Libertad en el sector transporte, con valor total adjudicado y % de concentración. Cita cada RUC y cada OCID."
 
 El agente orquesta internamente:
-1. `proveedores_sancionados_sanciones` (filtrado por estado=VIGENTE)
-2. `compras_publicas_suppliers` (filtrado por departamento=LA LIBERTAD)
-3. `compras_publicas_supplier_by_id` (uno por RUC)
-4. `compras_publicas_procurement_by_ocid` (los OCID resultantes)
-5. `compras_publicas_suppliers` otra vez para calcular concentración
+1. `rastro_buscar_tools({ query: "sanciones proveedores" })` → encuentra `proveedores_sancionados_sanciones`
+2. `rastro_llamar({ tool: "proveedores_sancionados_sanciones", args: { estado: "VIGENTE" } })`
+3. `rastro_buscar_tools({ query: "compras publicas suppliers" })` → encuentra los tools de `compras-publicas`
+4. `rastro_llamar` sobre `compras_publicas_suppliers` (filtrado por departamento=LA LIBERTAD), luego
+   `compras_publicas_supplier_by_id` por cada RUC y `compras_publicas_procurement_by_ocid` por cada OCID
+5. Recalcula concentración con los resultados ya obtenidos
 
 Y devuelve una tabla con citas (RUC, OCID, fuente, corte) sin que el usuario haya tocado la terminal.
 

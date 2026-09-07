@@ -124,9 +124,9 @@ transporte, con valor total adjudicado y % de
 concentración. Cita cada RUC y cada OCID."`}</code>
               </pre>
               <p className="text-xs text-muted mt-2">
-                El agente invoca <code className="text-fg">proveedores_sancionados_sanciones</code>,{" "}
-                <code className="text-fg">compras_publicas_suppliers</code>,{" "}
-                <code className="text-fg">compras_publicas_supplier_by_id</code> y los encadena — sin que tú toques la
+                Tu agente busca los tools relevantes con <code className="text-fg">rastro_buscar_tools</code> (ej.
+                "sanciones OECE", "compras La Libertad") y ejecuta cada uno por su nombre exacto con{" "}
+                <code className="text-fg">rastro_llamar</code>, encadenando los resultados — sin que tú toques la
                 terminal.
               </p>
             </div>
