@@ -69,6 +69,22 @@ actualizar RUIAS trimestralmente pero el export público no lo refleja) y `resid
 (MINAM, confirmado que el dataset real **no** tiene corte 2025 todavía, solo cubre 2014-2024) —
 no son huecos nuestros, son el techo real de lo que publican las fuentes hoy.
 
+**Fuentes vivas re-ejecutadas (2026-09-06)**, para verificar que sí traen el dato más reciente
+disponible en vez de asumirlo:
+
+| Fuente | Antes | Después |
+|---|---|---|
+| `proveedores-sancionados` (RNP) | 17,919 filas | 17,995 filas (+76 sanciones nuevas) |
+| `compras-publicas` — OECE releases | — | +22 procesos nuevos de La Libertad |
+| `compras-publicas` — OECE awards | — | +22 adjudicaciones, +19 ítems sin adjudicar nuevos |
+| `identidad-fiscal` (SUNAT) | 2,339,313 contribuyentes | 2,347,097 (+7,784) |
+| `inversion-privada` — VERTIX (APP/PA) | ~340 proyectos | 335 |
+| `inversion-privada` — OxI | 761 proyectos | 711 (-50, reclasificados/removidos en la fuente) |
+| `inversion-privada` — GIS | 473 features | 473 (sin cambio) |
+
+Confirma que estos conectores sí traen "lo más reciente disponible" cuando se re-ejecutan — el
+diseño ya era correcto, solo hacía falta volver a correrlos periódicamente.
+
 ## MINAM — serie histórica real 2019-2024, ANA queda pendiente (2026-09-06)
 
 Continuación del barrido: tras OEFA y MTC, se investigó MINAM y ANA en paralelo. **MINAM
