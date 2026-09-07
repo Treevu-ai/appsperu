@@ -56,6 +56,52 @@ function outputPathFor(routePath) {
   return path.join(distDir, routePath, "index.html");
 }
 
+// URLs estáticas servidas por public/ que NO son una <Route> de App.tsx —
+// no las descubre STATIC_ROUTES, se listan a mano acá.
+const EXTRA_SITEMAP_URLS = ["/citar-rastro.md"];
+
+// Prioridad/frecuencia por ruta — el resto usa el default. Refleja qué tan
+// seguido cambia el contenido real de cada vista, no un valor arbitrario.
+const SITEMAP_PRIORITY = {
+  "/": "1.0",
+  "/gore/la-libertad/ficha": "0.9",
+  "/gore/la-libertad/comparativo": "0.8",
+  "/gore/la-libertad/benchmark": "0.8",
+  "/estado": "0.7",
+  "/docs/api": "0.6",
+  "/buscar": "0.5",
+};
+const SITEMAP_CHANGEFREQ = {
+  "/": "weekly",
+  "/gore/la-libertad/ficha": "weekly",
+  "/gore/la-libertad/comparativo": "weekly",
+  "/gore/la-libertad/benchmark": "weekly",
+  "/estado": "daily",
+  "/docs/api": "monthly",
+};
+const DEFAULT_PRIORITY = "0.5";
+const DEFAULT_CHANGEFREQ = "monthly";
+
+/**
+ * Genera sitemap.xml desde STATIC_ROUTES en vez de mantenerlo a mano — el
+ * anterior (público, hardcodeado) declaraba 8 URLs mientras App.tsx ya tenía
+ * 15 rutas reales. Ahora es imposible que sitemap.xml y App.tsx diverjan sin
+ * que el test de src/__tests__/prerender-routes.test.ts lo detecte primero
+ * (STATIC_ROUTES es la misma lista que usa esa guardia).
+ */
+function buildSitemap(routes) {
+  const urls = [...routes, ...EXTRA_SITEMAP_URLS];
+  const items = urls
+    .map((routePath) => {
+      const loc = `https://www.rastro.fyi${routePath}`;
+      const changefreq = SITEMAP_CHANGEFREQ[routePath] ?? DEFAULT_CHANGEFREQ;
+      const priority = SITEMAP_PRIORITY[routePath] ?? DEFAULT_PRIORITY;
+      return `  <url>\n    <loc>${loc}</loc>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`;
+    })
+    .join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${items}\n</urlset>\n`;
+}
+
 async function main() {
   if (!fs.existsSync(templatePath)) {
     console.error(`[prerender] No existe ${path.relative(root, templatePath)} — corre "vite build" antes.`);
@@ -93,6 +139,10 @@ async function main() {
     console.error(`[prerender] FALLÓ ${f.routePath}: ${f.message}`);
   }
   console.log(`[prerender] OK — ${ok}/${STATIC_ROUTES.length} rutas prerenderizadas.`);
+
+  const sitemapPath = path.join(distDir, "sitemap.xml");
+  fs.writeFileSync(sitemapPath, buildSitemap(STATIC_ROUTES));
+  console.log(`[prerender] sitemap.xml regenerado con ${STATIC_ROUTES.length + EXTRA_SITEMAP_URLS.length} URLs.`);
 
   fs.rmSync(path.join(root, "dist-ssr"), { recursive: true, force: true });
 
