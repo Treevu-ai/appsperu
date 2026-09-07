@@ -135,3 +135,24 @@ inverso**: `P14A_1` = cantidad de computadoras (valores reales observados: 135, 
 código de tipo de conexión (1-5). Lección de ingeniería para el catálogo: el diccionario en PDF
 no es una fuente confiable para el orden exacto de columnas relacionadas cuando su tabla se
 extrae como texto plano — solo las filas de datos reales lo son.
+
+## Actualización de frescura de datos (2026-09-06, auditoría posterior)
+
+**RENAMU 2025 ya estaba publicado y no se había ingerido** — el punto 4 de "Pendiente antes de
+construir" quedó resuelto al verificar en vivo: el corte 2025 existe en la PNDA. Pero al intentar
+ingerirlo se confirmó que **la URL de descarga NO sigue el mismo patrón que 2024**:
+
+- 2024: `inei.gob.pe/media/DATOS_ABIERTOS/RENAMU/DATA/2024.zip`
+- 2025: `proyectos.inei.gob.pe/iinei/srienaho/descarga/CSV/984-Modulo1963.zip` (dominio y ruta
+  completamente distintos, resuelto vía `package_show` de CKAN sobre el slug del dataset 2025 —
+  el slug de 2024 no resuelve con ese mismo método de consulta).
+
+El conector se corrigió para usar un mapa explícito `KNOWN_ZIP_URLS` por año en vez de asumir un
+patrón — cada año nuevo requiere verificar en vivo y agregar la URL confirmada; el conector falla
+con un error explícito y accionable si el año pedido no está en el mapa, en vez de adivinar una
+URL que podría no existir.
+
+Verificado en vivo: RENAMU 2025 ingerido — 1,891 filas, 0 rechazadas, mismo esquema que 2024
+(confirmado columna por columna antes de ingerir). **La Libertad 2025: 84 municipalidades**
+(vs. 84 en 2024, sin cambio en el conteo — como se esperaría, el número de municipalidades no
+cambia año a año).

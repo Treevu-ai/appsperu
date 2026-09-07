@@ -15,13 +15,30 @@ import {
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
 
-// Confirmado en vivo 2026-09-06: `inei.gob.pe/media/DATOS_ABIERTOS/RENAMU/DATA/<año>.zip`
-// es el patrón real de descarga (fuera del patrón `datosabiertos.gob.pe/sites/default/files/...`
-// que usa el resto del catálogo). El ZIP trae una sola carpeta con un CSV y un PDF de
-// diccionario; el nombre de la carpeta cambia entre años (`928-Modulo1814` en 2024), así
-// que el conector busca el primer `.csv` dentro del ZIP en vez de asumir una ruta fija.
+// La URL de descarga NO sigue un patrón estable entre años — confirmado en vivo 2026-09-06 al
+// intentar ingerir 2025: el patrón usado para 2024 (`inei.gob.pe/media/DATOS_ABIERTOS/RENAMU/
+// DATA/<año>.zip`) da 404 para 2025, cuyo recurso real vive en un dominio y ruta totalmente
+// distintos (`proyectos.inei.gob.pe/iinei/srienaho/descarga/CSV/984-Modulo1963.zip`, resuelto
+// vía `package_show` de CKAN sobre el slug `registro-nacional-de-municipalidades-renamu-2025-
+// instituto-nacional-de-estadística-e`). El slug de 2024 tampoco resuelve con ese mismo patrón
+// (`Query ... doesn't return results`) — cada año hay que verificar a mano y agregar la URL
+// confirmada acá. El ZIP trae una sola carpeta con un CSV y un PDF de diccionario; el nombre de
+// la carpeta cambia entre años, así que el conector busca el primer `.csv` dentro del ZIP en vez
+// de asumir una ruta fija.
+const KNOWN_ZIP_URLS: Record<number, string> = {
+  2024: "https://www.inei.gob.pe/media/DATOS_ABIERTOS/RENAMU/DATA/2024.zip",
+  2025: "https://proyectos.inei.gob.pe/iinei/srienaho/descarga/CSV/984-Modulo1963.zip",
+};
+
 function fileUrlFor(anio: number): string {
-  return `https://www.inei.gob.pe/media/DATOS_ABIERTOS/RENAMU/DATA/${anio}.zip`;
+  const url = KNOWN_ZIP_URLS[anio];
+  if (!url) {
+    throw new Error(
+      `No hay URL de descarga confirmada para RENAMU ${anio} — verificar en vivo contra ` +
+        `datosabiertos.gob.pe (package_show del dataset del año) y agregarla a KNOWN_ZIP_URLS.`
+    );
+  }
+  return url;
 }
 
 function checksumOf(buffer: Buffer): string {
@@ -176,7 +193,8 @@ export async function ingestRenamu(anio: number): Promise<RenamuIngestSummary> {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const anio = Number(process.argv[2] ?? new Date().getFullYear() - 2);
+  const latestKnownYear = Math.max(...Object.keys(KNOWN_ZIP_URLS).map(Number));
+  const anio = Number(process.argv[2] ?? latestKnownYear);
   ingestRenamu(anio)
     .then((summary) => {
       console.log(JSON.stringify(summary, null, 2));
