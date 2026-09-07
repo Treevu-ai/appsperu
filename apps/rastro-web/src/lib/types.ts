@@ -62,7 +62,21 @@ export type AppKey =
   | "inversion-privada"
   | "bcrp-la-libertad";
 
-/** Catálogo de las 14 apps con su puerto y variable de entorno. */
+/**
+ * Catálogo de las 14 apps con dashboard visual propio en rastro.fyi (puerto +
+ * variable de entorno para su fetcher en api-client.ts).
+ *
+ * Decisión de alcance deliberada, no una brecha por cerrar: Rastro es
+ * agentic-first. Las 27 apps reales (142 tools) ya tienen cobertura completa
+ * hoy vía el servidor MCP (`rastro_buscar_tools` + `rastro_llamar`, ver
+ * mcp-server/README.md y /docs/api) — ese es el canal principal de consumo.
+ * Un dashboard visual dedicado por app no escala 1:1 con el crecimiento del
+ * catálogo (justo el problema que la reingeniería del MCP de 142 tools
+ * registrados a 2 meta-tools buscables resolvió del lado del agente); estas
+ * 14 son las que además justificaron una vista propia por su rol en los 3
+ * lectores (GORE La Libertad, Prensa de datos, Auditoría/OCI), no las
+ * primeras 14 de una lista de 27 pendientes.
+ */
 export const APP_CATALOG: Record<AppKey, { label: string; port: number; envKey: string }> = {
   "radar-ejecucion": { label: "Radar Ejecución (MEF)", port: 4000, envKey: "VITE_API_BASE_URL_RADAR_EJECUCION" },
   "compras-publicas": { label: "Compras Públicas (OECE/OCDS)", port: 4001, envKey: "VITE_API_BASE_URL_COMPRAS_PUBLICAS" },
