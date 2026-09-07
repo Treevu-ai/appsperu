@@ -19,9 +19,15 @@ export function costDriftPct(montoViable: number | null, costoActualizado: numbe
 /**
  * Umbral de "% de desvío que cuenta como sobrecosto", compartido entre
  * `infobras` y `salud-institucional`. Se mantiene en 0 (cualquier desvío
- * positivo cuenta) porque ADR-0020 decidió no inventar un valor distinto
- * sin evidencia real de la distribución de `costDriftPct` sobre datos ya
- * ingeridos — ver CX-14 (ticket de seguimiento) para ese análisis.
+ * positivo cuenta) — CX-14 (ver ADR-0020, actualización 2026-09-07) analizó
+ * la distribución real de `costDriftPct` sobre las 7,985 inversiones de
+ * `radar-inversiones` (Invierte.pe, La Libertad) con base de comparación
+ * válida: mediana exactamente 0%, p75 13.6%, p90 60.7% — con el usuario
+ * decidiendo mantener 0 en vista de que subirlo no filtra ruido de forma
+ * significativa (~130 de 3,124 casos positivos caen en la banda 0%-1%),
+ * solo excluiría sobrecostos reales aunque pequeños. Ya no es una postura
+ * conservadora sin evidencia — la evidencia real la confirma como
+ * defendible.
  *
  * Si este valor cambia, la comparación SQL de
  * `salud-institucional/routes/score.ts` (`costo_actualizado > monto_viable`)

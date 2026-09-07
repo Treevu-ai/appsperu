@@ -4,6 +4,37 @@
 
 Veintisiete apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
 
+## CX-14 — umbral de sobrecosto confirmado con evidencia real (2026-09-07)
+
+A pedido del usuario ("veamos ahora el CX-14"), se ejecutó el ticket que ADR-0020 (CX-10) había
+dejado abierto por falta de acceso a datos: analizar la distribución real de `costDriftPct`
+sobre obras/inversiones ya ingeridas y decidir, con evidencia, si `SOBRECOSTO_UMBRAL_PCT`
+(`packages/shared-signals`, hoy 0%) debería subir. El bloqueo original era de acceso a datos de
+esa sesión, no estructural — esta sí pudo levantar los Postgres locales ya ingeridos (mismo
+mecanismo Docker usado en toda la investigación de esta semana).
+
+**Hallazgo no anticipado**: la fuente original de `costDriftPct` (`infobras`/INFOBRAS,
+`public_works.costo_actualizado`) está degenerada en el corte ingerido — `0.00` para el 100% de
+las 10,134 obras (7,742 con `monto_viable` como base de comparación válida), mientras que campos
+vecinos (`avance_fisico_real_pct`, `monto_viable`) sí varían con normalidad. No es un bug de
+índice de columna (`COL.costoActualizado = 27`, adyacente al `montoViable = 26` que funciona
+bien) — casi seguro es que INFOBRAS solo popula ese campo ante una reformulación presupuestal
+formal, que la mayoría de obras nunca tuvo. Efecto práctico: `costDriftPct` en `infobras` es
+sistemáticamente -100% hoy (nunca positivo), por lo que `esSobrecosto()` da `false` para el 100%
+de las obras — el umbral es irrelevante ahí en el corte actual, sin relación con qué valor se
+elija.
+
+La distribución real y útil vino de `radar-inversiones` (Invierte.pe, la fuente que
+efectivamente consume `salud-institucional`) — 7,985 inversiones con base de comparación válida,
+100% de La Libertad: mediana 0%, p75 13.6%, p90 60.7%, p99 398.5%. Con umbral 0% (el actual),
+3,124/7,985 (39.1%) califican como sobrecosto; con 5%, 2,543 (31.8%); con 10%, 2,199 (27.5%).
+
+**Decisión con el usuario**: se mantiene `SOBRECOSTO_UMBRAL_PCT = 0` — subirlo no filtra ruido de
+forma significativa (solo ~130 de los 3,124 casos positivos caen en la banda 0%-1%), únicamente
+excluiría sobrecostos reales aunque pequeños. Detalle completo en la actualización 2026-09-07 de
+[`docs/adr/0020-umbral-sobrecosto-unificado.md`](adr/0020-umbral-sobrecosto-unificado.md). CX-14
+queda cerrado — el PRD de Consolidación de Lógica Compartida (CX-07 a CX-15) queda completo.
+
 ## CX-15 — chequeo automatizado catálogo MCP ↔ rutas Express reales (2026-09-07)
 
 A pedido del usuario ("empieza con CX-15", ver `docs/PRD_Consolidacion_Logica_Compartida_y_

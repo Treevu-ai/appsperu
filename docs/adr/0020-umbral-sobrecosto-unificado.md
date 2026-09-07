@@ -75,3 +75,59 @@ declara el nivel de confianza en vez de asumir).
 - Este ADR no autoriza inventar el valor del umbral en el futuro sin el análisis de datos que
   CX-14 exige — si CX-14 nunca se ejecuta, el umbral se mantiene en 0% indefinidamente, lo
   cual es una postura válida (conservadora), no un estado transitorio urgente.
+
+## Actualización 2026-09-07 — CX-14 ejecutado, `SOBRECOSTO_UMBRAL_PCT` confirmado en 0%
+
+A diferencia de la sesión que escribió este ADR, esta sí tuvo acceso a las bases locales ya
+ingeridas (Docker Postgres por app, mismo mecanismo usado en todo el resto de la investigación
+de esta semana) — el bloqueo de CX-14 era de acceso a datos, no estructural, y se pudo levantar.
+
+**Hallazgo no anticipado sobre la fuente de `infobras`**: `public_works.costo_actualizado`
+viene en `0.00` para el **100%** de las 10,134 obras ingeridas (7,742 con `monto_viable`
+distinto de cero como base de comparación) — sin excepción, mientras que campos vecinos
+(`avance_fisico_real_pct`, `monto_viable`) sí varían con normalidad. No es un bug de índice de
+columna (`COL.costoActualizado = 27`, verificado en vivo, adyacente a `montoViable = 26` que sí
+funciona) — es casi seguro una característica real de la fuente: INFOBRAS solo popula "Costo
+Actualizado de la inversión" cuando la entidad reporta una reformulación presupuestal formal, y
+la inmensa mayoría de obras nunca la tuvo. **Efecto práctico hoy**: `costDriftPct` en `infobras`
+es sistemáticamente `-100%` (nunca positivo) para toda obra con base de comparación válida, así
+que `esSobrecosto()` devuelve `false` para el 100% de las obras — el umbral es irrelevante en
+`infobras` específicamente, porque la señal fuente no discrimina nada en el corte actual. No es
+un bug de este proyecto ni algo que este ADR deba corregir; queda documentado como limitación
+conocida de la fuente (candidato a nota en `docs/data-contracts/infobras-obras-publicas.md` si
+se retoma ese análisis).
+
+**La distribución real y útil vino de `radar-inversiones` (Invierte.pe)** — la fuente que
+efectivamente consume `salud-institucional/routes/score.ts`, 7,985 inversiones con base de
+comparación válida, 100% de La Libertad (la app está acotada a ese departamento):
+
+| Percentil | `costDriftPct` |
+|---|---|
+| p10 | -17.0% |
+| p25 | 0% |
+| p50 (mediana) | 0% |
+| p75 | 13.6% |
+| p90 | 60.7% |
+| p95 | 113.5% |
+| p99 | 398.5% |
+
+| Umbral candidato | Inversiones clasificadas "con sobrecosto" |
+|---|---|
+| 0% (actual) | 3,124 / 7,985 (39.1%) |
+| 1% | 2,994 (37.5%) |
+| 5% | 2,543 (31.8%) |
+| 10% | 2,199 (27.5%) |
+| 20% | 1,729 (21.6%) |
+
+**Decisión (con el usuario, con esta evidencia delante)**: se **mantiene `SOBRECOSTO_UMBRAL_PCT
+= 0`**. Con la mediana exactamente en 0% y solo ~130 de los 3,124 casos positivos cayendo en la
+banda de posible ruido de redondeo (0%–1%), subir el umbral no elimina ruido de forma
+significativa — solo excluiría inversiones con sobrecosto real, aunque pequeño. 0% sigue siendo
+el criterio más simple de explicar ante un fiscalizador ("gastó más de lo aprobado", sin zona
+gris que justificar) y ya no es una postura conservadora sin evidencia: la evidencia real
+confirma que es defendible, no solo que no había datos para objetarla.
+
+CX-14 queda **cerrado**. No se ejecuta el refactor condicional que este ADR dejó abierto en el
+punto 4 (calcular `costDriftPct` fila por fila en `salud-institucional`) porque el umbral no
+cambió — la comparación SQL `costo_actualizado > monto_viable` sigue siendo exactamente
+equivalente a `costDriftPct > 0`.
