@@ -7,11 +7,15 @@
 
 Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tiempo cambia lo que viene después.
 
-Esta web app (Vite + React Router 7 SPA) consume APIs de appsperu (14 con fetcher propio en `api-client.ts`
-hoy, de <!-- COUNT:APP_COUNT -->27<!-- /COUNT --> reales — ver `docs/ESTADO.md`) y expone
-**<!-- COUNT:TOOL_COUNT -->142<!-- /COUNT --> tools MCP** para que agentes IA (Claude Code, Claude Desktop,
-Cursor, Windsurf, Cline, Continue.dev) encadenen consultas complejas con una sola query vía 2 meta-tools
-(`rastro_buscar_tools` + `rastro_llamar`, ver `mcp-server/README.md`).
+Rastro es agentic-first: el canal principal de consumo son los
+**<!-- COUNT:TOOL_COUNT -->142<!-- /COUNT --> tools MCP** de las <!-- COUNT:APP_COUNT -->27<!-- /COUNT -->
+apps reales de appsperu, buscables vía 2 meta-tools (`rastro_buscar_tools` + `rastro_llamar`, ver
+`mcp-server/README.md`) para que un agente IA (Claude Code, Claude Desktop, Cursor, Windsurf, Cline,
+Continue.dev) encadene consultas complejas con una sola query. Esta web app (Vite + React Router 7 SPA)
+es la capa de lectura visual para humanos — con dashboard propio hoy para 14 de esas 27 apps (`api-client.ts`),
+las que justificaron una vista dedicada por su rol en los 3 lectores (GORE La Libertad, Prensa, Auditoría).
+Esto es una decisión de alcance, no una brecha: un dashboard por cada app nueva no escala — para eso está
+el MCP.
 
 - **URL producción:** https://rastro.fyi/
 - **Stack:** Vite 8 + React 19 + TypeScript 6 + React Router 7 + Tailwind v4

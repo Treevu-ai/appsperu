@@ -140,11 +140,16 @@ console.log(`[generate-mcp-catalog] OK — ${appCount} apps / ${tools.length} to
 // (ej. borrado sin querer al editar el archivo a mano) debe fallar el build,
 // no quedar en silencio con el número viejo para siempre (mismo problema que
 // esta función existe para resolver, un nivel más abajo).
-function updateCountMarkers(filePath, replacements) {
+// `keys` es la lista de claves que ESE archivo debe tener — no todos los
+// archivos mencionan apps y tools, cada uno declara solo lo suyo para que
+// "no tiene el marcador de X" siga significando "se borró por error", no
+// "este archivo nunca habló de X".
+function updateCountMarkers(filePath, replacements, keys) {
   let text = fs.readFileSync(filePath, "utf8");
   let changed = false;
   const missingKeys = [];
-  for (const [key, value] of Object.entries(replacements)) {
+  for (const key of keys) {
+    const value = replacements[key];
     const re = new RegExp(`(<!-- COUNT:${key} -->)[^<]*(<!-- /COUNT -->)`, "g");
     if (!re.test(text)) {
       missingKeys.push(key);
@@ -160,11 +165,15 @@ function updateCountMarkers(filePath, replacements) {
 }
 
 const markerReplacements = { APP_COUNT: appCount, TOOL_COUNT: tools.length };
-const markerFiles = [path.join(root, "apps/rastro-web/README.md"), path.join(root, "apps/rastro-web/public/llms.txt")];
+const markerFiles = [
+  { file: path.join(root, "apps/rastro-web/README.md"), keys: ["APP_COUNT", "TOOL_COUNT"] },
+  { file: path.join(root, "apps/rastro-web/public/llms.txt"), keys: ["APP_COUNT", "TOOL_COUNT"] },
+  { file: path.join(root, "apps/rastro-web/DEPLOY.md"), keys: ["TOOL_COUNT"] },
+];
 let anyMissingMarkers = false;
-for (const file of markerFiles) {
+for (const { file, keys } of markerFiles) {
   if (!fs.existsSync(file)) continue;
-  const { changed, missingKeys } = updateCountMarkers(file, markerReplacements);
+  const { changed, missingKeys } = updateCountMarkers(file, markerReplacements, keys);
   if (changed) console.log(`[generate-mcp-catalog] Conteo actualizado en ${path.relative(root, file)}.`);
   if (missingKeys.length > 0) {
     anyMissingMarkers = true;

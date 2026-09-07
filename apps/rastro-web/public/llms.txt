@@ -51,7 +51,7 @@ Y devuelve una tabla con citas (RUC, OCID, fuente, corte) sin que el usuario hay
 - Muestra cifras con metadatos: fuente (app + tool MCP), corte (fecha del dato), cobertura (COMPLETA / PARCIAL / BLOQUEADA / NO_APLICA), matcher (cómo se vinculó).
 - Sirve 3 lectores: GORE (ficha, comparativo, benchmark de sectores), Prensa (perfil de proveedor), Auditoría (obras y activos por distrito).
 - Expone los <!-- COUNT:TOOL_COUNT -->142<!-- /COUNT --> tools MCP en `/docs/api` para que agentes IA los orquesten (vía 2 meta-tools de búsqueda/ejecución, `rastro_buscar_tools` + `rastro_llamar` — no 142 tools registrados uno por uno).
-- Muestra en `/estado` el estado de las APIs que el frontend monitorea hoy (14 de las <!-- COUNT:APP_COUNT -->27<!-- /COUNT --> apps backend reales — completar las 13 restantes es trabajo en curso, ver `docs/ESTADO.md`).
+- Muestra en `/estado` el estado de las 14 APIs con dashboard visual propio (de las <!-- COUNT:APP_COUNT -->27<!-- /COUNT --> apps backend reales) — decisión de alcance deliberada, no una brecha por cerrar: Rastro es agentic-first, las 27 completas ya están cubiertas hoy vía MCP (`rastro_buscar_tools` + `rastro_llamar`, ver `/docs/api`), un dashboard visual por app no es el patrón que escala.
 
 ## Lo que Rastro NO hace
 
@@ -64,7 +64,7 @@ Y devuelve una tabla con citas (RUC, OCID, fuente, corte) sin que el usuario hay
 
 ## Fuentes de datos (appsperu)
 
-Rastro NO genera ni infiere datos. Cada cifra viene verbatim de una API del repositorio `Treevu-ai/appsperu`. Las <!-- COUNT:APP_COUNT -->27<!-- /COUNT --> apps backend (14 con fetcher propio en el frontend hoy — ver `docs/ESTADO.md`):
+Rastro NO genera ni infiere datos. Cada cifra viene verbatim de una API del repositorio `Treevu-ai/appsperu`. Las <!-- COUNT:APP_COUNT -->27<!-- /COUNT --> apps backend (14 con dashboard visual propio en este sitio, las 27 completas vía MCP — decisión de alcance, no brecha; ver `src/lib/types.ts`):
 
 - radar-ejecucion (MEF, presupuesto/ejecución)
 - compras-publicas (OECE/OCDS, contrataciones)
