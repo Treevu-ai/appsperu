@@ -131,3 +131,25 @@ CX-14 queda **cerrado**. No se ejecuta el refactor condicional que este ADR dej�
 punto 4 (calcular `costDriftPct` fila por fila en `salud-institucional`) porque el umbral no
 cambió — la comparación SQL `costo_actualizado > monto_viable` sigue siendo exactamente
 equivalente a `costDriftPct > 0`.
+
+## Actualización 2026-09-07 (2) — corregido el hallazgo de `infobras`, no solo documentado
+
+El hallazgo de la sección anterior ("la fuente de `infobras` está degenerada") se verificó de
+forma exhaustiva y se corrigió, no solo se dejó anotado: se descargó y recorrió el **export
+nacional completo** de INFOBRAS (191,180 filas, sin filtrar departamento) — `costo_actualizado`
+trae `"0"` en el **100% de las filas, sin una sola excepción**, confirmando que no es un
+artefacto del corte local de La Libertad ni de una fecha de ingesta específica.
+
+`apps/infobras/api/src/ingest/normalize.ts` (`parseCostoActualizado`) ahora trata un valor
+parseado de exactamente `0` como `null` — con evidencia de 191,180/191,180, un "0" real sería
+estadísticamente indistinguible de "no reportado". Migración
+`004_costo_actualizado_zero_as_null.sql` corrigió las filas ya persistidas (verificado: 10,134
+filas locales pasaron de `costo_actualizado = 0` a `NULL`). Detalle completo en
+`docs/data-contracts/infobras-obras-publicas.md`.
+
+Efecto en `costDriftPct`/`esSobrecosto` para `infobras`: antes devolvían `-100%`/`false`
+sistemáticamente (un resultado que parecía decir "sin sobrecosto" pero en realidad reflejaba
+ausencia de dato); ahora devuelven `null`/`false` con `costoActualizado: null` explícito. La
+señal de Cost Drift queda documentada como no disponible en la práctica para `infobras` con la
+fuente actual, sin afectar `radar-inversiones`/Invierte.pe (que sí reporta valores reales, ver
+la distribución de la actualización anterior).

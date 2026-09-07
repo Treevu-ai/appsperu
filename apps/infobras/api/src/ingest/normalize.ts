@@ -20,6 +20,22 @@ export function parseSpaceDecimalNumber(raw: string | undefined): number | null 
   return null;
 }
 
+/**
+ * `Costo Actualizado de la inversión` (columna 27) viene en "0" para el 100% de las 191,180
+ * filas del export nacional — confirmado en vivo (2026-09-07, CX-14) descargando y recorriendo
+ * el archivo completo, sin una sola excepción. No es un bug de índice de columna (la adyacente
+ * `Monto Viable`, columna 26, sí varía con normalidad) ni específico de La Libertad. Es casi
+ * seguro que INFOBRAS solo popula este campo ante una reformulación presupuestal formal, que el
+ * export de Datos Abiertos no backfillea para el resto. Un "0" real y reportado sería
+ * estadísticamente indistinguible de "0 = no reportado" con esta evidencia — se trata como
+ * ausencia de dato (null), no como un costo actualizado real de cero, siguiendo el mismo
+ * principio de honestidad de datos que ya usa `parseSpaceDecimalNumber` para montos vacíos.
+ */
+function parseCostoActualizado(raw: string | undefined): number | null {
+  const parsed = parseSpaceDecimalNumber(raw);
+  return parsed === 0 ? null : parsed;
+}
+
 export function parseSiNoBoolean(raw: string | undefined): boolean {
   return (raw ?? "").trim().toUpperCase() === "SI";
 }
@@ -116,7 +132,7 @@ export function normalizeInfobrasRows(rows: string[][]): NormalizeResult {
     }
 
     const montoViable = parseSpaceDecimalNumber(cell(row, COL.montoViable));
-    const costoActualizado = parseSpaceDecimalNumber(cell(row, COL.costoActualizado));
+    const costoActualizado = parseCostoActualizado(cell(row, COL.costoActualizado));
     const costoExpedienteTecnico = parseSpaceDecimalNumber(cell(row, COL.costoExpedienteTecnico));
     const avanceFisicoProgPct = parseSpaceDecimalNumber(cell(row, COL.avanceFisicoProgPct));
     const avanceFisicoRealPct = parseSpaceDecimalNumber(cell(row, COL.avanceFisicoRealPct));

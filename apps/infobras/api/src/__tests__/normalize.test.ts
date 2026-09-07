@@ -100,6 +100,16 @@ describe("normalizeInfobrasRows", () => {
     });
   });
 
+  it("treats costoActualizado = 0 as null, not as a real reported value (CX-14, confirmado en vivo 2026-09-07: 191,180/191,180 filas nacionales traen 0)", () => {
+    const { rows } = normalizeInfobrasRows([realRow({ [COL.costoActualizado]: "0" })]);
+    expect(rows[0].costoActualizado).toBeNull();
+  });
+
+  it("still parses a genuine non-zero costoActualizado through normally", () => {
+    const { rows } = normalizeInfobrasRows([realRow({ [COL.costoActualizado]: "3200000 50" })]);
+    expect(rows[0].costoActualizado).toBe(3200000.5);
+  });
+
   it("rejects a row missing codigo Infobras", () => {
     const { rows, rejected } = normalizeInfobrasRows([realRow({ [COL.codigoInfobras]: "" })]);
     expect(rows).toHaveLength(0);

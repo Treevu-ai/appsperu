@@ -2,6 +2,18 @@
 
 Última actualización: 2026-09-07.
 
+## Fix — `infobras.costo_actualizado` corregido, no solo documentado (2026-09-07)
+
+A pedido del usuario ("atiendelo investiga y propon solucion", sobre el hallazgo de CX-14), se
+confirmó de forma exhaustiva y se corrigió el hallazgo de que `costo_actualizado` viene vacío en
+INFOBRAS: se descargó el export nacional completo (191,180 filas) y se verificó que el campo
+trae `"0"` en el 100% de las filas, sin excepción — no es un artefacto del corte local. Fix en
+`apps/infobras/api/src/ingest/normalize.ts` (trata `0` parseado como `null`) + migración
+`004_costo_actualizado_zero_as_null.sql` que corrigió las 10,134 filas ya persistidas. Detalle
+completo en la actualización (2) de
+[`docs/adr/0020-umbral-sobrecosto-unificado.md`](adr/0020-umbral-sobrecosto-unificado.md) y en
+[`docs/data-contracts/infobras-obras-publicas.md`](data-contracts/infobras-obras-publicas.md).
+
 Veintisiete apps standalone con API propia; todas son API-only (sin frontend web), salvo `rastro-web` (ver abajo). `salud-institucional` no tiene Postgres propio — es un agregador de solo lectura sobre las otras fuentes.
 
 ## CX-14 — umbral de sobrecosto confirmado con evidencia real (2026-09-07)
