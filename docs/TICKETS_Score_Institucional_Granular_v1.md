@@ -105,6 +105,7 @@
   - Test: valores en cada frontera exacta (45.9, 55.8, 67.9, 72.3) caen en la banda correcta (verificar `>=` vs `>` en cada límite).
 - **Dependencias:** ninguna técnica.
 - **Prioridad:** P0 · **Esfuerzo:** S
+- **Hecho (2026-09-08):** implementado con los umbrales ya confirmados por el usuario. Antes de implementar se re-verificó la distribución real tras SI-08 (que cambió el score de 3 entidades de forma significativa) — los percentiles de las 129 entidades apenas se movieron (todos cambiaron menos de 1 punto: p10 45.9→46.1, p25 55.8→55.9, mediana 61.3→61.7, p75 67.9→68.8, p90 72.3→72.8, min/max iguales), así que no se recalcularon los umbrales, documentado explícitamente en `score/compute.ts` y en `docs/data-contracts/salud-institucional-score.md`. Verificado en vivo: distribución real de bandas para La Libertad — Sobresaliente 16, Alto 20, Medio 62, Bajo 19, Crítico 12, sin score 1 (129+1=130, coincide exacto); 0 entidades sin score recibieron banda. Tests de regresión en las 4 fronteras exactas (45.9/55.8/67.9/72.3) y sus vecinos inmediatos, suite completa 31/31 en verde.
 
 ---
 

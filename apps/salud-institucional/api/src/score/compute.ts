@@ -63,6 +63,9 @@ export interface EntityScore {
   provincia: string | null;
   distrito: string | null;
   scoreCompuesto: number | null;
+  /** Clasificación cualitativa de scoreCompuesto (SI-04) — null explícito
+   * cuando scoreCompuesto es null, nunca una banda por defecto. */
+  banda: Banda | null;
   componentesUsados: number;
   componentes: {
     ejecucion: ComponentScore;
@@ -81,6 +84,46 @@ export interface EntityScore {
 function pct(numerator: number, denominator: number): number | null {
   if (denominator <= 0) return null;
   return Math.round((numerator / denominator) * 1000) / 10; // 1 decimal
+}
+
+export type Banda = "Sobresaliente" | "Alto" | "Medio" | "Bajo" | "Crítico";
+
+/**
+ * Umbrales de banda (SI-04) — 5 bandas con cola crítica, esquema confirmado
+ * por el usuario el 2026-09-07 sobre los percentiles reales de
+ * scoreCompuesto en las 129 entidades de La Libertad con score no nulo en
+ * esa fecha: mínimo 27.9, p10 45.9, p25 55.8, mediana 61.3, p75 67.9,
+ * p90 72.3, máximo 80.3, promedio 60.7.
+ *
+ * Re-verificado el 2026-09-08 tras SI-08 (fix de PIM=0 que cambió el score
+ * de 3 entidades de forma significativa, incl. Trujillo MPT 64.2 -> 80.2):
+ * la distribución completa de las 129 entidades apenas se movió
+ * (p10 46.1, p25 55.9, mediana 61.7, p75 68.8, p90 72.8, min/max iguales,
+ * promedio 61.1 — todos los percentiles cambiaron menos de 1 punto) porque
+ * solo 3 de 129 entidades se vieron afectadas. No se recalculan los
+ * umbrales confirmados por ese cambio — la distribución no cambió lo
+ * suficiente como para justificarlo (ver criterio de mantenimiento en
+ * docs/TICKETS_Score_Institucional_Granular_v1.md, SI-04).
+ *
+ * NO se recalculan automáticamente si la distribución cambia en el futuro
+ * (ej. tras automatizar el crossref o agregar más departamentos) — eso
+ * requiere una decisión explícita, no una asunción de que estos siguen
+ * siendo representativos para siempre.
+ */
+const BANDA_THRESHOLDS: ReadonlyArray<{ min: number; banda: Banda }> = [
+  { min: 72.3, banda: "Sobresaliente" }, // p90
+  { min: 67.9, banda: "Alto" }, // p75
+  { min: 55.8, banda: "Medio" }, // p25
+  { min: 45.9, banda: "Bajo" }, // p10
+  { min: -Infinity, banda: "Crítico" },
+];
+
+function bandaDe(scoreCompuesto: number | null): Banda | null {
+  if (scoreCompuesto === null) return null;
+  for (const { min, banda } of BANDA_THRESHOLDS) {
+    if (scoreCompuesto >= min) return banda;
+  }
+  return "Crítico"; // inalcanzable (el último umbral es -Infinity), solo para el chequeo de tipos
 }
 
 export function computeEntityScore(input: EntityScoreInputs): EntityScore {
@@ -145,6 +188,7 @@ export function computeEntityScore(input: EntityScoreInputs): EntityScore {
     provincia: input.provincia,
     distrito: input.distrito,
     scoreCompuesto,
+    banda: bandaDe(scoreCompuesto),
     componentesUsados: disponibles.length,
     componentes,
     rankingEnNivelGobierno: null,

@@ -1361,7 +1361,9 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "(infobras), inversiones (radar-inversiones), compras (compras-publicas) y salud tributaria de proveedores " +
       "(identidad-fiscal). Si una fuente no tiene dato para una entidad, ese componente se OMITE del promedio — " +
       "nunca se imputa 0 ni 100 por ausencia. No hay 'ingesta' propia que programar: requiere que las otras 5 apps " +
-      "estén corriendo. Default: LA LIBERTAD, año 2026.",
+      "estén corriendo. Cada resultado con score también trae `banda` (SI-04, 2026-09-08): Sobresaliente/Alto/" +
+      "Medio/Bajo/Crítico, umbrales fijos por percentiles reales de La Libertad — null si scoreCompuesto es null. " +
+      "Default: LA LIBERTAD, año 2026.",
     pathTemplate: "/api/score",
     pathParams: [],
     querySchema: {
