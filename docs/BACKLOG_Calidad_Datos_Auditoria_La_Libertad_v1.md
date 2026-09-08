@@ -21,7 +21,7 @@
 | Sprint | Objetivo | Tickets | Puerta de salida |
 |---|---|---|---|
 | **1** | Cerrar los 5 bugs de comportamiento confirmados con evidencia HTTP | DQ-01, DQ-02, DQ-03, DQ-04, DQ-05 | `/api/execution` pagina el universo real y expone provincia; los catálogos de MTC y residuos filtran por corte/año vigente por defecto; el crossref de score institucional está diagnosticado (y resuelto o formalmente documentado como limitación aceptada) |
-| **2** | Exponer categorías ya ingeridas y blindar contra el próximo bug del mismo tipo | DQ-06, DQ-07, DQ-08, DQ-09, DQ-10, DQ-14 | Endpoints de agregación disponibles para INFOBRAS y ejecución de gasto; `area_censo` expuesto en instituciones educativas; `docs/data-contracts` documenta qué fuentes son panel multi-año; smoke test genérico detecta discrepancias total-vs-suma-de-filas; INFOBRAS marca filas con `distrito` no reconocido para su departamento |
+| **2** | Exponer categorías ya ingeridas y blindar contra el próximo bug del mismo tipo | DQ-06, DQ-07, DQ-08, DQ-09, DQ-10, DQ-14, DQ-16 | Endpoints de agregación disponibles para INFOBRAS y ejecución de gasto; `area_censo` expuesto en instituciones educativas; `docs/data-contracts` documenta qué fuentes son panel multi-año; smoke test genérico detecta discrepancias total-vs-suma-de-filas; INFOBRAS marca filas con `distrito` no reconocido para su departamento; renamu y radar-ejecucion no mezclan años silenciosamente |
 | **3** | Decisiones explícitas sobre gaps de cobertura sin solución de una línea | DQ-11, DQ-12, DQ-13, DQ-15 | ADR/documento de decisión para cada uno — implementación solo si la evaluación la justifica |
 
 ---
@@ -44,6 +44,7 @@ Sprint 2: DQ-06 (agregación INFOBRAS) ⟷ DQ-07 (area_censo) — independientes
           DQ-10 (smoke test genérico, depende de DQ-01 y DQ-06 para tener algo correcto que verificar)
             ↓
           DQ-14 (validación de distrito en INFOBRAS, hallazgo 2026-09-08) — independiente, sin fecha comprometida
+          DQ-16 (corte vigente en renamu + colapso de anio_fiscal en radar-ejecucion, hallazgo 2026-09-08) — independiente, sin fecha comprometida
             ↓
 Sprint 3: DQ-11 (ADR score parcial, depende del diagnóstico de DQ-05)
           DQ-12 (evaluación CEPLAN Geo) — independiente, sin fecha comprometida
@@ -83,6 +84,7 @@ Cada sprint deja una **puerta de salida verificable**: si la puerta no se cumple
 | DQ-09 | Documentar fuentes panel multi-año/multi-corte en `docs/data-contracts` | Lista explícita de fuentes panel (mínimo las 4 identificadas) con su comportamiento por defecto documentado | Idealmente después de DQ-03/DQ-04 | P1 | S | ✅ Hecho (2026-09-08) — `docs/data-contracts/paneles-multi-corte.md`, 9 fuentes documentadas |
 | DQ-10 | Smoke test genérico: total de resumen vs. suma de filas paginadas | Script/suite que detecta discrepancias total-vs-paginación en cualquier app con endpoint de resumen; corre en CI | DQ-01, DQ-06 | P1 | M | ✅ Hecho (2026-09-08) — `scripts/smoke-check-pagination.mjs`, on-demand, 5/5 endpoints verificados |
 | DQ-14 | Validar `distrito` de INFOBRAS contra catálogo de territorios en el ingest | Filas con `distrito` no reconocido para su `departamento` quedan marcadas (no rechazadas) en vez de insertarse como si fueran confiables; expuesto en la API | — | P2 | S | ✅ Hecho (2026-09-08) — cobertura nacional (1,874 distritos), 7/7 casos reales detectados, ver TICKETS |
+| DQ-16 | Corte vigente en `renamu`/municipalidades + colapso de `anio_fiscal` en `radar-ejecucion` | `GET /api/municipalidades` filtra al año más reciente por defecto; `LATEST_BUDGET_CTE` decide explícitamente su comportamiento multi-año fiscal (filtro o advertencia, nunca silencio) | — | P2 | S+S | ⬜ Pendiente |
 
 **Puerta de salida del Sprint 2**: las categorías confirmadas como ya ingeridas (sector, causal, naturaleza, área urbano/rural, función, genérica) están disponibles vía API sin requerir descarga manual y agregación client-side; existe un mecanismo automatizado que habría detectado el bug de DQ-01 antes de que una auditoría manual tuviera que encontrarlo.
 
