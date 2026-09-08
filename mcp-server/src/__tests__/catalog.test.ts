@@ -133,6 +133,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "radar_ejecucion_care_services",
     "radar_ejecucion_execution",
     "radar_ejecucion_execution_by_entity",
+    "radar_ejecucion_execution_resumen",
     "radar_ejecucion_food_coverage",
     "radar_ejecucion_food_evidence_queue",
     "radar_ejecucion_food_integrity",

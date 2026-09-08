@@ -133,6 +133,94 @@ executionRouter.get("/", asyncHandler(async (req, res) => {
   });
 }));
 
+const GROUP_BY_COLUMNS = {
+  funcion: "b.funcion",
+  generica: "b.generica",
+} as const;
+
+const ExecutionResumenQuerySchema = z.object({
+  groupBy: z.enum(Object.keys(GROUP_BY_COLUMNS) as [string, ...string[]])
+    .describe("DQ-08: agrega PIA/PIM/devengado por 'funcion' o 'generica'. Un valor no soportado responde 400."),
+  nivel: z.string().min(1).optional(),
+  anio: z.string().regex(/^\d{4}$/, "debe ser un año de 4 dígitos").optional(),
+  ubigeo: z.string().min(1).optional(),
+  departamento: z.string().min(1).optional(),
+  metaDepartamento: z.string().min(1).optional(),
+});
+
+// DQ-08: agregación por función/genérica sin tener que paginar el universo
+// completo y sumar client-side. Debe declararse antes de "/:entityCode" —
+// si no, Express trataría "resumen" como un entityCode.
+executionRouter.get("/resumen", asyncHandler(async (req, res) => {
+  const parsed = parseQuery(ExecutionResumenQuerySchema, req.query, res);
+  if (!parsed) return;
+  const { groupBy, nivel, anio, ubigeo, departamento, metaDepartamento } = parsed;
+
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+
+  if (nivel) {
+    params.push(nivel);
+    conditions.push(`e.nivel_gobierno = $${params.length}`);
+  }
+  if (anio) {
+    params.push(Number(anio));
+    conditions.push(`b.anio_fiscal = $${params.length}`);
+  }
+  if (ubigeo) {
+    params.push(ubigeo);
+    conditions.push(`e.ubigeo = $${params.length}`);
+  }
+  if (departamento) {
+    params.push(departamento.toUpperCase());
+    conditions.push(`t.departamento = $${params.length}`);
+  }
+  if (metaDepartamento) {
+    params.push(metaDepartamento.toUpperCase());
+    conditions.push(`b.meta_departamento = $${params.length}`);
+  }
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  // Columna real resuelta por el mapa fijo GROUP_BY_COLUMNS, nunca por el
+  // texto crudo del query param, para no abrir una inyección SQL por
+  // nombre de columna (mismo criterio que DQ-06 en infobras).
+  const column = GROUP_BY_COLUMNS[groupBy as keyof typeof GROUP_BY_COLUMNS];
+  const { rows } = await pool.query(
+    `${LATEST_BUDGET_CTE}
+     SELECT ${column} AS grupo,
+            COUNT(*) AS filas,
+            SUM(b.pia) AS pia,
+            SUM(b.pim) AS pim,
+            SUM(b.devengado) AS devengado
+     FROM latest_budget b
+     JOIN entities e ON e.entity_code = b.entity_code
+     LEFT JOIN territories t ON t.ubigeo = e.ubigeo
+     ${where}
+     GROUP BY ${column}
+     ORDER BY devengado DESC`,
+    params
+  );
+
+  const porGrupo = rows.map((r) => ({
+    grupo: r.grupo,
+    filas: Number(r.filas),
+    pia: Number(r.pia),
+    pim: Number(r.pim),
+    devengado: Number(r.devengado),
+    avancePct: avancePct({ pim: Number(r.pim), devengado: Number(r.devengado) }),
+  }));
+
+  res.json({
+    groupBy,
+    totalFilas: porGrupo.reduce((acc, g) => acc + g.filas, 0),
+    totalPia: porGrupo.reduce((acc, g) => acc + g.pia, 0),
+    totalPim: porGrupo.reduce((acc, g) => acc + g.pim, 0),
+    totalDevengado: porGrupo.reduce((acc, g) => acc + g.devengado, 0),
+    porGrupo,
+    fuente: { dataset: "MEF - Presupuesto y ejecución de gasto" },
+  });
+}));
+
 executionRouter.get("/:entityCode", asyncHandler(async (req, res) => {
   const { rows } = await pool.query(
     `${LATEST_BUDGET_CTE}

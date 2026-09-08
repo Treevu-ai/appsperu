@@ -117,6 +117,7 @@
   - `docs/conectores.md` documenta el nuevo endpoint.
 - **Dependencias:** DQ-01 (necesita el universo completo de filas para que la agregación sea correcta).
 - **Prioridad:** P1 · **Esfuerzo:** M
+- **Hecho (2026-09-08):** `GET /api/execution/resumen?groupBy=funcion|generica` (requerido; 400 para cualquier otro valor), respeta los mismos filtros que `GET /api/execution`. Verificado en vivo: `groupBy=funcion` para La Libertad da 22 grupos cuya suma de filas es exactamente 2,594, el total departamental. Tests de regresión agregados, suite completa 87/87 en verde.
 
 ---
 

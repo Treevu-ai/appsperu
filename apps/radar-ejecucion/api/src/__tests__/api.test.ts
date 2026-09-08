@@ -404,6 +404,48 @@ describe("GET /api/servicios-cuidados", () => {
   });
 });
 
+describe("GET /api/execution/resumen (DQ-08)", () => {
+  it("groupBy=funcion agrega PIA/PIM/devengado por función, sumando el total", async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        { grupo: "EDUCACION", filas: "800", pia: "100000000", pim: "120000000", devengado: "70000000" },
+        { grupo: "SALUD", filas: "600", pia: "50000000", pim: "60000000", devengado: "35000000" },
+        { grupo: "TRANSPORTE", filas: "300", pia: "20000000", pim: "25000000", devengado: "10000000" },
+      ],
+    });
+
+    const res = await request(createApp()).get("/api/execution/resumen").query({ groupBy: "funcion" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.groupBy).toBe("funcion");
+    expect(res.body.porGrupo).toHaveLength(3);
+    expect(res.body.totalFilas).toBe(800 + 600 + 300);
+    expect(res.body.totalDevengado).toBe(70000000 + 35000000 + 10000000);
+
+    const [sql] = queryMock.mock.calls[0];
+    expect(sql).toMatch(/GROUP BY b\.funcion/);
+  });
+
+  it("groupBy=generica agrupa por la columna real, no el texto crudo del query param", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+    await request(createApp()).get("/api/execution/resumen").query({ groupBy: "generica" });
+    const [sql] = queryMock.mock.calls[0];
+    expect(sql).toMatch(/GROUP BY b\.generica/);
+  });
+
+  it("responde 400 sin groupBy — no hay agregación implícita por defecto", async () => {
+    const res = await request(createApp()).get("/api/execution/resumen");
+    expect(res.status).toBe(400);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it("responde 400 explícito para un groupBy no soportado, nunca lo ignora en silencio", async () => {
+    const res = await request(createApp()).get("/api/execution/resumen").query({ groupBy: "loQueSea" });
+    expect(res.status).toBe(400);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("GET /api/execution/:entityCode", () => {
   it("returns 404 when the entity has no ingested data", async () => {
     queryMock.mockResolvedValueOnce({ rows: [] });
