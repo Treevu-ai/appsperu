@@ -103,6 +103,15 @@ executionRouter.get("/", asyncHandler(async (req, res) => {
     },
   ])).values()];
 
+  // DQ-16: LATEST_BUDGET_CTE dedupe por (entity_code, funcion, anio_fiscal, ...) —
+  // anio_fiscal es parte de la clave, así que NO colapsa entre años fiscales
+  // distintos. Sin `anio` explícito, esta página puede mezclar más de un año
+  // fiscal si alguna vez se ingiere un segundo. En vez de filtrar en silencio
+  // (cambiaría el comportamiento por defecto de un CTE compartido por 5 apps),
+  // se advierte explícitamente cuántos años fiscales trae la página — nunca
+  // queda como una mezcla silenciosa.
+  const aniosFiscalesUsados = [...new Set(rows.map((r) => r.anio_fiscal))].sort();
+
   res.json({
     total,
     limit,
@@ -111,6 +120,11 @@ executionRouter.get("/", asyncHandler(async (req, res) => {
     coberturaTemporal: {
       estado: "PARCIAL",
       cortesUsados,
+      aniosFiscalesUsados,
+      advertenciaMultiAnio:
+        aniosFiscalesUsados.length > 1
+          ? `Esta página mezcla ${aniosFiscalesUsados.length} años fiscales (${aniosFiscalesUsados.join(", ")}). Filtra por \`anio\` si necesitas un solo año fiscal — sumar sin ese filtro infla cualquier total agregado.`
+          : null,
       limitacion: "Cada observación usa su último corte disponible; los cortes pueden diferir entre particiones de cobertura.",
     },
     resultados: rows.map((r) => ({
@@ -191,7 +205,8 @@ executionRouter.get("/resumen", asyncHandler(async (req, res) => {
             COUNT(*) AS filas,
             SUM(b.pia) AS pia,
             SUM(b.pim) AS pim,
-            SUM(b.devengado) AS devengado
+            SUM(b.devengado) AS devengado,
+            ARRAY_AGG(DISTINCT b.anio_fiscal) AS anios_fiscales
      FROM latest_budget b
      JOIN entities e ON e.entity_code = b.entity_code
      LEFT JOIN territories t ON t.ubigeo = e.ubigeo
@@ -210,6 +225,13 @@ executionRouter.get("/resumen", asyncHandler(async (req, res) => {
     avancePct: avancePct({ pim: Number(r.pim), devengado: Number(r.devengado) }),
   }));
 
+  // DQ-16: esta query SUMA pia/pim/devengado — a diferencia de GET /api/execution
+  // (que solo lista filas), mezclar años fiscales acá infla el total
+  // directamente, no solo duplica filas. Sin `anio` explícito, se advierte si
+  // algún grupo mezcla más de un año fiscal (LATEST_BUDGET_CTE no colapsa
+  // anio_fiscal en su dedupe).
+  const aniosFiscalesUsados = [...new Set(rows.flatMap((r) => r.anios_fiscales as number[]))].sort();
+
   res.json({
     groupBy,
     totalFilas: porGrupo.reduce((acc, g) => acc + g.filas, 0),
@@ -217,6 +239,11 @@ executionRouter.get("/resumen", asyncHandler(async (req, res) => {
     totalPim: porGrupo.reduce((acc, g) => acc + g.pim, 0),
     totalDevengado: porGrupo.reduce((acc, g) => acc + g.devengado, 0),
     porGrupo,
+    aniosFiscalesUsados,
+    advertenciaMultiAnio:
+      !anio && aniosFiscalesUsados.length > 1
+        ? `Los totales mezclan ${aniosFiscalesUsados.length} años fiscales (${aniosFiscalesUsados.join(", ")}) porque no se pasó \`anio\`. Cada total está sumado a través de esos años, no de un solo año fiscal.`
+        : null,
     fuente: { dataset: "MEF - Presupuesto y ejecución de gasto" },
   });
 }));

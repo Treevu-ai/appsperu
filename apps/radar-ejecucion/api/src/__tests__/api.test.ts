@@ -84,6 +84,35 @@ describe("GET /api/execution", () => {
     const [, rowParams] = queryMock.mock.calls[1];
     expect(rowParams).toEqual(["GOBIERNO_LOCAL", 2025, 1000, 0]);
   });
+
+  it("DQ-16: advierte explícitamente cuando la página mezcla más de un año fiscal", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "2" }] });
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        { entity_code: "001", nombre: "A", nivel_gobierno: "GOBIERNO_LOCAL", provincia: null, distrito: null, funcion: "Educación", anio_fiscal: 2025, pia: "100", pim: "100", devengado: "50", fecha_corte: "2026-08-16", resource_id: "abc" },
+        { entity_code: "001", nombre: "A", nivel_gobierno: "GOBIERNO_LOCAL", provincia: null, distrito: null, funcion: "Educación", anio_fiscal: 2026, pia: "100", pim: "100", devengado: "50", fecha_corte: "2026-08-16", resource_id: "abc" },
+      ],
+    });
+
+    const res = await request(createApp()).get("/api/execution");
+
+    expect(res.body.coberturaTemporal.aniosFiscalesUsados).toEqual([2025, 2026]);
+    expect(res.body.coberturaTemporal.advertenciaMultiAnio).toMatch(/mezcla 2 años fiscales/);
+  });
+
+  it("DQ-16: sin mezcla de años, advertenciaMultiAnio queda null", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "1" }] });
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        { entity_code: "001", nombre: "A", nivel_gobierno: "GOBIERNO_LOCAL", provincia: null, distrito: null, funcion: "Educación", anio_fiscal: 2026, pia: "100", pim: "100", devengado: "50", fecha_corte: "2026-08-16", resource_id: "abc" },
+      ],
+    });
+
+    const res = await request(createApp()).get("/api/execution");
+
+    expect(res.body.coberturaTemporal.aniosFiscalesUsados).toEqual([2026]);
+    expect(res.body.coberturaTemporal.advertenciaMultiAnio).toBeNull();
+  });
 });
 
 describe("GET /api/execution (paginación)", () => {
@@ -408,9 +437,9 @@ describe("GET /api/execution/resumen (DQ-08)", () => {
   it("groupBy=funcion agrega PIA/PIM/devengado por función, sumando el total", async () => {
     queryMock.mockResolvedValueOnce({
       rows: [
-        { grupo: "EDUCACION", filas: "800", pia: "100000000", pim: "120000000", devengado: "70000000" },
-        { grupo: "SALUD", filas: "600", pia: "50000000", pim: "60000000", devengado: "35000000" },
-        { grupo: "TRANSPORTE", filas: "300", pia: "20000000", pim: "25000000", devengado: "10000000" },
+        { grupo: "EDUCACION", filas: "800", pia: "100000000", pim: "120000000", devengado: "70000000", anios_fiscales: [2026] },
+        { grupo: "SALUD", filas: "600", pia: "50000000", pim: "60000000", devengado: "35000000", anios_fiscales: [2026] },
+        { grupo: "TRANSPORTE", filas: "300", pia: "20000000", pim: "25000000", devengado: "10000000", anios_fiscales: [2026] },
       ],
     });
 
@@ -421,9 +450,33 @@ describe("GET /api/execution/resumen (DQ-08)", () => {
     expect(res.body.porGrupo).toHaveLength(3);
     expect(res.body.totalFilas).toBe(800 + 600 + 300);
     expect(res.body.totalDevengado).toBe(70000000 + 35000000 + 10000000);
+    expect(res.body.aniosFiscalesUsados).toEqual([2026]);
+    expect(res.body.advertenciaMultiAnio).toBeNull();
 
     const [sql] = queryMock.mock.calls[0];
     expect(sql).toMatch(/GROUP BY b\.funcion/);
+    expect(sql).toMatch(/ARRAY_AGG\(DISTINCT b\.anio_fiscal\)/);
+  });
+
+  it("DQ-16: advierte cuando los totales agregados mezclan más de un año fiscal sin `anio` explícito", async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [{ grupo: "EDUCACION", filas: "2", pia: "200", pim: "200", devengado: "100", anios_fiscales: [2025, 2026] }],
+    });
+
+    const res = await request(createApp()).get("/api/execution/resumen").query({ groupBy: "funcion" });
+
+    expect(res.body.aniosFiscalesUsados).toEqual([2025, 2026]);
+    expect(res.body.advertenciaMultiAnio).toMatch(/mezclan 2 años fiscales/);
+  });
+
+  it("DQ-16: con `anio` explícito, no advierte aunque el grupo reporte un solo año", async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [{ grupo: "EDUCACION", filas: "1", pia: "100", pim: "100", devengado: "50", anios_fiscales: [2025] }],
+    });
+
+    const res = await request(createApp()).get("/api/execution/resumen").query({ groupBy: "funcion", anio: "2025" });
+
+    expect(res.body.advertenciaMultiAnio).toBeNull();
   });
 
   it("groupBy=generica agrupa por la columna real, no el texto crudo del query param", async () => {

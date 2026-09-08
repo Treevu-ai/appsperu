@@ -30,7 +30,10 @@ export const TOOL_CATALOG: ToolSpec[] = [
     app: "radar-ejecucion",
     description:
       "Ejecución presupuestal (PIA/PIM/Devengado) por entidad + función + año fiscal, agregada desde el CSV nacional del MEF. " +
-      "Cobertura PARCIAL: acotada a La Libertad (offsets fijos en el conector), no todo el país. " +
+      "Cobertura PARCIAL: acotada a La Libertad (offsets fijos en el conector), no todo el país. Sin `anio`, " +
+      "puede mezclar más de un año fiscal (el dedupe interno no colapsa anio_fiscal) — la respuesta expone " +
+      "`coberturaTemporal.aniosFiscalesUsados`/`advertenciaMultiAnio` para que nunca quede en silencio (DQ-16, " +
+      "2026-09-08). " +
       SIN_SCHEDULER,
     pathTemplate: "/api/execution",
     pathParams: [],
@@ -59,7 +62,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "universo completo y sumar client-side. `groupBy` es requerido (funcion|generica); cualquier otro valor " +
       "responde 400. Acepta los mismos filtros que radar_ejecucion_execution. Verificado en vivo: " +
       "groupBy=funcion para La Libertad da 22 grupos cuya suma de filas es exactamente 2,594 (el total " +
-      "departamental). " + SIN_SCHEDULER,
+      "departamental). Sin `anio`, los totales agregados pueden mezclar más de un año fiscal — la respuesta " +
+      "expone `aniosFiscalesUsados`/`advertenciaMultiAnio` (DQ-16, 2026-09-08). " + SIN_SCHEDULER,
     pathTemplate: "/api/execution/resumen",
     pathParams: [],
     querySchema: {
@@ -1869,6 +1873,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "deliberadamente parcial: el Módulo I completo de la fuente (datos generales) se excluyó por mezclar " +
       "campos institucionales con datos de persona natural del alcalde (nombre, teléfono y correo personal) " +
       "que no se pudieron mapear con certeza contra el diccionario de variables — nunca se ingirió PII. " +
+      "Panel multi-año (2024-2025): sin `anio` ni `historico=true` filtra al año más reciente por defecto " +
+      "(DQ-16, 2026-09-08) — antes mezclaba ambos años, duplicando cada municipalidad. " +
       SIN_SCHEDULER,
     pathTemplate: "/api/municipalidades",
     pathParams: [],
@@ -1876,6 +1882,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
       anio: z.coerce.number().int().min(2000).max(2100).optional(),
       departamento: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
       ubigeo: z.string().regex(/^\d{6}$/).optional(),
+      historico: z.enum(["true", "false"]).optional().describe("true trae todos los años (DQ-16); default: solo el más reciente."),
     },
   },
   {
