@@ -61,6 +61,16 @@ es la única excepción parcial: su endpoint ya usa `DISTINCT ON (ubigeo) ... OR
 DESC` para devolver solo el corte más reciente por defecto (mismo patrón que DQ-03/DQ-04,
 implementado desde el inicio, no como fix posterior).
 
+## Verificación automatizada (DQ-10)
+
+`scripts/smoke-check-pagination.mjs` pagina en vivo los endpoints con `{total, limit, offset,
+hasMore}` (incluye `residuos-solidos`/`residuos` e `infraestructura-mtc`/`aerodromos`+
+`terminales-portuarios`, dos de las fuentes de este documento) y falla con un mensaje explícito
+si la suma de filas paginadas no coincide con el `total` declarado — el mismo chequeo manual
+que descubrió el `LIMIT 1000` oculto de DQ-01. Corre on-demand (`node
+scripts/smoke-check-pagination.mjs`), no está cableado a un schedule de CI — ver DQ-10 en
+`TICKETS_Calidad_Datos_Auditoria_La_Libertad_v1.md` para la decisión y su razón.
+
 ## Regla para nuevas fuentes
 
 Antes de dar por cerrado un conector nuevo cuya tabla tenga una clave única que incluya

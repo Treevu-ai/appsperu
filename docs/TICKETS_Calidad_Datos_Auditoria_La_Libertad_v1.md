@@ -145,6 +145,8 @@
   - Falla con un mensaje claro indicando qué app/endpoint tiene la discrepancia.
 - **Dependencias:** DQ-01, DQ-06 (para tener algo que verificar correctamente antes de escribir el chequeo).
 - **Prioridad:** P1 · **Esfuerzo:** M
+- **Hecho (2026-09-08):** `scripts/smoke-check-pagination.mjs` — para cada endpoint con `{total, limit, offset, hasMore}` (5 cubiertos: `radar-ejecucion` `/api/execution`, `infraestructura-mtc` `/api/aerodromos` y `/api/terminales-portuarios`, `residuos-solidos` `/api/residuos`, `instituciones-educativas` `/api/instituciones`), pagina el universo completo y compara la suma de filas contra `total`; falla con un mensaje explícito (`FAIL <app> <path> — total declarado (X) no coincide con la suma de filas paginadas (Y)...`) si no coincide. Verificado en vivo contra los 5 servidores locales: 5/5 en verde (2,594 / 152 / 151 / 1,891 / 9,391 filas respectivamente).
+  - **Decisión de frecuencia (criterio de aceptación explícito):** este script corre **solo on-demand** (`node scripts/smoke-check-pagination.mjs`, opcionalmente `API_BASE=https://api.rastro.pe` contra producción), no está cableado a un workflow de CI programado. `.github/workflows/ci.yml` corre los tests de cada app con el pool de Postgres mockeado (sin datos reales) — habilitar este chequeo en un schedule de CI requeriría levantar Postgres + ingerir datos reales dentro del workflow, una pieza de infraestructura nueva y más cara que el script en sí. Se documenta como decisión deliberada, no como trabajo pendiente oculto: si se prioriza automatizarlo, es un ticket de infraestructura de CI aparte.
 
 ---
 
