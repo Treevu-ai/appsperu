@@ -35,6 +35,27 @@ describe("computeEntityScore", () => {
     expect(result.componentes.ejecucion.valor).toBe(100);
   });
 
+  it("PIM=0 (SI-08): no imputa 0 en ejecución cuando hay fila pero sin presupuesto registrado", () => {
+    // Caso real: Municipalidad Provincial de Trujillo, PIM=0 en sus 27 filas de
+    // ejecución 2026 pero S/116.3M de devengado real (ver docs/TICKETS_Score_Institucional_Granular_v1.md, SI-08).
+    const result = computeEntityScore({ ...baseInput(), ejecucion: { pim: 0, devengado: 116313632.14 } });
+    expect(result.componentes.ejecucion.disponible).toBe(false);
+    expect(result.componentes.ejecucion.valor).toBeNull();
+    expect(result.componentesUsados).toBe(0);
+    expect(result.scoreCompuesto).toBeNull();
+  });
+
+  it("PIM=0 no contamina el promedio cuando hay otros componentes disponibles", () => {
+    const result = computeEntityScore({
+      ...baseInput(),
+      ejecucion: { pim: 0, devengado: 5000000 },
+      obras: { total: 10, paralizadas: 0 }, // 100
+    });
+    expect(result.componentes.ejecucion.disponible).toBe(false);
+    expect(result.componentesUsados).toBe(1);
+    expect(result.scoreCompuesto).toBe(100); // solo obras entra al promedio, no un 0 falso de ejecución
+  });
+
   it("promedia solo los componentes disponibles, no todos los posibles", () => {
     const result = computeEntityScore({
       ...baseInput(),

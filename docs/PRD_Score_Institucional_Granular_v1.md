@@ -54,7 +54,7 @@ Exponer nivel de gobierno y territorio (provincia/distrito) en `GET /api/score`,
 | Lector no técnico de un reporte | Entender "76.8" sin memorizar la distribución completa. | Banda cualitativa con umbral documentado (SI-04, tras confirmación). |
 | Equipo de datos | No repetir el episodio de DQ-05 (score colapsado meses sin que nadie lo note). | Chequeo de salud del crossref (SI-07). |
 
-## 5. Alcance funcional: siete issues
+## 5. Alcance funcional: ocho issues
 
 Ver detalle en [`docs/TICKETS_Score_Institucional_Granular_v1.md`](TICKETS_Score_Institucional_Granular_v1.md). Resumen:
 
@@ -65,12 +65,14 @@ Ver detalle en [`docs/TICKETS_Score_Institucional_Granular_v1.md`](TICKETS_Score
 - **SI-05** (P1, evaluación) — Evaluar promedio ponderado vs. simple — **requiere confirmar con el usuario si se implementa tras la evaluación**.
 - **SI-06** (P2, evaluación) — Evaluar sub-métricas nuevas como componentes adicionales del score.
 - **SI-07** (P1, S) — Chequeo de salud del crossref (filas y fecha de última construcción).
+- **SI-08** (P1, S) — Corregir la imputación silenciosa de 0 cuando el PIM de una entidad está registrado en cero — hallazgo encontrado el 2026-09-08 al documentar la metodología del score, contradice el propio principio de diseño del código ("nunca se asume 0 ni 100").
 
 ## 6. Priorización y secuencia
 
 | Fase | Entregables | Resultado que desbloquea |
 |---|---|---|
 | **Ahora (Sprint 1)** | SI-01, SI-02, SI-07 | Score expone nivel/territorio y rankings por cohorte; existe forma de detectar si el crossref vuelve a vaciarse. |
+| **Ahora (Sprint 1.5, sin bloqueo de confirmación)** | SI-08 | El componente de ejecución deja de imputar 0 cuando el PIM real es 0 — no requiere decisión de producto, es una corrección de un defecto que contradice el diseño ya documentado del código. |
 | **Siguiente (Sprint 2, sujeto a confirmación)** | SI-04 (con umbrales confirmados), SI-03 | Bandas cualitativas visibles; agregación provincial disponible. |
 | **Después (evaluación, sin fecha comprometida)** | SI-05, SI-06 | Ponderación y sub-métricas nuevas, solo si la evaluación y la confirmación del usuario lo justifican. |
 

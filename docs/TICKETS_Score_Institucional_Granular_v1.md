@@ -45,6 +45,27 @@
 - **Dependencias:** ninguna.
 - **Prioridad:** P1 · **Esfuerzo:** S
 
+### SI-08 · Corregir imputación silenciosa de 0 cuando el PIM está en cero (no `null`) ✅ Hecho (2026-09-08)
+
+- **Historia:** Como analista, quiero que una entidad sin PIM registrado (pero con fila de ejecución existente) tenga el componente de ejecución marcado como no disponible, para no leer un vacío de registro como "0% de avance" — que es exactamente lo que el propio diseño del score dice que nunca debe pasar.
+- **Contexto verificado (2026-09-08, al documentar la metodología del score):** `apps/salud-institucional/api/src/score/compute.ts` calcula el componente así:
+  ```ts
+  const ejecucionScore: ComponentScore = input.ejecucion
+    ? { valor: Math.min(100, pct(input.ejecucion.devengado, input.ejecucion.pim) ?? 0), disponible: true }
+    : { valor: null, disponible: false };
+  ```
+  `pct(numerator, denominator)` devuelve `null` si `denominator <= 0`. Cuando `pim` es exactamente `0` (la entidad sí tiene fila en `budget_execution`, así que `input.ejecucion` no es `null` — ver `routes/score.ts`, línea que arma `ejecucion: r.pim !== null ? {...} : null`), `pct()` devuelve `null`, y el `?? 0` lo convierte en **0 literal**, con `disponible: true`. El comentario del propio archivo dice explícitamente: *"Cada componente es independiente: si una fuente no tiene dato para una entidad... ese componente se omite del promedio — nunca se asume 0 ni 100."* Este caso concreto viola esa regla.
+  **Cuantificado en la provincia de Trujillo, La Libertad** (verificado vía `GET /api/execution`, filtrado por nombre exacto de entidad, 2026-09-08): Municipalidad Provincial de Trujillo — 27 filas de ejecución 2026, PIM = 0 en las 27, devengado real acumulado **S/116,313,632.14**. Municipalidad Distrital de El Porvenir — PIM = 0, devengado real **S/16,064,018.19**. Municipalidad Distrital de Florencia de Mora — PIM = 0, devengado real **S/14,927,088.79**. Las 3 entidades ejecutaron gasto real pero su componente de ejecución sale en 0% por este defecto — no es una limitación de alcance de este PRD, es del mismo tamaño que el bug de SI-01/DQ-02 (columna disponible, mal manejada).
+- **Criterios de aceptación:**
+  - `ejecucionScore` en `compute.ts` marca `disponible: false, valor: null` cuando `input.ejecucion.pim <= 0` (en vez de calcular `pct()` y aplicar `?? 0`) — mismo criterio que ya se usa para `input.ejecucion === null`.
+  - Test unitario nuevo en `apps/salud-institucional/api/src/__tests__/compute.test.ts`: input con `ejecucion: { pim: 0, devengado: 50000000 }` produce `componentes.ejecucion.disponible === false` y `componentes.ejecucion.valor === null` — no `0`.
+  - Test de regresión: un input con `pim > 0` y `devengado` normal sigue calculando el componente igual que antes (no se rompe el caso común).
+  - Verificado en vivo contra el servidor local tras el fix: las 3 entidades cuantificadas arriba (Municipalidad Provincial de Trujillo, El Porvenir, Florencia de Mora) muestran `componentesUsados` reducido en 1 para el componente de ejecución (de 5/5 a 4/5, o el conteo que corresponda tras el fix) y su `scoreCompuesto` cambia (probablemente sube, al dejar de promediarse con un 0 falso) — documentar los 3 valores antes/después en el PR.
+  - `docs/data-contracts` o el propio comentario de `compute.ts` se actualiza para dejar explícito este caso límite (PIM=0 vs. PIM=null) como parte de la regla "nunca se asume 0 ni 100".
+- **Dependencias:** ninguna técnica. Relacionado con SI-05 (si se pasa a promedio ponderado, este fix debe aplicarse antes para no ponderar sobre un valor falso).
+- **Prioridad:** P1 · **Esfuerzo:** S (cambio de una condición + tests)
+- **Verificado:** suite completa de `salud-institucional/api` en verde (17/17, incluye 2 tests nuevos). Verificado en vivo contra el servidor local: las 3 entidades cuantificadas en el hallazgo pasan de `disponible: true, valor: 0` a `disponible: false, valor: null` en el componente de ejecución. Score compuesto real: Municipalidad Provincial de Trujillo 64.2 → **80.2** (componentesUsados 5→4), El Porvenir 54.8 → **68.5**, Florencia de Mora 60.6 → **75.7**.
+
 ---
 
 ## ÉPICA 2 — Agregación territorial y bandas (Sprint 2)
