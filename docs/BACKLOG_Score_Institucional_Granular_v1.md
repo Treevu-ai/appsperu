@@ -57,8 +57,8 @@
 
 | ID | Objetivo | Criterios de aceptación (resumen) | Dep. | P | Esf. | Estado |
 |---|---|---|---|---|---|---|
-| SI-05 | Evaluar promedio ponderado vs. simple | Documento de evaluación; si se pondera, pesos explícitos en la respuesta | — | P1 | S | ⬜ Pendiente |
-| SI-06 | Evaluar sub-métricas nuevas como componentes | Documento de evaluación por categoría candidata (causal de paralización, modalidad de control, tipo de infracción) | — | P2 | M | ⬜ Pendiente |
+| SI-05 | Evaluar promedio ponderado vs. simple | Documento de evaluación; si se pondera, pesos explícitos en la respuesta | — | P1 | S | ✅ Evaluado (2026-09-08) — impacto confirmado (39% de entidades se mueven >10 puestos), requiere decisión del usuario sobre pesos |
+| SI-06 | Evaluar sub-métricas nuevas como componentes | Documento de evaluación por categoría candidata (causal de paralización, modalidad de control, tipo de infracción) | — | P2 | M | ✅ Evaluado (2026-09-08) — ninguna de las 3 candidatas se agrega, ver TICKETS |
 
 **Puerta de salida del Sprint 3**: decisión documentada sobre ponderación y sobre cada sub-métrica candidata — implementación solo si el usuario confirma tras ver la evaluación.
 
