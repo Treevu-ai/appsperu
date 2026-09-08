@@ -50,12 +50,15 @@ describe("GET /api/meta/sources", () => {
 
 describe("GET /api/execution", () => {
   it("returns the ranking with traceability and applies query filters", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "1" }] });
     queryMock.mockResolvedValueOnce({
       rows: [
         {
           entity_code: "001",
           nombre: "Municipalidad de Ejemplo",
           nivel_gobierno: "GOBIERNO_LOCAL",
+          provincia: "TRUJILLO",
+          distrito: "TRUJILLO",
           funcion: "Educación",
           anio_fiscal: 2025,
           pia: "1000000",
@@ -73,9 +76,83 @@ describe("GET /api/execution", () => {
     expect(res.status).toBe(200);
     expect(res.body.resultados[0].avancePct).toBe(50);
     expect(res.body.resultados[0].fuente.dataset).toMatch(/MEF/);
+    expect(res.body.resultados[0].provincia).toBe("TRUJILLO");
+    expect(res.body.resultados[0].distrito).toBe("TRUJILLO");
 
-    const [, params] = queryMock.mock.calls[0];
-    expect(params).toEqual(["GOBIERNO_LOCAL", 2025]);
+    const [, countParams] = queryMock.mock.calls[0];
+    expect(countParams).toEqual(["GOBIERNO_LOCAL", 2025]);
+    const [, rowParams] = queryMock.mock.calls[1];
+    expect(rowParams).toEqual(["GOBIERNO_LOCAL", 2025, 1000, 0]);
+  });
+});
+
+describe("GET /api/execution (paginación)", () => {
+  it("expone total/limit/offset/hasMore y pagina con LIMIT/OFFSET reales", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "2594" }] });
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          entity_code: "001", nombre: "Entidad A", nivel_gobierno: "GOBIERNO_LOCAL",
+          provincia: "TRUJILLO", distrito: "TRUJILLO", funcion: "Educación", anio_fiscal: 2026,
+          pia: "100", pim: "200", devengado: "100", fecha_corte: "2026-09-03", resource_id: "r1",
+        },
+      ],
+    });
+
+    const res = await request(createApp()).get("/api/execution").query({ departamento: "LA LIBERTAD", limit: "1", offset: "0" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(2594);
+    expect(res.body.limit).toBe(1);
+    expect(res.body.offset).toBe(0);
+    expect(res.body.hasMore).toBe(true);
+
+    const [, rowParams] = queryMock.mock.calls[1];
+    expect(rowParams.slice(-2)).toEqual([1, 0]);
+  });
+
+  it("hasMore es false cuando la página agota el total", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "1" }] });
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          entity_code: "001", nombre: "Entidad A", nivel_gobierno: "GOBIERNO_LOCAL",
+          provincia: "TRUJILLO", distrito: "TRUJILLO", funcion: "Educación", anio_fiscal: 2026,
+          pia: "100", pim: "200", devengado: "100", fecha_corte: "2026-09-03", resource_id: "r1",
+        },
+      ],
+    });
+
+    const res = await request(createApp()).get("/api/execution").query({ departamento: "LA LIBERTAD" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.hasMore).toBe(false);
+  });
+
+  it("no inventa provincia/distrito cuando la entidad no matchea territories", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "1" }] });
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          entity_code: "999", nombre: "Corte Superior de Justicia de La Libertad", nivel_gobierno: "GOBIERNO_NACIONAL",
+          provincia: null, distrito: null, funcion: "Justicia", anio_fiscal: 2026,
+          pia: "100", pim: "200", devengado: "100", fecha_corte: "2026-09-03", resource_id: "r2",
+        },
+      ],
+    });
+
+    const res = await request(createApp()).get("/api/execution");
+
+    expect(res.status).toBe(200);
+    expect(res.body.resultados[0].provincia).toBeNull();
+    expect(res.body.resultados[0].distrito).toBeNull();
+  });
+
+  it("responde 400 si limit excede el máximo permitido, sin tocar la base", async () => {
+    const res = await request(createApp()).get("/api/execution").query({ limit: "5001" });
+
+    expect(res.status).toBe(400);
+    expect(queryMock).not.toHaveBeenCalled();
   });
 });
 

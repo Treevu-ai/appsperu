@@ -8,6 +8,9 @@ import { parseQuery } from "../lib/validate-query.js";
 
 export const executionRouter = Router();
 
+const MAX_LIMIT = 5000;
+const DEFAULT_LIMIT = 1000;
+
 const ExecutionQuerySchema = z.object({
   nivel: z.string().min(1).optional(),
   funcion: z.string().min(1).optional(),
@@ -22,12 +25,14 @@ const ExecutionQuerySchema = z.object({
    * inversión, etc.) — ver ADR-0006 Decisión 1. Filtra por código GENERICA
    * (ej. "2.1"), no por nombre. */
   generica: z.string().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 executionRouter.get("/", asyncHandler(async (req, res) => {
   const parsed = parseQuery(ExecutionQuerySchema, req.query, res);
   if (!parsed) return;
-  const { nivel, funcion, anio, ubigeo, departamento, metaDepartamento, generica } = parsed;
+  const { nivel, funcion, anio, ubigeo, departamento, metaDepartamento, generica, limit, offset } = parsed;
 
   const conditions: string[] = [];
   const params: unknown[] = [];
@@ -63,18 +68,31 @@ executionRouter.get("/", asyncHandler(async (req, res) => {
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
+  const { rows: countRows } = await pool.query<{ total: string }>(
+    `${LATEST_BUDGET_CTE}
+     SELECT COUNT(*) AS total
+     FROM latest_budget b
+     JOIN entities e ON e.entity_code = b.entity_code
+     JOIN raw_mef_batches rb ON rb.id = b.source_batch_id
+     LEFT JOIN territories t ON t.ubigeo = e.ubigeo
+     ${where}`,
+    params
+  );
+  const total = Number(countRows[0].total);
+
   const { rows } = await pool.query(
     `${LATEST_BUDGET_CTE}
      SELECT b.entity_code, e.nombre, e.nivel_gobierno, b.funcion, b.anio_fiscal,
-            b.pia, b.pim, b.devengado, b.fecha_corte, b.meta_departamento, rb.resource_id, b.generica, b.generica_nombre
+            b.pia, b.pim, b.devengado, b.fecha_corte, b.meta_departamento, rb.resource_id, b.generica, b.generica_nombre,
+            t.provincia, t.distrito
      FROM latest_budget b
      JOIN entities e ON e.entity_code = b.entity_code
      JOIN raw_mef_batches rb ON rb.id = b.source_batch_id
      LEFT JOIN territories t ON t.ubigeo = e.ubigeo
      ${where}
      ORDER BY b.devengado DESC
-     LIMIT 1000`,
-    params
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, limit, offset]
   );
 
   const cortesUsados = [...new Map(rows.map((r) => [
@@ -86,6 +104,10 @@ executionRouter.get("/", asyncHandler(async (req, res) => {
   ])).values()];
 
   res.json({
+    total,
+    limit,
+    offset,
+    hasMore: offset + rows.length < total,
     coberturaTemporal: {
       estado: "PARCIAL",
       cortesUsados,
@@ -95,6 +117,8 @@ executionRouter.get("/", asyncHandler(async (req, res) => {
       entityCode: r.entity_code,
       nombre: r.nombre,
       nivelGobierno: r.nivel_gobierno,
+      provincia: r.provincia,
+      distrito: r.distrito,
       funcion: r.funcion,
       generica: r.generica,
       genericaNombre: r.generica_nombre,
