@@ -194,6 +194,7 @@
   - Test de regresión con las 7 filas reales de Pataz como fixture.
 - **Dependencias:** ninguna. No requiere ningún otro conector.
 - **Prioridad:** P2 · **Esfuerzo:** S
+- **Implementado (2026-09-08):** el catálogo se amplió a cobertura **nacional** (no solo La Libertad) — se encontró y reutilizó la tabla `territories` de `ceplan-geo` (1,874 distritos, coincide exactamente con el total oficial INEI), exportada una sola vez a `ingest/distritos-conocidos.ts` (infobras no tiene acceso directo a la base de `ceplan-geo`, son apps independientes). Migración `005_distrito_sospechoso.sql` agrega la columna `distrito_sospechoso` (boolean, default false, no bloqueante). Verificado en vivo tras re-ingerir La Libertad completo: `GET /api/public-works/resumen?departamento=LA%20LIBERTAD` reporta `conDistritoSospechoso: 7` — exactamente las 3 combinaciones provincia/distrito conocidas (ANDAHUAYLILLAS×2, CCARHUAYO×3, TURPAY×2), ninguna falsa alarma sobre las 10,127 filas restantes. Suite completa 96/96 en verde, incluidos tests de regresión con los 3 casos reales como fixture.
 
 ### DQ-15 · Cobertura de homicidios ausente en el catálogo de datos de seguridad
 

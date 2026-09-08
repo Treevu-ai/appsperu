@@ -1,4 +1,5 @@
 import { COL } from "./columns.js";
+import { distritoEsSospechoso } from "./distritos-conocidos.js";
 
 /**
  * Los campos numéricos del dataset real usan un espacio en vez de punto/coma
@@ -73,6 +74,7 @@ export interface CanonicalPublicWorkRow {
   departamento: string;
   provincia: string | null;
   distrito: string | null;
+  distritoSospechoso: boolean;
   costoExpedienteTecnico: number | null;
   avanceFisicoProgPct: number | null;
   avanceFisicoRealPct: number | null;
@@ -178,6 +180,7 @@ export function normalizeInfobrasRows(rows: string[][]): NormalizeResult {
       departamento,
       provincia: optionalText(row, COL.provincia),
       distrito: optionalText(row, COL.distrito),
+      distritoSospechoso: distritoEsSospechoso(departamento, optionalText(row, COL.distrito)),
       costoExpedienteTecnico,
       avanceFisicoProgPct,
       avanceFisicoRealPct,

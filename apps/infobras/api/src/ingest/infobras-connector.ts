@@ -300,11 +300,11 @@ export async function ingestInfobrasPublicWorks(options: IngestOptions = {}): Pr
              (codigo_infobras, codigo_entidad, entidad_nombre, nombre_obra, modalidad_ejecucion,
               naturaleza_obra, estado_ejecucion, nivel_gobierno, sector_entidad, cui, codigo_snip,
               nombre_inversion, monto_viable, costo_actualizado, departamento, provincia, distrito,
-              costo_expediente_tecnico, avance_fisico_prog_pct, avance_fisico_real_pct,
-              valorizacion_prog, valorizacion_ejecutada, ejecucion_financiera_pct,
-              existe_paralizacion, causal_paralizacion, fecha_paralizacion, dias_paralizado,
-              monto_devengado_total, source_batch_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29)
+              distrito_sospechoso, costo_expediente_tecnico, avance_fisico_prog_pct,
+              avance_fisico_real_pct, valorizacion_prog, valorizacion_ejecutada,
+              ejecucion_financiera_pct, existe_paralizacion, causal_paralizacion,
+              fecha_paralizacion, dias_paralizado, monto_devengado_total, source_batch_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30)
            ON CONFLICT (codigo_infobras) DO UPDATE SET
              codigo_entidad = EXCLUDED.codigo_entidad,
              entidad_nombre = EXCLUDED.entidad_nombre,
@@ -322,6 +322,7 @@ export async function ingestInfobrasPublicWorks(options: IngestOptions = {}): Pr
              departamento = EXCLUDED.departamento,
              provincia = EXCLUDED.provincia,
              distrito = EXCLUDED.distrito,
+             distrito_sospechoso = EXCLUDED.distrito_sospechoso,
              costo_expediente_tecnico = EXCLUDED.costo_expediente_tecnico,
              avance_fisico_prog_pct = EXCLUDED.avance_fisico_prog_pct,
              avance_fisico_real_pct = EXCLUDED.avance_fisico_real_pct,
@@ -352,6 +353,7 @@ export async function ingestInfobrasPublicWorks(options: IngestOptions = {}): Pr
             row.departamento,
             row.provincia,
             row.distrito,
+            row.distritoSospechoso,
             row.costoExpedienteTecnico,
             row.avanceFisicoProgPct,
             row.avanceFisicoRealPct,
