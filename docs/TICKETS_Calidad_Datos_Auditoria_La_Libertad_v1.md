@@ -162,6 +162,7 @@
   - Si se decide un chequeo de salud: se implementa (puede ser tan simple como un endpoint `/health/crossref` que reporte `rowCount` y `lastBuiltAt`).
 - **Dependencias:** ninguna (DQ-05 ya resuelto).
 - **Prioridad:** P2 · **Esfuerzo:** S (documento de decisión + chequeo simple si aplica)
+- **Hecho (2026-09-08):** [ADR-0022](adr/0022-crossref-build-operacion-continua.md). Decisión: no automatizar `crossref:build` (mismo bloqueador de infraestructura que ADR-0016 — Postgres solo en loopback, no alcanzable desde runners cloud). El chequeo de salud del criterio de aceptación ya existía (`GET /api/crossref/salud`, implementado en SI-07 el 2026-09-07) — este ADR documenta que es la mitigación real para este ciclo y por qué, en vez de dejarlo como una decisión implícita.
 
 ### DQ-12 · Evaluar inversión en CEPLAN Geo
 
