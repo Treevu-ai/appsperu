@@ -8,7 +8,7 @@
 Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tiempo cambia lo que viene después.
 
 Rastro es agentic-first: el canal principal de consumo son los
-**<!-- COUNT:TOOL_COUNT -->142<!-- /COUNT --> tools MCP** de las <!-- COUNT:APP_COUNT -->27<!-- /COUNT -->
+**<!-- COUNT:TOOL_COUNT -->146<!-- /COUNT --> tools MCP** de las <!-- COUNT:APP_COUNT -->27<!-- /COUNT -->
 apps reales de appsperu, buscables vía 2 meta-tools (`rastro_buscar_tools` + `rastro_llamar`, ver
 `mcp-server/README.md`) para que un agente IA (Claude Code, Claude Desktop, Cursor, Windsurf, Cline,
 Continue.dev) encadene consultas complejas con una sola query. Esta web app (Vite + React Router 7 SPA)
@@ -19,7 +19,7 @@ el MCP.
 
 - **URL producción:** https://rastro.fyi/
 - **Stack:** Vite 8 + React 19 + TypeScript 6 + React Router 7 + Tailwind v4
-- **MCP:** <!-- COUNT:TOOL_COUNT -->142<!-- /COUNT --> tools de solo lectura, transporte stdio
+- **MCP:** <!-- COUNT:TOOL_COUNT -->146<!-- /COUNT --> tools de solo lectura, transporte stdio
 - **Hosting:** Cloudflare Pages (proyecto `rastro`)
 
 ## Estructura

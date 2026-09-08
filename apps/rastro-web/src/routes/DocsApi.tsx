@@ -102,7 +102,7 @@ claude mcp add rastro \\
       <section className="mt-8 card border-accent/30">
         <p className="text-xs text-accent font-mono mb-2">CÓMO LLAMA UN AGENTE A ESTOS TOOLS</p>
         <p className="text-fg-soft text-sm">
-          No hay 142 tools registrados en tu cliente MCP — hay 2. Primero se busca el nombre exacto, después se
+          No hay 146 tools registrados en tu cliente MCP — hay 2. Primero se busca el nombre exacto, después se
           ejecuta con ese nombre:
         </p>
         <pre className="text-xs bg-ink-950 border border-line rounded-md p-3 overflow-x-auto text-fg-soft mt-3">

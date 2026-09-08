@@ -13,7 +13,7 @@
 
 **Estimación:** S ≤ 1 día · M 2–3 días · L 4–6 días (esfuerzo relativo, no calendario).
 
-> **Estado real (2026-08-31):** este backlog se escribió antes de construir `apps/rastro-web`. La app ya existe, está mergeada en `master` y desplegada en `rastro.fyi` — pero el build real no siguió los 4 sprints en orden ni al pie de la letra. Auditoría ticket por ticket contra el código en [`docs/TICKETS_Rastro_Capa_Lectura_v1.md`](TICKETS_Rastro_Capa_Lectura_v1.md#estado-real-auditoría-de-código-2026-08-31): **6 hechos, 9 parciales, 5 pendientes** de 20. Las columnas "Estado" de las tablas de sprint abajo resumen lo mismo; el detalle de qué falta en cada ticket parcial vive en el otro doc.
+> **Estado real (2026-09-08, re-sincronizado):** este backlog se escribió antes de construir `apps/rastro-web`. La app ya existe, está mergeada en `master` y desplegada en `rastro.fyi` — el build real no siguió los 4 sprints en orden ni al pie de la letra, pero **los 20 tickets ya están hechos**. La auditoría del 2026-08-31 (referenciada en las tablas de abajo hasta hoy) encontró 6 hechos/9 parciales/5 pendientes; esa foto quedó obsoleta cuando el PR #54 y el trabajo de AL3-02/03/07/09/12/15 (2026-09-02) cerraron todos los huecos restantes — ver la auditoría vigente en [`docs/TICKETS_Rastro_Capa_Lectura_v1.md`](TICKETS_Rastro_Capa_Lectura_v1.md#estado-real-auditoría-de-código-2026-09-02): **20 hechos, 0 parciales, 0 pendientes de 20**. Este documento (`BACKLOG_...`) nunca se actualizó para reflejar esa auditoría — las tablas de sprint de abajo quedaron marcando `⬜ Pendiente`/`🟡 Parcial` en varios tickets que en realidad ya estaban cerrados; se corrigen en esta misma edición (2026-09-08) para que ambos documentos coincidan.
 
 ---
 
@@ -49,11 +49,11 @@ Cada sprint deja una **puerta de salida verificable**: si la puerta no se cumple
 | ID | Épica | Objetivo | Criterios de aceptación | Dep. | P | Esf. | Estado |
 |---|---|---|---|---|---|---|---|
 | AL3-01 | Fundación | Proyecto Vite 5 + React Router 6 + Tailwind v4 con layout raíz. | App corre en `localhost:5173`; header global con nav (GORE / Proveedor / Distrito / Estado / Docs); 14 vars `VITE_API_BASE_URL_*` validadas en build. | — | P0 | M | ✅ Hecho |
-| AL3-02 | Fundación | Cliente HTTP tipado a las 14 APIs. | `apps/Rastro-web/lib/api-client.ts` con 14 funciones; timeout 8 s; errores tipados (`timeout` / `network` / `http_5xx` / `http_4xx`); sin retry silencioso; tests con MSW. | AL3-01 | P0 | M | 🟡 Parcial — 6/14 apps con función de datos real |
-| AL3-03 | Honestidad | Header global con frescura honesta. | `<DataFreshnessBar>` consulta `radar_ejecucion_meta_sources` en SSR; color ámbar si > 7 d, rojo si > 30 d; si API caída, muestra "API no disponible" sin spinner. | AL3-02 | P0 | S | 🟡 Parcial — falta modal al clic |
+| AL3-02 | Fundación | Cliente HTTP tipado a las 14 APIs. | `apps/Rastro-web/lib/api-client.ts` con 14 funciones; timeout 8 s; errores tipados (`timeout` / `network` / `http_5xx` / `http_4xx`); sin retry silencioso; tests con MSW. | AL3-01 | P0 | M | ✅ Hecho (2026-09-02) — 14/14 apps con función de datos real |
+| AL3-03 | Honestidad | Header global con frescura honesta. | `<DataFreshnessBar>` consulta `radar_ejecucion_meta_sources` en SSR; color ámbar si > 7 d, rojo si > 30 d; si API caída, muestra "API no disponible" sin spinner. | AL3-02 | P0 | S | ✅ Hecho (2026-09-02) — modal con `meta_sources` completo al clic |
 | AL3-13 | Honestidad | Linter de UI "no número sin metadata". | `npm run lint:meta` falla el build si alguna vista renderiza un número sin `matcher`/`cobertura`/`corte`/`fuente`; documentado con ejemplos. | AL3-02 | P0 | M | ✅ Hecho |
 | AL3-16 | Docs | Manual de uso para citar Rastro. | `apps/Rastro-web/public/citar-Rastro.md` con 4 secciones (informe, noticia, qué NO concluir, reportar vacío); ejemplo de bloque de citación. | — | P1 | S | ✅ Hecho |
-| AL3-19 | Calidad | CI GitHub Actions. | Workflow `Rastro-web-ci.yml` con jobs `typecheck` + `unit` + `lint-meta`; cache por lockfile; falla PR si algo falla. | AL3-13 | P0 | S | 🟡 Parcial — sin job `e2e` (no existe la suite) |
+| AL3-19 | Calidad | CI GitHub Actions. | Workflow `Rastro-web-ci.yml` con jobs `typecheck` + `unit` + `lint-meta`; cache por lockfile; falla PR si algo falla. | AL3-13 | P0 | S | ✅ Hecho (2026-09-02) — job `e2e` (Playwright) agregado a `rastro-web-ci.yml` |
 
 **Puerta Sprint 11:** `npm run dev` levanta `/` con header de frescura visible; CI corre linter; linter bloquea un PR de prueba con un número sin metadata. **Demostración:** video de 60 s o captura.
 
@@ -66,7 +66,7 @@ Cada sprint deja una **puerta de salida verificable**: si la puerta no se cumple
 | AL3-04 | Lector GORE | Ficha de sector por departamento. | `/gore/la-libertad` consume `radar_ejecucion_sector_ficha`; tabla con PIA/PIM/devengado + `matcher`/`cobertura`/`corte`; 422 se muestra literal. | AL3-02, AL3-03 | P0 | M | ✅ Hecho |
 | AL3-05 | Lector GORE | Comparativo de sectores verificados. | `/gore/la-libertad/comparativo?sectores=...` consume `radar_ejecucion_sector_comparativo`; copy del tool ("mantiene separadas la responsabilidad nacional dirigida…") textual. | AL3-04 | P0 | S | ✅ Hecho |
 | AL3-06 | Lector GORE | Benchmark de entidad vs cohorte. | `/gore/la-libertad/benchmark?entityCode=...` consume `radar_ejecucion_benchmark`; `datos_insuficientes` se ve con badge explícito; tooltip explica `criterios`. | AL3-04 | P1 | S | ✅ Hecho |
-| AL3-15 | Docs | Página `/docs/api` con los 82 tools. | Generada desde `mcp-server/src/catalog.ts` en build-time; tabla con nombre / app / descripción / path; tooltip con `SIN_SCHEDULER`. | AL3-01 | P1 | S | 🟡 Parcial — copia manual estática, sin buscador ni tooltip |
+| AL3-15 | Docs | Página `/docs/api` con los 82 tools. | Generada desde `mcp-server/src/catalog.ts` en build-time; tabla con nombre / app / descripción / path; tooltip con `SIN_SCHEDULER`. | AL3-01 | P1 | S | ✅ Hecho (2026-09-02) — `scripts/generate-mcp-catalog.mjs` en build-time, con buscador y tooltip |
 
 **Puerta Sprint 12:** `/gore/la-libertad` navega 3 vistas (ficha, comparativo, benchmark) con datos reales de la API; `/docs/api` lista los 82 tools con su descripción y nota de no-scheduler. **Demostración:** navegación QA manual sin tocar terminal.
 
@@ -76,11 +76,11 @@ Cada sprint deja una **puerta de salida verificable**: si la puerta no se cumple
 
 | ID | Épica | Objetivo | Criterios de aceptación | Dep. | P | Esf. | Estado |
 |---|---|---|---|---|---|---|---|
-| AL3-07 | Lector Prensa | Perfil de proveedor por RUC. | `/proveedor/{ruc}` consume 3 APIs en paralelo (identidad, compras, sanciones); vacío con nota del tool; botón "Citar Rastro" abre modal. | AL3-02, AL3-13 | P0 | M | 🟡 Parcial — contrataciones sin filtro real, sin botón/modal de cita |
-| AL3-08 | Lector Prensa | Ranking de proveedores con concentración. | `/prensa/proveedores?departamento=...` consume `compras_publicas_suppliers`; tabla con CR3/CR5/HHI; sin score de riesgo. | AL3-07 | P1 | S | ⬜ Pendiente |
-| AL3-09 | Lector Auditoría | Activos por distrito. | `/distrito/{ubigeo}` consume `infobras_public_works` + `radar_ejecucion_infrastructure_assets`; chip "PARALIZADA" literal; sin score de calidad. | AL3-02, AL3-13 | P0 | M | 🟡 Parcial — solo infobras, filtrado por departamento no por distrito |
-| AL3-10 | Lector Auditoría | Integridad con `estricto=true`. | `/distrito/{ubigeo}/integridad?estricto=true` muestra 409 con mensaje textual; página `/docs/integridad` explica la semántica. | AL3-09 | P0 | S | ⬜ Pendiente |
-| AL3-11 | Búsqueda | Buscador `/buscar` con 3 sources. | `/buscar?q=...` une resultados de `radar_inversiones` + `identidad_fiscal` + `infobras_public_works` con rank; rate limit 30 req/min. | AL3-02, AL3-13 | P1 | M | 🟡 Parcial — solo redirige por regex RUC/UBIGEO, sin búsqueda libre |
+| AL3-07 | Lector Prensa | Perfil de proveedor por RUC. | `/proveedor/{ruc}` consume 3 APIs en paralelo (identidad, compras, sanciones); vacío con nota del tool; botón "Citar Rastro" abre modal. | AL3-02, AL3-13 | P0 | M | ✅ Hecho (2026-09-02) — contrataciones con match real, botón "Citar Rastro" con modal |
+| AL3-08 | Lector Prensa | Ranking de proveedores con concentración. | `/prensa/proveedores?departamento=...` consume `compras_publicas_suppliers`; tabla con CR3/CR5/HHI; sin score de riesgo. | AL3-07 | P1 | S | ✅ Hecho |
+| AL3-09 | Lector Auditoría | Activos por distrito. | `/distrito/{ubigeo}` consume `infobras_public_works` + `radar_ejecucion_infrastructure_assets`; chip "PARALIZADA" literal; sin score de calidad. | AL3-02, AL3-13 | P0 | M | ✅ Hecho (2026-09-02) — ambas fuentes, filtrado por distrito exacto vía `ceplan_geo_territories`, con fallback departamental |
+| AL3-10 | Lector Auditoría | Integridad con `estricto=true`. | `/distrito/{ubigeo}/integridad?estricto=true` muestra 409 con mensaje textual; página `/docs/integridad` explica la semántica. | AL3-09 | P0 | S | ✅ Hecho |
+| AL3-11 | Búsqueda | Buscador `/buscar` con 3 sources. | `/buscar?q=...` une resultados de `radar_inversiones` + `identidad_fiscal` + `infobras_public_works` con rank; rate limit 30 req/min. | AL3-02, AL3-13 | P1 | M | ✅ Hecho — `GET /api/search` (Cloudflare Pages Function) agrega las 3 fuentes con `puntaje`, rate limit 30 req/min vía KV |
 
 **Puerta Sprint 13:** Los 3 lectores funcionan end-to-end con datos reales. Una consulta como *"pegar RUC de un proveedor sancionado"* y *"abrir distrito con obras paralizadas"* se completan sin tocar terminal. **Demostración:** capturas de pantalla + JSON crudo comparado.
 
@@ -90,11 +90,11 @@ Cada sprint deja una **puerta de salida verificable**: si la puerta no se cumple
 
 | ID | Épica | Objetivo | Criterios de aceptación | Dep. | P | Esf. | Estado |
 |---|---|---|---|---|---|---|---|
-| AL3-12 | Estado | Página `/estado` con `meta_sources` agregadas. | Tabla con 14 filas (una por app): URL base, último `runAt`, conteo, cobertura; refresh 60 s; sin caché. | AL3-02, AL3-03 | P1 | S | 🟡 Parcial — sin refresh automático de 60s |
-| AL3-14 | Calidad | Tests E2E "JSON de API = JSON renderizado". | Suite Playwright que compara JSON crudo vs HTML renderizado en 5 fichas + 3 perfiles + 2 distritos; diff visible en log de CI. | AL3-04, AL3-07, AL3-09 | P0 | M | ⬜ Pendiente |
-| AL3-17 | Operación | Rate limit en rutas sensibles. | Middleware 60 req/min en `/proveedor`, 30 req/min en `/buscar`; HTTP 429 con `Retry-After`; métrica pública `429Count24h` en `/estado`. | AL3-07, AL3-11 | P2 | S | ⬜ Pendiente |
-| AL3-18 | Despliegue | Deploy en Cloudflare Pages + vars de entorno. | Proyecto `Rastro-web` en Cloudflare Pages; 14 vars `VITE_API_BASE_URL_*`; dominio personalizado; preview → production gate con E2E. **No Vercel.** Fly.io queda como plan B documentado. | AL3-14 | P0 | S | 🟡 Parcial — deployado con dominio propio; falta deploy hook secret y gate E2E |
-| AL3-20 | Validación | Reporte de smoke test de los 3 lectores. | `docs/validacion-smoke-Rastro-web-v1.md` con capturas/HTML, JSON crudo y texto renderizado lado a lado; divergencias marcadas explícitas, no omitidas. | AL3-04, AL3-07, AL3-09, AL3-12 | P0 | S | ⬜ Pendiente |
+| AL3-12 | Estado | Página `/estado` con `meta_sources` agregadas. | Tabla con 14 filas (una por app): URL base, último `runAt`, conteo, cobertura; refresh 60 s; sin caché. | AL3-02, AL3-03 | P1 | S | ✅ Hecho (2026-09-02) — refresh automático cada 60s vía `setInterval`, limpiado al desmontar |
+| AL3-14 | Calidad | Tests E2E "JSON de API = JSON renderizado". | Suite Playwright que compara JSON crudo vs HTML renderizado en 5 fichas + 3 perfiles + 2 distritos; diff visible en log de CI. | AL3-04, AL3-07, AL3-09 | P0 | M | ✅ Hecho — 10 specs contra fixtures fijas, job `e2e` en `rastro-web-ci.yml` |
+| AL3-17 | Operación | Rate limit en rutas sensibles. | Middleware 60 req/min en `/proveedor`, 30 req/min en `/buscar`; HTTP 429 con `Retry-After`; métrica pública `429Count24h` en `/estado`. | AL3-07, AL3-11 | P2 | S | ✅ Hecho — Cloudflare KV, 30 req/min en `/api/search`, `429Count24h` vía `/api/rate-limit-stats` |
+| AL3-18 | Despliegue | Deploy en Cloudflare Pages + vars de entorno. | Proyecto `Rastro-web` en Cloudflare Pages; 14 vars `VITE_API_BASE_URL_*`; dominio personalizado; preview → production gate con E2E. **No Vercel.** Fly.io queda como plan B documentado. | AL3-14 | P0 | S | ✅ Hecho (2026-09-02) — proyecto `rastro`, dominio `rastro.fyi`, `rastro-web-deploy.yml` corre el E2E completo como gate antes del build de producción |
+| AL3-20 | Validación | Reporte de smoke test de los 3 lectores. | `docs/validacion-smoke-Rastro-web-v1.md` con capturas/HTML, JSON crudo y texto renderizado lado a lado; divergencias marcadas explícitas, no omitidas. | AL3-04, AL3-07, AL3-09, AL3-12 | P0 | S | ✅ Hecho — `docs/validacion-smoke-rastro-web-v1.md`, 12 capturas, sin divergencias encontradas |
 
 **Puerta Sprint 14:** App desplegada en **Cloudflare Pages**; tests E2E verdes; reporte de smoke firmado por Ricardo; release v1.0 etiquetado y comunicado en el siguiente `MEMO` regional.
 
@@ -138,12 +138,6 @@ Cada sprint deja una **puerta de salida verificable**: si la puerta no se cumple
 
 ---
 
-## Próximo paso sugerido (actualizado 2026-08-31)
+## Estado de cierre (2026-09-08)
 
-Sprints 11-13 ya están en producción (fundación, lector GORE completo, perfil de proveedor y distrito parciales). Los tres huecos con más impacto para cerrar v1, en orden sugerido:
-
-1. **AL3-14 (tests E2E)** — sin esto no hay red de seguridad para tocar `Proveedor.tsx`/`Distrito.tsx` sin romper lo que ya funciona; agregar Playwright es la base para todo lo demás en esta lista.
-2. **AL3-07 y AL3-09 (cerrar los parciales de los lectores Prensa/Auditoría)** — reemplazar el filtro placeholder de "Contrataciones" por `compras_publicas_supplier_by_id` real, agregar el segundo fetch a `radar_ejecucion_infrastructure_assets`, y el modal "Citar Rastro".
-3. **AL3-18 (cerrar el deploy)** — crear el Deploy Hook de Cloudflare y el secret `CLOUDFLARE_DEPLOY_HOOK_URL` en GitHub (pendiente #7 de `docs/ESTADO.md`); sin esto, cada push a `master` que toque `apps/rastro-web` deja el workflow de deploy en rojo.
-
-AL3-08 (ranking de proveedores), AL3-10 (integridad de infraestructura) y AL3-11 (búsqueda libre real) quedan como P1 detrás de esos tres — son features nuevas, no huecos que rompan algo ya publicado. AL3-17 (rate limit) y AL3-20 (smoke test firmado) son P0/P2 de cierre de v1 pero no bloquean el uso actual del sitio.
+Los 20 tickets de este backlog están hechos — ver la tabla consolidada de arriba y la auditoría vigente en [`docs/TICKETS_Rastro_Capa_Lectura_v1.md`](TICKETS_Rastro_Capa_Lectura_v1.md#estado-real-auditoría-de-código-2026-09-02). No queda ningún hueco pendiente de este backlog; release v1.0 puede darse por cerrada a nivel de alcance funcional. Esta sección reemplaza el "Próximo paso sugerido" del 2026-08-31 (ya resuelto en su totalidad por el PR #54 y el trabajo del 2026-09-02).
