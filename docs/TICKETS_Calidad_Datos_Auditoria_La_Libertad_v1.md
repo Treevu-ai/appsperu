@@ -238,3 +238,7 @@
   - `docs/data-contracts/paneles-multi-corte.md` (DQ-09) se actualiza para reflejar el comportamiento corregido de ambos casos.
 - **Dependencias:** ninguna técnica. El caso de `radar-ejecucion` es más difícil de verificar en vivo porque requiere ingerir un segundo año fiscal en desarrollo primero.
 - **Prioridad:** P2 · **Esfuerzo:** S (renamu) + S (radar-ejecucion, incluye decidir el comportamiento antes de codificarlo)
+- **Hecho (2026-09-08):**
+  1. **`renamu`**: `GET /api/municipalidades` filtra por defecto a `MAX(anio)`; `historico=true`/`anio=YYYY` para el comportamiento multi-año — mismo patrón que `GET /api/equipamiento`, consistencia restaurada. Verificado en vivo: La Libertad 168 → **84** filas.
+  2. **`radar-ejecucion`**: se optó por la advertencia explícita, no por cambiar el filtro por defecto de `LATEST_BUDGET_CTE` (compartido por 5 apps, no se podía verificar el cambio contra datos reales multi-año sin arriesgar romper otros consumidores). `GET /api/execution` expone `coberturaTemporal.aniosFiscalesUsados`/`advertenciaMultiAnio`; `GET /api/execution/resumen` expone el mismo par de campos, calculado con `ARRAY_AGG(DISTINCT b.anio_fiscal)` en la propia query de agregación (ahí el riesgo es mayor porque SUMA, no solo lista). Ambos quedan `null`/vacío cuando no hay mezcla. Verificado con tests que simulan 2 años fiscales (91/91 en verde) — no verificable en vivo hoy porque el entorno de desarrollo solo tiene 2026 ingerido.
+  - `docs/conectores.md` y `docs/data-contracts/paneles-multi-corte.md` actualizados en ambos casos.

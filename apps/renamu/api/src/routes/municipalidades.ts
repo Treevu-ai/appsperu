@@ -13,6 +13,8 @@ const MunicipalidadesQuerySchema = z.object({
     .string()
     .regex(/^\d{6}$/, "ubigeo debe tener 6 dígitos")
     .optional(),
+  historico: z.enum(["true", "false"]).optional()
+    .describe("true trae todos los años ingeridos (DQ-16) — sin esto y sin `anio`, solo el año más reciente."),
 });
 
 municipalidadesRouter.get(
@@ -20,13 +22,19 @@ municipalidadesRouter.get(
   asyncHandler(async (req, res) => {
     const parsed = parseQuery(MunicipalidadesQuerySchema, req.query, res);
     if (!parsed) return;
-    const { anio, departamento, ubigeo } = parsed;
+    const { anio, departamento, ubigeo, historico } = parsed;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
     if (anio) {
       params.push(anio);
       conditions.push(`m.anio = $${params.length}`);
+    } else if (historico !== "true") {
+      // DQ-16: sin anio/historico explícitos, solo el año más reciente — la
+      // tabla es un panel multi-año (UNIQUE idmunici+anio) y sin este filtro
+      // cada municipalidad aparecía duplicada una vez por año ingerido
+      // (ej. Pataz: 26 filas para 13 municipalidades en vez de 13).
+      conditions.push(`m.anio = (SELECT MAX(anio) FROM renamu_municipalidades)`);
     }
     if (departamento) {
       params.push(`%${departamento}%`);

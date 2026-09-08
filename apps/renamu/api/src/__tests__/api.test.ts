@@ -69,6 +69,28 @@ describe("GET /api/municipalidades", () => {
     expect(res.status).toBe(400);
     expect(queryMock).not.toHaveBeenCalled();
   });
+
+  it("DQ-16: sin anio/historico, filtra al año más reciente por defecto — evita duplicar cada municipalidad una vez por año ingerido", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+    await request(createApp()).get("/api/municipalidades").query({ departamento: "LA LIBERTAD" });
+    const [sql] = queryMock.mock.calls[0];
+    expect(sql).toMatch(/m\.anio = \(SELECT MAX\(anio\) FROM renamu_municipalidades\)/);
+  });
+
+  it("DQ-16: historico=true trae todos los años", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+    await request(createApp()).get("/api/municipalidades").query({ historico: "true" });
+    const [sql] = queryMock.mock.calls[0];
+    expect(sql).not.toMatch(/MAX\(anio\)/);
+  });
+
+  it("DQ-16: anio explícito filtra a ese año exacto, no al más reciente", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+    await request(createApp()).get("/api/municipalidades").query({ anio: "2024" });
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toMatch(/m\.anio = \$1/);
+    expect(params).toEqual([2024]);
+  });
 });
 
 describe("GET /api/equipamiento", () => {
