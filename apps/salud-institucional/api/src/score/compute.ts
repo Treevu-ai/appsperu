@@ -84,9 +84,17 @@ function pct(numerator: number, denominator: number): number | null {
 }
 
 export function computeEntityScore(input: EntityScoreInputs): EntityScore {
-  const ejecucionScore: ComponentScore = input.ejecucion
-    ? { valor: Math.min(100, pct(input.ejecucion.devengado, input.ejecucion.pim) ?? 0), disponible: true }
-    : { valor: null, disponible: false };
+  // PIM=0 (a diferencia de PIM=null) significa que la entidad SÍ tiene fila de
+  // ejecución, pero sin presupuesto modificado registrado en la fuente — un
+  // vacío de dato, no un 0% de avance real. pct() ya devuelve null cuando el
+  // denominador es <=0; antes de este fix, `?? 0` convertía ese null en un 0
+  // literal marcado como `disponible: true`, violando la regla del propio
+  // archivo de nunca imputar 0 ni 100 por ausencia de dato (SI-08, hallazgo
+  // 2026-09-08 — ver docs/TICKETS_Score_Institucional_Granular_v1.md).
+  const ejecucionScore: ComponentScore =
+    input.ejecucion && input.ejecucion.pim > 0
+      ? { valor: Math.min(100, pct(input.ejecucion.devengado, input.ejecucion.pim) ?? 0), disponible: true }
+      : { valor: null, disponible: false };
 
   const obrasScore: ComponentScore = input.obras
     ? { valor: pct(input.obras.total - input.obras.paralizadas, input.obras.total), disponible: true }

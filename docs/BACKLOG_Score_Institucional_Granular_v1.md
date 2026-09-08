@@ -14,6 +14,7 @@
 | Sprint | Objetivo | Tickets | Puerta de salida |
 |---|---|---|---|
 | **1** | Exponer nivel de gobierno/territorio y blindar el crossref | SI-01, SI-02, SI-07 | `/api/score` expone `nivelGobierno`/`provincia`/`distrito` y ranking por cohorte; existe forma de detectar si el crossref se vacía de nuevo |
+| **1.5** | Corregir imputación silenciosa de 0 (hallazgo del 2026-09-08, sin bloqueo de confirmación) | SI-08 | El componente de ejecución nunca vale 0 por un PIM=0 no distinguido de "sin dato" |
 | **2** | Agregación provincial y bandas (sujeto a confirmación) | SI-03, SI-04 | Score promedio por provincia disponible; bandas visibles con umbrales confirmados por el usuario y documentados |
 | **3 (evaluación, sin fecha)** | Ponderación y sub-métricas nuevas | SI-05, SI-06 | Documentos de evaluación — implementación solo si el usuario confirma tras verlos |
 
@@ -28,6 +29,16 @@
 | SI-07 | Chequeo de salud del crossref (infobras/compras-publicas) | Endpoint que reporta `rowCount`/última construcción; señala explícitamente si está vacío | — | P1 | S | ✅ Hecho (2026-09-07) |
 
 **Puerta de salida del Sprint 1**: una consulta a `/api/score` para La Libertad trae nivel de gobierno y territorio por entidad, permite saber la posición de una entidad dentro de su propio nivel de gobierno, y existe una forma de verificar si el crossref que alimenta el score sigue poblado sin tener que auditarlo manualmente de nuevo. **Cumplida (2026-09-07)**: verificado en vivo — 130/130 entidades con `nivelGobierno`, 129/130 con `rankingEnNivelGobierno` (la única sin ranking es la única sin score); `GET /api/crossref/salud` de infobras y compras-publicas reportan `estado: "OK"` con las cifras reales (92 y 71 filas respectivamente). Suites completas en verde: `salud-institucional` 15/15, `infobras` 86/86, `compras-publicas` 109/109.
+
+---
+
+## Sprint 1.5 — Corrección de imputación silenciosa (hallazgo 2026-09-08)
+
+| ID | Objetivo | Criterios de aceptación (resumen) | Dep. | P | Esf. | Estado |
+|---|---|---|---|---|---|---|
+| SI-08 | Corregir `ejecucionScore` para no imputar 0 cuando `pim` es exactamente 0 | `disponible: false, valor: null` cuando `pim <= 0`; test unitario nuevo; verificado en vivo contra Municipalidad Provincial de Trujillo (S/116.3M de devengado real con PIM=0), El Porvenir (S/16.1M) y Florencia de Mora (S/14.9M) | — | P1 | S | ✅ Hecho (2026-09-08) |
+
+**Puerta de salida del Sprint 1.5**: ninguna entidad con PIM=0 registrado (pero con fila de ejecución real) muestra el componente de ejecución en 0 — muestra `disponible: false`. Las 3 entidades cuantificadas en el hallazgo del 2026-09-08 quedan verificadas explícitamente antes/después en el PR. **Cumplida**: Trujillo MPT 64.2→80.2, El Porvenir 54.8→68.5, Florencia de Mora 60.6→75.7. Suite `salud-institucional/api` 17/17.
 
 ---
 
