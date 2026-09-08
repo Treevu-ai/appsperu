@@ -226,6 +226,24 @@ export interface IngestOptions {
 export const PERU_DEPARTAMENTOS = ["AMAZONAS", "ANCASH", "APURIMAC", "AREQUIPA", "AYACUCHO", "CAJAMARCA", "CALLAO", "CUSCO", "HUANCAVELICA", "HUANUCO", "ICA", "JUNIN", "LA LIBERTAD", "LAMBAYEQUE", "LIMA", "LORETO", "MADRE DE DIOS", "MOQUEGUA", "PASCO", "PIURA", "PUNO", "SAN MARTIN", "TACNA", "TUMBES", "UCAYALI"] as const;
 export const DEFAULT_TERRITORIAL_SCOPE = PERU_DEPARTAMENTOS;
 
+/**
+ * El XLSX nacional de INFOBRAS etiqueta la provincia constitucional del
+ * Callao como "P C DEL CALLAO" (confirmado en vivo, 2026-09-08, CT-06) en
+ * vez del nombre canónico "CALLAO" del catálogo territorial. Sin este alias,
+ * sus 1,471 obras caían en "otro departamento" y el corte nacional nunca
+ * podía cerrar como completo. Se normaliza una sola vez, en el punto donde
+ * se lee la columna, para que el filtro de scope, el normalizador y el
+ * conteo de cobertura vean siempre el nombre canónico.
+ */
+const DEPARTAMENTO_ALIASES_FUENTE: Record<string, string> = {
+  "P C DEL CALLAO": "CALLAO",
+};
+
+export function canonicalizarDepartamentoFuente(raw: string | undefined): string {
+  const trimmed = (raw ?? "").trim().toUpperCase();
+  return DEPARTAMENTO_ALIASES_FUENTE[trimmed] ?? trimmed;
+}
+
 export function normalizeDepartamentoScope(
   departamento?: string,
   departamentos?: readonly string[]
@@ -279,7 +297,12 @@ export async function ingestInfobrasPublicWorks(options: IngestOptions = {}): Pr
   }
 
   try {
-    const [checksum, allRows] = await Promise.all([checksumOf(filePath), readInfobrasRows(filePath)]);
+    const [checksum, rawRows] = await Promise.all([checksumOf(filePath), readInfobrasRows(filePath)]);
+    const allRows = rawRows.map((row) => {
+      const canonical = [...row];
+      canonical[29] = canonicalizarDepartamentoFuente(row[29]);
+      return canonical;
+    });
 
     const wantedDepartamentos = new Set(normalizeDepartamentoScope(departamento, departamentos));
     const filteredRows = wantedDepartamentos.size > 0
