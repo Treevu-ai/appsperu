@@ -46,7 +46,7 @@
 
 | ID | Objetivo | Criterios de aceptación (resumen) | Dep. | P | Esf. | Estado |
 |---|---|---|---|---|---|---|
-| SI-03 | Agregación de score por provincia | Promedio por provincia (solo entidades con score); provincias sin dato marcadas explícitamente, no en 0 | SI-01 | P1 | M | ⬜ Pendiente |
+| SI-03 | Agregación de score por provincia | Promedio por provincia (solo entidades con score); provincias sin dato marcadas explícitamente, no en 0 | SI-01 | P1 | M | ✅ Hecho (2026-09-08) — 12 provincias verificadas, Pataz 62.6, Trujillo 61.1 |
 | SI-04 | Bandas de score cualitativas | Campo `banda` por entidad con score; umbrales confirmados por el usuario y documentados con su base de cálculo (percentiles reales) | — | P0 | S | ⬜ Pendiente — esquema confirmado (5 bandas, ver TICKETS) |
 
 **Puerta de salida del Sprint 2**: existe una vista agregada por provincia; cada entidad con score tiene una banda cualitativa cuyos umbrales fueron confirmados explícitamente por el usuario (no elegidos unilateralmente) y están documentados en `docs/data-contracts`.

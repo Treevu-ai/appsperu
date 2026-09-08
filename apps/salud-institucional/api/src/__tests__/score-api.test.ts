@@ -93,3 +93,52 @@ describe("GET /api/score (nivel de gobierno, territorio y ranking por cohorte)",
     expect(res.body.resultados[0].rankingEnNivelGobierno).toBeNull();
   });
 });
+
+describe("GET /api/score/por-provincia (SI-03)", () => {
+  it("3 entidades de la misma provincia con scores conocidos producen el promedio esperado", async () => {
+    ejecucionQueryMock.mockResolvedValueOnce({
+      rows: [
+        { entity_code: "A", nombre: "A", nivel_gobierno: "GOBIERNOS LOCALES", provincia: "TRUJILLO", distrito: "TRUJILLO", pim: "100", devengado: "80" },
+        { entity_code: "B", nombre: "B", nivel_gobierno: "GOBIERNOS LOCALES", provincia: "TRUJILLO", distrito: "LAREDO", pim: "100", devengado: "60" },
+        { entity_code: "C", nombre: "C", nivel_gobierno: "GOBIERNOS LOCALES", provincia: "TRUJILLO", distrito: "MOCHE", pim: "100", devengado: "40" },
+      ],
+    });
+    mockEmptyDownstream();
+
+    const res = await request(createApp()).get("/api/score/por-provincia");
+
+    expect(res.status).toBe(200);
+    const trujillo = res.body.provincias.find((p: { provincia: string }) => p.provincia === "TRUJILLO");
+    // scores: 80, 60, 40 -> promedio 60
+    expect(trujillo).toMatchObject({ promedioScore: 60, entidadesConScore: 3, entidadesSinScore: 0, sinDatos: false });
+  });
+
+  it("una provincia sin ninguna entidad con score queda con sinDatos:true y promedioScore:null, nunca un 0 engañoso", async () => {
+    ejecucionQueryMock.mockResolvedValueOnce({
+      rows: [
+        { entity_code: "X", nombre: "X", nivel_gobierno: "GOBIERNOS LOCALES", provincia: "PATAZ", distrito: "TAYABAMBA", pim: null, devengado: null },
+      ],
+    });
+    mockEmptyDownstream();
+
+    const res = await request(createApp()).get("/api/score/por-provincia");
+
+    const pataz = res.body.provincias.find((p: { provincia: string }) => p.provincia === "PATAZ");
+    expect(pataz).toMatchObject({ promedioScore: null, entidadesConScore: 0, entidadesSinScore: 1, sinDatos: true });
+  });
+
+  it("mezcla entidades con y sin score en la misma provincia sin que el promedio se contamine", async () => {
+    ejecucionQueryMock.mockResolvedValueOnce({
+      rows: [
+        { entity_code: "A", nombre: "A", nivel_gobierno: "GOBIERNOS LOCALES", provincia: "ASCOPE", distrito: "ASCOPE", pim: "100", devengado: "50" },
+        { entity_code: "B", nombre: "B", nivel_gobierno: "GOBIERNOS LOCALES", provincia: "ASCOPE", distrito: "CASA GRANDE", pim: null, devengado: null },
+      ],
+    });
+    mockEmptyDownstream();
+
+    const res = await request(createApp()).get("/api/score/por-provincia");
+
+    const ascope = res.body.provincias.find((p: { provincia: string }) => p.provincia === "ASCOPE");
+    expect(ascope).toMatchObject({ promedioScore: 50, entidadesConScore: 1, entidadesSinScore: 1, sinDatos: false });
+  });
+});

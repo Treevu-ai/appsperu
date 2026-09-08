@@ -1369,6 +1369,20 @@ export const TOOL_CATALOG: ToolSpec[] = [
       anio: z.string().regex(/^\d{4}$/).optional(),
     },
   },
+  {
+    name: "salud_institucional_score_por_provincia",
+    app: "salud-institucional",
+    description:
+      "Promedio de scoreCompuesto por provincia (SI-03, 2026-09-08), solo entidades con score disponible — " +
+      "reutiliza el mismo cálculo que salud_institucional_score. Provincia sin ninguna entidad con score trae " +
+      "promedioScore:null y sinDatos:true, nunca un 0 engañoso. Default: LA LIBERTAD, año 2026.",
+    pathTemplate: "/api/score/por-provincia",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      anio: z.string().regex(/^\d{4}$/).optional(),
+    },
+  },
 
   // ---- actividad-agraria (MIDAGRI, jornal agrícola) ----
   {
