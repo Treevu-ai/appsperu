@@ -690,6 +690,7 @@ multi-año** (2019-2024) verificada, no solo un snapshot del corte más reciente
 | **Frecuencia** | Manual (`npm run ingest:residuos` en `apps/residuos-solidos/api`). |
 | **Fuente de datos** | `datosabiertos.gob.pe/sites/default/files/1. Dataset Generación anual de residuos sólidos domiciliarios y municipales.csv` (MINAM). |
 | **Cobertura real ingerida** | Verificado en vivo 2026-09-06: **11,310 filas insertadas, 0 rechazadas** — serie 2019-2024 completa. La Libertad: **500 filas (83-84 distritos × 6 años), 12 provincias**. |
+| **`GET /api/residuos` — año vigente por defecto (DQ-04, 2026-09-08)** | Sin `anio` ni `historico=true`, el endpoint filtra al año más reciente (`MAX(anio)`) en vez de devolver los 6 años mezclados — antes sumaba silenciosamente ~1,890 filas/año como si fueran el universo de un solo corte, sobreestimando 6x cualquier total agregado client-side. `historico=true` recupera la serie completa; `anio=YYYY` filtra a un año exacto. |
 | **Detalle completo** | [`docs/data-contracts/minam-residuos-solidos.md`](data-contracts/minam-residuos-solidos.md) |
 | **Cruces** | Ninguno implementado — candidato natural: por UBIGEO contra `radar-ejecucion` (`FUNCION = SANEAMIENTO`) y contra `renamu` (¿la municipalidad con más generación de residuos tiene camión recolector de basura operativo?). |
 
@@ -719,6 +720,7 @@ beneficio real.
 | **Cobertura real ingerida** | Verificado en vivo 2026-09-06: **507/595/233 filas insertadas, 0 rechazadas** en los tres. La Libertad: **9 filas de terminales** (3 terminales: TP Multipropósito Salaverry, TP Multiboyas Salaverry, TP Chicama/Malabrigo), **36 filas de aeródromos** (9 aeródromos, incluye el Aeropuerto Internacional de Trujillo), **15 filas de peajes** (5 unidades: Menocucho, Virú, Pacanguilla, Chicama, Ciudad de Dios). El corte de peajes (2025-12-31) es el más reciente de los tres datasets de esta pasada. |
 | **Detalle completo** | [`docs/data-contracts/mtc-infraestructura-puntual.md`](data-contracts/mtc-infraestructura-puntual.md) |
 | **Cruces** | Ninguno implementado — candidato natural: por UBIGEO contra `radar-ejecucion` (`FUNCION = TRANSPORTE`) y contra `inversion-privada` (Puerto Salaverry ha tenido inversión APP reciente). |
+| **Corte vigente por defecto en los 3 endpoints (DQ-03, 2026-09-08)** | Los tres catálogos son paneles multi-año (`UNIQUE (código, fecha_corte)`) con hasta 4 cortes distintos ingeridos por app. Sin `fechaCorte` ni `historico=true`, cada endpoint filtra al corte más reciente (`MAX(fecha_corte)`) — antes devolvía todos los cortes mezclados (ej. aeródromos: 595 filas de 4 años en vez de las 152 vigentes). `historico=true` recupera la serie completa; `fechaCorte=YYYY-MM-DD` filtra a un corte exacto. |
 
 ---
 

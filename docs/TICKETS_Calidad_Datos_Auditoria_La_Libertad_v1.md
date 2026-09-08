@@ -51,6 +51,7 @@
   - `docs/conectores.md` documenta que este dataset es multi-corte y cuál es el comportamiento por defecto.
 - **Dependencias:** ninguna.
 - **Prioridad:** P0 · **Esfuerzo:** S
+- **Hecho (2026-09-08):** los 3 endpoints filtran por defecto a `fecha_corte = MAX(fecha_corte)`; `historico=true` o `fechaCorte=YYYY-MM-DD` recuperan el comportamiento multi-corte. Verificado en vivo para La Libertad tras el fix: terminales portuarios = **2** (antes 9, sumando 4 cortes), aeródromos = **9** (antes 595 filas nacionales de 4 cortes), coincide exactamente con lo esperado. Tests de regresión agregados en `apps/infraestructura-mtc/api/src/__tests__/api.test.ts`, suite completa 28/28 en verde.
 
 ### DQ-04 · Filtro de año vigente por defecto en `residuos-solidos`
 
@@ -62,6 +63,7 @@
   - Test de regresión: sin parámetro `anio` (o con el año más reciente explícito), la generación de Trujillo no debe exceder por un orden de magnitud el valor de un solo año típico (umbral de sanity check, ej. no más de 2x un promedio histórico razonable).
 - **Dependencias:** ninguna.
 - **Prioridad:** P0 · **Esfuerzo:** S
+- **Hecho (2026-09-08):** `GET /api/residuos` filtra por defecto a `anio = MAX(anio)`; `historico=true` o `anio=YYYY` recuperan la serie completa. Verificado en vivo para La Libertad: 84 filas (12 provincias, año 2024 único) en vez de las 500 de los 6 años mezclados. Tests de regresión en `apps/residuos-solidos/api/src/__tests__/api.test.ts`, suite completa 19/19 en verde.
 
 ### DQ-05 · Investigar y resolver el crossref infobras↔ejecución vacío ✅ Hecho (2026-09-07)
 

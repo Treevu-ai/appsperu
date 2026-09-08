@@ -85,4 +85,26 @@ describe("GET /api/residuos", () => {
     expect(res.status).toBe(200);
     expect(res.body.resultados).toEqual([]);
   });
+
+  it("DQ-04: sin anio/historico, filtra al año más reciente por defecto — evita sumar 6 años de generación como si fuera un solo año (2019-2024, ~1,890 filas/año en dev)", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "0" }] }).mockResolvedValueOnce({ rows: [] });
+    await request(createApp()).get("/api/residuos");
+    const [countSql] = queryMock.mock.calls[0];
+    expect(countSql).toMatch(/r\.anio = \(SELECT MAX\(anio\) FROM residuos_solidos_municipales\)/);
+  });
+
+  it("DQ-04: historico=true trae todos los años", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "0" }] }).mockResolvedValueOnce({ rows: [] });
+    await request(createApp()).get("/api/residuos").query({ historico: "true" });
+    const [countSql] = queryMock.mock.calls[0];
+    expect(countSql).not.toMatch(/MAX\(anio\)/);
+  });
+
+  it("DQ-04: anio explícito filtra a ese año exacto, no al más reciente", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "0" }] }).mockResolvedValueOnce({ rows: [] });
+    await request(createApp()).get("/api/residuos").query({ anio: "2021" });
+    const [countSql, countParams] = queryMock.mock.calls[0];
+    expect(countSql).toMatch(/r\.anio = \$1/);
+    expect(countParams).toEqual([2021]);
+  });
 });

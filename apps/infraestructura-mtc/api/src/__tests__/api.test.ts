@@ -80,6 +80,28 @@ describe("GET /api/terminales-portuarios", () => {
     expect(res.status).toBe(200);
     expect(res.body.resultados).toEqual([]);
   });
+
+  it("DQ-03: sin fechaCorte/historico, filtra al corte más reciente por defecto", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "0" }] }).mockResolvedValueOnce({ rows: [] });
+    await request(createApp()).get("/api/terminales-portuarios");
+    const [countSql] = queryMock.mock.calls[0];
+    expect(countSql).toMatch(/t\.fecha_corte = \(SELECT MAX\(fecha_corte\) FROM terminales_portuarios\)/);
+  });
+
+  it("DQ-03: historico=true trae todos los cortes, sin el filtro de corte más reciente", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "0" }] }).mockResolvedValueOnce({ rows: [] });
+    await request(createApp()).get("/api/terminales-portuarios").query({ historico: "true" });
+    const [countSql] = queryMock.mock.calls[0];
+    expect(countSql).not.toMatch(/MAX\(fecha_corte\)/);
+  });
+
+  it("DQ-03: fechaCorte explícito filtra a ese corte exacto, no al más reciente", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "0" }] }).mockResolvedValueOnce({ rows: [] });
+    await request(createApp()).get("/api/terminales-portuarios").query({ fechaCorte: "2023-12-31" });
+    const [countSql, countParams] = queryMock.mock.calls[0];
+    expect(countSql).toMatch(/t\.fecha_corte = \$1/);
+    expect(countParams).toEqual(["2023-12-31"]);
+  });
 });
 
 describe("GET /api/aerodromos", () => {
@@ -123,6 +145,20 @@ describe("GET /api/aerodromos", () => {
     expect(res.status).toBe(200);
     expect(res.body.resultados).toEqual([]);
   });
+
+  it("DQ-03: sin fechaCorte/historico, filtra al corte más reciente por defecto — evita sumar 4 años de snapshots (146+150+147+152 filas reales en dev)", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "0" }] }).mockResolvedValueOnce({ rows: [] });
+    await request(createApp()).get("/api/aerodromos");
+    const [countSql] = queryMock.mock.calls[0];
+    expect(countSql).toMatch(/a\.fecha_corte = \(SELECT MAX\(fecha_corte\) FROM aerodromos\)/);
+  });
+
+  it("DQ-03: historico=true trae todos los cortes", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "0" }] }).mockResolvedValueOnce({ rows: [] });
+    await request(createApp()).get("/api/aerodromos").query({ historico: "true" });
+    const [countSql] = queryMock.mock.calls[0];
+    expect(countSql).not.toMatch(/MAX\(fecha_corte\)/);
+  });
 });
 
 describe("GET /api/peajes", () => {
@@ -162,5 +198,19 @@ describe("GET /api/peajes", () => {
     const res = await request(createApp()).get("/api/peajes");
     expect(res.status).toBe(200);
     expect(res.body.resultados).toEqual([]);
+  });
+
+  it("DQ-03: sin fechaCorte/historico, filtra al corte más reciente por defecto — evita sumar 3 cortes (77+78+78 filas reales en dev)", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+    await request(createApp()).get("/api/peajes");
+    const [sql] = queryMock.mock.calls[0];
+    expect(sql).toMatch(/p\.fecha_corte = \(SELECT MAX\(fecha_corte\) FROM peajes\)/);
+  });
+
+  it("DQ-03: historico=true trae todos los cortes", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+    await request(createApp()).get("/api/peajes").query({ historico: "true" });
+    const [sql] = queryMock.mock.calls[0];
+    expect(sql).not.toMatch(/MAX\(fecha_corte\)/);
   });
 });
