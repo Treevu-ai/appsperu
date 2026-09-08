@@ -9,6 +9,36 @@ import { parseQuery } from "../lib/validate-query.js";
 
 export const crossrefRouter = Router();
 
+/**
+ * Salud del crossref infobras<->radar-ejecucion (SI-07) — `entity_crosswalk`
+ * se puebla con `npm run crossref:build`, un job manual sin scheduler. Una
+ * auditoría de datos de La Libertad (2026-09) encontró la tabla en 0 filas
+ * durante meses sin que nadie lo notara, bloqueando el componente
+ * `obrasNoParalizadas` del score institucional para el 100% de las
+ * entidades del país. Este endpoint permite verificarlo sin conectarse
+ * directamente a la base.
+ */
+crossrefRouter.get(
+  "/salud",
+  asyncHandler(async (_req, res) => {
+    const { rows } = await pool.query(
+      `SELECT COUNT(*) AS filas,
+              COUNT(*) FILTER (WHERE confidence = 'confirmada') AS confirmadas,
+              COUNT(*) FILTER (WHERE confidence = 'candidata') AS candidatas,
+              MAX(computed_at) AS ultima_construccion
+       FROM entity_crosswalk`
+    );
+    const filas = Number(rows[0].filas);
+    res.json({
+      filas,
+      confirmadas: Number(rows[0].confirmadas),
+      candidatas: Number(rows[0].candidatas),
+      ultimaConstruccion: rows[0].ultima_construccion,
+      estado: filas === 0 ? "VACIO" : "OK",
+    });
+  })
+);
+
 const CrossrefQuerySchema = z.object({
   departamento: z.string().min(1).optional(),
 });

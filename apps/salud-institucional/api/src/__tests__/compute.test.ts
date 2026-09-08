@@ -5,6 +5,9 @@ function baseInput() {
   return {
     entityCode: "301189",
     nombre: "MUNICIPALIDAD PROVINCIAL DE SANCHEZ CARRION - HUAMACHUCO",
+    nivelGobierno: "GOBIERNOS LOCALES",
+    provincia: "SANCHEZ CARRION",
+    distrito: "HUAMACHUCO",
     ejecucion: null,
     obras: null,
     inversiones: null,
@@ -65,5 +68,23 @@ describe("computeEntityScore", () => {
   it("salud tributaria: todos los proveedores evaluables regulares da 100", () => {
     const result = computeEntityScore({ ...baseInput(), fiscal: { evaluables: 4, regulares: 4 } });
     expect(result.componentes.saludTributariaProveedores.valor).toBe(100);
+  });
+
+  it("expone nivelGobierno/provincia/distrito tal cual el input, sin transformarlos", () => {
+    const result = computeEntityScore(baseInput());
+    expect(result.nivelGobierno).toBe("GOBIERNOS LOCALES");
+    expect(result.provincia).toBe("SANCHEZ CARRION");
+    expect(result.distrito).toBe("HUAMACHUCO");
+  });
+
+  it("no inventa provincia/distrito cuando el input no los trae", () => {
+    const result = computeEntityScore({ ...baseInput(), provincia: null, distrito: null });
+    expect(result.provincia).toBeNull();
+    expect(result.distrito).toBeNull();
+  });
+
+  it("rankingEnNivelGobierno queda null hasta que score.ts lo calcula sobre el conjunto completo", () => {
+    const result = computeEntityScore(baseInput());
+    expect(result.rankingEnNivelGobierno).toBeNull();
   });
 });

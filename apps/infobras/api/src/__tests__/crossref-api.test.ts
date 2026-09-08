@@ -151,3 +151,33 @@ describe("GET /api/crossref/ejecucion", () => {
     expect(publicWorksQueryMock).not.toHaveBeenCalled();
   });
 });
+
+describe("GET /api/crossref/salud", () => {
+  it("reporta filas/confirmadas/candidatas/ultimaConstruccion cuando el crosswalk tiene datos", async () => {
+    publicWorksQueryMock.mockResolvedValueOnce({
+      rows: [{ filas: "92", confirmadas: "75", candidatas: "17", ultima_construccion: "2026-09-07T19:30:00.000Z" }],
+    });
+
+    const res = await request(createApp()).get("/api/crossref/salud");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      filas: 92,
+      confirmadas: 75,
+      candidatas: 17,
+      ultimaConstruccion: "2026-09-07T19:30:00.000Z",
+      estado: "OK",
+    });
+  });
+
+  it("marca estado VACIO explícito cuando entity_crosswalk no tiene filas", async () => {
+    publicWorksQueryMock.mockResolvedValueOnce({
+      rows: [{ filas: "0", confirmadas: "0", candidatas: "0", ultima_construccion: null }],
+    });
+
+    const res = await request(createApp()).get("/api/crossref/salud");
+
+    expect(res.body.estado).toBe("VACIO");
+    expect(res.body.ultimaConstruccion).toBeNull();
+  });
+});
