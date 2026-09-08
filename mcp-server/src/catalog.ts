@@ -52,6 +52,26 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
   {
+    name: "radar_ejecucion_execution_resumen",
+    app: "radar-ejecucion",
+    description:
+      "Agrega PIA/PIM/devengado por función o genérica de gasto (DQ-08, 2026-09-08) sin tener que paginar el " +
+      "universo completo y sumar client-side. `groupBy` es requerido (funcion|generica); cualquier otro valor " +
+      "responde 400. Acepta los mismos filtros que radar_ejecucion_execution. Verificado en vivo: " +
+      "groupBy=funcion para La Libertad da 22 grupos cuya suma de filas es exactamente 2,594 (el total " +
+      "departamental). " + SIN_SCHEDULER,
+    pathTemplate: "/api/execution/resumen",
+    pathParams: [],
+    querySchema: {
+      groupBy: z.enum(["funcion", "generica"]),
+      nivel: z.string().min(1).optional(),
+      anio: z.string().regex(/^\d{4}$/).optional(),
+      ubigeo: z.string().min(1).optional(),
+      departamento: z.string().min(1).optional(),
+      metaDepartamento: z.string().min(1).optional(),
+    },
+  },
+  {
     name: "radar_ejecucion_execution_by_entity",
     app: "radar-ejecucion",
     description: "Detalle de ejecución presupuestal de una entidad específica por su entity_code. " + SIN_SCHEDULER,
