@@ -90,7 +90,7 @@ Cada sprint deja una **puerta de salida verificable**: si la puerta no se cumple
 |---|---|---|---|---|---|---|
 | DQ-11 | ADR: aceptar score institucional parcial o priorizar DQ-05 | ADR con decisión explícita sobre cómo comunicar (o no) un score de máximo 2/5 componentes | DQ-05 | P2 | S | ⬜ Pendiente |
 | DQ-12 | Evaluar inversión en CEPLAN Geo | Documento de evaluación costo/beneficio de ingerir infraestructura y población para las 11 provincias restantes | — | P2 | S | ⬜ Pendiente |
-| DQ-13 | Evaluar fuente adicional de autoridades subnacionales electas | Documento de evaluación de disponibilidad y costo de un conector ONPE/JNE de autoridades municipales/regionales | — | P2 | S | ⬜ Pendiente |
+| DQ-13 | Evaluar fuente adicional de autoridades subnacionales electas | Documento de evaluación de disponibilidad y costo de un conector ONPE/JNE de autoridades municipales/regionales | — | P2 | S | ✅ Evaluado (2026-09-08) — no requiere conector nuevo, ver TICKETS |
 
 **Puerta de salida del Sprint 3**: decisión documentada (con o sin implementación de seguimiento) para cada uno de los 3 gaps de cobertura — ninguno queda como limitación implícita sin registrar.
 
