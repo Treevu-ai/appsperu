@@ -7,8 +7,18 @@ import { costDriftPct, gapFisicoFinanciero } from "../signals/signals.js";
 
 export const publicWorksRouter = Router();
 
+const GROUP_BY_COLUMNS = {
+  sectorEntidad: "sector_entidad",
+  nivelGobierno: "nivel_gobierno",
+  naturalezaObra: "naturaleza_obra",
+  modalidadEjecucion: "modalidad_ejecucion",
+  causalParalizacion: "causal_paralizacion",
+} as const;
+
 const PublicWorksResumenQuerySchema = z.object({
   departamento: z.string().min(1).optional(),
+  groupBy: z.enum(Object.keys(GROUP_BY_COLUMNS) as [string, ...string[]]).optional()
+    .describe("DQ-06: desglosa el resumen por categoría — sectorEntidad, nivelGobierno, naturalezaObra, modalidadEjecucion o causalParalizacion. Un valor no soportado responde 400, nunca se ignora en silencio."),
 });
 
 const PublicWorksQuerySchema = z.object({
@@ -58,12 +68,16 @@ function withSignals(row: Record<string, unknown>) {
   };
 }
 
+function pct(part: number, total: number): number {
+  return total === 0 ? 0 : Math.round((part / total) * 10000) / 100;
+}
+
 publicWorksRouter.get(
   "/resumen",
   asyncHandler(async (req, res) => {
     const parsed = parseQuery(PublicWorksResumenQuerySchema, req.query, res);
     if (!parsed) return;
-    const { departamento } = parsed;
+    const { departamento, groupBy } = parsed;
     const params: unknown[] = [];
     let where = "";
     if (departamento) {
@@ -83,13 +97,42 @@ publicWorksRouter.get(
     );
 
     const total = Number(rows[0].total);
-    res.json({
+    const body: Record<string, unknown> = {
       totalObras: total,
-      conParalizacionPct: total === 0 ? 0 : Math.round((Number(rows[0].con_paralizacion) / total) * 10000) / 100,
-      conAvanceReportadoPct:
-        total === 0 ? 0 : Math.round((Number(rows[0].con_avance_reportado) / total) * 10000) / 100,
+      conParalizacionPct: pct(Number(rows[0].con_paralizacion), total),
+      conAvanceReportadoPct: pct(Number(rows[0].con_avance_reportado), total),
       conDistritoSospechoso: Number(rows[0].con_distrito_sospechoso),
-    });
+    };
+
+    if (groupBy) {
+      // DQ-06: `groupBy` viene validado por el enum del schema — la columna real
+      // sale de GROUP_BY_COLUMNS, nunca del texto crudo del query param, para no
+      // abrir una inyección SQL por nombre de columna.
+      const column = GROUP_BY_COLUMNS[groupBy as keyof typeof GROUP_BY_COLUMNS];
+      const { rows: groupRows } = await pool.query(
+        `SELECT ${column} AS grupo,
+                COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE existe_paralizacion) AS con_paralizacion,
+                COUNT(*) FILTER (WHERE avance_fisico_real_pct IS NOT NULL) AS con_avance_reportado
+         FROM public_works
+         ${where}
+         GROUP BY ${column}
+         ORDER BY total DESC`,
+        params
+      );
+      body.groupBy = groupBy;
+      body.porGrupo = groupRows.map((r) => {
+        const grupoTotal = Number(r.total);
+        return {
+          grupo: r.grupo,
+          total: grupoTotal,
+          conParalizacionPct: pct(Number(r.con_paralizacion), grupoTotal),
+          conAvanceReportadoPct: pct(Number(r.con_avance_reportado), grupoTotal),
+        };
+      });
+    }
+
+    res.json(body);
   })
 );
 

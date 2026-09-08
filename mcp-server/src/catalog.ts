@@ -871,10 +871,17 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "infobras_public_works_resumen",
     app: "infobras",
-    description: "Resumen agregado: total de obras, % con paralización, % con avance físico reportado.",
+    description:
+      "Resumen agregado: total de obras, % con paralización, % con avance físico reportado, conteo de " +
+      "distrito_sospechoso (DQ-14). `groupBy` (DQ-06, 2026-09-08) desglosa por sectorEntidad, " +
+      "nivelGobierno, naturalezaObra, modalidadEjecucion o causalParalizacion — antes se ignoraba en " +
+      "silencio; un valor no soportado ahora responde 400 explícito.",
     pathTemplate: "/api/public-works/resumen",
     pathParams: [],
-    querySchema: { departamento: z.string().min(1).optional() },
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      groupBy: z.enum(["sectorEntidad", "nivelGobierno", "naturalezaObra", "modalidadEjecucion", "causalParalizacion"]).optional(),
+    },
   },
   {
     name: "infobras_public_work_by_codigo",
@@ -1892,7 +1899,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "`TELEFONO`, `EMAIL` y `PROMOTOR` de la fuente real nunca se leen ni persisten — solo `NRORUC`/" +
       "`RZSOCIAL` de instituciones privadas (identidad de entidad, no de persona). Universo nacional de 180K+ " +
       "filas supera ampliamente el `limit` por defecto sin un filtro territorial — paginación real: usa " +
-      "`limit`/`offset`; la respuesta trae `total` y `hasMore`. " + SIN_SCHEDULER,
+      "`limit`/`offset`; la respuesta trae `total` y `hasMore`. `areaCenso` (Urbana/Rural, DQ-07, 2026-09-08) " +
+      "expuesto y filtrable — La Libertad: 4,800 Urbana + 4,591 Rural = 9,391. " + SIN_SCHEDULER,
     pathTemplate: "/api/instituciones",
     pathParams: [],
     querySchema: {
@@ -1903,6 +1911,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
       estado: z.string().min(1).optional().describe("Ej. 'Activo'."),
       gestion: z.string().min(1).optional(),
       nombre: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      areaCenso: z.enum(["Urbana", "Rural"]).optional(),
       limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
       offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
