@@ -133,6 +133,7 @@
   - Enlazado desde `docs/conectores.md` para que sea descubrible.
 - **Dependencias:** idealmente después de DQ-03/DQ-04 para documentar el comportamiento ya corregido, no el bug.
 - **Prioridad:** P1 · **Esfuerzo:** S
+- **Hecho (2026-09-08):** creado `docs/data-contracts/paneles-multi-corte.md`, enlazado desde `docs/conectores.md`. Cubre las 4 fuentes identificadas en el ticket original más `radar-ejecucion` (riesgo latente encontrado al auditar `LATEST_BUDGET_CTE`: `anio_fiscal` no se colapsa en el dedupe, así que ingerir un segundo año fiscal reproduciría el mismo bug de DQ-03/DQ-04 — no verificable hoy porque el entorno de desarrollo solo tiene 2026 ingerido) y `renamu`/`municipalidades` (inconsistencia entre `GET /api/municipalidades`, que no filtra por año, y `GET /api/equipamiento`, que sí — candidato a ticket de seguimiento, fuera de alcance de este ticket).
 
 ### DQ-10 · Chequeo genérico: total de resumen vs. suma de filas paginadas
 
