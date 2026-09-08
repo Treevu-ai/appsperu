@@ -61,8 +61,8 @@ de las otras bases y `npm run dev`.
 
 ## Servidor MCP (Model Context Protocol)
 
-[`mcp-server/`](mcp-server/) expone las 27 apps como **142 tools de solo lectura**, buscables desde
-2 meta-tools (`rastro_buscar_tools` + `rastro_llamar`, no 142 registrados uno por uno) para agentes IA
+[`mcp-server/`](mcp-server/) expone las 27 apps como **146 tools de solo lectura**, buscables desde
+2 meta-tools (`rastro_buscar_tools` + `rastro_llamar`, no 146 registrados uno por uno) para agentes IA
 vía MCP (transporte stdio). Compatible con Claude Code, Claude Desktop, Cursor, Windsurf, Cline y
 Continue.dev. Una vez conectado, el agente busca el tool exacto, lo ejecuta, encadena resultados y
 entrega respuestas con citas verificables. Requiere que las apps ya estén corriendo — ver
