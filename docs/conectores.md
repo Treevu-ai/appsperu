@@ -19,6 +19,12 @@ qué tan seguido *convendría* correr el conector si se automatizara.
 > de archivo en este documento. Si agregas un conector, actualiza este archivo en el mismo PR
 > — el chequeo no exige un formato de ficha específico, solo que el archivo esté nombrado acá.
 
+> **¿Tu fuente es un panel multi-año/multi-corte?** Antes de sumar filas de cualquier
+> endpoint de listado, revisa [`docs/data-contracts/paneles-multi-corte.md`](data-contracts/paneles-multi-corte.md)
+> (DQ-09) — varias fuentes acumulan una fila nueva por año/corte en vez de sobrescribir, y
+> sumar sin filtrar infla el total en un múltiplo del número de años ingeridos (confirmado
+> como bug real en `infraestructura-mtc` y `residuos-solidos`, DQ-03/DQ-04).
+
 ---
 
 <a id="radar-ejecucion"></a>
