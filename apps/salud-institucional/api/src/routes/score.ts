@@ -38,12 +38,13 @@ scoreRouter.get("/", asyncHandler(async (req, res) => {
   // 1. Universo de entidades + ejecución presupuestal (radar-ejecucion, fuente primaria).
   const { rows: entityRows } = await ejecucionPool.query(
     `${LATEST_BUDGET_CTE}
-     SELECT e.entity_code, e.nombre, SUM(b.pim) AS pim, SUM(b.devengado) AS devengado
+     SELECT e.entity_code, e.nombre, e.nivel_gobierno, t.provincia, t.distrito,
+            SUM(b.pim) AS pim, SUM(b.devengado) AS devengado
      FROM entities e
      JOIN territories t ON t.ubigeo = e.ubigeo
      LEFT JOIN latest_budget b ON b.entity_code = e.entity_code AND b.anio_fiscal = $2
      WHERE t.departamento = $1
-     GROUP BY e.entity_code, e.nombre`,
+     GROUP BY e.entity_code, e.nombre, e.nivel_gobierno, t.provincia, t.distrito`,
     [wantedDepartamento, anio]
   );
 
@@ -153,6 +154,9 @@ scoreRouter.get("/", asyncHandler(async (req, res) => {
   const inputs: EntityScoreInputs[] = entityRows.map((r) => ({
     entityCode: r.entity_code,
     nombre: r.nombre,
+    nivelGobierno: r.nivel_gobierno,
+    provincia: r.provincia,
+    distrito: r.distrito,
     ejecucion: r.pim !== null ? { pim: Number(r.pim), devengado: Number(r.devengado) || 0 } : null,
     obras: obrasByEntity.get(r.entity_code) ?? null,
     inversiones: inversionesByEntity.get(r.entity_code) ?? null,
@@ -161,6 +165,23 @@ scoreRouter.get("/", asyncHandler(async (req, res) => {
   }));
 
   const resultados = inputs.map(computeEntityScore).sort((a, b) => (b.scoreCompuesto ?? -1) - (a.scoreCompuesto ?? -1));
+
+  // Ranking dentro de cada cohorte de nivel de gobierno (SI-02) — no se calcula
+  // en compute.ts porque requiere ver el conjunto completo de entidades, no una
+  // entidad aislada. Entidades sin score no reciben ranking.
+  const cohortesPorNivel = new Map<string, typeof resultados>();
+  for (const r of resultados) {
+    if (r.scoreCompuesto === null) continue;
+    const nivel = r.nivelGobierno ?? "SIN_NIVEL";
+    if (!cohortesPorNivel.has(nivel)) cohortesPorNivel.set(nivel, []);
+    cohortesPorNivel.get(nivel)!.push(r);
+  }
+  for (const cohorte of cohortesPorNivel.values()) {
+    cohorte.sort((a, b) => (b.scoreCompuesto ?? -1) - (a.scoreCompuesto ?? -1));
+    cohorte.forEach((r, index) => {
+      r.rankingEnNivelGobierno = { posicion: index + 1, total: cohorte.length };
+    });
+  }
 
   res.json({ departamento: wantedDepartamento, anioFiscal: anio, resultados });
 }));

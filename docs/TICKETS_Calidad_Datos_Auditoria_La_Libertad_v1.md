@@ -63,17 +63,18 @@
 - **Dependencias:** ninguna.
 - **Prioridad:** P0 · **Esfuerzo:** S
 
-### DQ-05 · Investigar y resolver el crossref infobras↔ejecución vacío
+### DQ-05 · Investigar y resolver el crossref infobras↔ejecución vacío ✅ Hecho (2026-09-07)
 
 - **Historia:** Como equipo de datos, quiero saber por qué el cruce que alimenta `obrasNoParalizadas` en el score institucional está vacío en la base viva, para decidir si se arregla o se documenta como limitación aceptada.
-- **Contexto verificado:** `GET /api/crossref/ejecucion` (infobras) devuelve `{"resultados":[]}` para el país completo, no solo para La Libertad. Verificado también que `comprasNoConcentradas` y `saludTributariaProveedores` están en 0/130 entidades en La Libertad y 0/78 en Lima (grupo de control) — los 3 componentes faltantes del score institucional están vacíos a escala nacional. La documentación interna del proyecto describe el cruce infobras↔ejecución como funcional con decenas de coincidencias confirmadas, lo que contradice el estado observado.
-- **Criterios de aceptación:**
-  - Investigación documentada (en el PR o en un ADR si el hallazgo lo justifica) de la causa raíz: ¿el job de matching nunca corrió en este entorno?, ¿la tabla se vació en una migración?, ¿el crossref depende de un dataset que cambió de formato?
-  - Si la causa es corregible en esfuerzo ≤ M: el crossref se repuebla y `GET /api/crossref/ejecucion` deja de devolver vacío; el score institucional debe mostrar al menos algunas entidades con 3+ de 5 componentes tras el fix.
-  - Si el esfuerzo excede M: este ticket entrega solo el diagnóstico de causa raíz, y la implementación queda como ticket de seguimiento — igual patrón que CX-02 en el backlog de Confiabilidad de Conectores.
-  - Se actualiza `docs/conectores.md` (ficha de infobras, sección de crossref) con el estado real encontrado.
-- **Dependencias:** ninguna. Relacionado con DQ-11 (decisión de aceptar el score parcial si este ticket no se resuelve).
-- **Prioridad:** P0 · **Esfuerzo:** M (investigación) — puede escalar a L si la causa raíz requiere rehacer el job de matching completo.
+- **Contexto verificado:** `GET /api/crossref/ejecucion` (infobras) devolvía `{"resultados":[]}` para el país completo, no solo para La Libertad. Igual `comprasNoConcentradas` y `saludTributariaProveedores` en 0/130 entidades en La Libertad y 0/78 en Lima (grupo de control).
+- **Causa raíz encontrada (no era un bug de código):** ambas apps (`infobras`, `compras-publicas`) tienen un script `npm run crossref:build` (`tsx src/crossref/build-crosswalk.ts`) que puebla `entity_crosswalk` — es un job manual, on-demand, y **nunca se había corrido en este entorno de desarrollo**. Las tablas estaban en 0 filas no por un bug sino por falta de ejecución inicial.
+- **Resuelto:** se corrieron ambos scripts.
+  - `infobras`: `ejecucionEntities: 130, infobrasEntities: 164, confirmadas: 75, candidatas: 17, sinMatch: 72`.
+  - `compras-publicas`: `mefEntities: 130, oeceEntities: 85, confirmadas: 56, candidatas: 15, sinMatch: 14`.
+  - Score institucional de La Libertad verificado post-fix: distribución de `componentesUsados` pasó de `{0:1, 1:30, 2:99, 3+:0}` a **`{0:1, 1:28, 2:8, 3:35, 4:9, 5:49}`** — 93 de 130 entidades (71.5%) ahora tienen 3 o más de 5 componentes, 49 tienen los 5 completos.
+- **Pendiente de seguimiento (no bloqueante, ver DQ-04 de `docs/BACKLOG_Confiabilidad_Conectores_y_Cruces_v1.md`, evaluado y diferido en ADR-0016):** este hallazgo es evidencia fuerte de que vale la pena reabrir esa evaluación — un job manual que nadie corrió durante meses dejó al score institucional completo (nacional, no solo La Libertad) mostrando datos parciales sin que nadie lo notara. Recomendación: automatizar `crossref:build` de ambas apps con un mínimo de frecuencia (ej. semanal) o, si no se automatiza, documentar explícitamente en el runbook de despliegue que es un paso obligatorio post-deploy.
+- **Dependencias:** ninguna. DQ-11 se reevalúa a la luz de este resultado (el score ya no está estructuralmente topado en 2/5).
+- **Prioridad:** P0 · **Esfuerzo real:** XS (dos comandos) — estimado como M/L; el esfuerzo real fue mínimo porque el mecanismo ya existía, solo faltaba ejecutarlo.
 
 ---
 
@@ -143,15 +144,16 @@
 
 ## ÉPICA 4 — Decisiones de alcance pendientes (Sprint 3, evaluación)
 
-### DQ-11 · ADR: aceptar el score institucional parcial o priorizar DQ-05
+### DQ-11 · ADR: aceptar el score institucional parcial o priorizar DQ-05 — ⚠️ Premisa resuelta por DQ-05, redefinido
 
-- **Historia:** Como equipo de producto, quiero una decisión explícita sobre si el score institucional (hoy tope de 2/5 componentes para el 100% de las entidades del país) es aceptable como está o si bloquea la utilidad del score.
-- **Contexto verificado:** confirmado que 0 de 130 entidades en La Libertad y 0 de 78 en Lima llegan a 3+ componentes — no es un problema de cobertura regional, es estructural mientras DQ-05 no se resuelva.
+- **Historia original:** decisión explícita sobre si el score institucional (tope de 2/5 componentes) era aceptable o bloqueaba la utilidad del score.
+- **Estado:** DQ-05 se resolvió corriendo `crossref:build` en ambas apps — el score ya no está topado en 2/5 (93/130 entidades de La Libertad tienen 3+, 49 tienen 5/5). La pregunta original ya no aplica tal cual.
+- **Redefinido como:** ADR sobre **operación continua del crossref**, no sobre aceptar un score roto. Documentar: (a) que el score depende de 2 jobs manuales (`crossref:build` de infobras y compras-publicas) que deben re-correrse periódicamente a medida que entran nuevas entidades/proyectos/adjudicaciones, (b) qué pasa si alguno vuelve a vaciarse o desactualizarse sin que nadie lo note (mismo riesgo que ya se vivió), (c) decisión sobre automatizar ambos jobs (reabrir ADR-0016, que evaluó esto para otros conectores y lo difirió) o, como mínimo, agregar un chequeo de salud (ej. alertar si `entity_crosswalk` tiene 0 filas o no se ha recalculado en N días).
 - **Criterios de aceptación:**
-  - ADR (siguiente número libre en `docs/adr/`, verificar al implementar — 0022 al momento de escribir este ticket) que documenta: impacto de mostrar un score "de máximo 2/5" sin más contexto a un usuario final, alternativas (mostrar el score tal cual con una nota explícita de cobertura, ocultar el score hasta que DQ-05 se resuelva, u otra), y decisión tomada.
-  - Si la decisión es "mostrar con nota de cobertura": se especifica el texto/mecanismo exacto que comunica la limitación donde el score se presenta.
-- **Dependencias:** DQ-05 (el diagnóstico de causa raíz informa si vale la pena esperar el fix o aceptar la limitación indefinidamente).
-- **Prioridad:** P2 · **Esfuerzo:** S (documento de decisión, no implementación)
+  - ADR (siguiente número libre en `docs/adr/` al implementar) con la decisión sobre automatización o chequeo de salud del crossref.
+  - Si se decide un chequeo de salud: se implementa (puede ser tan simple como un endpoint `/health/crossref` que reporte `rowCount` y `lastBuiltAt`).
+- **Dependencias:** ninguna (DQ-05 ya resuelto).
+- **Prioridad:** P2 · **Esfuerzo:** S (documento de decisión + chequeo simple si aplica)
 
 ### DQ-12 · Evaluar inversión en CEPLAN Geo
 

@@ -37,6 +37,13 @@ export interface FiscalInput {
 export interface EntityScoreInputs {
   entityCode: string;
   nombre: string;
+  /** Nivel de gobierno, provincia y distrito de la entidad (derivados de
+   * `entities.ubigeo` -> `territories` en la capa de rutas) — pass-through,
+   * no se calculan acá. `null` explícito si `ubigeo` no resuelve; nunca se
+   * infiere un valor. */
+  nivelGobierno: string | null;
+  provincia: string | null;
+  distrito: string | null;
   ejecucion: EjecucionInput | null;
   obras: ObrasInput | null;
   inversiones: InversionesInput | null;
@@ -52,6 +59,9 @@ export interface ComponentScore {
 export interface EntityScore {
   entityCode: string;
   nombre: string;
+  nivelGobierno: string | null;
+  provincia: string | null;
+  distrito: string | null;
   scoreCompuesto: number | null;
   componentesUsados: number;
   componentes: {
@@ -61,6 +71,11 @@ export interface EntityScore {
     comprasNoConcentradas: ComponentScore;
     saludTributariaProveedores: ComponentScore;
   };
+  /** Posición dentro de las entidades de su mismo nivel de gobierno con score
+   * disponible (ej. "3° de 85 Gobiernos Locales") — se calcula en score.ts
+   * sobre el conjunto completo de resultados, no acá; queda `null` hasta que
+   * score.ts lo rellena, y se mantiene `null` si la entidad no tiene score. */
+  rankingEnNivelGobierno: { posicion: number; total: number } | null;
 }
 
 function pct(numerator: number, denominator: number): number | null {
@@ -118,8 +133,12 @@ export function computeEntityScore(input: EntityScoreInputs): EntityScore {
   return {
     entityCode: input.entityCode,
     nombre: input.nombre,
+    nivelGobierno: input.nivelGobierno,
+    provincia: input.provincia,
+    distrito: input.distrito,
     scoreCompuesto,
     componentesUsados: disponibles.length,
     componentes,
+    rankingEnNivelGobierno: null,
   };
 }

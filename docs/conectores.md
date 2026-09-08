@@ -98,6 +98,13 @@ lee `awards.supplier_id` (`GET /api/crossref`, RUC exacto extraído del prefijo 
 [`proveedores-sancionados`](#proveedores-sancionados) hace lo mismo para cruzar cada adjudicación
 contra inhabilitaciones vigentes — ambos reutilizan el mismo `extractRuc()` sobre `supplier_id`.
 
+**`GET /api/crossref/salud` (SI-07, 2026-09-07)**: reporta `{filas, confirmadas, candidatas,
+ultimaConstruccion, estado}` de `entity_crosswalk`, con `estado: "VACIO"` explícito si tiene 0
+filas. Se agregó tras encontrar esta tabla vacía durante meses en una auditoría de datos (nadie
+había corrido `npm run crossref:build`), bloqueando `comprasNoConcentradas`/
+`saludTributariaProveedores` del score institucional para el 100% de las entidades del país —
+revisar tras cada seed/despliegue de datos nuevo.
+
 <a id="compras-publicas-releases"></a>
 ### `oece-connector.ts` (releases)
 
@@ -195,6 +202,7 @@ contra inhabilitaciones vigentes — ambos reutilizan el mismo `extractRuc()` so
 | **Fuente de datos** | `infobras.contraloria.gob.pe` — descarga directa vía `InfobrasWeb/Archivo/DownloadFile`. |
 | **Alcance territorial CLI** | `INFOBRAS_DEPARTAMENTOS` acepta La Libertad, Lambayeque, Piura, Cajamarca y Cusco. El XLSX fuente es nacional y se guarda el tamaño de lote nacional antes del filtro territorial. Los porcentajes se preservan como fuente y la columna admite valores atípicamente escalados; no se reinterpreta un porcentaje en la ingesta. |
 | **Cost Drift** | `costDriftPct` (% de desvío entre `monto_viable` y `costo_actualizado` de una obra) vive en `@appsperu/shared-signals`, compartida con `salud-institucional`. Umbral de "sobrecosto" (`SOBRECOSTO_UMBRAL_PCT`) unificado en el mismo paquete — ver [ADR-0020](adr/0020-umbral-sobrecosto-unificado.md). |
+| **`GET /api/crossref/salud` (SI-07, 2026-09-07)** | Reporta `{filas, confirmadas, candidatas, ultimaConstruccion, estado}` de `entity_crosswalk`, con `estado: "VACIO"` explícito si tiene 0 filas. Se agregó después de que una auditoría de datos de La Libertad encontrara esta tabla vacía durante meses (nadie había corrido `npm run crossref:build`), bloqueando el componente `obrasNoParalizadas` del score institucional para el 100% de las entidades del país sin que nadie lo notara — revisar este endpoint tras cada seed/despliegue de datos nuevo. |
 | **Detalle completo** | [`docs/data-contracts/infobras-obras-publicas.md`](data-contracts/infobras-obras-publicas.md) |
 
 ---
@@ -410,6 +418,7 @@ duplicar lógica entre los tres.
 | **Frecuencia** | N/A — se recalcula en cada request, no hay "ingesta" que programar. |
 | **Fuente de datos** | Las 5 bases Postgres de las otras apps (indirectamente, las 5 fuentes externas de arriba). |
 | **Sobrecosto (componente inversiones)** | `costo_actualizado > monto_viable` en SQL — equivalente a `costDriftPct(...) > SOBRECOSTO_UMBRAL_PCT` de `@appsperu/shared-signals` (no calculado fila por fila por performance). Umbral unificado con `infobras` — ver [ADR-0020](adr/0020-umbral-sobrecosto-unificado.md). |
+| **Nivel de gobierno, territorio y ranking por cohorte (SI-01/SI-02, 2026-09-07)** | `GET /api/score` expone `nivelGobierno`/`provincia`/`distrito` por entidad (mismo JOIN a `territories` que la query ya hacía, solo faltaba seleccionarlo — mismo patrón que DQ-02 en `radar-ejecucion`) y `rankingEnNivelGobierno: {posicion, total}`, calculado sobre las entidades de su misma cohorte de nivel de gobierno con score disponible. Entidades sin score no reciben ranking. |
 | **Detalle completo** | [`docs/data-contracts/salud-institucional-score.md`](data-contracts/salud-institucional-score.md) |
 
 ---
