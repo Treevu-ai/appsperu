@@ -26,6 +26,36 @@ entidad, ese componente se omite del promedio — nunca se imputa 0 ni 100 por
 ausencia. `componentesUsados` viaja explícito en cada resultado; un score con
 1 componente no es comparable a uno con 5, y el consumidor debe poder verlo.
 
+## Bandas cualitativas (SI-04, esquema confirmado 2026-09-07, implementado 2026-09-08)
+
+Cada resultado con `scoreCompuesto` no nulo trae también `banda`, una clasificación de 5
+niveles con cola crítica — nunca reemplaza el número, es una lectura adicional para quien no
+quiere interpretar la distribución completa. Entidad con `scoreCompuesto: null` recibe
+`banda: null`, nunca una banda por defecto.
+
+| Banda | Umbral | Entidades (verificado 2026-09-08) |
+|---|---|---|
+| Sobresaliente | `scoreCompuesto >= 72.3` (p90) | 16 |
+| Alto | `67.9 <= scoreCompuesto < 72.3` (p75–p90) | 20 |
+| Medio | `55.8 <= scoreCompuesto < 67.9` (p25–p75) | 62 |
+| Bajo | `45.9 <= scoreCompuesto < 55.8` (p10–p25) | 19 |
+| Crítico | `scoreCompuesto < 45.9` (p10) | 12 |
+
+Los umbrales son los percentiles reales de `scoreCompuesto` en las 129 entidades de La
+Libertad con score no nulo, calculados el 2026-09-07 (mínimo 27.9, p10 45.9, p25 55.8,
+mediana 61.3, p75 67.9, p90 72.3, máximo 80.3, promedio 60.7) y **hardcodeados como
+constantes en `score/compute.ts`** — no se recalculan automáticamente.
+
+**Re-verificados el 2026-09-08** tras SI-08 (fix de `ejecucionScore` que cambió el score de 3
+entidades de forma significativa, incl. Municipalidad Provincial de Trujillo 64.2 → 80.2): la
+distribución completa de las 129 entidades apenas se movió (p10 46.1, p25 55.9, mediana 61.7,
+p75 68.8, p90 72.8, mínimo/máximo iguales, promedio 61.1 — todos los percentiles cambiaron
+menos de 1 punto, porque solo 3 de 129 entidades se vieron afectadas por SI-08). Se decidió
+**no recalcular los umbrales confirmados** por este cambio, ya que la distribución no se
+movió lo suficiente como para justificarlo. Si en el futuro cambia sustancialmente (ej. tras
+automatizar el crossref o agregar más departamentos), esa es una decisión explícita nueva, no
+una asunción de que estos umbrales siguen siendo representativos para siempre.
+
 ## Hallazgo real al construir esto: el crosswalk `infobras ↔ radar-ejecucion` existía en código pero nunca se había corrido
 
 La migración `003_entity_crosswalk.sql` y el endpoint `GET /api/crossref/ejecucion`

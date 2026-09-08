@@ -109,3 +109,55 @@ describe("computeEntityScore", () => {
     expect(result.rankingEnNivelGobierno).toBeNull();
   });
 });
+
+describe("bandaDe (SI-04)", () => {
+  function withEjecucion(pim: number, devengado: number) {
+    return computeEntityScore({ ...baseInput(), ejecucion: { pim, devengado } });
+  }
+
+  it("scoreCompuesto: null recibe banda: null, nunca una banda por defecto", () => {
+    expect(computeEntityScore(baseInput()).banda).toBeNull();
+  });
+
+  it("justo en el umbral de Sobresaliente (72.3, p90) cae en Sobresaliente", () => {
+    expect(withEjecucion(1000, 723).scoreCompuesto).toBe(72.3);
+    expect(withEjecucion(1000, 723).banda).toBe("Sobresaliente");
+  });
+
+  it("justo debajo del umbral de Sobresaliente cae en Alto", () => {
+    expect(withEjecucion(1000, 722).scoreCompuesto).toBe(72.2);
+    expect(withEjecucion(1000, 722).banda).toBe("Alto");
+  });
+
+  it("justo en el umbral de Alto (67.9, p75) cae en Alto", () => {
+    expect(withEjecucion(1000, 679).banda).toBe("Alto");
+  });
+
+  it("justo debajo del umbral de Alto cae en Medio", () => {
+    expect(withEjecucion(1000, 678).banda).toBe("Medio");
+  });
+
+  it("justo en el umbral de Medio (55.8, p25) cae en Medio", () => {
+    expect(withEjecucion(1000, 558).banda).toBe("Medio");
+  });
+
+  it("justo debajo del umbral de Medio cae en Bajo", () => {
+    expect(withEjecucion(1000, 557).banda).toBe("Bajo");
+  });
+
+  it("justo en el umbral de Bajo (45.9, p10) cae en Bajo", () => {
+    expect(withEjecucion(1000, 459).banda).toBe("Bajo");
+  });
+
+  it("justo debajo del umbral de Bajo cae en Crítico", () => {
+    expect(withEjecucion(1000, 458).banda).toBe("Crítico");
+  });
+
+  it("un score de 0 cae en Crítico, no queda sin clasificar", () => {
+    expect(withEjecucion(1000, 0).banda).toBe("Crítico");
+  });
+
+  it("el máximo posible (100) cae en Sobresaliente", () => {
+    expect(withEjecucion(1000, 1000).banda).toBe("Sobresaliente");
+  });
+});
