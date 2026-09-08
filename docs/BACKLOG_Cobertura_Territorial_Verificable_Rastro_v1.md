@@ -33,12 +33,21 @@
 
 Los P0 constituyen el mínimo para ampliar territorio de manera honesta. No se debe iniciar análisis comparativo público de las 25 jurisdicciones mientras CT-05 a CT-09 no produzcan un corte verificable. CT-10 es la apuesta más costosa; por eso se separa de las fuentes que ya tienen archivos nacionales manejables.
 
-## Estado de ejecución (2026-08-25)
+## Estado de ejecución (2026-09-08, actualizado — ver CT-06 más abajo)
 
 | Tickets | Estado | Evidencia |
 |---|---|---|
 | CT-01, CT-02, CT-03, CT-04, CT-18 | Implementado y validado | Migración central, catálogo de 25, CLI y pruebas que bloquean falsos “completos”. |
-| CT-05, CT-08, CT-09 | Instrumentado; pendiente de corte terminal | Los conectores registran conteos y límites por jurisdicción. INFOBRAS tiene un corte verificable de cinco regiones; OECE y SEACE aún no tienen corrida nacional verificable. |
+| CT-06 | **Hecho (2026-09-08)** | Ver sección "CT-06 — cerrado" más abajo. |
+| CT-08, CT-09 | Instrumentado; pendiente de corte terminal | OECE y SEACE aún no tienen corrida nacional verificable — mismo patrón que tenía INFOBRAS antes de CT-06. |
 | CT-07 | Ejecutado y verificado | Invierte recorrió sin huecos los cinco rangos del CSV público (246,344,022 bytes) y consolidó las 25 regiones como `COMPLETA_VERIFICADA`; el alcance continúa acotado a lo expuesto por esa fuente pública. |
-| CT-06, CT-10 a CT-17, CT-20 | Pendiente | Requieren fuente/corrida o dependencias que todavía no están verificadas. |
+| CT-10 a CT-17, CT-20 | Pendiente | Requieren fuente/corrida o dependencias que todavía no están verificadas. |
 | CT-19 | Implementado de forma inicial | `docs/RUNBOOK_Cobertura_Territorial_Rastro.md`; falta automatización programada, expresamente fuera de alcance. |
+
+## CT-06 — cerrado (2026-09-08)
+
+No hizo falta infraestructura de worker ni código de escaneo nuevo (la fuente INFOBRAS entrega un único XLSX nacional, no un endpoint por región) — solo correr la ingesta ya existente con las 25 jurisdicciones en vez de las 5 que se habían corrido hasta ahora (`LA LIBERTAD,LAMBAYEQUE,PIURA,CAJAMARCA,CUSCO`).
+
+Al correrla apareció un hallazgo real, no un artefacto de la corrida: **Callao salía `SIN_DATOS_EN_FUENTE`** pese a que la Provincia Constitucional del Callao sí tiene obras registradas. Causa — el XLSX etiqueta esa jurisdicción como `"P C DEL CALLAO"`, no `"CALLAO"` (el nombre canónico del catálogo territorial), así que sus 1,471 filas caían silenciosamente en "otro departamento" en cada corrida anterior, incluidas las 5 regiones que ya se daban por buenas. Corregido en `canonicalizarDepartamentoFuente()` (`apps/infobras/api/src/ingest/infobras-connector.ts`), con test de regresión (`src/__tests__/infobras-connector.test.ts`) y ficha actualizada en `docs/conectores.md`.
+
+Verificado en vivo tras el fix: `npm run cobertura:territorial -- --app infobras --todas --require-complete` (`apps/radar-ejecucion/api`) → `state: "COMPLETA_VERIFICADA"`, `coverage_claimable: true`, exit code 0, 25/25 jurisdicciones `COMPLETA_VERIFICADA`. Ingesta nacional: 191,180 filas leídas, 178,616 aceptadas (antes del fix: 177,145 — la diferencia son exactamente las 1,471 obras de Callao), 346 rechazadas por campos inválidos.
