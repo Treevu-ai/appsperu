@@ -504,6 +504,17 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: { confidence: z.enum(["confirmada", "candidata"]).optional() },
   },
   {
+    name: "compras_publicas_crossref_salud",
+    app: "compras-publicas",
+    description:
+      "Salud del crossref compras-publicas <-> radar-ejecucion (entity_crosswalk): filas totales, confirmadas, " +
+      "candidatas y última construcción. `estado: \"VACIO\"` explícito si no hay filas — usar antes de confiar en " +
+      "compras_publicas_crossref para detectar si el crossref se vació de nuevo.",
+    pathTemplate: "/api/crossref/salud",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
     name: "compras_publicas_unsuccessful_tenders",
     app: "compras-publicas",
     description:
@@ -876,6 +887,17 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathTemplate: "/api/crossref",
     pathParams: [],
     querySchema: { departamento: z.string().min(1).optional() },
+  },
+  {
+    name: "infobras_crossref_salud",
+    app: "infobras",
+    description:
+      "Salud del crossref infobras <-> radar-ejecucion (entity_crosswalk): filas totales, confirmadas, candidatas " +
+      "y última construcción. `estado: \"VACIO\"` explícito si no hay filas — usar antes de confiar en " +
+      "infobras_crossref_ejecucion para detectar si el crossref se vació de nuevo.",
+    pathTemplate: "/api/crossref/salud",
+    pathParams: [],
+    querySchema: {},
   },
   {
     name: "infobras_crossref_ejecucion",

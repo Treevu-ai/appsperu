@@ -54,6 +54,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
   ],
   "compras-publicas": [
     "compras_publicas_crossref",
+    "compras_publicas_crossref_salud",
     "compras_publicas_procurement",
     "compras_publicas_procurement_by_ocid",
     "compras_publicas_supplier_by_id",
@@ -102,6 +103,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
   infobras: [
     "infobras_crossref",
     "infobras_crossref_ejecucion",
+    "infobras_crossref_salud",
     "infobras_public_work_by_codigo",
     "infobras_public_works",
     "infobras_public_works_resumen",
