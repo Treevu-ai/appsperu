@@ -13,6 +13,10 @@ const QuerySchema = z.object({
   idDepartamento: z.string().min(1).optional().describe("Código UBIGEO de departamento, ej. '13' para La Libertad."),
   provincia: z.string().min(1).optional(),
   tipoAerodromo: z.string().min(1).optional(),
+  fechaCorte: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "debe tener formato YYYY-MM-DD").optional()
+    .describe("Corte específico (YYYY-MM-DD). Sin este parámetro y sin `historico`, se usa solo el corte más reciente."),
+  historico: z.enum(["true", "false"]).optional()
+    .describe("true trae todos los cortes ingeridos (DQ-03) — sin esto, solo el más reciente, para no sumar aeródromos de distintos años como si fueran el universo actual."),
   limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -22,7 +26,7 @@ aerodromosRouter.get(
   asyncHandler(async (req, res) => {
     const parsed = parseQuery(QuerySchema, req.query, res);
     if (!parsed) return;
-    const { idDepartamento, provincia, tipoAerodromo, limit, offset } = parsed;
+    const { idDepartamento, provincia, tipoAerodromo, fechaCorte, historico, limit, offset } = parsed;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -37,6 +41,15 @@ aerodromosRouter.get(
     if (tipoAerodromo) {
       params.push(`%${tipoAerodromo}%`);
       conditions.push(`a.tipo_aerodromo ILIKE $${params.length}`);
+    }
+    if (fechaCorte) {
+      params.push(fechaCorte);
+      conditions.push(`a.fecha_corte = $${params.length}`);
+    } else if (historico !== "true") {
+      // DQ-03: sin fechaCorte/historico explícitos, solo el corte más reciente —
+      // la tabla es un panel multi-año (UNIQUE codigo_aerodromo+fecha_corte) y
+      // sumar sin filtro mezcla hasta 4 años de snapshots del mismo aeródromo.
+      conditions.push(`a.fecha_corte = (SELECT MAX(fecha_corte) FROM aerodromos)`);
     }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 

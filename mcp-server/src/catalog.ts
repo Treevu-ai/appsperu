@@ -1977,8 +1977,9 @@ export const TOOL_CATALOG: ToolSpec[] = [
     description:
       "Generación anual de residuos sólidos domiciliarios y municipales por distrito (MINAM/SIGERSOL) — " +
       "población INEI, generación per cápita, toneladas/día y toneladas/año. Serie histórica real 2019-2024 " +
-      "(6 años), a diferencia de la mayoría de fuentes del catálogo (snapshot único) — permite ver evolución " +
-      "temporal por distrito. 11,310 filas nacionales verificadas (500 en La Libertad, 12 provincias, 2019-2024). " +
+      "(6 años, 11,310 filas nacionales, 500 en La Libertad). Sin `anio` ni `historico=true`, filtra al año " +
+      "más reciente por defecto (DQ-04, 2026-09-08) — antes mezclaba los 6 años, sobreestimando cualquier " +
+      "total agregado ~6x. `historico=true` recupera la serie completa; `anio=YYYY` filtra a un año exacto. " +
       "Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. " +
       SIN_SCHEDULER,
     pathTemplate: "/api/residuos",
@@ -1989,6 +1990,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
       distrito: z.string().min(1).optional(),
       ubigeo: z.string().regex(/^\d{6}$/).optional(),
       anio: z.coerce.number().int().min(2000).max(2100).optional(),
+      historico: z.enum(["true", "false"]).optional().describe("true trae todos los años (DQ-04); default: solo el más reciente."),
       limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
       offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
@@ -2000,17 +2002,20 @@ export const TOOL_CATALOG: ToolSpec[] = [
     app: "infraestructura-mtc",
     description:
       "Catálogo de terminales portuarios y embarcaderos (MTC) — ubicación, ámbito (marítimo/fluvial/" +
-      "lacustre), tipo, uso, tráfico, estado de conservación, titularidad y administrador. Snapshot anual " +
-      "acumulado 2022-2025 (una fila por terminal por corte, no solo el más reciente). 507 filas nacionales " +
-      "verificadas (9 en La Libertad, 3 terminales: TP Multipropósito Salaverry, TP Multiboyas Salaverry, " +
-      "TP Chicama/Malabrigo). El total nacional (507) puede superar el `limit` por defecto sin filtro — " +
-      "paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. " + SIN_SCHEDULER,
+      "lacustre), tipo, uso, tráfico, estado de conservación, titularidad y administrador. Panel multi-corte " +
+      "2022-2025 (507 filas nacionales), pero sin `fechaCorte` ni `historico=true` filtra al corte más " +
+      "reciente por defecto (DQ-03, 2026-09-08) — La Libertad vigente: 2 terminales (antes mezclaba hasta 4 " +
+      "cortes y devolvía 9 filas, incluyendo TP Chicama/Malabrigo ya dado de baja). `historico=true` recupera " +
+      "todos los cortes; `fechaCorte=YYYY-MM-DD` filtra a uno exacto. Paginación real: usa `limit`/`offset`; " +
+      "la respuesta trae `total` y `hasMore`. " + SIN_SCHEDULER,
     pathTemplate: "/api/terminales-portuarios",
     pathParams: [],
     querySchema: {
       idDepartamento: z.string().min(1).optional().describe("Código UBIGEO de departamento, ej. '13' para La Libertad."),
       ambito: z.string().min(1).optional(),
       estado: z.string().min(1).optional(),
+      fechaCorte: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Corte exacto YYYY-MM-DD."),
+      historico: z.enum(["true", "false"]).optional().describe("true trae todos los cortes (DQ-03); default: solo el más reciente."),
       limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 500, máximo 1000."),
       offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
@@ -2020,14 +2025,13 @@ export const TOOL_CATALOG: ToolSpec[] = [
     app: "infraestructura-mtc",
     description:
       "Catálogo de infraestructura aeroportuaria/aeródromos (MTC) — ubicación, tipo, código OACI, escala, " +
-      "estado, jerarquía, titularidad y administrador. Snapshot anual acumulado 2022-2025. La columna ID " +
-      "original de la fuente viene con el literal '#¡REF!' (error de fórmula de Excel) en el corte 2025 — " +
-      "no se usa; la clave real es codigoAerodromo. 595 filas nacionales verificadas (36 en La Libertad, 9 " +
-      "aeródromos: incluye el Aeropuerto Internacional Cap. FAP Carlos Martínez de Pinillos en Trujillo y 8 " +
-      "aeródromos rurales/mineros/municipales en Pataz, Virú, Sánchez Carrión, Santiago de Chuco y Pacasmayo). " +
-      "El total nacional (595) SUPERA el `limit` por defecto (500) sin filtro de departamento — confirmado en " +
-      "vivo que sin paginación esto truncaba 95 filas en silencio antes de exponer `total`/`hasMore`; usa " +
-      "`limit`/`offset` y revisa `hasMore` en vez de asumir que `resultados` trae el universo completo. " +
+      "estado, jerarquía, titularidad y administrador. La columna ID original de la fuente viene con el " +
+      "literal '#¡REF!' (error de fórmula de Excel) en el corte 2025 — no se usa; la clave real es " +
+      "codigoAerodromo. Panel multi-corte 2022-2025 (595 filas nacionales), pero sin `fechaCorte` ni " +
+      "`historico=true` filtra al corte más reciente por defecto (DQ-03, 2026-09-08) — vigente: 152 " +
+      "nacionales, 9 en La Libertad (incluye el Aeropuerto Internacional Cap. FAP Carlos Martínez de " +
+      "Pinillos en Trujillo). `historico=true` recupera todos los cortes (595); `fechaCorte=YYYY-MM-DD` " +
+      "filtra a uno exacto. Paginación real: usa `limit`/`offset` y revisa `hasMore`. " +
       SIN_SCHEDULER,
     pathTemplate: "/api/aerodromos",
     pathParams: [],
@@ -2035,6 +2039,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
       idDepartamento: z.string().min(1).optional().describe("Código UBIGEO de departamento, ej. '13' para La Libertad."),
       provincia: z.string().min(1).optional(),
       tipoAerodromo: z.string().min(1).optional(),
+      fechaCorte: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Corte exacto YYYY-MM-DD."),
+      historico: z.enum(["true", "false"]).optional().describe("true trae todos los cortes (DQ-03); default: solo el más reciente."),
       limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 500, máximo 1000."),
       offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
@@ -2044,15 +2050,19 @@ export const TOOL_CATALOG: ToolSpec[] = [
     app: "infraestructura-mtc",
     description:
       "Catálogo de unidades de peaje de la red vial nacional (MTC) — ubicación, código de ruta, km de inicio, " +
-      "titularidad, administrador y estado operativo. El corte más reciente del catálogo (2025-12-31, más " +
-      "fresco que red_vial_subnacional_intervenciones). 233 features nacionales verificadas (15 en La " +
-      "Libertad, 5 unidades: Menocucho, Virú, Pacanguilla, Chicama, Ciudad de Dios). " + SIN_SCHEDULER,
+      "titularidad, administrador y estado operativo. Panel multi-corte (233 features nacionales, 3 cortes " +
+      "2024-12-30 a 2025-12-31), pero sin `fechaCorte` ni `historico=true` filtra al corte más reciente por " +
+      "defecto (DQ-03, 2026-09-08) — vigente: 78 nacionales, 5 en La Libertad (Menocucho, Virú, Pacanguilla, " +
+      "Chicama, Ciudad de Dios). `historico=true` recupera todos los cortes; `fechaCorte=YYYY-MM-DD` filtra a " +
+      "uno exacto. " + SIN_SCHEDULER,
     pathTemplate: "/api/peajes",
     pathParams: [],
     querySchema: {
       idDepartamento: z.string().min(1).optional().describe("Código UBIGEO de departamento, ej. '13' para La Libertad."),
       codigoRuta: z.string().min(1).optional(),
       estado: z.string().min(1).optional(),
+      fechaCorte: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Corte exacto YYYY-MM-DD."),
+      historico: z.enum(["true", "false"]).optional().describe("true trae todos los cortes (DQ-03); default: solo el más reciente."),
     },
   },
 ];

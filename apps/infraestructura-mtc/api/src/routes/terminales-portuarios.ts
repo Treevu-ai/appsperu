@@ -13,6 +13,10 @@ const QuerySchema = z.object({
   idDepartamento: z.string().min(1).optional().describe("Código UBIGEO de departamento, ej. '13' para La Libertad."),
   ambito: z.string().min(1).optional(),
   estado: z.string().min(1).optional(),
+  fechaCorte: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "debe tener formato YYYY-MM-DD").optional()
+    .describe("Corte específico (YYYY-MM-DD). Sin este parámetro y sin `historico`, se usa solo el corte más reciente."),
+  historico: z.enum(["true", "false"]).optional()
+    .describe("true trae todos los cortes ingeridos (DQ-03) — sin esto, solo el más reciente, para no sumar terminales de distintos años como si fueran el universo actual."),
   limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -22,7 +26,7 @@ terminalesPortuariosRouter.get(
   asyncHandler(async (req, res) => {
     const parsed = parseQuery(QuerySchema, req.query, res);
     if (!parsed) return;
-    const { idDepartamento, ambito, estado, limit, offset } = parsed;
+    const { idDepartamento, ambito, estado, fechaCorte, historico, limit, offset } = parsed;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -37,6 +41,14 @@ terminalesPortuariosRouter.get(
     if (estado) {
       params.push(`%${estado}%`);
       conditions.push(`t.estado ILIKE $${params.length}`);
+    }
+    if (fechaCorte) {
+      params.push(fechaCorte);
+      conditions.push(`t.fecha_corte = $${params.length}`);
+    } else if (historico !== "true") {
+      // DQ-03: sin fechaCorte/historico explícitos, solo el corte más reciente —
+      // ver mismo razonamiento en aerodromos.ts.
+      conditions.push(`t.fecha_corte = (SELECT MAX(fecha_corte) FROM terminales_portuarios)`);
     }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 

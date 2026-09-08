@@ -15,6 +15,8 @@ const ResiduosQuerySchema = z.object({
   distrito: z.string().min(1).optional(),
   ubigeo: z.string().regex(/^\d{6}$/).optional(),
   anio: z.coerce.number().int().min(2000).max(2100).optional(),
+  historico: z.enum(["true", "false"]).optional()
+    .describe("true trae todos los años ingeridos (DQ-04) — sin esto y sin `anio`, solo el año más reciente."),
   limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -24,7 +26,7 @@ residuosRouter.get(
   asyncHandler(async (req, res) => {
     const parsed = parseQuery(ResiduosQuerySchema, req.query, res);
     if (!parsed) return;
-    const { departamento, provincia, distrito, ubigeo, anio, limit, offset } = parsed;
+    const { departamento, provincia, distrito, ubigeo, anio, historico, limit, offset } = parsed;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -43,6 +45,12 @@ residuosRouter.get(
     if (anio) {
       params.push(anio);
       conditions.push(`r.anio = $${params.length}`);
+    } else if (historico !== "true") {
+      // DQ-04: sin anio/historico explícitos, solo el año más reciente — la
+      // tabla es un panel multi-año (2019-2024 en este corte, ~1,890 filas
+      // por año) y sumar sin filtro sobreestima la generación de residuos
+      // multiplicándola por la cantidad de años ingeridos.
+      conditions.push(`r.anio = (SELECT MAX(anio) FROM residuos_solidos_municipales)`);
     }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
