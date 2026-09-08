@@ -17,6 +17,7 @@ const InstitucionesQuerySchema = z.object({
   estado: z.string().min(1).optional().describe("Ej. 'Activo'."),
   gestion: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
   nombre: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE) sobre el nombre de la IE."),
+  areaCenso: z.enum(["Urbana", "Rural"]).optional().describe("DQ-07: área censal urbano/rural, tal cual la trae la fuente."),
   limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -26,7 +27,7 @@ institucionesRouter.get(
   asyncHandler(async (req, res) => {
     const parsed = parseQuery(InstitucionesQuerySchema, req.query, res);
     if (!parsed) return;
-    const { departamento, provincia, distrito, ubigeo, estado, gestion, nombre, limit, offset } = parsed;
+    const { departamento, provincia, distrito, ubigeo, estado, gestion, nombre, areaCenso, limit, offset } = parsed;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -48,6 +49,10 @@ institucionesRouter.get(
       params.push(ubigeo);
       conditions.push(`i.ubigeo = $${params.length}`);
     }
+    if (areaCenso) {
+      params.push(areaCenso);
+      conditions.push(`i.area_censo = $${params.length}`);
+    }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
     const { rows: countRows } = await pool.query<{ total: string }>(
@@ -59,7 +64,7 @@ institucionesRouter.get(
     const { rows } = await pool.query(
       `SELECT i.cod_mod, i.anexo, i.nombre, i.nivel_modalidad, i.gestion, i.direccion,
               i.ubigeo, i.departamento, i.provincia, i.distrito, i.ugel, i.latitud, i.longitud,
-              i.turno, i.ruc, i.razon_social, i.estado, i.fecha_actualizacion, rb.fetched_at
+              i.turno, i.ruc, i.razon_social, i.estado, i.area_censo, i.fecha_actualizacion, rb.fetched_at
        FROM instituciones_educativas i
        JOIN raw_padron_batches rb ON rb.id = i.source_batch_id
        ${where}
@@ -90,6 +95,7 @@ institucionesRouter.get(
         ruc: r.ruc,
         razonSocial: r.razon_social,
         estado: r.estado,
+        areaCenso: r.area_censo,
         fechaActualizacion: r.fecha_actualizacion,
         fuente: { dataset: "MINEDU/ESCALE - Padrón de Instituciones Educativas", extraidoEl: r.fetched_at },
       })),

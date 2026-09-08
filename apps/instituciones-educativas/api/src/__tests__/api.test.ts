@@ -119,6 +119,59 @@ describe("GET /api/instituciones", () => {
     expect(res.status).toBe(400);
     expect(queryMock).not.toHaveBeenCalled();
   });
+
+  it("DQ-07: expone areaCenso en cada resultado", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "1" }] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            cod_mod: "0415547",
+            anexo: "0",
+            nombre: "123",
+            nivel_modalidad: "Inicial - Jardín",
+            gestion: "Pública de gestión directa",
+            direccion: "JIRON TERESA GONZALES DE FANNY 543",
+            ubigeo: "130101",
+            departamento: "LA LIBERTAD",
+            provincia: "TRUJILLO",
+            distrito: "TRUJILLO",
+            ugel: "UGEL TRUJILLO",
+            latitud: null,
+            longitud: null,
+            turno: "Mañana",
+            ruc: null,
+            razon_social: null,
+            estado: "Activo",
+            area_censo: "Urbana",
+            fecha_actualizacion: "2026-08-28",
+            fetched_at: "2026-09-06T00:00:00.000Z",
+          },
+        ],
+      });
+
+    const app = createApp();
+    const res = await request(app).get("/api/instituciones").query({ departamento: "LA LIBERTAD" });
+
+    expect(res.body.resultados[0]).toMatchObject({ areaCenso: "Urbana" });
+  });
+
+  it("DQ-07: filtra por areaCenso", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "0" }] }).mockResolvedValueOnce({ rows: [] });
+    const app = createApp();
+    await request(app).get("/api/instituciones").query({ areaCenso: "Rural" });
+
+    const [countSql, countParams] = queryMock.mock.calls[0];
+    expect(countSql).toMatch(/i\.area_censo = \$1/);
+    expect(countParams).toEqual(["Rural"]);
+  });
+
+  it("DQ-07: rechaza un areaCenso fuera de Urbana/Rural", async () => {
+    const app = createApp();
+    const res = await request(app).get("/api/instituciones").query({ areaCenso: "Semi-Urbana" });
+    expect(res.status).toBe(400);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("GET /api/resumen", () => {

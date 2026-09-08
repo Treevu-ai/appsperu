@@ -136,6 +136,40 @@ describe("GET /api/public-works/resumen", () => {
       conDistritoSospechoso: 0,
     });
   });
+
+  it("DQ-06: groupBy=nivelGobierno desglosa por categoría, sumando el total departamental", async () => {
+    queryMock
+      .mockResolvedValueOnce({
+        rows: [{ total: "10134", con_paralizacion: "252", con_avance_reportado: "8241", con_distrito_sospechoso: "7" }],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          { grupo: "GOBIERNO LOCAL", total: "7000", con_paralizacion: "180", con_avance_reportado: "5600" },
+          { grupo: "GOBIERNO NACIONAL", total: "2134", con_paralizacion: "50", con_avance_reportado: "1800" },
+          { grupo: "GOBIERNO REGIONAL", total: "1000", con_paralizacion: "22", con_avance_reportado: "841" },
+        ],
+      });
+
+    const app = createApp();
+    const res = await request(app).get("/api/public-works/resumen").query({ groupBy: "nivelGobierno" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.groupBy).toBe("nivelGobierno");
+    expect(res.body.porGrupo).toHaveLength(3);
+    const sumaGrupos = res.body.porGrupo.reduce((acc: number, g: { total: number }) => acc + g.total, 0);
+    expect(sumaGrupos).toBe(res.body.totalObras);
+
+    const [groupSql] = queryMock.mock.calls[1];
+    expect(groupSql).toMatch(/GROUP BY nivel_gobierno/);
+  });
+
+  it("DQ-06: un groupBy no soportado responde 400 explícito, nunca lo ignora en silencio", async () => {
+    const app = createApp();
+    const res = await request(app).get("/api/public-works/resumen").query({ groupBy: "loQueSea" });
+
+    expect(res.status).toBe(400);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("GET /api/public-works/:codigoInfobras", () => {

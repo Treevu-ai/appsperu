@@ -92,6 +92,7 @@
   - `docs/conectores.md` documenta los valores de `groupBy` soportados.
 - **Dependencias:** ninguna.
 - **Prioridad:** P1 · **Esfuerzo:** M
+- **Hecho (2026-09-08):** `groupBy` acepta `sectorEntidad`, `nivelGobierno`, `naturalezaObra`, `modalidadEjecucion` y `causalParalizacion`; cualquier otro valor responde 400. Verificado en vivo: `groupBy=nivelGobierno` para La Libertad devuelve 3 grupos (Gobierno Local 9033, Nacional 765, Regional 336) que suman exactamente el total departamental (10,134). Tests de regresión agregados, suite completa 98/98 en verde.
 
 ### DQ-07 · Exponer `area_censo` (urbano/rural) en `instituciones-educativas`
 
@@ -104,6 +105,7 @@
   - `docs/conectores.md` deja de listar este campo como "no expuesto" si existía esa nota, o se agrega la ficha correspondiente.
 - **Dependencias:** ninguna.
 - **Prioridad:** P1 · **Esfuerzo:** S
+- **Hecho (2026-09-08):** `areaCenso` expuesto en cada resultado y filtrable (`Urbana`/`Rural`). Verificado en vivo: La Libertad = 4,800 Urbana + 4,591 Rural = 9,391, coincide exacto con el total conocido. Tests de regresión agregados, suite completa 23/23 en verde.
 
 ### DQ-08 · Endpoint de agregación funcional/genérica en `radar-ejecucion`
 

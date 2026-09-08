@@ -77,8 +77,8 @@ Cada sprint deja una **puerta de salida verificable**: si la puerta no se cumple
 
 | ID | Objetivo | Criterios de aceptación (resumen) | Dep. | P | Esf. | Estado |
 |---|---|---|---|---|---|---|
-| DQ-06 | Endpoint de agregación por categoría en INFOBRAS + fix de `groupBy` ignorado | `groupBy` funciona para sector/nivel/naturaleza/modalidad/causal o responde 400 explícito para valores no soportados; nunca lo ignora en silencio | — | P1 | M | ⬜ Pendiente |
-| DQ-07 | Exponer `area_censo` en `instituciones-educativas` | Campo expuesto y filtrable en `/api/instituciones`; suma del desglose coincide con el total conocido | — | P1 | S | ⬜ Pendiente |
+| DQ-06 | Endpoint de agregación por categoría en INFOBRAS + fix de `groupBy` ignorado | `groupBy` funciona para sector/nivel/naturaleza/modalidad/causal o responde 400 explícito para valores no soportados; nunca lo ignora en silencio | — | P1 | M | ✅ Hecho (2026-09-08) — verificado groupBy=nivelGobierno suma exacto el total |
+| DQ-07 | Exponer `area_censo` en `instituciones-educativas` | Campo expuesto y filtrable en `/api/instituciones`; suma del desglose coincide con el total conocido | — | P1 | S | ✅ Hecho (2026-09-08) — 4,800 Urbana + 4,591 Rural = 9,391 |
 | DQ-08 | Endpoint de agregación funcional/genérica en `radar-ejecucion` | Nuevo endpoint/parámetro de agregación por función y genérica de gasto; suma de grupos coincide con el total | DQ-01 | P1 | M | ⬜ Pendiente |
 | DQ-09 | Documentar fuentes panel multi-año/multi-corte en `docs/data-contracts` | Lista explícita de fuentes panel (mínimo las 4 identificadas) con su comportamiento por defecto documentado | Idealmente después de DQ-03/DQ-04 | P1 | S | ⬜ Pendiente |
 | DQ-10 | Smoke test genérico: total de resumen vs. suma de filas paginadas | Script/suite que detecta discrepancias total-vs-paginación en cualquier app con endpoint de resumen; corre en CI | DQ-01, DQ-06 | P1 | M | ⬜ Pendiente |
