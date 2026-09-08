@@ -100,6 +100,18 @@ describe("normalizeInfobrasRows", () => {
     });
   });
 
+  it("marca distritoSospechoso=false para un distrito real (DQ-14)", () => {
+    const { rows } = normalizeInfobrasRows([realRow()]);
+    expect(rows[0].distritoSospechoso).toBe(false);
+  });
+
+  it("marca distritoSospechoso=true cuando el distrito no pertenece al departamento declarado (DQ-14, caso real de Pataz)", () => {
+    const { rows } = normalizeInfobrasRows([
+      realRow({ [COL.provincia]: "PATAZ", [COL.distrito]: "CCARHUAYO" }),
+    ]);
+    expect(rows[0].distritoSospechoso).toBe(true);
+  });
+
   it("treats costoActualizado = 0 as null, not as a real reported value (CX-14, confirmado en vivo 2026-09-07: 191,180/191,180 filas nacionales traen 0)", () => {
     const { rows } = normalizeInfobrasRows([realRow({ [COL.costoActualizado]: "0" })]);
     expect(rows[0].costoActualizado).toBeNull();

@@ -78,6 +78,16 @@ describe("GET /api/public-works", () => {
     expect(sql).toMatch(/pw\.existe_paralizacion = true/);
     expect(params).toEqual(["LA LIBERTAD", "En Ejecución"]);
   });
+
+  it("applies the distritoSospechoso filter (DQ-14)", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+
+    const app = createApp();
+    await request(app).get("/api/public-works").query({ distritoSospechoso: "true" });
+
+    const [sql] = queryMock.mock.calls[0];
+    expect(sql).toMatch(/pw\.distrito_sospechoso = true/);
+  });
 });
 
 describe("GET /api/public-works (validación de query)", () => {
@@ -94,7 +104,9 @@ describe("GET /api/public-works (validación de query)", () => {
 describe("GET /api/public-works/resumen", () => {
   it("returns aggregate coverage percentages, not raw counts", async () => {
     queryMock.mockResolvedValueOnce({
-      rows: [{ total: "10141", con_paralizacion: "252", con_avance_reportado: "8241" }],
+      rows: [
+        { total: "10141", con_paralizacion: "252", con_avance_reportado: "8241", con_distrito_sospechoso: "7" },
+      ],
     });
 
     const app = createApp();
@@ -105,16 +117,24 @@ describe("GET /api/public-works/resumen", () => {
       totalObras: 10141,
       conParalizacionPct: 2.48,
       conAvanceReportadoPct: 81.26,
+      conDistritoSospechoso: 7,
     });
   });
 
   it("returns zeros instead of dividing by zero when there are no rows", async () => {
-    queryMock.mockResolvedValueOnce({ rows: [{ total: "0", con_paralizacion: "0", con_avance_reportado: "0" }] });
+    queryMock.mockResolvedValueOnce({
+      rows: [{ total: "0", con_paralizacion: "0", con_avance_reportado: "0", con_distrito_sospechoso: "0" }],
+    });
 
     const app = createApp();
     const res = await request(app).get("/api/public-works/resumen");
 
-    expect(res.body).toEqual({ totalObras: 0, conParalizacionPct: 0, conAvanceReportadoPct: 0 });
+    expect(res.body).toEqual({
+      totalObras: 0,
+      conParalizacionPct: 0,
+      conAvanceReportadoPct: 0,
+      conDistritoSospechoso: 0,
+    });
   });
 });
 

@@ -15,6 +15,7 @@ const PublicWorksQuerySchema = z.object({
   departamento: z.string().min(1).optional(),
   estado: z.string().min(1).optional(),
   conParalizacion: z.enum(["true", "false"]).optional(),
+  distritoSospechoso: z.enum(["true", "false"]).optional(),
 });
 
 function toNumberOrNull(value: unknown): number | null {
@@ -41,6 +42,7 @@ function withSignals(row: Record<string, unknown>) {
     departamento: row.departamento,
     provincia: row.provincia,
     distrito: row.distrito,
+    distritoSospechoso: row.distrito_sospechoso,
     montoViable,
     costoActualizado,
     avanceFisicoProgPct: toNumberOrNull(row.avance_fisico_prog_pct),
@@ -73,7 +75,8 @@ publicWorksRouter.get(
       `SELECT
          COUNT(*) AS total,
          COUNT(*) FILTER (WHERE existe_paralizacion) AS con_paralizacion,
-         COUNT(*) FILTER (WHERE avance_fisico_real_pct IS NOT NULL) AS con_avance_reportado
+         COUNT(*) FILTER (WHERE avance_fisico_real_pct IS NOT NULL) AS con_avance_reportado,
+         COUNT(*) FILTER (WHERE distrito_sospechoso) AS con_distrito_sospechoso
        FROM public_works
        ${where}`,
       params
@@ -85,6 +88,7 @@ publicWorksRouter.get(
       conParalizacionPct: total === 0 ? 0 : Math.round((Number(rows[0].con_paralizacion) / total) * 10000) / 100,
       conAvanceReportadoPct:
         total === 0 ? 0 : Math.round((Number(rows[0].con_avance_reportado) / total) * 10000) / 100,
+      conDistritoSospechoso: Number(rows[0].con_distrito_sospechoso),
     });
   })
 );
@@ -94,7 +98,7 @@ publicWorksRouter.get(
   asyncHandler(async (req, res) => {
     const parsed = parseQuery(PublicWorksQuerySchema, req.query, res);
     if (!parsed) return;
-    const { departamento, estado, conParalizacion } = parsed;
+    const { departamento, estado, conParalizacion, distritoSospechoso } = parsed;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -108,6 +112,11 @@ publicWorksRouter.get(
     }
     if (conParalizacion === "true") {
       conditions.push("pw.existe_paralizacion = true");
+    }
+    if (distritoSospechoso === "true") {
+      conditions.push("pw.distrito_sospechoso = true");
+    } else if (distritoSospechoso === "false") {
+      conditions.push("pw.distrito_sospechoso = false");
     }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 

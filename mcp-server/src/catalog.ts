@@ -860,6 +860,12 @@ export const TOOL_CATALOG: ToolSpec[] = [
       departamento: z.string().min(1).optional(),
       estado: z.string().min(1).optional().describe("estado_ejecucion de la obra."),
       conParalizacion: z.enum(["true", "false"]).optional(),
+      distritoSospechoso: z
+        .enum(["true", "false"])
+        .optional()
+        .describe(
+          "DQ-14: filtra obras cuyo distrito no pertenece al universo real de su departamento (catálogo nacional de 1,874 distritos)."
+        ),
     },
   },
   {
