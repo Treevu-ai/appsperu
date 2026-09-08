@@ -1,5 +1,11 @@
-import { describe, expect, it } from "vitest";
-import { canonicalizarDepartamentoFuente, normalizeDepartamentoScope } from "../ingest/infobras-connector.js";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("../db/pool.js", () => ({ pool: { query: vi.fn() } }));
+vi.mock("../db/ejecucion-pool.js", () => ({ ejecucionPool: { query: vi.fn() } }));
+
+const { canonicalizarDepartamentoFuente, normalizeDepartamentoScope } = await import(
+  "../ingest/infobras-connector.js"
+);
 
 describe("canonicalizarDepartamentoFuente", () => {
   it('mapea el alias real de la fuente "P C DEL CALLAO" al nombre canónico CALLAO', () => {
