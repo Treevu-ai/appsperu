@@ -28,13 +28,11 @@ const CONDICIONES_REGULARES = new Set(["HABIDO"]);
  * de radar-ejecucion); si un bloque no tiene datos para una entidad, esa
  * entidad simplemente no trae ese componente (ver score/compute.ts — nunca
  * se imputa 0 ni 100 por ausencia de dato).
+ *
+ * Extraído a función compartida (SI-03) porque `GET /por-provincia` necesita
+ * el mismo conjunto de resultados ya calculado, no una query nueva.
  */
-scoreRouter.get("/", asyncHandler(async (req, res) => {
-  const parsed = parseQuery(ScoreQuerySchema, req.query, res);
-  if (!parsed) return;
-  const wantedDepartamento = parsed.departamento?.toUpperCase().trim() ?? "LA LIBERTAD";
-  const anio = parsed.anio ? Number(parsed.anio) : 2026;
-
+async function computeScoresForDepartamento(wantedDepartamento: string, anio: number) {
   // 1. Universo de entidades + ejecución presupuestal (radar-ejecucion, fuente primaria).
   const { rows: entityRows } = await ejecucionPool.query(
     `${LATEST_BUDGET_CTE}
@@ -49,8 +47,7 @@ scoreRouter.get("/", asyncHandler(async (req, res) => {
   );
 
   if (entityRows.length === 0) {
-    res.json({ departamento: wantedDepartamento, resultados: [] });
-    return;
+    return [];
   }
   const entityCodes = entityRows.map((r) => r.entity_code);
 
@@ -183,5 +180,58 @@ scoreRouter.get("/", asyncHandler(async (req, res) => {
     });
   }
 
+  return resultados;
+}
+
+scoreRouter.get("/", asyncHandler(async (req, res) => {
+  const parsed = parseQuery(ScoreQuerySchema, req.query, res);
+  if (!parsed) return;
+  const wantedDepartamento = parsed.departamento?.toUpperCase().trim() ?? "LA LIBERTAD";
+  const anio = parsed.anio ? Number(parsed.anio) : 2026;
+
+  const resultados = await computeScoresForDepartamento(wantedDepartamento, anio);
   res.json({ departamento: wantedDepartamento, anioFiscal: anio, resultados });
+}));
+
+/**
+ * SI-03: promedio de scoreCompuesto por provincia (solo entidades con score
+ * no nulo), sobre el mismo conjunto de resultados que ya calcula GET /.
+ * Provincias sin ninguna entidad con score no aparecen con un 0 engañoso —
+ * quedan con promedioScore: null y sinDatos: true.
+ */
+scoreRouter.get("/por-provincia", asyncHandler(async (req, res) => {
+  const parsed = parseQuery(ScoreQuerySchema, req.query, res);
+  if (!parsed) return;
+  const wantedDepartamento = parsed.departamento?.toUpperCase().trim() ?? "LA LIBERTAD";
+  const anio = parsed.anio ? Number(parsed.anio) : 2026;
+
+  const resultados = await computeScoresForDepartamento(wantedDepartamento, anio);
+
+  const porProvincia = new Map<
+    string,
+    { sumaScore: number; conScore: number; sinScore: number }
+  >();
+  for (const r of resultados) {
+    const provincia = r.provincia ?? "SIN_PROVINCIA";
+    if (!porProvincia.has(provincia)) porProvincia.set(provincia, { sumaScore: 0, conScore: 0, sinScore: 0 });
+    const acc = porProvincia.get(provincia)!;
+    if (r.scoreCompuesto === null) {
+      acc.sinScore += 1;
+    } else {
+      acc.sumaScore += r.scoreCompuesto;
+      acc.conScore += 1;
+    }
+  }
+
+  const provincias = [...porProvincia.entries()]
+    .map(([provincia, acc]) => ({
+      provincia,
+      promedioScore: acc.conScore > 0 ? Math.round((acc.sumaScore / acc.conScore) * 10) / 10 : null,
+      entidadesConScore: acc.conScore,
+      entidadesSinScore: acc.sinScore,
+      sinDatos: acc.conScore === 0,
+    }))
+    .sort((a, b) => (b.promedioScore ?? -1) - (a.promedioScore ?? -1));
+
+  res.json({ departamento: wantedDepartamento, anioFiscal: anio, provincias });
 }));

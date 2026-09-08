@@ -168,7 +168,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "radar_inversiones_investments",
     "radar_inversiones_investments_desactivadas",
   ],
-  "salud-institucional": ["salud_institucional_score"],
+  "salud-institucional": ["salud_institucional_score", "salud_institucional_score_por_provincia"],
   "seguridad-ciudadana": ["seguridad_ciudadana_crossref", "seguridad_ciudadana_denuncias"],
   "servicios-salud": ["servicios_salud_crossref", "servicios_salud_ipress"],
 };

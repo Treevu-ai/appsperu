@@ -80,6 +80,7 @@
   - Test: 3 entidades de la misma provincia con scores conocidos producen el promedio esperado.
 - **Dependencias:** SI-01.
 - **Prioridad:** P1 · **Esfuerzo:** M
+- **Hecho (2026-09-08):** `GET /api/score/por-provincia` reutiliza el mismo cálculo de `GET /api/score` (extraído a `computeScoresForDepartamento()`, no una query nueva). Provincia sin ninguna entidad con score queda `promedioScore: null, sinDatos: true`, nunca un 0 engañoso. Verificado en vivo: 12 provincias de La Libertad, ej. Pataz 62.6 (15 entidades con score), Trujillo 61.1 (34 con score, 1 sin score). Tests de regresión agregados (incluye el caso de 3 entidades con scores conocidos produciendo el promedio esperado), suite completa 20/20 en verde.
 
 ### SI-04 · Bandas de score cualitativas — ✅ esquema confirmado (2026-09-07), listo para implementar
 
