@@ -21,8 +21,8 @@
 | Sprint | Objetivo | Tickets | Puerta de salida |
 |---|---|---|---|
 | **1** | Cerrar los 5 bugs de comportamiento confirmados con evidencia HTTP | DQ-01, DQ-02, DQ-03, DQ-04, DQ-05 | `/api/execution` pagina el universo real y expone provincia; los catálogos de MTC y residuos filtran por corte/año vigente por defecto; el crossref de score institucional está diagnosticado (y resuelto o formalmente documentado como limitación aceptada) |
-| **2** | Exponer categorías ya ingeridas y blindar contra el próximo bug del mismo tipo | DQ-06, DQ-07, DQ-08, DQ-09, DQ-10 | Endpoints de agregación disponibles para INFOBRAS y ejecución de gasto; `area_censo` expuesto en instituciones educativas; `docs/data-contracts` documenta qué fuentes son panel multi-año; smoke test genérico detecta discrepancias total-vs-suma-de-filas |
-| **3** | Decisiones explícitas sobre gaps de cobertura sin solución de una línea | DQ-11, DQ-12, DQ-13 | ADR/documento de decisión para cada uno — implementación solo si la evaluación la justifica |
+| **2** | Exponer categorías ya ingeridas y blindar contra el próximo bug del mismo tipo | DQ-06, DQ-07, DQ-08, DQ-09, DQ-10, DQ-14 | Endpoints de agregación disponibles para INFOBRAS y ejecución de gasto; `area_censo` expuesto en instituciones educativas; `docs/data-contracts` documenta qué fuentes son panel multi-año; smoke test genérico detecta discrepancias total-vs-suma-de-filas; INFOBRAS marca filas con `distrito` no reconocido para su departamento |
+| **3** | Decisiones explícitas sobre gaps de cobertura sin solución de una línea | DQ-11, DQ-12, DQ-13, DQ-15 | ADR/documento de decisión para cada uno — implementación solo si la evaluación la justifica |
 
 ---
 
@@ -43,9 +43,12 @@ Sprint 2: DQ-06 (agregación INFOBRAS) ⟷ DQ-07 (area_censo) — independientes
             ↓
           DQ-10 (smoke test genérico, depende de DQ-01 y DQ-06 para tener algo correcto que verificar)
             ↓
+          DQ-14 (validación de distrito en INFOBRAS, hallazgo 2026-09-08) — independiente, sin fecha comprometida
+            ↓
 Sprint 3: DQ-11 (ADR score parcial, depende del diagnóstico de DQ-05)
           DQ-12 (evaluación CEPLAN Geo) — independiente, sin fecha comprometida
           DQ-13 (evaluación autoridades electas) — independiente, sin fecha comprometida
+          DQ-15 (evaluación fuente de homicidios, hallazgo 2026-09-08) — independiente, sin fecha comprometida
 ```
 
 Cada sprint deja una **puerta de salida verificable**: si la puerta no se cumple, no se abre el siguiente sprint. Dentro del Sprint 1, DQ-03/DQ-04/DQ-05 son independientes de DQ-01/DQ-02 y pueden trabajarse en paralelo.
@@ -79,6 +82,7 @@ Cada sprint deja una **puerta de salida verificable**: si la puerta no se cumple
 | DQ-08 | Endpoint de agregación funcional/genérica en `radar-ejecucion` | Nuevo endpoint/parámetro de agregación por función y genérica de gasto; suma de grupos coincide con el total | DQ-01 | P1 | M | ⬜ Pendiente |
 | DQ-09 | Documentar fuentes panel multi-año/multi-corte en `docs/data-contracts` | Lista explícita de fuentes panel (mínimo las 4 identificadas) con su comportamiento por defecto documentado | Idealmente después de DQ-03/DQ-04 | P1 | S | ⬜ Pendiente |
 | DQ-10 | Smoke test genérico: total de resumen vs. suma de filas paginadas | Script/suite que detecta discrepancias total-vs-paginación en cualquier app con endpoint de resumen; corre en CI | DQ-01, DQ-06 | P1 | M | ⬜ Pendiente |
+| DQ-14 | Validar `distrito` de INFOBRAS contra catálogo de territorios en el ingest | Filas con `distrito` no reconocido para su `departamento` quedan marcadas (no rechazadas) en vez de insertarse como si fueran confiables; expuesto en la API | — | P2 | S | ⬜ Pendiente |
 
 **Puerta de salida del Sprint 2**: las categorías confirmadas como ya ingeridas (sector, causal, naturaleza, área urbano/rural, función, genérica) están disponibles vía API sin requerir descarga manual y agregación client-side; existe un mecanismo automatizado que habría detectado el bug de DQ-01 antes de que una auditoría manual tuviera que encontrarlo.
 
@@ -91,8 +95,9 @@ Cada sprint deja una **puerta de salida verificable**: si la puerta no se cumple
 | DQ-11 | ADR: aceptar score institucional parcial o priorizar DQ-05 | ADR con decisión explícita sobre cómo comunicar (o no) un score de máximo 2/5 componentes | DQ-05 | P2 | S | ⬜ Pendiente |
 | DQ-12 | Evaluar inversión en CEPLAN Geo | Documento de evaluación costo/beneficio de ingerir infraestructura y población para las 11 provincias restantes | — | P2 | S | ⬜ Pendiente |
 | DQ-13 | Evaluar fuente adicional de autoridades subnacionales electas | Documento de evaluación de disponibilidad y costo de un conector ONPE/JNE de autoridades municipales/regionales | — | P2 | S | ✅ Evaluado (2026-09-08) — no requiere conector nuevo, ver TICKETS |
+| DQ-15 | Evaluar fuente de homicidios por territorio | Documento de evaluación: ¿existe dataset abierto de homicidios a nivel provincial/distrital reutilizable con el mismo patrón de conector? | — | P2 | S | ⬜ Pendiente |
 
-**Puerta de salida del Sprint 3**: decisión documentada (con o sin implementación de seguimiento) para cada uno de los 3 gaps de cobertura — ninguno queda como limitación implícita sin registrar.
+**Puerta de salida del Sprint 3**: decisión documentada (con o sin implementación de seguimiento) para cada uno de los 4 gaps de cobertura — ninguno queda como limitación implícita sin registrar.
 
 ---
 
