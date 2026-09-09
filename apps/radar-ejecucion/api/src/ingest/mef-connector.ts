@@ -6,8 +6,7 @@ import { pool } from "../db/pool.js";
 import { refreshBudgetCoverageSnapshots } from "../db/budget-coverage.js";
 import { CONFIRMED_MEF_FIELD_MAPPING, type MefFieldMapping } from "./field-mapping.js";
 import { normalizeMefRows, normalizeMefProyectos } from "./normalize.js";
-import { PILOT_DEPARTMENT_UBIGEO, type PilotDepartmentName } from "../lib/pilot-departments.js";
-import { SECTION_NIVEL_MES_BOUNDS, departamentoSectionWindow, type SectionBounds } from "./mef-section-bounds.js";
+import { SECTION_NIVEL_MES_BOUNDS, departamentoSectionWindow, DEPARTAMENTO_UBIGEO_PREFIJO, type SectionBounds } from "./mef-section-bounds.js";
 
 const FILES_BASE_URL = "https://fs.datosabiertos.mef.gob.pe/datastorefiles";
 
@@ -221,7 +220,7 @@ function ejecutoraLineNeedles(departamento: string, nivelGobierno: string): stri
   if (nivelGobierno === "GOBIERNOS REGIONALES") {
     return [`"${nivelGobierno}"`, `"${dept}"`];
   }
-  const ubigeo = PILOT_DEPARTMENT_UBIGEO[dept as PilotDepartmentName];
+  const ubigeo = DEPARTAMENTO_UBIGEO_PREFIJO[dept as keyof typeof DEPARTAMENTO_UBIGEO_PREFIJO];
   if (nivelGobierno === "GOBIERNOS LOCALES" && ubigeo) {
     return [`"${nivelGobierno}"`, `","${ubigeo}","${dept}","`];
   }
@@ -691,11 +690,15 @@ export async function ingestMefFullYearForDepartamento(
 
 /**
  * Offsets del bloque "GOBIERNO NACIONAL" del archivo `2026-Gasto-Mensual.csv`
- * (confirmado en vivo el 2026-08-21 vía búsqueda binaria sobre bytes reales
- * del archivo remoto — no es una estimación). El bloque nacional viene
- * DESPUÉS de "GOBIERNOS LOCALES" (que termina cerca del byte 4,767,552,175)
- * y ocupa el resto del archivo hasta EOF. Tamaño total del archivo
- * confirmado por `Content-Range` en la respuesta HTTP: 6,240,885,549 bytes.
+ * — vía búsqueda binaria sobre bytes reales del archivo remoto (no es una
+ * estimación). **Recalibrado CT-10 (2026-09-09)**: el bloque nacional viene
+ * DESPUÉS de "GOBIERNOS LOCALES" (que ahora termina en el byte
+ * 5,377,593,670, tras sumarse `MES_EJE=8`) y ocupa el resto del archivo
+ * hasta EOF. Tamaño total del archivo confirmado por `Content-Range`:
+ * 7,029,320,981 bytes (era 6,240,885,549 en la calibración anterior de
+ * 2026-08-21 — creció 12.6% al agregarse el mes de agosto). Volver a correr
+ * `recalibrate-mef-bounds` (ver notas de CT-10 / mef-section-bounds.ts)
+ * cuando `assertMefFileSizeWithinTolerance` vuelva a fallar.
  *
  * A diferencia de `SECTION_OFFSETS_LA_LIBERTAD` (offsets *por departamento*,
  * porque el archivo ordena Regional/Local por `DEPARTAMENTO_EJECUTORA_NOMBRE`
@@ -711,16 +714,17 @@ export async function ingestMefFullYearForDepartamento(
  * solo La Libertad — son offsets del bloque Nacional, no de un departamento.
  */
 const NACIONAL_MES_START_BYTE: Record<string, number> = {
-  "7": 4_767_552_175,
-  "6": 4_962_111_870,
-  "5": 5_128_297_026,
-  "4": 5_295_149_068,
-  "3": 5_454_753_275,
-  "2": 5_614_487_230,
-  "1": 5_768_701_506,
-  "0": 5_914_421_330,
+  "8": 5_377_593_670,
+  "7": 5_551_600_806,
+  "6": 5_745_450_673,
+  "5": 5_911_160_173,
+  "4": 6_077_597_833,
+  "3": 6_236_749_623,
+  "2": 6_396_144_313,
+  "1": 6_549_682_600,
+  "0": 6_693_879_301,
 };
-const NACIONAL_FILE_END_BYTE = 6_240_885_549;
+const NACIONAL_FILE_END_BYTE = 7_029_320_981;
 
 /**
  * Ingesta comprensiva de Gobierno Nacional filtrado por `DEPARTAMENTO_META`
@@ -806,7 +810,7 @@ export async function ingestMefFullYearForMetaDepartamento(
   mapping: MefFieldMapping = CONFIRMED_MEF_FIELD_MAPPING
 ): Promise<FullYearIngestSummary> {
   const wantedMetaDepartamento = metaDepartamento.toUpperCase().trim();
-  const meses = ["7", "6", "5", "4", "3", "2", "1", "0"];
+  const meses = Object.keys(NACIONAL_MES_START_BYTE).sort((a, b) => Number(b) - Number(a));
 
   await assertMefFileSizeWithinTolerance(filename, NACIONAL_FILE_END_BYTE);
 
