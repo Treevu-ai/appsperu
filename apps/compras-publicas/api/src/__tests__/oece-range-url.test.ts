@@ -1,10 +1,16 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../db/pool.js", () => ({ pool: {} }));
 vi.mock("@appsperu/http-client", () => ({ fetchWithTimeout: vi.fn() }));
 
 import { fetchRecordsPage, recordsPageUrl } from "../ingest/oece-records-connector.js";
-import { fetchReleasesPage, OecePageNotFoundError, releasesPageUrl } from "../ingest/oece-connector.js";
+import {
+  fetchReleasesPage,
+  OecePageNotFoundError,
+  PERU_DEPARTAMENTOS,
+  releasesPageUrl,
+  resolveDepartamentosFromEnv,
+} from "../ingest/oece-connector.js";
 import { fetchWithTimeout } from "@appsperu/http-client";
 import { monthlySegments } from "../ingest/oece-segments.js";
 
@@ -42,5 +48,37 @@ describe("OECE range ingestion URLs", () => {
     await expect(fetchRecordsPage(501)).rejects.toEqual(expect.objectContaining({
       name: "OecePageNotFoundError", page: 501, endpoint: "/records",
     } satisfies Partial<OecePageNotFoundError>));
+  });
+});
+
+describe("resolveDepartamentosFromEnv (CT-08 — scripts de barrido nacional)", () => {
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  it("lee OECE_DEPARTAMENTOS como lista separada por comas", () => {
+    process.env.OECE_DEPARTAMENTOS = "LA LIBERTAD,CALLAO";
+    delete process.env.OECE_DEPARTAMENTO;
+    expect(resolveDepartamentosFromEnv()).toEqual(["LA LIBERTAD", "CALLAO"]);
+  });
+
+  it("cae a OECE_DEPARTAMENTO (singular) cuando no hay OECE_DEPARTAMENTOS", () => {
+    delete process.env.OECE_DEPARTAMENTOS;
+    process.env.OECE_DEPARTAMENTO = "CUSCO";
+    expect(resolveDepartamentosFromEnv()).toEqual(["CUSCO"]);
+  });
+
+  it("devuelve undefined sin ninguna de las dos variables — el llamador decide el default", () => {
+    delete process.env.OECE_DEPARTAMENTOS;
+    delete process.env.OECE_DEPARTAMENTO;
+    expect(resolveDepartamentosFromEnv()).toBeUndefined();
+  });
+
+  it("expone las 25 jurisdicciones para que los scripts de barrido nacional no hardcodeen una sola región", () => {
+    expect(PERU_DEPARTAMENTOS).toHaveLength(25);
+    expect(PERU_DEPARTAMENTOS).toContain("LA LIBERTAD");
+    expect(PERU_DEPARTAMENTOS).toContain("CALLAO");
   });
 });

@@ -1,5 +1,5 @@
 import { pool } from "../db/pool.js";
-import { ingestOecdReleases, OecePageNotFoundError } from "./oece-connector.js";
+import { ingestOecdReleases, OecePageNotFoundError, PERU_DEPARTAMENTOS, resolveDepartamentosFromEnv } from "./oece-connector.js";
 import { ingestAwards } from "./oece-records-connector.js";
 import { monthlySegments } from "./oece-segments.js";
 
@@ -15,6 +15,10 @@ if ((kind !== "releases" && kind !== "records") || !startSegment || !endSegment 
   throw new Error("Usa --kind releases|records, --start-segment YYYY-MM, --end-segment YYYY-MM, --page-chunk entero >= 1 y --start-page entero >= 1.");
 }
 
+// CT-08 (2026-09-09): antes hardcodeaba "LA LIBERTAD" — ver la misma nota en
+// run-oece-releases-full.ts.
+const departamentos = resolveDepartamentosFromEnv() ?? [...PERU_DEPARTAMENTOS];
+
 const segments = monthlySegments(startSegment, endSegment);
 const summaries: unknown[] = [];
 
@@ -24,8 +28,8 @@ try {
     for (;;) {
       try {
         const summary = kind === "releases"
-          ? await ingestOecdReleases({ maxPages: pageChunk, startPage, departamento: "LA LIBERTAD", params: { dataSegmentationID } })
-          : await ingestAwards({ maxPages: pageChunk, startPage, departamento: "LA LIBERTAD", params: { dataSegmentationID } });
+          ? await ingestOecdReleases({ maxPages: pageChunk, startPage, departamentos, params: { dataSegmentationID } })
+          : await ingestAwards({ maxPages: pageChunk, startPage, departamentos, params: { dataSegmentationID } });
         summaries.push({ kind, dataSegmentationID, startPage, summary });
         console.log(JSON.stringify({ checkpoint: { kind, dataSegmentationID, startPage, pageChunk }, ...summary }));
         if (!summary.isPartial) break;
@@ -39,7 +43,7 @@ try {
       }
     }
   }
-  console.log(JSON.stringify({ status: "COMPLETE", scope: { department: "LA LIBERTAD", kind, segments }, summaries }, null, 2));
+  console.log(JSON.stringify({ status: "COMPLETE", scope: { departamentos, kind, segments }, summaries }, null, 2));
 } catch (error) {
   console.error(`Barrido segmentado OECE de ${kind} falló:`, error);
   process.exitCode = 1;
