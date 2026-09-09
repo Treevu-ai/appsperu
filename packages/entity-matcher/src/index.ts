@@ -39,7 +39,21 @@ const STOPWORDS = new Set(["DE", "LA", "LIBERTAD", "DEL", "Y", "UE"]);
 // AGALLPAMPA" y "... DE CHILIA" matchean por ser ambas "municipalidades
 // distritales", sin que sus nombres de lugar tengan nada en común (bug real
 // detectado antes de persistir este matcher — ver test de regresión).
-const ENTITY_TYPE_WORDS = new Set(["MUNICIPALIDAD", "PROVINCIAL", "DISTRITAL", "GOBIERNO", "REGIONAL", "REGION"]);
+// "PROYECTO ESPECIAL" es el mismo problema con otro molde: hay varios
+// proyectos especiales de irrigación en el Perú (CHAVIMOCHIC, CHINECAS,
+// OLMOS, ...) que no deben matchear entre sí solo por compartir ese prefijo
+// (DQ-17 — caso real: CHAVIMOCHIC de La Libertad matcheaba con CHINECAS de
+// Áncash únicamente por "PROYECTO ESPECIAL").
+const ENTITY_TYPE_WORDS = new Set([
+  "MUNICIPALIDAD",
+  "PROVINCIAL",
+  "DISTRITAL",
+  "GOBIERNO",
+  "REGIONAL",
+  "REGION",
+  "PROYECTO",
+  "ESPECIAL",
+]);
 
 const CANDIDATE_MIN_SCORE = 0.4;
 

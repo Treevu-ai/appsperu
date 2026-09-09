@@ -15,8 +15,9 @@ export interface BuildCrosswalkSummary {
  * Recalcula el cruce radar-ejecucion (MEF) <-> INFOBRAS por nombre de
  * entidad, para un departamento, y lo persiste en `entity_crosswalk`. Se
  * puede correr de nuevo cuando haya más datos ingeridos en cualquiera de las
- * dos fuentes — hace upsert por (ejecucion_entity_code,
- * infobras_codigo_entidad), no acumula duplicados. Mismo patrón que
+ * dos fuentes, o cuando cambie el matcher compartido — reemplaza (borra +
+ * inserta) las filas del departamento en vez de solo upsert, para no dejar
+ * matches obsoletos huérfanos. Mismo patrón que
  * `compras-publicas/src/crossref/build-crosswalk.ts`.
  */
 export async function buildCrosswalk(departamento: string): Promise<BuildCrosswalkSummary> {
@@ -44,21 +45,21 @@ export async function buildCrosswalk(departamento: string): Promise<BuildCrosswa
   }));
 
   const matches = matchEntities(ejecucionEntities, infobrasEntities);
+  const infobrasCodigos = infobrasEntities.map((e) => e.codigoEntidad);
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    // Reemplaza, no solo inserta: si una fila de `entity_crosswalk` ya
+    // existente ya no aparece en `matches` (p.ej. porque un ajuste al
+    // matcher dejó de considerarla válida — ver DQ-17), debe desaparecer al
+    // recalcular, no quedar huérfana con su `computed_at` viejo.
+    await client.query(`DELETE FROM entity_crosswalk WHERE infobras_codigo_entidad = ANY($1)`, [infobrasCodigos]);
     for (const m of matches) {
       await client.query(
         `INSERT INTO entity_crosswalk
            (ejecucion_entity_code, ejecucion_nombre, infobras_codigo_entidad, infobras_entidad_nombre, confidence, score)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (ejecucion_entity_code, infobras_codigo_entidad) DO UPDATE
-           SET ejecucion_nombre = EXCLUDED.ejecucion_nombre,
-               infobras_entidad_nombre = EXCLUDED.infobras_entidad_nombre,
-               confidence = EXCLUDED.confidence,
-               score = EXCLUDED.score,
-               computed_at = now()`,
+         VALUES ($1, $2, $3, $4, $5, $6)`,
         [m.ejecucionEntityCode, m.ejecucionNombre, m.infobrasCodigoEntidad, m.infobrasEntidadNombre, m.confidence, m.score]
       );
     }
