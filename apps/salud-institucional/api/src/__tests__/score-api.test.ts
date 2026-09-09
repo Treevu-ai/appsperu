@@ -92,6 +92,22 @@ describe("GET /api/score (nivel de gobierno, territorio y ranking por cohorte)",
     expect(res.body.resultados[0].scoreCompuesto).toBeNull();
     expect(res.body.resultados[0].rankingEnNivelGobierno).toBeNull();
   });
+
+  it("expone obrasConDistritoSospechoso sin afectar el score (contexto, no peso)", async () => {
+    ejecucionQueryMock.mockResolvedValueOnce({
+      rows: [{ entity_code: "001", nombre: "Municipalidad de Ejemplo", nivel_gobierno: "GOBIERNOS LOCALES", provincia: "PATAZ", distrito: "PATAZ", pim: "100", devengado: "50" }],
+    });
+    infobrasQueryMock.mockResolvedValueOnce({
+      rows: [{ entity_code: "001", total: "5", paralizadas: "0", distrito_sospechoso: "2" }],
+    });
+    inversionesQueryMock.mockResolvedValueOnce({ rows: [] });
+    comprasQueryMock.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(createApp()).get("/api/score").query({ departamento: "LA LIBERTAD" });
+
+    expect(res.body.resultados[0].advertencias).toEqual({ obrasConDistritoSospechoso: 2 });
+    expect(res.body.resultados[0].componentes.obrasNoParalizadas.valor).toBe(100);
+  });
 });
 
 describe("GET /api/score/por-provincia (SI-03)", () => {

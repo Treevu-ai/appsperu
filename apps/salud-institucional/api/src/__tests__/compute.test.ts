@@ -49,7 +49,7 @@ describe("computeEntityScore", () => {
     const result = computeEntityScore({
       ...baseInput(),
       ejecucion: { pim: 0, devengado: 5000000 },
-      obras: { total: 10, paralizadas: 0 }, // 100
+      obras: { total: 10, paralizadas: 0, distritoSospechoso: 0 }, // 100
     });
     expect(result.componentes.ejecucion.disponible).toBe(false);
     expect(result.componentesUsados).toBe(1);
@@ -60,14 +60,14 @@ describe("computeEntityScore", () => {
     const result = computeEntityScore({
       ...baseInput(),
       ejecucion: { pim: 100, devengado: 100 }, // 100
-      obras: { total: 10, paralizadas: 5 }, // 50
+      obras: { total: 10, paralizadas: 5, distritoSospechoso: 0 }, // 50
     });
     expect(result.componentesUsados).toBe(2);
     expect(result.scoreCompuesto).toBe(75); // (100+50)/2
   });
 
   it("caso real: obras sin ninguna paralizada da 100 en ese componente", () => {
-    const result = computeEntityScore({ ...baseInput(), obras: { total: 92, paralizadas: 8 } });
+    const result = computeEntityScore({ ...baseInput(), obras: { total: 92, paralizadas: 8, distritoSospechoso: 0 } });
     // Sánchez Carrión real: 92 obras, 8 paralizadas (ver docs/analisis-la-libertad-2026-08.md)
     expect(result.componentes.obrasNoParalizadas.valor).toBeCloseTo(91.3, 1);
   });
@@ -76,6 +76,20 @@ describe("computeEntityScore", () => {
     const result = computeEntityScore({ ...baseInput(), inversiones: { total: 0, conSobrecosto: 0 } });
     expect(result.componentes.inversionesSinSobrecosto.valor).toBeNull();
     expect(result.componentesUsados).toBe(0);
+  });
+
+  it("advertencia de distrito sospechoso (DQ-14) no afecta el score, solo se reporta aparte", () => {
+    const result = computeEntityScore({
+      ...baseInput(),
+      obras: { total: 10, paralizadas: 0, distritoSospechoso: 3 },
+    });
+    expect(result.componentes.obrasNoParalizadas.valor).toBe(100); // el componente ignora distritoSospechoso
+    expect(result.advertencias.obrasConDistritoSospechoso).toBe(3);
+  });
+
+  it("advertencia de distrito sospechoso es null, no 0, cuando no hay obras para la entidad", () => {
+    const result = computeEntityScore(baseInput());
+    expect(result.advertencias.obrasConDistritoSospechoso).toBeNull();
   });
 
   it("concentración de compras: un solo proveedor con todo el monto da score 0 (máxima concentración)", () => {

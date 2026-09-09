@@ -55,7 +55,8 @@ async function computeScoresForDepartamento(wantedDepartamento: string, anio: nu
   const { rows: obrasRows } = await infobrasPool.query(
     `SELECT ec.ejecucion_entity_code AS entity_code,
             COUNT(*) AS total,
-            COUNT(*) FILTER (WHERE pw.existe_paralizacion) AS paralizadas
+            COUNT(*) FILTER (WHERE pw.existe_paralizacion) AS paralizadas,
+            COUNT(*) FILTER (WHERE pw.distrito_sospechoso) AS distrito_sospechoso
      FROM entity_crosswalk ec
      JOIN public_works pw ON pw.codigo_entidad = ec.infobras_codigo_entidad
      WHERE ec.ejecucion_entity_code = ANY($1)
@@ -63,7 +64,10 @@ async function computeScoresForDepartamento(wantedDepartamento: string, anio: nu
     [entityCodes]
   );
   const obrasByEntity = new Map(
-    obrasRows.map((r) => [r.entity_code, { total: Number(r.total), paralizadas: Number(r.paralizadas) }])
+    obrasRows.map((r) => [
+      r.entity_code,
+      { total: Number(r.total), paralizadas: Number(r.paralizadas), distritoSospechoso: Number(r.distrito_sospechoso) },
+    ])
   );
 
   // 3. Inversiones (radar-inversiones), por SEC_EJEC exacto — sin crosswalk, clave compartida directa.

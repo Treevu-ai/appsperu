@@ -17,6 +17,10 @@ export interface EjecucionInput {
 export interface ObrasInput {
   total: number;
   paralizadas: number;
+  /** Obras con `distrito_sospechoso: true` en INFOBRAS (DQ-14) — advertencia de
+   * calidad de dato de la fuente, no participa en el cálculo del componente
+   * `obrasNoParalizadas`. Vive en `advertencias`, nunca resta ni suma al score. */
+  distritoSospechoso: number;
 }
 
 export interface InversionesInput {
@@ -79,6 +83,13 @@ export interface EntityScore {
    * sobre el conjunto completo de resultados, no acá; queda `null` hasta que
    * score.ts lo rellena, y se mantiene `null` si la entidad no tiene score. */
   rankingEnNivelGobierno: { posicion: number; total: number } | null;
+  /** Señales de calidad de dato sobre las fuentes del score — nunca pesan en
+   * `scoreCompuesto` ni en ningún componente. `null` cuando la fuente
+   * correspondiente no tiene datos para esta entidad (mismo criterio que el
+   * resto del archivo: ausencia de dato no es cero). */
+  advertencias: {
+    obrasConDistritoSospechoso: number | null;
+  };
 }
 
 function pct(numerator: number, denominator: number): number | null {
@@ -192,5 +203,8 @@ export function computeEntityScore(input: EntityScoreInputs): EntityScore {
     componentesUsados: disponibles.length,
     componentes,
     rankingEnNivelGobierno: null,
+    advertencias: {
+      obrasConDistritoSospechoso: input.obras ? input.obras.distritoSospechoso : null,
+    },
   };
 }
