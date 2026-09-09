@@ -229,13 +229,17 @@ export async function ingestOecdReleases(options: IngestOptions = {}): Promise<I
     await client.query("COMMIT");
 
     if (wantedDepartamentos.size > 0) {
-      const isCompleteSnapshot = !hasNext && startPage === 1 && Object.keys(params).length === 0;
+      // CT-21 (2026-09-09): antes exigía `Object.keys(params).length === 0` para poder marcar
+      // completitud — eso hacía que cualquier barrido con `startDate`/`endDate` (el caso normal de
+      // un barrido "full") nunca pudiera certificarse, aunque recorriera la fuente hasta la página
+      // terminal. Lo que importa es la exhaustividad de la paginación, no si hubo parámetros.
+      const isCompleteSnapshot = !hasNext && startPage === 1;
       await recordTerritorialCoverage({
         departamentos: [...wantedDepartamentos], releases: allReleases, normalized: allRows, rejected, batchId,
         isCompleteSnapshot,
         restriction: isCompleteSnapshot
-          ? "Recorrido hasta la página terminal del endpoint público /releases sin filtros."
-          : "Cobertura parcial: página inicial, paginación o parámetros de consulta acotan el recorrido de /releases.",
+          ? "Recorrido hasta la página terminal del endpoint público /releases; el rango de fechas u otros parámetros de consulta, si los hubo, definen el universo cubierto, no una cobertura parcial."
+          : "Cobertura parcial: página inicial o paginación no llegaron a la página terminal del recorrido de /releases.",
       });
     }
 

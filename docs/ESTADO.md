@@ -1,6 +1,65 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-09-07.
+Última actualización: 2026-09-09.
+
+## Decisión de alcance — ejecución activa acotada a LA LIBERTAD, AREQUIPA y LIMA (2026-09-09)
+
+Sucesor directo de la decisión "La Libertad únicamente" del 2026-08-27 (ver más abajo). El catálogo
+territorial de 25 jurisdicciones (`docs/PRD_Cobertura_Territorial_Verificable_Rastro_v1.md`, RF-01)
+sigue siendo el diseño final del producto — no se reduce el objetivo. Lo que cambia es el **alcance
+de ejecución inmediata**: en vez de perseguir las 25 regiones a la vez (como intentó el batch CT-10
+de esta misma sesión), el trabajo activo se acota a **LA LIBERTAD, AREQUIPA y LIMA**.
+
+**Por qué:** el batch CT-10 (23 departamentos MEF, ~4h+ estimadas) confirmó en vivo que el equipo de
+desarrollo no soporta ingestas nacionales completas de una sola vez — picos de RAM >1GB por proceso,
+corridas de horas, dos fallos reales (AMAZONAS por bug de parseo CSV, CALLAO por alias de
+departamento no mapeado). Se detuvo deliberadamente en HUANUCO, no por falla. Ver
+`docs/BACKLOG_Cobertura_Territorial_Verificable_Rastro_v1.md` (sección CT-10) para el detalle.
+
+**Estado real verificado (2026-09-09) por app y región, antes de cualquier ingesta nueva:**
+
+| App / fuente | LA LIBERTAD | AREQUIPA | LIMA |
+|---|---|---|---|
+| infobras | ✅ óptimo (10,134, coverage fiel) | ✅ óptimo (9,910, coverage fiel) | ✅ óptimo (19,476, coverage fiel) |
+| radar-inversiones (Invierte) | ✅ óptimo (7,973 + 19,774) | ❌ 0 filas — gap real, nunca ingerido | ❌ 0 filas — gap real, nunca ingerido |
+| compras-publicas / OECE | ⚠️ dato completo (416) pero `PARCIAL` — bug de bookkeeping en `isCompleteSnapshot` | ⚠️ mismo bug | ⚠️ mismo bug |
+| compras-publicas / SEACE | ⚠️ `COMPLETA_VERIFICADA` pero persisted &lt; normalized sin explicación | ⚠️ coverage sobre-cuenta vs. tabla real | ⚠️ mismo patrón |
+| radar-ejecucion (MEF) | ⚠️ dato completo (GR+GL+GN) pero sin materializador de cobertura → `BLOQUEADA` falso | ⚠️ dato parcial (GR+GL, sin GN), tampoco materializado | ❌ 0 lotes — gap real, nunca ingerido |
+
+Detalle de causas raíz, tickets nuevos (CT-21/22/23) y plan de cierre en
+`docs/BACKLOG_Cobertura_Territorial_Verificable_Rastro_v1.md`.
+
+**Cierre de sesión (2026-09-09, más tarde):** CT-21 y CT-22 corregidos y ejecutados en vivo.
+**LA LIBERTAD, AREQUIPA y LIMA quedan óptimas al 100%** (radar-ejecucion, radar-inversiones,
+infobras, compras-publicas, las 4 en `COMPLETA_VERIFICADA` en las 3 regiones). El cierre de LIMA/MEF
+requirió dos fixes adicionales en `mef-connector.ts`, no solo correr comandos: (1) `saveFilteredBatch()`
+trocea el payload crudo en varios lotes `jsonb` de hasta 100MB en vez de uno solo (Lima superaba el
+límite de 256MB de Postgres para un valor `jsonb`), y (2) un helper `pushAll()` reemplaza
+`array.push(...grande)` en 6 sitios (el spread revienta el límite de argumentos de V8 con arrays
+de cientos de miles de filas). 99/99 tests en verde. CT-23 (SEACE) quedó como decisión pendiente,
+no bug: `territorial_coverage` mide la región buscada, no la región de ejecución real del ítem.
+Detalle completo en `docs/BACKLOG_Cobertura_Territorial_Verificable_Rastro_v1.md`.
+
+## Puesta al día — trabajo de 2026-09-08/09 no registrado hasta ahora (2026-09-09)
+
+Dos días de trabajo real nunca se volcaron a este archivo; quedan resumidos aquí, detalle completo
+en cada backlog/tickets correspondiente:
+
+- **CT-06 (INFOBRAS)**: cerrado 2026-09-08. 25/25 jurisdicciones `COMPLETA_VERIFICADA`; de paso se
+  corrigió el alias de Callao (`"P C DEL CALLAO"` vs `"CALLAO"`) que perdía 1,471 obras
+  silenciosamente. Detalle: `docs/BACKLOG_Cobertura_Territorial_Verificable_Rastro_v1.md` (CT-06).
+- **CT-08 (OECE) y CT-09 (SEACE)**: cerrados 2026-09-09 con corrida nacional real (25/25 regiones
+  verificadas en datos: `procurement_processes`/`awards` y `minor_contracts` poblados para las 25).
+  El código de `isCompleteSnapshot` en OECE quedó con un bug de bookkeeping que marca `PARCIAL` aun
+  con el dato completo — ver decisión de alcance arriba, ticket CT-21.
+- **CT-10 (MEF multirregión)**: recalibración de límites de archivo (PR #145) + extensión de
+  matching a las 25 regiones; batch de 23 departamentos lanzado y detenido deliberadamente en
+  HUANUCO tras la decisión de alcance de arriba. 6 departamentos quedaron con ingesta real
+  (ANCASH, APURIMAC, AYACUCHO, CAJAMARCA, CUSCO, HUANCAVELICA); AMAZONAS y CALLAO fallaron.
+- **DQ-06 a DQ-17 y SI-09** (`docs/TICKETS_Calidad_Datos_Auditoria_La_Libertad_v1.md`): batch de
+  hallazgos y correcciones de calidad de dato del 2026-09-08/09, incluyendo DQ-17 (crosswalk
+  Chavimochic↔Chinecas cruzando departamentos) y SI-09 (advertencias de calidad en el score
+  institucional, sin pesar). DQ-17 queda pendiente, sin resolver esta sesión.
 
 ## Fix — `infobras.costo_actualizado` corregido, no solo documentado (2026-09-07)
 
