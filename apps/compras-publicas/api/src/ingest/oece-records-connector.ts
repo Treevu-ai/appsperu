@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
 import { fetchWithTimeout } from "@appsperu/http-client";
-import { OecePageNotFoundError, normalizeDepartamentoScope } from "./oece-connector.js";
+import { OecePageNotFoundError, normalizeDepartamentoScope, resolveDepartamentosFromEnv } from "./oece-connector.js";
 import { findBuyerDepartamento, normalizeAwards, type OcdsRecord } from "./normalize-awards.js";
 import { normalizeBidders, persistBidders } from "./normalize-bidders.js";
 import { normalizeUnsuccessfulTenders } from "./normalize-unsuccessful-tenders.js";
@@ -290,11 +290,7 @@ export async function ingestAwards(options: IngestAwardsOptions = {}): Promise<I
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const maxPages = process.env.OECE_MAX_PAGES ? Number(process.env.OECE_MAX_PAGES) : undefined;
-  const departamentos = process.env.OECE_DEPARTAMENTOS
-    ? normalizeDepartamentoScope(undefined, process.env.OECE_DEPARTAMENTOS.split(","))
-    : process.env.OECE_DEPARTAMENTO
-      ? normalizeDepartamentoScope(process.env.OECE_DEPARTAMENTO)
-      : undefined;
+  const departamentos = resolveDepartamentosFromEnv();
 
   ingestAwards({ maxPages, departamentos })
     .then((summary) => {

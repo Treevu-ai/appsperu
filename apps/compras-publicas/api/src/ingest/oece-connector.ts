@@ -256,13 +256,25 @@ export async function ingestOecdReleases(options: IngestOptions = {}): Promise<I
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const maxPages = process.env.OECE_MAX_PAGES ? Number(process.env.OECE_MAX_PAGES) : undefined;
-  const departamentos = process.env.OECE_DEPARTAMENTOS
+/**
+ * Lee el ámbito territorial de `OECE_DEPARTAMENTOS`/`OECE_DEPARTAMENTO` (mismas
+ * variables que usa esta CLI) para que los scripts de barrido nacional
+ * (`run-oece-releases-full.ts`, `run-oece-records-full.ts`,
+ * `run-oece-segmented.ts`) no tengan que hardcodear un departamento — CT-08,
+ * 2026-09-09. Sin ninguna de las dos variables, no fija scope (deja pasar
+ * todo, igual que antes de este cambio para el uso normal del CLI).
+ */
+export function resolveDepartamentosFromEnv(): string[] | undefined {
+  return process.env.OECE_DEPARTAMENTOS
     ? normalizeDepartamentoScope(undefined, process.env.OECE_DEPARTAMENTOS.split(","))
     : process.env.OECE_DEPARTAMENTO
       ? normalizeDepartamentoScope(process.env.OECE_DEPARTAMENTO)
       : undefined;
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const maxPages = process.env.OECE_MAX_PAGES ? Number(process.env.OECE_MAX_PAGES) : undefined;
+  const departamentos = resolveDepartamentosFromEnv();
 
   ingestOecdReleases({ maxPages, departamentos })
     .then((summary) => {
