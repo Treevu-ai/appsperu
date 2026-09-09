@@ -15,6 +15,7 @@
     "ingest:mef:pilot:ejecutora": "tsx src/cli/ingest-pilot-ejecutora.ts",
     "ingest:mincetur-hospedaje": "tsx src/ingest/run-mincetur-hospedaje.ts",
     "cobertura:territorial": "tsx src/cli/territorial-coverage.ts",
+    "coverage:mef": "tsx src/ingest/materialize-mef-coverage.ts",
     "tablero:lluvias": "tsx src/cli/lluvias-seguimiento.ts",
     "integrity:budget": "tsx src/cli/integrity-budget.ts",
     "sectors:seed": "tsx src/cli/seed-sector-registry.ts",

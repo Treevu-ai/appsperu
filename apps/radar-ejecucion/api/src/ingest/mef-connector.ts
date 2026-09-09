@@ -572,8 +572,8 @@ export async function ingestMefFullYearForDepartamento(
       const cached = await loadCachedRows(resourceId);
       if (cached) {
         console.log(`  [cache] ${nivelGobierno}/mes=${mesEje}: ${cached.rows.length} filas de ${wantedDepartamento}`);
-        batchIds.push(cached.id);
-        allRecords.push(...cached.rows);
+        batchIds.push(...cached.ids);
+        pushAll(allRecords, cached.rows);
         continue;
       }
 
@@ -612,13 +612,13 @@ export async function ingestMefFullYearForDepartamento(
 
       const client = await pool.connect();
       try {
-        const batchId = await saveFilteredBatch(client, resourceId, records);
-        batchIds.push(batchId);
+        const ids = await saveFilteredBatch(client, resourceId, records);
+        batchIds.push(...ids);
       } finally {
         client.release();
       }
 
-      allRecords.push(...records);
+      pushAll(allRecords, records);
     }
   }
 
@@ -752,27 +752,62 @@ const NACIONAL_FILE_END_BYTE = 7_029_320_981;
  * terminadas externamente entre los 10 y 15 minutos, mucho antes de
  * completar las 8 secciones).
  */
-async function loadCachedRows(resourceId: string): Promise<{ id: number; rows: Record<string, unknown>[] } | null> {
+/**
+ * CT-22-LIMA (2026-09-09): `target.push(...source)` revienta con
+ * `RangeError: Maximum call stack size exceeded` cuando `source` tiene más
+ * de unas ~65-125 mil filas (límite de argumentos de función de V8) —
+ * confirmado en vivo con las 169,615 filas de Gobierno Nacional de LIMA en
+ * `mes=0`. Todo lugar de este archivo que acumula filas potencialmente
+ * grandes en un array usa este helper en vez del operador spread.
+ */
+function pushAll<T>(target: T[], source: readonly T[]): void {
+  for (const item of source) target.push(item);
+}
+
+/**
+ * CT-22-LIMA (2026-09-09): `loadCachedRows` asumía un único lote por
+ * `resource_id` (verdad hasta ahora porque las filas filtradas de cualquier
+ * departamento cabían siempre en un solo `jsonb`). LIMA lo rompió — su
+ * volumen de Gobierno Nacional por `DEPARTAMENTO_META` es un orden de
+ * magnitud mayor que cualquier otro departamento (~90-100 mil filas por mes,
+ * frente a miles en el resto), así que `saveFilteredBatch` ahora puede
+ * partir una sección en varios lotes (`resource_id` sufijado con
+ * `#chunk=N`). Esta función junta TODOS los lotes de un `resource_id` (el
+ * formato viejo sin sufijo sigue funcionando: es simplemente un único lote)
+ * en vez de tomar solo el más reciente.
+ */
+async function loadCachedRows(resourceId: string): Promise<{ ids: number[]; rows: Record<string, unknown>[] } | null> {
   const { rows } = await pool.query<{ id: number; payload: { rows?: Record<string, unknown>[]; csv?: string } }>(
-    `SELECT id, payload FROM raw_mef_batches WHERE resource_id = $1 ORDER BY fetched_at DESC LIMIT 1`,
+    `SELECT id, payload FROM raw_mef_batches
+     WHERE resource_id = $1 OR resource_id LIKE $1 || '#chunk=%'
+     ORDER BY id ASC`,
     [resourceId]
   );
   if (rows.length === 0) return null;
 
-  if (rows[0].payload.rows) {
-    return { id: rows[0].id, rows: rows[0].payload.rows };
+  const ids: number[] = [];
+  const allRows: Record<string, unknown>[] = [];
+  for (const row of rows) {
+    ids.push(row.id);
+    if (row.payload.rows) {
+      pushAll(allRows, row.payload.rows);
+      continue;
+    }
+    // Compatibilidad con lotes guardados antes de `saveFilteredBatch`.
+    if (!row.payload.csv) continue;
+    const parsedRows = parse(row.payload.csv, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+      relax_column_count: true,
+    }) as Record<string, unknown>[];
+    pushAll(allRows, parsedRows);
   }
-
-  // Compatibilidad con lotes guardados antes de `saveFilteredBatch`.
-  if (!rows[0].payload.csv) return null;
-  const parsedRows = parse(rows[0].payload.csv, {
-    columns: true,
-    skip_empty_lines: true,
-    trim: true,
-    relax_column_count: true,
-  }) as Record<string, unknown>[];
-  return { id: rows[0].id, rows: parsedRows };
+  return { ids, rows: allRows };
 }
+
+/** Margen conservador bajo el límite duro de Postgres para un valor `jsonb` (268,435,455 bytes). */
+const MAX_JSONB_PAYLOAD_BYTES = 100 * 1024 * 1024;
 
 /**
  * Guarda solo las filas YA FILTRADAS por `DEPARTAMENTO_META` (no la sección
@@ -782,26 +817,58 @@ async function loadCachedRows(resourceId: string): Promise<{ id: number; rows: R
  * Postgres rechaza strings JSONB de más de 268,435,455 bytes
  * (`error: string too long to represent as jsonb string`, confirmado en vivo
  * el 2026-08-21 — la primera versión de este connector intentaba guardar el
- * texto crudo completo y falló exactamente así). Las filas ya filtradas
- * (miles, no cientos de miles) pesan unos pocos MB — muy por debajo del
- * límite. El costo real: si `DEPARTAMENTO_META_NOMBRE` tuviera un bug de
- * normalización, las filas descartadas no quedan en ningún lado para
- * auditoría — aceptable acá porque el filtro es una comparación de string
- * exacta y trivial de verificar, no una heurística.
+ * texto crudo completo y falló exactamente así). Para la mayoría de
+ * departamentos las filas ya filtradas (miles, no cientos de miles) pesan
+ * unos pocos MB — muy por debajo del límite.
+ *
+ * LIMA rompió ese supuesto (CT-22-LIMA, 2026-09-09): su volumen de Gobierno
+ * Nacional por `DEPARTAMENTO_META=LIMA` es de decenas/cientos de miles de
+ * filas por mes, y el payload filtrado en sí puede superar el límite de
+ * `jsonb`. Por eso esta función trocea en varios `INSERT` (uno por lote de
+ * hasta `MAX_JSONB_PAYLOAD_BYTES`) en vez de asumir que un único lote basta;
+ * `loadCachedRows` ya sabe reunir todos los lotes de un mismo `resource_id`.
+ * El costo real sigue siendo el mismo que antes: si `DEPARTAMENTO_META_NOMBRE`
+ * tuviera un bug de normalización, las filas descartadas no quedan en ningún
+ * lado para auditoría — aceptable porque el filtro es una comparación de
+ * string exacta y trivial de verificar, no una heurística.
  */
+export function chunkRowsBySize(rows: Record<string, unknown>[], maxBytes: number): Record<string, unknown>[][] {
+  const chunks: Record<string, unknown>[][] = [];
+  let current: Record<string, unknown>[] = [];
+  let currentBytes = 0;
+  for (const row of rows) {
+    const rowBytes = Buffer.byteLength(JSON.stringify(row), "utf8");
+    if (current.length > 0 && currentBytes + rowBytes > maxBytes) {
+      chunks.push(current);
+      current = [];
+      currentBytes = 0;
+    }
+    current.push(row);
+    currentBytes += rowBytes;
+  }
+  if (current.length > 0) chunks.push(current);
+  return chunks;
+}
+
 async function saveFilteredBatch(
   client: PoolClient,
   resourceId: string,
   filteredRows: Record<string, unknown>[]
-): Promise<number> {
-  const payload = JSON.stringify({ rows: filteredRows });
-  const result = await client.query<{ id: number }>(
-    `INSERT INTO raw_mef_batches (resource_id, query, checksum, record_count, payload)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id`,
-    [resourceId, `meta-departamento-download:${resourceId}`, checksumOf(payload), filteredRows.length, payload]
-  );
-  return result.rows[0].id;
+): Promise<number[]> {
+  const chunks = chunkRowsBySize(filteredRows, MAX_JSONB_PAYLOAD_BYTES);
+  const ids: number[] = [];
+  for (const [index, chunkRows] of chunks.entries()) {
+    const chunkResourceId = chunks.length > 1 ? `${resourceId}#chunk=${index}` : resourceId;
+    const payload = JSON.stringify({ rows: chunkRows });
+    const result = await client.query<{ id: number }>(
+      `INSERT INTO raw_mef_batches (resource_id, query, checksum, record_count, payload)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id`,
+      [chunkResourceId, `meta-departamento-download:${resourceId}`, checksumOf(payload), chunkRows.length, payload]
+    );
+    ids.push(result.rows[0].id);
+  }
+  return ids;
 }
 
 export async function ingestMefFullYearForMetaDepartamento(
@@ -827,8 +894,8 @@ export async function ingestMefFullYearForMetaDepartamento(
       // El payload cacheado YA está filtrado (ver `saveFilteredBatch`) — no
       // hace falta re-filtrar.
       console.log(`  [cache] mes=${mesEje}: ${cached.rows.length} filas de ${wantedMetaDepartamento} (sección ya descargada)`);
-      batchIds.push(cached.id);
-      allRecords.push(...cached.rows);
+      batchIds.push(...cached.ids);
+      pushAll(allRecords, cached.rows);
       continue;
     }
 
@@ -852,14 +919,14 @@ export async function ingestMefFullYearForMetaDepartamento(
 
     const client = await pool.connect();
     try {
-      const batchId = await saveFilteredBatch(client, resourceId, records);
-      batchIds.push(batchId);
+      const ids = await saveFilteredBatch(client, resourceId, records);
+      batchIds.push(...ids);
     } finally {
       client.release();
     }
 
     console.log(`  [red] mes=${mesEje}: ${records.length} filas de ${wantedMetaDepartamento} guardadas`);
-    allRecords.push(...records);
+    pushAll(allRecords, records);
   }
 
   if (allRecords.length === 0) {
