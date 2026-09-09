@@ -124,13 +124,52 @@ Una región será **cubierta** solo si tiene lote, conteos persistidos, corte id
 
 ## 11. Roadmap
 
-- **Ahora:** catálogo, esquema de cobertura, CLI y fuente base INFOBRAS/Invierte/OECE.
-- **Siguiente:** MEF con escaneo reproducible, proveedores/identidad y actividad agraria.
-- **Después:** propagación a Salud/CEPLAN, corte de publicación y automatización controlada.
+El catálogo de 25 jurisdicciones (RF-01) sigue siendo el diseño final del producto — no cambia.
+Lo que se re-secuencia, a partir de la decisión de alcance del 2026-09-09
+(`docs/ESTADO.md`, `docs/BACKLOG_Cobertura_Territorial_Verificable_Rastro_v1.md`), es qué se
+ejecuta primero: no hay equipo para sostener corridas nacionales completas de una sola vez.
 
-## 12. Avance de implementación (2026-08-25)
+- **Ahora (ejecución activa):** catálogo, esquema de cobertura, CLI y fuente base INFOBRAS/Invierte/OECE/SEACE/MEF llevadas a `COMPLETA_VERIFICADA` (o `PARCIAL` con restricción real, nunca `BLOQUEADA` por falta de materializador) para **LA LIBERTAD, AREQUIPA y LIMA** específicamente — no las 25 regiones a la vez.
+- **Siguiente:** proveedores/identidad y actividad agraria para esas mismas 3 regiones; retomar el resto del catálogo (~20 regiones) solo cuando el equipo lo permita o se decida explícitamente escalar.
+- **Después:** propagación a Salud/CEPLAN, corte de publicación y automatización controlada — sin cambios respecto al plan original.
+
+## 12. Avance de implementación
+
+### 2026-08-25 (línea base)
 
 - Implementados: catálogo central de 25 jurisdicciones, tabla de cobertura, estados, verificador CLI, regresiones y registro desde INFOBRAS, Invierte, OECE `/releases`, OECE `/records` y SEACE menores 8 UIT.
 - Verificado en código: una corrida limitada se registra como `PARCIAL`; una fuente sin filas solo puede ser `SIN_DATOS_EN_FUENTE` si el recorrido se completó; una capa sin corrida aparece como `BLOQUEADA`; CEPLAN es `NO_APLICA` mientras no exista llave territorial oficial.
-- Verificado en datos: el corte completo de Invierte recorrió de forma continua los cinco rangos HTTP del CSV público (bytes `0` a `246344021`) y materializó cobertura `COMPLETA_VERIFICADA` para las 25 regiones. El verificador específico `--app radar-inversiones --require-complete` termina correctamente.
-- Pendiente: completar la corrida persistente de INFOBRAS para las 25 regiones (el corte actual verificable cubre cinco), recorridos terminales OECE/SEACE y el escaneo reproducible MEF. El verificador global debe seguir fallando mientras esas capas no tengan un corte completo; el resultado de Invierte no certifica por sí solo el universo externo ni las demás fuentes.
+- Verificado en datos: el corte completo de Invierte recorrió de forma continua los cinco rangos HTTP del CSV público (bytes `0` a `246344021`) y materializó cobertura `COMPLETA_VERIFICADA` para LA LIBERTAD. El verificador específico `--app radar-inversiones --require-complete` termina correctamente.
+
+### 2026-09-09 (estado real verificado, LA LIBERTAD / AREQUIPA / LIMA)
+
+Al ejecutar el verificador para las 3 regiones del alcance activo, ninguna queda óptima todavía —
+con dos tipos de gap distintos:
+
+| App / fuente | LA LIBERTAD | AREQUIPA | LIMA |
+|---|---|---|---|
+| infobras | ✅ óptimo | ✅ óptimo | ✅ óptimo |
+| radar-inversiones (Invierte) | ✅ óptimo | ❌ gap real, sin ingerir | ❌ gap real, sin ingerir |
+| compras-publicas / OECE | ⚠️ bug de bookkeeping (`isCompleteSnapshot`) | ⚠️ mismo bug | ⚠️ mismo bug |
+| compras-publicas / SEACE | ⚠️ discrepancia de conteo sin explicar | ⚠️ mismo patrón, dirección opuesta | ⚠️ mismo patrón |
+| radar-ejecucion (MEF) | ⚠️ dato completo, sin materializador de cobertura | ⚠️ dato parcial (falta GN), sin materializador | ❌ gap real, sin ingerir |
+
+Detalle de causa raíz y tickets (CT-21, CT-22, CT-23) en
+`docs/BACKLOG_Cobertura_Territorial_Verificable_Rastro_v1.md`. El verificador global debe seguir
+fallando (`--require-complete`) mientras estas capas no tengan un corte completo y correctamente
+registrado — un dato real sin bookkeeping fiel no es lo mismo que cobertura certificada.
+
+### 2026-09-09 (cierre de sesión, tras CT-21/CT-22 y las corridas reales)
+
+| App / fuente | LA LIBERTAD | AREQUIPA | LIMA |
+|---|---|---|---|
+| infobras | ✅ óptimo | ✅ óptimo | ✅ óptimo |
+| radar-inversiones (Invierte) | ✅ óptimo | ✅ óptimo (corrida real 2026-09-09) | ✅ óptimo (corrida real 2026-09-09) |
+| compras-publicas (OECE+SEACE) | ✅ óptimo (CT-21) | ✅ óptimo (CT-21) | ✅ óptimo (CT-21) |
+| radar-ejecucion (MEF) | ✅ óptimo (CT-22) | ✅ óptimo (GN corrido en vivo) | ✅ óptimo (GN corrido en vivo tras el fix de troceo de payload + `pushAll`) |
+
+**LA LIBERTAD, AREQUIPA y LIMA quedan óptimas al 100%** en las 4 apps con fuente real. El cierre de
+LIMA/MEF requirió dos fixes reales en `mef-connector.ts` (troceo de payload `jsonb` y reemplazo de
+`push(...arrayGrande)` por un helper sin límite de argumentos), no solo correr comandos — detalle en
+`docs/BACKLOG_Cobertura_Territorial_Verificable_Rastro_v1.md`. CT-23 (SEACE) se documentó como
+decisión de diseño pendiente (qué debe medir `persisted_records`), no como bug.

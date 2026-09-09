@@ -252,7 +252,7 @@
   - Verificado en vivo: consulta directa a `public_works` confirma exactamente 7 filas `distrito_sospechoso=true` en La Libertad (coincide con DQ-14); el join vía `entity_crosswalk` usado por `salud-institucional` suma 9 repartidas en 6 entidades, con las 2 filas de arriba como origen de la diferencia.
 - **Criterios de aceptación:**
   - Auditar (o re-generar) `entity_crosswalk` para excluir/corregir vínculos entre entidades y obras de departamentos distintos — mínimo, resolver el caso Chavimochic↔Chinecas documentado arriba.
-  - Correr una auditoría de `distrito_sospechoso` sobre las 25 regiones ahora disponibles (no solo La Libertad, como hizo DQ-14 originalmente) y documentar cuántos casos reales aparecen a nivel nacional.
+  - Correr una auditoría de `distrito_sospechoso` sobre las 25 regiones ahora disponibles (no solo La Libertad, como hizo DQ-14 originalmente) y documentar cuántos casos reales aparecen a nivel nacional. **Nota (2026-09-09):** con la decisión de alcance que acota la ejecución activa a LA LIBERTAD/AREQUIPA/LIMA (`docs/ESTADO.md`), el criterio de "25 regiones" queda como objetivo eventual — la auditoría inmediata puede acotarse a esas 3 regiones sin bloquear el ticket.
   - Decidir y documentar qué hacer con filas como la de Sarín (departamento completo errado, no solo distrito) — probablemente requiere una segunda validación en el ingest de INFOBRAS, distinta de `distritoEsSospechoso()` (que solo valida distrito-dentro-de-departamento-declarado).
 - **Dependencias:** CT-06 (ya cerrado — es la causa de que este hallazgo sea visible ahora).
 - **Prioridad:** P1 · **Esfuerzo:** M
