@@ -27,7 +27,7 @@ function positiveInteger(raw: string | undefined, fallback: number): number {
   return value;
 }
 
-async function materializeVerifiedCoverage(batchIds: readonly number[], runId: string, contentLength: number): Promise<void> {
+async function materializeVerifiedCoverage(batchIds: readonly number[], runId: string, contentLength: number, departamentos: readonly string[] = DEFAULT_TERRITORIAL_SCOPE): Promise<void> {
   const sourceBatchRefs = batchIds.map((id) => `invierte-desactivadas:${id}`);
   const { rows } = await ejecucionPool.query<{
     jurisdiction_code: string;
@@ -49,7 +49,7 @@ async function materializeVerifiedCoverage(batchIds: readonly number[], runId: s
     [SOURCE_NAME, sourceBatchRefs]
   );
   const aggregate = new Map(rows.map((row) => [row.jurisdiction_code, row]));
-  for (const departamento of DEFAULT_TERRITORIAL_SCOPE) {
+  for (const departamento of departamentos) {
     const { rows: jurisdictions } = await ejecucionPool.query<{ code: string }>(
       "SELECT code FROM territorial_jurisdictions WHERE name=$1",
       [departamento]
@@ -89,13 +89,19 @@ export async function ingestFullDeactivatedInvestments(
     batchIds.push(summary.batchId);
     console.log(JSON.stringify({ runId, startByte, endByte: startByte + maxBytes - 1, batchId: summary.batchId, accepted: summary.accepted, rejected: summary.rejected }));
   }
-  await materializeVerifiedCoverage(batchIds, runId, contentLength);
+  await materializeVerifiedCoverage(batchIds, runId, contentLength, departamentos);
   return { runId, contentLength, batchIds };
+}
+
+function resolveInvierteDepartamentosFromEnv(): readonly string[] {
+  const raw = process.env.INVIERTE_DEPARTAMENTOS;
+  if (!raw) return [...DEFAULT_TERRITORIAL_SCOPE];
+  return raw.split(",").map((value) => value.trim().toUpperCase()).filter(Boolean);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const chunkBytes = positiveInteger(process.env.INVIERTE_CHUNK_BYTES, DEFAULT_CHUNK_BYTES);
-  ingestFullDeactivatedInvestments({ departamentos: [...DEFAULT_TERRITORIAL_SCOPE], chunkBytes })
+  ingestFullDeactivatedInvestments({ departamentos: resolveInvierteDepartamentosFromEnv(), chunkBytes })
     .then((summary) => console.log("Ingesta completa de inversiones desactivadas verificada:", summary))
     .finally(async () => { await Promise.all([pool.end(), ejecucionPool.end()]); })
     .catch((error) => { console.error("Ingesta completa de inversiones desactivadas falló:", error); process.exitCode = 1; });

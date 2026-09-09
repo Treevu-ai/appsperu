@@ -24,7 +24,7 @@ function positiveInteger(raw: string | undefined, fallback: number): number {
   return value;
 }
 
-export async function materializeVerifiedCoverage(batchIds: readonly number[], runId: string, contentLength: number): Promise<void> {
+export async function materializeVerifiedCoverage(batchIds: readonly number[], runId: string, contentLength: number, departamentos: readonly string[] = DEFAULT_TERRITORIAL_SCOPE): Promise<void> {
   const sourceBatchRefs = batchIds.map((id) => `invierte:${id}`);
   const { rows } = await ejecucionPool.query<{
     jurisdiction_code: string;
@@ -46,7 +46,7 @@ export async function materializeVerifiedCoverage(batchIds: readonly number[], r
     [sourceBatchRefs]
   );
   const aggregate = new Map(rows.map((row) => [row.jurisdiction_code, row]));
-  for (const departamento of DEFAULT_TERRITORIAL_SCOPE) {
+  for (const departamento of departamentos) {
     const { rows: jurisdictions } = await ejecucionPool.query<{ code: string }>(
       "SELECT code FROM territorial_jurisdictions WHERE name=$1",
       [departamento]
@@ -84,8 +84,19 @@ export async function ingestFullInvestments(options: Pick<IngestOptions, "depart
     batchIds.push(summary.batchId);
     console.log(JSON.stringify({ runId, startByte, endByte: startByte + maxBytes - 1, batchId: summary.batchId, accepted: summary.accepted, rejected: summary.rejected }));
   }
-  await materializeVerifiedCoverage(batchIds, runId, contentLength);
+  await materializeVerifiedCoverage(batchIds, runId, contentLength, departamentos);
   return { runId, contentLength, batchIds };
+}
+
+// CT-10-Invierte (2026-09-09): `ingestFullInvestments` tenía `DEFAULT_TERRITORIAL_SCOPE`
+// (solo LA LIBERTAD) escrito directo en la llamada del entrypoint CLI, igual que el
+// hardcode de "LA LIBERTAD" que se corrigió en OECE (CT-08) — el barrido "full" ya
+// descarga el CSV nacional completo por rangos, así que ampliar el alcance no cuesta
+// una descarga nueva, solo persistir más departamentos de lo ya recorrido.
+function resolveInvierteDepartamentosFromEnv(): readonly string[] {
+  const raw = process.env.INVIERTE_DEPARTAMENTOS;
+  if (!raw) return [...DEFAULT_TERRITORIAL_SCOPE];
+  return raw.split(",").map((value) => value.trim().toUpperCase()).filter(Boolean);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
@@ -94,13 +105,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   if (existingBatchIds?.length) {
     sourceLength()
       .then(async (contentLength) => {
-        await materializeVerifiedCoverage(existingBatchIds, process.env.INVIERTE_RUN_ID ?? randomUUID(), contentLength);
+        await materializeVerifiedCoverage(existingBatchIds, process.env.INVIERTE_RUN_ID ?? randomUUID(), contentLength, resolveInvierteDepartamentosFromEnv());
         console.log("Cobertura de Invierte consolidada desde lotes existentes:", { batchIds: existingBatchIds, contentLength });
       })
       .finally(async () => { await Promise.all([pool.end(), ejecucionPool.end()]); })
       .catch((error) => { console.error("No se pudo consolidar Invierte:", error); process.exitCode = 1; });
   } else {
-  ingestFullInvestments({ departamentos: [...DEFAULT_TERRITORIAL_SCOPE], chunkBytes })
+  ingestFullInvestments({ departamentos: resolveInvierteDepartamentosFromEnv(), chunkBytes })
     .then((summary) => console.log("Ingesta completa de Invierte verificada:", summary))
     .finally(async () => { await Promise.all([pool.end(), ejecucionPool.end()]); })
     .catch((error) => { console.error("Ingesta completa de Invierte falló:", error); process.exitCode = 1; });
