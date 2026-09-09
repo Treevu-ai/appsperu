@@ -14,8 +14,9 @@ export interface BuildCrosswalkSummary {
 /**
  * Recalcula el cruce MEF <-> OECE para un departamento y lo persiste en
  * `entity_crosswalk`. Se puede correr de nuevo cuando haya más datos
- * ingeridos en cualquiera de las dos fuentes — hace upsert por
- * (mef_entity_code, oece_buyer_id), no acumula duplicados.
+ * ingeridos en cualquiera de las dos fuentes, o cuando cambie el matcher
+ * compartido — reemplaza (borra + inserta) las filas del departamento en
+ * vez de solo upsert, para no dejar matches obsoletos huérfanos.
  */
 export async function buildCrosswalk(departamento: string): Promise<BuildCrosswalkSummary> {
   const wantedDepartamento = departamento.toUpperCase().trim();
@@ -36,20 +37,20 @@ export async function buildCrosswalk(departamento: string): Promise<BuildCrosswa
   const oeceEntities: OeceEntityInput[] = oeceRows.map((r) => ({ buyerId: r.buyer_id, buyerName: r.buyer_name }));
 
   const matches = matchEntities(mefEntities, oeceEntities);
+  const oeceBuyerIds = oeceEntities.map((e) => e.buyerId);
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    // Reemplaza, no solo inserta: si una fila ya existente ya no aparece en
+    // `matches` (p.ej. un ajuste al matcher compartido la descarta), debe
+    // desaparecer al recalcular, no quedar huérfana con su `computed_at`
+    // viejo — mismo fix que `infobras/src/crossref/build-crosswalk.ts` (DQ-17).
+    await client.query(`DELETE FROM entity_crosswalk WHERE oece_buyer_id = ANY($1)`, [oeceBuyerIds]);
     for (const m of matches) {
       await client.query(
         `INSERT INTO entity_crosswalk (mef_entity_code, mef_nombre, oece_buyer_id, oece_buyer_name, confidence, score)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (mef_entity_code, oece_buyer_id) DO UPDATE
-           SET mef_nombre = EXCLUDED.mef_nombre,
-               oece_buyer_name = EXCLUDED.oece_buyer_name,
-               confidence = EXCLUDED.confidence,
-               score = EXCLUDED.score,
-               computed_at = now()`,
+         VALUES ($1, $2, $3, $4, $5, $6)`,
         [m.mefEntityCode, m.mefNombre, m.oeceBuyerId, m.oeceBuyerName, m.confidence, m.score]
       );
     }

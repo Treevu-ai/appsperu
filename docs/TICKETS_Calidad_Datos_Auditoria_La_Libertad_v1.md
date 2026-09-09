@@ -256,7 +256,47 @@
   - Decidir y documentar qué hacer con filas como la de Sarín (departamento completo errado, no solo distrito) — probablemente requiere una segunda validación en el ingest de INFOBRAS, distinta de `distritoEsSospechoso()` (que solo valida distrito-dentro-de-departamento-declarado).
 - **Dependencias:** CT-06 (ya cerrado — es la causa de que este hallazgo sea visible ahora).
 - **Prioridad:** P1 · **Esfuerzo:** M
-- **Estado:** Pendiente — documentado 2026-09-09, no resuelto esta sesión (se priorizó no expandir el alcance de SI-09 en la misma sesión que lo descubrió).
+- **Estado:** 🟡 Parcial — resuelto el caso Chavimochic↔Chinecas y corrida la auditoría nacional (2026-09-09); el caso Sarín queda fuera de alcance.
+- **Hecho (2026-09-09):**
+  1. **Causa raíz real del match espurio, verificada en vivo:** no era un bug de umbral de score — `PROYECTO` y `ESPECIAL` estaban tratados como tokens distintivos por el matcher genérico (`@appsperu/entity-matcher`), igual que el bug histórico de "MUNICIPALIDAD DISTRITAL" ya documentado en ese archivo. Se agregaron ambos a `ENTITY_TYPE_WORDS` (`packages/entity-matcher/src/index.ts`) — mismo mecanismo, mismo patrón, ya existente en el código. Verificado con 2 tests de regresión nuevos (Chavimochic↔Chinecas ya no matchea; Chavimochic↔Chavimochic sigue matcheando con el mismo score 0.750).
+  2. **Se descartó un fix alternativo más agresivo** (filtrar `confidence = 'confirmada'` en el JOIN de `salud-institucional/routes/score.ts`): se probó primero y se revirtió porque el match legítimo Chavimochic↔Chavimochic también tiene `confidence = 'candidata'` (la comparación de nombres nunca es exacta entre radar-ejecucion e INFOBRAS) — ese filtro hubiera borrado toda la data real de la entidad, no solo la espuria. El fix correcto vive en el matcher, no en el consumidor.
+  3. **Bug adicional encontrado al verificar el fix:** `buildCrosswalk()` (`apps/infobras/api/src/crossref/build-crosswalk.ts` y el mismo patrón en `apps/compras-publicas/api/src/crossref/build-crosswalk.ts`) solo hacía `INSERT ... ON CONFLICT DO UPDATE` — nunca borraba filas que el matcher dejaba de generar. Al arreglar el matcher, la fila espuria Chavimochic↔Chinecas seguía viva en la tabla con su `computed_at` viejo hasta que se detectó en vivo. Cambiado a reemplazo real: `DELETE FROM entity_crosswalk WHERE infobras_codigo_entidad = ANY(...)` (u `oece_buyer_id` en compras-publicas) antes de insertar, dentro de la misma transacción. Verificado en vivo: tras recalcular La Libertad, `entity_crosswalk` para la entidad 1134 solo tiene la fila Chavimochic↔Chavimochic.
+  4. **Auditoría nacional de `distrito_sospechoso`** (consulta directa a `public_works`, agregado por `departamento`, sobre las 25 regiones ingeridas por CT-06):
+
+     | departamento | total_obras | distrito_sospechoso | % |
+     |---|---:|---:|---:|
+     | HUANCAVELICA | 9,186 | 1,409 | 15.3% |
+     | LIMA | 19,476 | 560 | 2.9% |
+     | PIURA | 9,806 | 465 | 4.7% |
+     | HUANUCO | 6,092 | 423 | 6.9% |
+     | CAJAMARCA | 9,976 | 422 | 4.2% |
+     | CUSCO | 13,205 | 405 | 3.1% |
+     | LAMBAYEQUE | 4,139 | 373 | 9.0% |
+     | ICA | 4,878 | 359 | 7.4% |
+     | AYACUCHO | 8,367 | 358 | 4.3% |
+     | UCAYALI | 2,836 | 352 | 12.4% |
+     | PUNO | 11,178 | 237 | 2.1% |
+     | JUNIN | 10,852 | 236 | 2.2% |
+     | ANCASH | 15,382 | 193 | 1.3% |
+     | APURIMAC | 5,250 | 191 | 3.6% |
+     | AREQUIPA | 9,910 | 175 | 1.8% |
+     | PASCO | 3,203 | 131 | 4.1% |
+     | MOQUEGUA | 1,946 | 117 | 6.0% |
+     | SAN MARTIN | 5,971 | 56 | 0.9% |
+     | MADRE DE DIOS | 922 | 34 | 3.7% |
+     | LORETO | 4,884 | 31 | 0.6% |
+     | TACNA | 2,469 | 30 | 1.2% |
+     | AMAZONAS | 5,025 | 19 | 0.4% |
+     | LA LIBERTAD | 10,134 | 7 | 0.1% |
+     | CALLAO | 1,471 | 0 | 0% |
+     | TUMBES | 2,058 | 0 | 0% |
+     | **Total nacional** | **178,616** | **6,583** | **3.7%** |
+
+     El problema es **muchísimo mayor a nivel nacional** de lo que sugería La Libertad (7 casos, 0.1%) — DQ-14 solo se verificó contra un universo pequeño cuando se cerró. **HUANCAVELICA es un outlier extremo** (15.3%, ~20x la tasa nacional promedio de las regiones bajas): posible problema sistemático de esa fuente/región específica, no ruido — amerita ticket propio de investigación dedicada, no incluido en el alcance de este fix.
+- **Pendiente, fuera de alcance de este fix:**
+  - Caso Sarín (`codigo_infobras 516316`): departamento completo errado sin que el propio `nombre_obra` lo delate con un patrón regex simple confiable a nivel nacional — decidir el approach (heurística de texto libre vs. aceptar como ruido de la fuente) queda para un ticket aparte.
+  - Investigar el outlier de HUANCAVELICA (15.3% vs. 3.7% nacional).
+- **Verificación:** `packages/entity-matcher` 9/9 tests (2 nuevos); `apps/infobras/api` 105/105; `apps/compras-publicas/api` 113/113; `apps/identidad-fiscal/api` 9/9; `apps/salud-institucional/api` 34/34 — todos en verde. Verificado en vivo contra Postgres real (contenedores `infobras-postgres-1`/`radar-ejecucion-postgres-1`, estaban caídos por falta de RAM, se levantaron para esta verificación).
 
 ### SI-09 · Advertencias de calidad de dato en el score institucional (sin pesar en el score)
 
