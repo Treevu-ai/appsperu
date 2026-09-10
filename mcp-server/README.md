@@ -90,9 +90,22 @@ como si fuera completo.
 
 - **Transporte**: solo stdio (uso local, agente y las 20 APIs en la misma máquina). Streamable
   HTTP para exponerlo remoto es un paso posterior, no implementado.
-- **Sin autenticación**: igual que las 27 APIs que agrega (`helmet` + `cors` + rate limit, sin auth
-  — confirmado en cada `app.ts`). Aceptable para stdio local; **no exponer este servidor ni las
-  APIs subyacentes fuera de `localhost` sin resolver auth primero**.
+- **Sin autenticación por defecto**: igual que las 27 APIs que agrega (`helmet` + `cors` + rate
+  limit, sin auth — confirmado en cada `app.ts`). Aceptable para stdio local; **no exponer este
+  servidor ni las APIs subyacentes fuera de `localhost` sin resolver auth primero**.
+- **Códigos de acceso `sk-rastro-...` (Fase 1, opt-in)**: para grupos controlados (talleres) que
+  comparten un código con presupuesto de queries, sin exponer nada por HTTP todavía — el código se
+  valida al arrancar el proceso stdio vía `MCP_API_KEY`, no por header. Ver
+  [`docs/conectores.md`] o la sección siguiente. **Sin `MCP_API_KEY` en el entorno, el servidor
+  funciona exactamente igual que antes** (sin auth, sin depender de Postgres para nada) — esto es
+  una capa paralela, no un reemplazo.
+  - Setup: `docker compose up -d` (Postgres local dedicado, puerto 5436) + `npm run migrate`.
+  - Emitir un código: `npm run create-key -- --group "taller-2026-09" --limit 200` (se imprime una
+    sola vez, no es recuperable — solo se guarda su hash SHA-256).
+  - Usarlo: `MCP_API_KEY=sk-rastro-... npm start` — si es inválido/vencido/sin presupuesto, el
+    proceso no arranca (falla rápido con mensaje explícito).
+  - Transporte Streamable HTTP remoto (para talleres no presenciales) queda fuera de esta fase —
+    requiere resolver hosting/dominio primero, ver spec de API keys.
 - **No incluye las ingestas** (`npm run ingest:*`) — este servidor es de solo lectura. Disparar
   ingestas desde un agente es una superficie de riesgo distinta (ejecución de scripts contra
   Postgres) que se dejó fuera de alcance a propósito.
