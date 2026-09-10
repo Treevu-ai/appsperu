@@ -116,7 +116,11 @@ function registerMetaTools(server: McpServer, activeKey: ApiKeyRecord | null): v
         "su app. `args` lleva tanto los path params requeridos como los query params opcionales de ese tool.",
       inputSchema: {
         tool: z.string().min(1).describe('Nombre exacto del tool, ej. "infobras_public_work_by_codigo".'),
-        args: z.record(z.unknown()).optional().describe("Params del tool (path + query) como pares clave-valor."),
+        // z.record(z.unknown()) generaba un JSON Schema con additionalProperties:true
+        // pero sin "type":"object" (aviso de portabilidad del MCP Inspector) — algunos
+        // clientes MCP estrictos rechazan ese esquema. z.object({}).catchall(...) declara
+        // el tipo explícitamente y mantiene el mismo comportamiento (objeto libre).
+        args: z.object({}).catchall(z.unknown()).optional().describe("Params del tool (path + query) como pares clave-valor."),
       },
     },
     async ({ tool: toolName, args }) => runRastroLlamarWithAuth(activeKey, toolName, args as Record<string, unknown> | undefined)
@@ -197,10 +201,21 @@ export async function resolveActiveKey(): Promise<ApiKeyRecord | null> {
   return result.key;
 }
 
-async function main(): Promise<void> {
-  const activeKey = await resolveActiveKey();
+/**
+ * Fase 1-D (HTTP): un `McpServer` por sesión, no uno por proceso — a diferencia
+ * de stdio (un proceso = un `activeKey` fijo para toda su vida), un mismo
+ * proceso HTTP sirve muchas sesiones con códigos distintos a la vez. Extraído
+ * para que `http-transport.ts` lo reuse sin duplicar el registro de tools.
+ */
+export function buildMcpServer(activeKey: ApiKeyRecord | null): McpServer {
   const server = new McpServer({ name: "appsperu-mcp-server", version: "0.1.0" });
   registerMetaTools(server, activeKey);
+  return server;
+}
+
+async function main(): Promise<void> {
+  const activeKey = await resolveActiveKey();
+  const server = buildMcpServer(activeKey);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
@@ -211,7 +226,16 @@ async function main(): Promise<void> {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((err) => {
+  // Fase 1-D: MCP_TRANSPORT=http arranca el transporte remoto (http-transport.ts) en vez de
+  // stdio — default sin la variable sigue siendo stdio, comportamiento intacto.
+  const startServer =
+    process.env.MCP_TRANSPORT === "http"
+      ? async () => {
+          const { startHttpTransport } = await import("./http-transport.js");
+          await startHttpTransport();
+        }
+      : main;
+  startServer().catch((err) => {
     console.error("appsperu-mcp-server falló al iniciar:", err);
     process.exit(1);
   });

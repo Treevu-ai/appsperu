@@ -88,8 +88,9 @@ como si fuera completo.
 
 ## Alcance actual y lo que falta
 
-- **Transporte**: solo stdio (uso local, agente y las 20 APIs en la misma máquina). Streamable
-  HTTP para exponerlo remoto es un paso posterior, no implementado.
+- **Transporte**: stdio (default, uso local) y Streamable HTTP (`MCP_TRANSPORT=http`, para
+  exponerlo remoto y agregarlo como "conector personalizado" en Claude Desktop — ver sección
+  siguiente).
 - **Sin autenticación por defecto**: igual que las 27 APIs que agrega (`helmet` + `cors` + rate
   limit, sin auth — confirmado en cada `app.ts`). Aceptable para stdio local; **no exponer este
   servidor ni las APIs subyacentes fuera de `localhost` sin resolver auth primero**.
@@ -104,8 +105,18 @@ como si fuera completo.
     sola vez, no es recuperable — solo se guarda su hash SHA-256).
   - Usarlo: `MCP_API_KEY=sk-rastro-... npm start` — si es inválido/vencido/sin presupuesto, el
     proceso no arranca (falla rápido con mensaje explícito).
-  - Transporte Streamable HTTP remoto (para talleres no presenciales) queda fuera de esta fase —
-    requiere resolver hosting/dominio primero, ver spec de API keys.
+  - **Transporte Streamable HTTP (Fase 1-D)**: `MCP_TRANSPORT=http PORT=8080 npm run dev:http`
+    (o `node dist/http-transport.js` tras build) expone `POST/GET/DELETE /mcp` y `GET /health`.
+    A diferencia de stdio (un proceso = un código fijo validado al arrancar), acá **cada request
+    valida el header `x-api-key`** (`auth/http-api-key.ts`) — un mismo proceso sirve muchas
+    sesiones con códigos distintos a la vez. Sesión MCP vía header `mcp-session-id`, siguiendo el
+    patrón de referencia del propio SDK (`StreamableHTTPServerTransport`, mapa de sesiones —
+    ver `src/http-transport.ts`). Sin CORS (Claude Desktop no es un navegador). Probado en vivo
+    con curl: handshake `initialize` → `tools/list` → `tools/call rastro_llamar` con datos reales
+    y consumo de presupuesto correcto.
+  - Despliegue a `mcp.rastro.fyi` en Fly.io (app nueva, standalone, no detrás del gateway
+    compartido de las 27 APIs): ver `docs/FLY_DEPLOY_MCP.md`. Todos los pasos de `flyctl`/DNS los
+    ejecuta un humano — requieren `flyctl auth login`, que Claude no puede hacer.
 - **No incluye las ingestas** (`npm run ingest:*`) — este servidor es de solo lectura. Disparar
   ingestas desde un agente es una superficie de riesgo distinta (ejecución de scripts contra
   Postgres) que se dejó fuera de alcance a propósito.
@@ -119,3 +130,5 @@ como si fuera completo.
   parseo de texto, sin levantar las 27 APIs; detecta un endpoint sin tool o un tool sin endpoint
   real, el gap que dejó pasar `compras-publicas` antes de la auditoría de 2026-09-07). Ninguno de
   los dos hace requests HTTP contra las APIs corriendo — son chequeos estáticos, no integración.
+  Autenticación (`src/auth/*`) y el transporte HTTP (`src/__tests__/http-*.test.ts`) tienen su
+  propia suite con `pool`/`validateApiKey` mockeados, sin necesitar Postgres real para correr en CI.

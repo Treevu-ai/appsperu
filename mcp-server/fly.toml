@@ -1,0 +1,29 @@
+# App standalone, no detrás del gateway compartido de las 27 APIs
+# (rastro-api-gw) — por eso puede dormir (min_machines_running=0) sin el
+# problema de resolución `.internal` que fuerza min_machines_running=1 en
+# las apps que sí están sobre la red privada 6PN del gateway (ver
+# docs/FLY_DEPLOY_MCP.md). Cambiá "app" si "rastro-mcp" ya está tomado
+# (mismo comentario que docs/FLY_DEPLOY.md sobre FLY_APP_PREFIX).
+app = "rastro-mcp"
+primary_region = "gru"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  MCP_TRANSPORT = "http"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "30s"
+    method = "GET"
+    timeout = "10s"
+    path = "/health"
