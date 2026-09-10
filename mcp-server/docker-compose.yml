@@ -1,0 +1,22 @@
+name: mcp-server
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: mcp_keys
+      POSTGRES_PASSWORD: mcp_keys
+      POSTGRES_DB: rastro_keys
+    ports:
+      - "127.0.0.1:5436:5432"
+    volumes:
+      - mcp_keys_pgdata:/var/lib/postgresql/data
+
+volumes:
+  mcp_keys_pgdata:
+    name: mcp_server_pgdata
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true

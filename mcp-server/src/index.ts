@@ -4,6 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { APP_KEYS, baseUrlFor, type AppKey } from "./apps.js";
+import type { ApiKeyRecord } from "./auth/api-key.js";
 import { TOOL_CATALOG, type ToolSpec } from "./catalog.js";
 import { buildUrl, callApi } from "./http-client.js";
 import { searchTools } from "./search.js";
@@ -64,7 +65,25 @@ export async function invokeTool(tool: ToolSpec, args: Record<string, unknown>) 
  * nueva ahora es solo agregar filas a `TOOL_CATALOG` — no crece la superficie que
  * un cliente MCP carga por adelantado.
  */
-function registerMetaTools(server: McpServer): void {
+/**
+ * Solo se usa cuando el proceso arrancó con `MCP_API_KEY` (ver `main()`).
+ * Importa `auth/rate-limiter.js` de forma diferida — ese módulo importa
+ * `db/pool.js`, que revienta al cargarse si `MCP_API_DATABASE_URL` no está
+ * definida. El uso normal sin código (la inmensa mayoría, hoy) no debe
+ * depender de tener esa variable configurada.
+ */
+async function enforceBudgetOrThrow(activeKey: ApiKeyRecord, toolName: string): Promise<void> {
+  const { consumeQuery, logUsage } = await import("./auth/rate-limiter.js");
+  const result = await consumeQuery(activeKey.id);
+  if (!result.allowed) {
+    await logUsage({ keyId: activeKey.id, toolName, success: false, errorMessage: "BUDGET_EXCEEDED" });
+    throw new Error(
+      `Presupuesto de queries agotado para este código (${activeKey.queryLimit} consultas). Pide un código nuevo al equipo de Rastro.`
+    );
+  }
+}
+
+function registerMetaTools(server: McpServer, activeKey: ApiKeyRecord | null): void {
   server.registerTool(
     "rastro_buscar_tools",
     {
@@ -100,8 +119,43 @@ function registerMetaTools(server: McpServer): void {
         args: z.record(z.unknown()).optional().describe("Params del tool (path + query) como pares clave-valor."),
       },
     },
-    async ({ tool: toolName, args }) => runRastroLlamar(toolName, args as Record<string, unknown> | undefined)
+    async ({ tool: toolName, args }) => runRastroLlamarWithAuth(activeKey, toolName, args as Record<string, unknown> | undefined)
   );
+}
+
+/**
+ * Cuerpo completo de `rastro_llamar` (auth + presupuesto + llamada real + log),
+ * extraído para poder probar la composición sin pasar por el registro MCP —
+ * en particular, que un fallo de `logUsage` nunca enmascare un resultado real
+ * ya obtenido (ver hallazgo de code review, 2026-09-09).
+ */
+export async function runRastroLlamarWithAuth(
+  activeKey: ApiKeyRecord | null,
+  toolName: string,
+  args?: Record<string, unknown>
+) {
+  if (activeKey) {
+    try {
+      await enforceBudgetOrThrow(activeKey, toolName);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: "text" as const, text: message }], isError: true };
+    }
+  }
+  const result = await runRastroLlamar(toolName, args);
+  if (activeKey) {
+    // El logging de uso es best-effort: si falla (ej. blip transitorio de
+    // Postgres), no debe tumbar ni enmascarar un resultado real que ya se
+    // obtuvo y ya consumió presupuesto — eso perdería la respuesta sin
+    // devolver el presupuesto gastado.
+    try {
+      const { logUsage } = await import("./auth/rate-limiter.js");
+      await logUsage({ keyId: activeKey.id, toolName, success: !result.isError });
+    } catch (err) {
+      console.error("logUsage falló (no bloqueante):", err instanceof Error ? err.message : err);
+    }
+  }
+  return result;
 }
 
 /** Cuerpo de `rastro_llamar`, extraído para poder probarlo sin pasar por el registro MCP. */
@@ -116,13 +170,44 @@ export async function runRastroLlamar(toolName: string, args?: Record<string, un
   return invokeTool(tool, args ?? {});
 }
 
+/**
+ * Fase 1 (sk-rastro-...): sin `MCP_API_KEY` en el entorno, el servidor
+ * arranca exactamente igual que antes — sin auth, sin depender de
+ * `MCP_API_DATABASE_URL`. Con `MCP_API_KEY` seteada, se valida una sola vez
+ * al arrancar (no hay concepto de "header" en stdio); si el código no es
+ * válido, el proceso no arranca — mejor fallar rápido que dejar entrar una
+ * sesión que luego se bloquea a mitad de un taller.
+ */
+export async function resolveActiveKey(): Promise<ApiKeyRecord | null> {
+  const rawKey = process.env.MCP_API_KEY;
+  if (!rawKey) return null;
+
+  const { validateApiKey } = await import("./auth/api-key.js");
+  const result = await validateApiKey(rawKey);
+  if (!result.ok) {
+    const reasons: Record<typeof result.reason, string> = {
+      NOT_FOUND: "El código no existe.",
+      INACTIVE: "El código fue desactivado.",
+      REVOKED: "El código fue revocado.",
+      EXPIRED: "El código venció.",
+      BUDGET_EXCEEDED: "El código ya agotó su presupuesto de queries.",
+    };
+    throw new Error(`MCP_API_KEY inválida: ${reasons[result.reason]}`);
+  }
+  return result.key;
+}
+
 async function main(): Promise<void> {
+  const activeKey = await resolveActiveKey();
   const server = new McpServer({ name: "appsperu-mcp-server", version: "0.1.0" });
-  registerMetaTools(server);
+  registerMetaTools(server, activeKey);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(`appsperu-mcp-server: 2 meta-tools registrados (catálogo de ${TOOL_CATALOG.length} tools buscable), esperando por stdio.`);
+  const authNote = activeKey
+    ? ` — código activo (grupo=${activeKey.groupId ?? "?"}, ${activeKey.queryLimit - activeKey.queriesUsed}/${activeKey.queryLimit} queries restantes)`
+    : "";
+  console.error(`appsperu-mcp-server: 2 meta-tools registrados (catálogo de ${TOOL_CATALOG.length} tools buscable), esperando por stdio${authNote}.`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
