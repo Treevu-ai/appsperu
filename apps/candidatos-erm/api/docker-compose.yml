@@ -1,0 +1,21 @@
+name: candidatos-erm
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: candidatos_erm
+      POSTGRES_PASSWORD: candidatos_erm
+      POSTGRES_DB: candidatos_erm
+    ports:
+      - "127.0.0.1:5458:5432"
+    volumes:
+      - candidatos_erm_pgdata:/var/lib/postgresql/data
+
+volumes:
+  candidatos_erm_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true

@@ -1,6 +1,83 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-09-07.
+Última actualización: 2026-09-10.
+
+## OE-04/OE-05/OE-06 — Sancionado recurrente, cobertura de conformación societaria, límite de mindef (2026-09-10)
+
+Cierran los 6 tickets de `docs/PRD_Observatorio_Electoral_y_Riesgo_v1.md`, todos implementados el
+mismo día que se escribió el PRD.
+
+**OE-04**: `GET /api/crossref/sancionado-recurrente?minResoluciones=2&ventanaDias=180` en
+`proveedores-sancionados` — agrupa `inhabilitaciones` por RUC y marca proveedores con varias
+resoluciones distintas en poco tiempo. Verificado contra el registro nacional completo: Serpaem
+(4 resoluciones/142 días), Mejesa (2/81 días) y Protektor (2/22 días) — los 3 casos ya conocidos de
+Lima — aparecen con los mismos números exactos, dentro de **637 resultados a nivel nacional** con
+los parámetros por defecto (universo sin analizar, fuera del alcance de este ticket de
+infraestructura). 3 tests nuevos, suite en 33/33.
+
+**OE-05**: se descubrió que la cifra de cobertura de conformación societaria documentada el
+2026-09-04 ("100%, 3,818/3,818 RUC") quedó desactualizada por la propia ingesta de Lima de hoy — el
+universo real de proveedores creció a 21,119 RUC mientras el conector sigue en 3,809 (18.0%).
+`docs/conectores.md` ahora documenta la cifra vigente con fecha, marcando la anterior como
+histórica. La ampliación de cobertura (parte condicional del ticket) queda pendiente y evaluable.
+
+**OE-06**: `docs/conectores.md` (ficha de `mindef`) deja registrado, sin código nuevo, que esa app
+no tiene ni tuvo nunca datos de capacidad/brechas militares — solo diplomacia de defensa,
+capacitación en el exterior y misiones de paz — y que no existe fuente oficial abierta para eso.
+
+## OE-03 — Endpoint reusable de cruce candidato↔sanción (2026-09-10)
+
+Siguiendo a OE-01/OE-02 (abajo), se agregó `GET /api/crossref/candidatos-sancionados` en
+`proveedores-sancionados` (`?departamento=X` o `?dni=a,b,c`), que cruza candidatos de
+[candidatos-erm](conectores.md#candidatos-erm) contra vínculos societarios
+(`supplier_conformacion`) y sanciones directas por DNI (`inhabilitaciones`/`multas`), y revisa
+por separado si la empresa vinculada tiene sus propias sanciones — sin fusionar ambas categorías,
+tal como pedía el ticket. Reemplaza el script de Node ad-hoc usado el mismo día antes de que este
+endpoint existiera. Verificado en vivo: reproduce exactamente los mismos casos encontrados a mano
+— La Libertad (4,637 candidatos revisados → 6 resultados) y Lima (12,770 revisados → 9 resultados,
+3 con inhabilitación vigente hoy: Inga Zapata, Canto Vidal, Ríos Padilla). 6 tests nuevos, suite
+completa de la app en 30/30.
+
+## OE-01/OE-02 — Batch insert en detector de señales + conector de candidatos ERM (2026-09-10)
+
+A partir del ejercicio de cruce contrataciones×sanciones×candidatos hecho en vivo para La Libertad
+y Lima (ver `docs/PRD_Observatorio_Electoral_y_Riesgo_v1.md` y
+`docs/TICKETS_Observatorio_Electoral_y_Riesgo_v1.md`), se implementaron dos tickets el mismo día:
+
+**OE-01**: `apps/compras-publicas/api/src/minor-contracts/run-signals.ts` insertaba cada señal y
+cada lote de evidencia con un `INSERT` separado, uno por `await` dentro del loop — impráctico a
+escala Lima (se había decidido no correrlo esa misma sesión). Se cambió a inserción por lotes de
+500 vía `jsonb_to_recordset`. Verificado contra datos reales: La Libertad reproduce exactamente los
+mismos números que la corrida secuencial (2,021 contratos, 21,293 señales, 93,577 filas de
+evidencia) en 69s (antes 15+ min, con un intento colgado). Lima —el caso descartado como
+impráctico— corre completo en 5m47s (11,572 contratos tras el filtro de monto, 85,032 señales).
+3 tests nuevos, suite completa de la app en 116/116.
+
+**OE-02**: nueva app `apps/candidatos-erm` (Postgres propio, puerto 4027/5458, mismo patrón que
+`autoridades-electas`). No existe dataset abierto oficial de candidatos ERM 2026 — las plataformas
+del JNE están protegidas contra automatización (Turnstile/Incapsula, verificado en vivo, no se
+evade). Se usa una republicación de terceros (Datapol, JSON estático sin protección) con la
+dependencia documentada explícitamente en `docs/conectores.md`. DNI almacenado sin enmascarar
+(es el mismo dato que el JNE ya publica sin enmascarar en la hoja de vida pública de cada
+candidato) pero enmascarado en toda respuesta de `GET /api/candidatos`. Verificado en vivo:
+101,948 candidatos nacionales ingeridos, 0 rechazados; La Libertad (4,637) y Lima (12,770)
+coinciden exactamente con el conteo manual del mismo día. 18 tests nuevos, TypeScript limpio.
+
+Pendientes del mismo PRD: OE-03 (endpoint reusable de cruce candidato↔sanción), OE-04 (señal de
+sancionado recurrente), OE-05 (cobertura de conformación societaria), OE-06 (nota sobre `mindef`).
+
+## DQ-18 — `provincia`/`distrito` no confiables en OxI Ficha técnica/Por Priorizar (2026-09-10)
+
+Durante una exploración ad-hoc de inversión pública/privada en La Libertad (a pedido del usuario, sin
+ticket previo), se encontró que 9 de los 31 proyectos OxI en fase "Por Priorizar" traen `provincia`
+con un código numérico en vez de un nombre de provincia (ej. "469"/"478") y `distrito` vacío. Se
+verificó en vivo que **no es un bug del conector**: `parseOxiSheetXml` lee cada celda por referencia
+exacta sin desfases, y el mismo proyecto (`oxi_id 5346`) cambió de "469" a "478" en descargas del XLSX
+fuente separadas por 3 días — un ubigeo real no cambia entre corridas, y 4 provincias reales distintas
+(Pacasmayo, Sánchez Carrión, Virú, Santiago de Chuco) comparten el mismo valor "478" en la misma
+descarga. Es un defecto de calidad de dato de la fuente oficial (PROINVERSIÓN/VERTIX OxI), acotado a
+filas con `nivelEstudio: "Ficha técnica"` + `nivelGobierno: "Gobierno Regional"`. El dato correcto sí
+existe en texto libre dentro de `nombreProyecto`. Documentado como ticket [DQ-18](TICKETS_Calidad_Datos_Auditoria_La_Libertad_v1.md) — pendiente, no resuelto esta sesión.
 
 ## Fix — `infobras.costo_actualizado` corregido, no solo documentado (2026-09-07)
 

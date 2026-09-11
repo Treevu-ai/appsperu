@@ -17,6 +17,13 @@ vi.mock("../db/pool.js", () => ({
 vi.mock("../db/fiscal-pool.js", () => ({
   fiscalPool: { query: vi.fn() },
 }));
+// app.ts monta candidatosSancionadosRouter, que importa candidatos-pool.ts —
+// este último lee CANDIDATOS_DATABASE_URL al cargar el módulo. Sin mockearlo,
+// importar app.ts en un proceso de test sin ese env var lanza al vuelo,
+// aunque esta ruta no lo use.
+vi.mock("../db/candidatos-pool.js", () => ({
+  candidatosPool: { query: vi.fn() },
+}));
 
 const { createApp } = await import("../app.js");
 
