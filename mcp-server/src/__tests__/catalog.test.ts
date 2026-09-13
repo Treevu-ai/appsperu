@@ -39,6 +39,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "ceplan_geo_crossref_ejecucion",
     "ceplan_geo_crossref_inversiones",
     "ceplan_geo_crossref_obras",
+    "ceplan_geo_crossref_salud",
     "ceplan_geo_denominadores_benchmark_ejecucion",
     "ceplan_geo_denominadores_poblacion",
     "ceplan_geo_denominadores_tasas",
@@ -120,8 +121,10 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
   ],
   "programas-sociales": ["programas_sociales_cobertura", "programas_sociales_crossref"],
   "proveedores-sancionados": [
+    "proveedores_sancionados_candidatos_sancionados",
     "proveedores_sancionados_crossref",
     "proveedores_sancionados_personas",
+    "proveedores_sancionados_recurrente",
     "proveedores_sancionados_redes_proveedores",
     "proveedores_sancionados_sanciones",
   ],
