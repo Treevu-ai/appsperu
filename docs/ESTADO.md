@@ -1,7 +1,116 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-09-12.
+Última actualización: 2026-09-13.
 
+## Audit de tablas registro/crosswalk + `territory_name_crosswalk` (2026-09-13)
+
+A partir de encontrar `sector_entity_registry` vacío durante PV-01 (ver abajo), se auditaron las 7
+tablas tipo registro/crosswalk/lookup de las 4 apps que tienen ese patrón (ceplan-geo,
+compras-publicas, infobras, radar-ejecucion). Hallazgos:
+
+- `sector_entity_registry` (radar-ejecucion): 0 filas → **corregido** (PV-01, ver abajo).
+- `territory_name_crosswalk` (ceplan-geo): **0 filas**, `npm run crossref:build` nunca corrido —
+  corregido en esta sesión (ver detalle abajo).
+- `entity_crosswalk` (compras-publicas: 71/1,711 buyers ≈ 4.1%; infobras: 91/2,454 ≈ 3.7%): bajo
+  pero no "olvidado" — ambas apps ya tienen `GET /api/crossref/salud` reportando `estado: OK`
+  (documentado en SI-07). No es hallazgo nuevo.
+- `supplier_conformacion`/`_lookup` (compras-publicas): 18% de cobertura, ya documentado en OE-05.
+- `sector_link_review_queue` (radar-ejecucion): 0 filas, pero es una cola de revisión humana — vacía
+  es el estado normal cuando nada se ha marcado para revisar, no un bug.
+
+**`territory_name_crosswalk` (ceplan-geo)** fue el único hallazgo nuevo real: 0 filas, tercer caso
+del mismo patrón que ya había aparecido en esta app (`infrastructure`, DQ-12) y en `entity_crosswalk`
+de infobras/compras-publicas antes de su primera corrida. Severidad más baja que los otros casos
+porque `GET /crossref/obras` ya tenía fallback en vivo (`lookupTerritoryByNames`) para cualquier
+tríada sin caché — el resultado era correcto, solo recalculaba en vez de usar caché. El problema real
+era que esta app, a diferencia de infobras/compras-publicas, no tenía ningún `GET /api/crossref/salud`
+para notarlo sin leer el código fuente. Se agregó ese endpoint (`filas`/`confirmadas`/`candidatas`/
+`sinMatch`/`departamentosConstruidos`/`ultimaConstruccion`/`estado`) y se corrió
+`npm run crossref:build` para LA LIBERTAD: 86 tríadas, 83 confirmadas, 0 candidatas, 3 sin match —
+verificado en vivo contra `GET /api/crossref/salud` (`estado: "OK"`). 6 tests nuevos en
+`crossref-api.test.ts`, suite completa de la app en 38/38, TypeScript limpio. `docs/conectores.md`
+documenta el hallazgo y deja explícito que faltan las otras 24 jurisdicciones por construir.
+
+Revisión de `code-reviewer` (APPROVE) encontró un MEDIUM real: la query de `/salud` no filtraba por
+`source = 'infobras'` como sí hace `/obras` — inofensivo hoy (una sola fuente existe), pero mezclaría
+conteos si se agrega una segunda fuente al mismo crosswalk en el futuro. Corregido agregando el mismo
+filtro, con comentario explicando por qué. 38/38 sigue en verde tras el fix.
+
+**Construidas las 25 jurisdicciones (2026-09-13, mismo día):** se corrió `crossref:build` para las 24
+regiones restantes. Total nacional verificado en vivo vía `GET /api/crossref/salud`: **2,020 tríadas,
+1,780 confirmadas (88%), 0 candidatas, 240 sin match, `departamentosConstruidos: 25`**.
+
+**Hallazgo — CALLAO en 0% de confirmación (7/7 sin match), corregido el mismo día:** INFOBRAS reporta
+la provincia como `"PROV CONST DEL CALLAO"`, mientras que `territories.provincia` la tiene como
+`"CALLAO"` — un alias de provincia no normalizado, mismo tipo de problema que el ya resuelto a nivel
+de *departamento* en infobras (`canonicalizarDepartamentoFuente()`, CT-06) pero a nivel de *provincia*.
+Se agregó `canonicalizarProvinciaFuente()` (`ingest/normalize.ts`, mapa `PROVINCIA_ALIASES`) aplicada
+en el único punto de match (`lookupTerritoryByNames`), compartido por el endpoint en vivo
+(`GET /crossref/obras`) y por `build-crosswalk.ts` — un solo fix cubre ambos caminos. Deliberadamente
+**no** se aplicó en `territories`/`parseDistrictProperties` (esos datos vienen de GeoServer, ya
+correctos) ni afecta `departamento`/`distrito` (el alias es específico de provincia). Reconstruido
+Callao: 0/7 → **7/7 confirmadas**. Total nacional tras el fix (`GET /api/crossref/salud`): 2,020
+tríadas, **1,787 confirmadas** (antes 1,780), 233 sin match (antes 240), `departamentosConstruidos:
+25`. 4 tests nuevos (`normalize.test.ts` + `territory-lookup.test.ts`, este último nuevo), suite
+completa de la app en 42/42, TypeScript limpio.
+
+Nota de alcance: se revisaron otros `sin_match` de alta incidencia (ej. Huancavelica, 57/154) y
+resultaron ser un problema distinto — provincia/distrito de INFOBRAS no correspondientes entre sí
+(mismo patrón que DQ-18 en OxI), no un alias de nombre. No se tocó — fuera de lo pedido.
+
+Revisión de `code-reviewer` (APPROVE) encontró un MEDIUM de organización: `canonicalizarProvinciaFuente`
+vivía en `ingest/normalize.ts` (funciones de parseo de GeoServer) pero su único consumidor es
+`crossref/territory-lookup.ts` — es un alias de cruce, no de ingesta. Movida a
+`territory-lookup.ts`, junto a su caller. Dos LOW de cobertura también cerrados: test que confirma
+que `parseDistrictProperties` (GeoServer) nunca aplica este alias, y test de `lookupTerritoryByNames`
+con `provincia = null`. 44/44 tras la reorganización, TypeScript limpio.
+
+## Bug de la "Ñ" en la fuente INFOBRAS/Contraloría (2026-09-13)
+
+Al investigar los 233 `sin_match` restantes del crosswalk territorial (pedido explícito: "data
+quality de Huancavelica/otros sin_match"), se clasificaron en tres grupos bien distintos:
+
+- **57 (24%):** mismo departamento, provincia mal etiquetada por INFOBRAS (ej. Huancavelica con
+  distritos reales de Ica/Lima) — defecto genuino de la fuente, no corregible sin adivinar el dato
+  correcto (mismo criterio que DQ-18). **No se tocó.**
+- **109 (47%):** departamento completamente mal etiquetado (el distrito existe, pero en otro
+  departamento real) — mismo tipo de defecto, mismo criterio. **No se tocó.**
+- **67 (29%):** el distrito no existe bajo ningún nombre. Al investigar, la mayoría resultó ser un
+  patrón nacional: **el propio XLSX de INFOBRAS/Contraloría trae la letra "Ñ" reemplazada por un
+  espacio** (verificado descomprimiendo el `.xlsx` descargado e inspeccionando el XML crudo del
+  sheet — "CA ETE" en vez de "CAÑETE" ya está así en el archivo que publican, confirmado con
+  `grep` sobre 726MB de XML: 0 ocurrencias de "Ñ" en todo el archivo, 1 ocurrencia exacta de
+  "CA ETE"). Afecta a nivel nacional: FERRE AFE, PARI AS, MU ANI, NU OA, CA ETE, y ~30 más.
+
+**Fix (recomendado y aprobado por el usuario: recuperación algorítmica, no tabla fija):**
+`territory-lookup.ts` agrega `candidatosConEnyeRestaurada()` (genera variantes reemplazando cada
+espacio interno por "N" — no "Ñ": se descubrió en el camino que `territories` ya guarda toda "Ñ"
+como "N" sin tilde vía `normalizeTerritoryToken`/`ACCENT_MAP`, así que "CAÑETE" vive en la tabla
+como "CANETE") e `intentarRecuperacionEnye()` (tres niveles: distrito corregido, provincia
+corregida, ambos corregidos a la vez — necesario porque en casos reales como Cañete la corrupción
+aparece en provincia Y distrito simultáneamente). Solo acepta la recuperación si exactamente un
+candidato produce exactamente una fila — cualquier ambigüedad se descarta sin adivinar, mismo
+criterio que el resto del matcher. Se activa solo cuando el match exacto falla y hay al menos un
+espacio, para no agregar queries en el camino feliz.
+
+Verificado en vivo reconstruyendo el crosswalk completo de las 25 regiones: **confirmadas 1,787→1,851
+(+64), sin_match 233→169 (-64)** — el resto de los sin_match (Huancavelica y similares) son los
+grupos 1 y 2, correctamente sin tocar. 7 tests nuevos en `territory-lookup.test.ts` (17 en total),
+suite completa de la app en 49/49, TypeScript limpio.
+
+Revisión de `code-reviewer` (APPROVE) encontró 3 MEDIUM: (1) una "Ñ" en la *primera* posición de un
+token se pierde antes de que la recuperación la vea (`normalizeTerritoryToken` hace `.trim()` antes
+del `candidatosConNRestaurada`) — documentado como límite conocido en el código; verificado que hoy
+no hay ningún caso real de esto en las 25 regiones (0 filas con espacio inicial), así que no se
+resolvió sin evidencia de necesidad; (2) el costo de la recuperación (hasta ~20 queries secuenciales
+por obra corrupta) también se dispara en el camino en vivo de `GET /crossref/obras`, no solo en el
+build batch — documentado en el código como algo a revisar si el volumen sin caché crece, no
+resuelto ahora (habría requerido rediseñar ese endpoint, fuera del alcance de este fix puntual); (3)
+faltaba cobertura de test para el nivel 1 y nivel 2 de la recuperación en escenario exitoso — cerrado
+con 2 tests nuevos (Azángaro/Muñani para nivel 1, Ferreñafe/Pueblo Nuevo para nivel 2, ambos casos
+reales). Un LOW (nombre de función desactualizado) también cerrado:
+`candidatosConEnyeRestaurada` → `candidatosConNRestaurada`. 51/51 tras los cambios, TypeScript
+limpio.
 ## PV-01/PV-02 — Ámbito nacional en la ficha sectorial (2026-09-12, implementados)
 
 Últimos dos tickets de `docs/PRD_Propuesta_Valor_Bajo_Esfuerzo_v1.md`. Al implementar PV-01 se

@@ -50,4 +50,17 @@ describe("normalize", () => {
     expect(featureIdFromGeoJson({ id: "cb_limdistx.12" }, 0)).toBe("cb_limdistx.12");
     expect(featureIdFromGeoJson({}, 3)).toBe("feature-3");
   });
+
+  it("parseDistrictProperties nunca aplica el alias de provincia de fuentes externas (regresión, revisión 2026-09-13)", () => {
+    // GeoServer ya trae "CALLAO" tal cual (es la fuente canónica) — el alias
+    // "PROV CONST DEL CALLAO" -> "CALLAO" vive en crossref/territory-lookup.ts
+    // porque es un problema de INFOBRAS al cruzar, no de este parser.
+    const parsed = parseDistrictProperties({
+      dpto: "CALLAO",
+      prov: "CALLAO",
+      dist: "BELLAVISTA",
+      ubigeo: "070102",
+    });
+    expect(parsed?.provincia).toBe("CALLAO");
+  });
 });
