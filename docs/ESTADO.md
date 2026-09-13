@@ -2,6 +2,22 @@
 
 Última actualización: 2026-09-13.
 
+## CX-15 — catálogo MCP desincronizado de rutas Express reales (2026-09-13, cerrado)
+
+Al mergear #148/#149 se notó que ambos PR tenían el check `mcp-server` en rojo. Verificado en vivo
+que **también fallaba en `master` limpio, sin ningún cambio de esta sesión** — no era una regresión
+de los PR, era un gap preexistente: dos endpoints de la sesión OE-02/OE-03 (2026-09-10) nunca se
+agregaron al catálogo MCP (`/api/crossref/candidatos-sancionados`, `/api/crossref/sancionado-recurrente`
+en `proveedores-sancionados`). Al corregirlo apareció un tercer gap, esta vez introducido en esta
+misma sesión: `/api/crossref/salud` (ceplan-geo, ya mergeado en #149) tampoco tenía tool.
+
+Se agregaron las 3 tools faltantes a `mcp-server/src/catalog.ts` (mismo patrón que las entradas
+existentes) y se actualizó `proveedores_sancionados_crossref` para reflejar los parámetros nuevos de
+PV-05/PV-06 (`departamento=TODOS`, `soloNuevos`) que esta sesión ya implementó en el endpoint real
+pero no se habían propagado al catálogo. También se actualizó `EXPECTED_TOOLS_BY_APP` en
+`catalog.test.ts` (lista hermana que detecta desincronización del catálogo consigo mismo) con los 3
+nombres nuevos. 113/113 en `mcp-server`, TypeScript limpio.
+
 ## Audit de tablas registro/crosswalk + `territory_name_crosswalk` (2026-09-13)
 
 A partir de encontrar `sector_entity_registry` vacío durante PV-01 (ver abajo), se auditaron las 7

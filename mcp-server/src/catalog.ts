@@ -1179,6 +1179,18 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: { ubigeo: z.string().regex(/^\d{6}$/) },
   },
   {
+    name: "ceplan_geo_crossref_salud",
+    app: "ceplan-geo",
+    description:
+      "Salud del caché de territory_name_crosswalk (audit 2026-09-13): filas/confirmadas/candidatas/sinMatch " +
+      "y `departamentosConstruidos` (de 25 posibles). Una tabla vacía o con pocos departamentos NO significa " +
+      "que el cruce falle — `GET /crossref/obras` recalcula en vivo cualquier tríada sin entrada cacheada, " +
+      "esto solo mide qué tan caliente está el caché. `estado: 'VACIO'` si 0 filas. " + SIN_SCHEDULER,
+    pathTemplate: "/api/crossref/salud",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
     name: "ceplan_geo_denominadores_poblacion",
     app: "ceplan-geo",
     description:
@@ -1313,12 +1325,19 @@ export const TOOL_CATALOG: ToolSpec[] = [
     description:
       "Cruce proveedores-sancionados <-> compras-publicas por RUC exacto — señal más fuerte que el estatus " +
       "tributario: una inhabilitación VIGENTE es prohibición LEGAL de contratar con el Estado. " +
-      "`soloInhabilitados=true` filtra solo adjudicaciones con inhabilitación vigente. Default: LA LIBERTAD.",
+      "`soloInhabilitados=true` filtra solo adjudicaciones con inhabilitación vigente. Default: LA LIBERTAD; " +
+      "`departamento=TODOS` (PV-06, 2026-09-13) agrega awards+minor_contracts a nivel nacional en una sola " +
+      "consulta. `soloNuevos=true` filtra a los casos marcados `esNuevoDesdeUltimaCorrida` (PV-05): la tabla " +
+      "`sanciones_contratos_vistos` recuerda qué par proveedor-contrato ya se había visto en una corrida " +
+      "anterior — combinado con `departamento=TODOS` es el punto de entrada para vigilancia nacional, sin " +
+      "repetir los casos ya conocidos. No envía notificaciones (correo/Slack/webhook): es un endpoint de " +
+      "consulta, no una alerta activa. " + SIN_SCHEDULER,
     pathTemplate: "/api/crossref",
     pathParams: [],
     querySchema: {
-      departamento: z.string().min(1).optional(),
+      departamento: z.string().min(1).optional().describe("Default LA LIBERTAD. 'TODOS' agrega a nivel nacional."),
       soloInhabilitados: z.enum(["true", "false"]).optional(),
+      soloNuevos: z.enum(["true", "false"]).optional().describe("Filtra a esNuevoDesdeUltimaCorrida=true (PV-05/PV-06)."),
     },
   },
   {
@@ -1335,6 +1354,40 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: [],
     querySchema: {
       soloVigentes: z.enum(["true", "false"]).optional(),
+    },
+  },
+  {
+    name: "proveedores_sancionados_candidatos_sancionados",
+    app: "proveedores-sancionados",
+    description:
+      "Cruce candidato<->sanción (OE-03, 2026-09-10): candidatos de candidatos-erm (por departamento, o una " +
+      "lista explícita de DNI separada por comas) contra vínculos societarios (supplier_conformacion, " +
+      "compras-publicas) y sanciones directas (inhabilitaciones/multas) del Tribunal de Contrataciones. " +
+      "El cruce es siempre por DNI exacto, nunca por nombre — el DNI se enmascara en toda respuesta (últimos " +
+      "3 dígitos visibles), el nombre del candidato no se enmascara (ya es público por ley en su candidatura). " +
+      "Distingue explícitamente vínculo societario sin sanción de sanción directa — nunca las fusiona en una " +
+      "sola categoría de 'hallazgo'. Requiere `departamento` o `dni`. " + SIN_SCHEDULER,
+    pathTemplate: "/api/crossref/candidatos-sancionados",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Requerido si no se pasa 'dni'."),
+      dni: z.string().min(1).optional().describe("Lista de DNI separados por comas. Requerido si no se pasa 'departamento'."),
+    },
+  },
+  {
+    name: "proveedores_sancionados_recurrente",
+    app: "proveedores-sancionados",
+    description:
+      "Señal de sancionado recurrente (OE-04, 2026-09-10): agrupa inhabilitaciones por RUC y marca los que " +
+      "tienen `minResoluciones` o más resoluciones DISTINTAS cuyo rango completo (primera a última fecha " +
+      "`desde`) cae dentro de `ventanaDias`. Preselección exploratoria, NO una conclusión de patrón de " +
+      "conducta — cada resultado trae su propia `explicacion` diciéndolo explícitamente. Cobertura nacional " +
+      "completa (1993-2026). " + SIN_SCHEDULER,
+    pathTemplate: "/api/crossref/sancionado-recurrente",
+    pathParams: [],
+    querySchema: {
+      minResoluciones: z.coerce.number().int().min(2).max(20).optional().describe("Default 2."),
+      ventanaDias: z.coerce.number().int().min(1).max(3650).optional().describe("Default 180."),
     },
   },
   {
