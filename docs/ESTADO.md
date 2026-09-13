@@ -1,6 +1,131 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-09-10.
+Última actualización: 2026-09-12.
+
+## PV-01/PV-02 — Ámbito nacional en la ficha sectorial (2026-09-12, implementados)
+
+Últimos dos tickets de `docs/PRD_Propuesta_Valor_Bajo_Esfuerzo_v1.md`. Al implementar PV-01 se
+encontró que **`sector_entity_registry` (radar-ejecucion) estaba completamente vacío** en este
+entorno — 0 filas, y `sector_link_review_queue` también en 0, así que ni siquiera había candidatos
+pendientes de revisión. `GET /api/sectores/:sectorId/ficha` existía en el código pero era
+efectivamente inalcanzable para cualquier sector: el one-pager `Radar Produce` del mismo día se
+había armado con SQL directo contra la base sin que nadie notara que este endpoint ya cubría casi
+todo lo que ese SQL hacía a mano. Se corrió `npm run sectors:seed` (21 entidades, ninguna sin
+encontrar) y se agregó una entrada nueva a `INITIAL_SECTOR_SEEDS` (`sector/registry.ts`) para el
+pliego 1086 (Ministerio de la Producción) — el único sector que faltaba para poder verificar
+PV-01 contra el caso real del día.
+
+**PV-01**: `budgetByRegistry` (`sectors.ts`) acepta ahora un modo `ambitoNacional` que omite el
+filtro de `meta_departamento` en el JOIN contra `latest_budget` — agrega el pliego completo sin
+acotar a un departamento. Como los snapshots de cobertura territorial son por departamento, en modo
+nacional `cobertura.estado` queda explícitamente `"NO_VERIFICADA"` en vez de inventar un agregado.
+Expuesto vía `?ambito=NACIONAL` en `BaseQuery`, que también alcanza `/comparativo` y
+`/movimiento-presupuestal` al compartir la misma función. Verificado en vivo:
+`GET /api/sectores/PRODUCCION/ficha?ambito=NACIONAL` devuelve `pim: 208104679, devengado:
+128209085.25` — exactamente las cifras ya verificadas a mano el mismo día para el Ministerio de la
+Producción. El modo regional (sin `ambito`, o `ambito=REGIONAL`) no cambió de comportamiento:
+`departamento=LA LIBERTAD` sigue devolviendo 0 para Produce (correcto — ese pliego no dirige gasto
+a La Libertad en el dataset actual). 5 tests nuevos en `sectors.test.ts` (ruta sin cobertura previa),
+suite completa de la app en 96/96, TypeScript limpio.
+
+**PV-02**: `docs/conectores.md` (ficha de `radar-ejecucion`) documenta esta ruta como el punto de
+entrada recomendado para armar un one-pager sectorial, con el ejemplo real de PRODUCCION y una nota
+explícita: antes de repetir el ejercicio para otro sector, confirmar que esté en
+`INITIAL_SECTOR_SEEDS` y correr `npm run sectors:seed` — un 404 en este endpoint casi siempre
+significa eso, no un bug.
+
+Revisión de `code-reviewer` (APPROVE) encontró un MEDIUM real: la suite nueva solo cubría
+`GET /:sectorId/ficha`, dejando sin test el call site con más riesgo de desalineación de parámetros
+(`/entidades/:entityCode/ficha`, donde `sectorId` se pasa `undefined` y `entityCode` se desplaza a
+la 5ª posición de `budgetByRegistry`). Se agregaron 2 tests que fijan ese call site en ambos modos
+(nacional: `$2` para `entity_code`, sin `meta_departamento`; regional: `$2` departamento + `$3`
+`entity_code`) — 7/7 en `sectors.test.ts`, 98/98 en la suite completa.
+
+**Los seis tickets del PRD de bajo esfuerzo quedan implementados y verificados en vivo el mismo día
+que se escribió el PRD, con sus tres tandas de revisión de código en APPROVE.**
+
+## PV-03/PV-04/PV-06 — Ranking de obras paralizadas + vigilancia nacional (2026-09-12, implementados)
+
+Tercer y cuarto ticket del PRD de bajo esfuerzo, seguidos por PV-06:
+
+**PV-03**: `GET /api/public-works` (infobras) suma `sectorEntidad`, `diasParalizadoMin` (con validación
+`.refine()`: exige `conParalizacion=true`, responde 400 si no) y `orderBy` (`nombre_asc` default,
+`diasParalizado_desc`, `montoViable_desc`). Verificado en vivo: reproduce exactamente las 4 obras de
+Producción ya identificadas en el one-pager del 2026-09-12, en el mismo orden. 5 tests nuevos en
+`api.test.ts`, suite de la app en 110/110, TypeScript limpio.
+
+**PV-04**: con PV-03 hecho, el ranking nacional es el mismo endpoint sin `sectorEntidad` — cero código
+adicional. Medido en vivo: **1,319 obras** paralizadas +180 días a nivel nacional, por encima del
+umbral de ~500 filas que el ticket usaba para decidir si paginar. Se documenta la cifra en
+`docs/conectores.md` y se difiere la paginación (opción explícitamente permitida por el ticket), en
+vez de construir paginación sin que nadie la haya pedido.
+
+**PV-06**: `GET /api/crossref` (proveedores-sancionados) acepta `departamento=TODOS` (agrega
+`awards`+`minor_contracts` a nivel nacional en una sola consulta, no un loop de 25 llamadas) y
+`soloNuevos=true` (filtra a los casos que PV-05 marcó como nuevos). Verificado en vivo: con la tabla
+`sanciones_contratos_vistos` vacía, `departamento=TODOS&soloInhabilitados=true` devuelve 346
+adjudicaciones con inhabilitación vigente a nivel nacional, las 346 nuevas; repitiendo el mismo request,
+`soloNuevos=true` devuelve 0. 3 tests nuevos en `crossref.test.ts` (7 en total), suite en 40/40,
+TypeScript limpio. `docs/conectores.md` deja explícito que esto sigue sin enviar notificaciones — es
+un endpoint de consulta, el canal de entrega es un ticket de seguimiento aparte.
+
+Pendientes del mismo PRD: PV-01 (ámbito nacional en `GET /sectors/:sectorId/ficha`) y PV-02
+(documentar esa ruta como recomendada para one-pagers).
+
+## PV-05 — Persistir "primera vez visto" en el cruce de sancionados (2026-09-12, implementado)
+
+Primer ticket ejecutado de `docs/PRD_Propuesta_Valor_Bajo_Esfuerzo_v1.md`. Migración nueva
+`003_sanciones_contratos_vistos.sql` en `proveedores-sancionados` (tabla `sanciones_contratos_vistos`,
+`UNIQUE(ruc, referencia_contrato)`). `GET /api/crossref` ahora identifica, entre los proveedores con
+inhabilitación vigente, cuáles ya estaban registrados como vistos; inserta los nuevos y expone
+`esNuevoDesdeUltimaCorrida` en cada resultado — sin cambiar ningún campo existente de la respuesta.
+
+Verificado en vivo (no solo con mocks): con la tabla vacía, `GET /api/crossref?departamento=LIMA&soloInhabilitados=true`
+devuelve 136 casos, los 136 marcados `esNuevoDesdeUltimaCorrida: true`; al correrlo de nuevo sin
+cambios en la fuente, los mismos 136 casos quedan `false` — el experimento exacto que pedía el
+criterio de aceptación del ticket. 4 tests nuevos en `crossref.test.ts` (antes sin cobertura), suite
+completa de la app en 37/37, TypeScript limpio.
+
+Revisión de `code-reviewer` encontró un MEDIUM real: el diseño original (`SELECT` de vistos, luego
+`INSERT` aparte) dejaba una ventana de carrera entre dos corridas concurrentes del cruce — ambas
+podían leer "no visto" antes de que la otra terminara de insertar, y devolver `esNuevoDesdeUltimaCorrida:
+true` dos veces para el mismo caso (sin duplicar filas en la tabla, gracias al `UNIQUE` + `ON CONFLICT`,
+pero sí duplicando la señal de "nuevo"). Corregido reemplazando el par SELECT+INSERT por un único
+`INSERT ... ON CONFLICT DO NOTHING RETURNING ruc, referencia_contrato`, atómico: las filas que vuelve
+son, por definición de Postgres, exactamente las que esa sentencia insertó. Reverificado en vivo con
+el mismo experimento de dos corridas (136 nuevos → 0 nuevos), tests actualizados al nuevo flujo de una
+sola query, 37/37 y TypeScript limpio otra vez.
+
+Nota operativa: durante la implementación un archivo se corrompió con bytes nulos tras un intento de
+edición fallido (causa no confirmada — posible interacción de herramienta en este entorno Windows);
+se detectó con `file`/`od` antes de continuar y se reescribió limpio desde el contenido ya verificado,
+sin pérdida de trabajo.
+
+## PV-01..PV-06 — Propuesta de valor de bajo esfuerzo: PRD + tickets (2026-09-12, propuesto)
+
+A partir de armar un one-pager de inteligencia para el sector Producción (artifact `Radar Produce`,
+tres datos verificados en vivo: 244 proveedores con sanción vigente hoy, S/ 46.0M devengados en
+bienes y servicios de PRODUCE en 2026, 4 obras del sector paralizadas +180 días según INFOBRAS), se
+revisó el código de los endpoints relevantes y se confirmó que **la mayor parte de esa capacidad ya
+existe** — `GET /sectors/:sectorId/ficha` en `radar-ejecucion` ya arma presupuesto+inversiones+obras+
+contrataciones por sector, y `public-works.ts`/`crossref.ts` ya filtran por departamento. El one-pager
+se armó igual con SQL directo porque tres brechas puntuales lo impedían: la ficha sectorial no tiene
+modo nacional (`ambito=NACIONAL`), `GET /public-works` no filtra por sector/umbral de días parado ni
+ordena por `dias_paralizado`, y el cruce de sancionados (`crossref.ts`) es una foto sin estado — no
+distingue un caso ya conocido de uno nuevo desde la última corrida.
+
+Documentado como `docs/PRD_Propuesta_Valor_Bajo_Esfuerzo_v1.md` (nueva serie de tickets **PV-**) y
+`docs/TICKETS_Propuesta_Valor_Bajo_Esfuerzo_v1.md`, seis tickets en tres épicas: PV-01/PV-02 (ámbito
+nacional en la ficha sectorial + documentarla como ruta recomendada), PV-03/PV-04 (filtro de sector,
+umbral de días paralizado y orden en `GET /public-works`, luego el mismo ranking sin filtro de
+sector = ranking nacional), PV-05/PV-06 (persistir "primera vez visto" en el cruce de sancionados
+con una tabla nueva `sanciones_contratos_vistos`, luego un endpoint nacional que solo devuelve los
+casos nuevos desde la última corrida). Explícitamente fuera de alcance: cualquier canal de envío de
+notificaciones (correo/Slack/webhook) — no hay infraestructura de notificación en el repo hoy
+(verificado con `grep` de `nodemailer`/`sendgrid`/`webhook`/`slack` en `apps/*/api/src`, sin
+resultados) y añadirla es una decisión de producto aparte.
+
+**Ningún ticket está implementado todavía — este PRD queda propuesto, pendiente de owner.**
 
 ## OE-04/OE-05/OE-06 — Sancionado recurrente, cobertura de conformación societaria, límite de mindef (2026-09-10)
 

@@ -13,6 +13,11 @@ export const sectorsRouter = Router();
 const BaseQuery = z.object({
   anio: z.coerce.number().int().min(2009).max(2100).default(2026),
   departamento: z.string().min(1).default("LA LIBERTAD"),
+  // PV-01: NACIONAL agrega todas las entidades del sector sin filtrar por
+  // departamento — sin esto, armar un one-pager de un sector distinto a
+  // La Libertad exigía SQL directo contra la base (ver `Radar Produce`,
+  // 2026-09-12). `departamento` se ignora cuando ambito=NACIONAL.
+  ambito: z.enum(["REGIONAL", "NACIONAL"]).default("REGIONAL"),
 });
 const CompareQuery = BaseQuery.extend({ sectores: z.string().min(1).optional() });
 const InventoryQuery = BaseQuery.extend({ limit: z.coerce.number().int().min(1).max(500).default(100) });
@@ -31,11 +36,38 @@ function stringArray(value: unknown): string[] {
 }
 function money(value: unknown): number { return Math.round(number(value) * 100) / 100; }
 
-async function budgetByRegistry(anio: number, departamento: string, sectorId?: string, entityCode?: string): Promise<BudgetRow[]> {
-  const params: unknown[] = [anio, departamento];
+async function budgetByRegistry(
+  anio: number,
+  departamento: string,
+  ambitoNacional: boolean,
+  sectorId?: string,
+  entityCode?: string,
+): Promise<BudgetRow[]> {
+  const params: unknown[] = ambitoNacional ? [anio] : [anio, departamento];
   const filters = ["r.verification_status = 'VERIFICADO'"];
   if (sectorId) { params.push(sectorId.toUpperCase()); filters.push(`r.sector_id = $${params.length}`); }
   if (entityCode) { params.push(entityCode); filters.push(`r.entity_code = $${params.length}`); }
+
+  // Ámbito nacional: agrega todos los departamentos del entity_code (sin la
+  // condición territorial de `latest_budget`) — el total real del pliego,
+  // no acotado a una región. Preserva la distinción META_DEPARTAMENTO vs
+  // SEDE_EJECUTORA en `scope_rule`/`advertenciaGasto`, no en el JOIN mismo.
+  const budgetJoinCondition = ambitoNacional
+    ? ""
+    : `AND ((r.scope_rule='META_DEPARTAMENTO' AND b.meta_departamento=$2)
+          OR (r.scope_rule='SEDE_EJECUTORA' AND b.meta_departamento IS NULL))`;
+
+  // `budget_coverage_snapshots` es un corte por departamento — a nivel
+  // nacional no hay un único snapshot que citar. En vez de inventar una
+  // cobertura agregada, el JOIN no calza nunca (`ON false`) y `mapBudget`
+  // declara `estado: "NO_VERIFICADA"` explícitamente, como ya hace cuando
+  // no hay snapshot para el caso regional.
+  const coverageJoin = ambitoNacional
+    ? "LEFT JOIN budget_coverage_snapshots s ON false"
+    : `LEFT JOIN budget_coverage_snapshots s ON s.activo=true AND s.anio_fiscal=$1 AND s.departamento=$2
+        AND s.nivel_gobierno=r.nivel_gobierno
+        AND s.origen_cobertura=CASE WHEN r.scope_rule='META_DEPARTAMENTO' THEN 'META_DEPARTAMENTO' ELSE 'SEDE_EJECUTORA' END`;
+
   const { rows } = await pool.query<BudgetRow>(
     `${LATEST_BUDGET_CTE}
      SELECT r.sector_id,r.sector_nombre,r.entity_code,r.entity_name_publicado,r.entity_kind,r.nivel_gobierno,r.scope_rule,
@@ -44,13 +76,9 @@ async function budgetByRegistry(anio: number, departamento: string, sectorId?: s
             COALESCE(array_agg(DISTINCT rb.resource_id) FILTER (WHERE rb.resource_id IS NOT NULL), ARRAY[]::text[]) AS resource_ids,
             s.estado_cobertura, s.fecha_corte AS cobertura_corte, s.record_count AS cobertura_registros
        FROM sector_entity_registry r
-  LEFT JOIN latest_budget b ON b.entity_code=r.entity_code AND b.anio_fiscal=$1
-        AND ((r.scope_rule='META_DEPARTAMENTO' AND b.meta_departamento=$2)
-          OR (r.scope_rule='SEDE_EJECUTORA' AND b.meta_departamento IS NULL))
+  LEFT JOIN latest_budget b ON b.entity_code=r.entity_code AND b.anio_fiscal=$1 ${budgetJoinCondition}
   LEFT JOIN raw_mef_batches rb ON rb.id=b.source_batch_id
-  LEFT JOIN budget_coverage_snapshots s ON s.activo=true AND s.anio_fiscal=$1 AND s.departamento=$2
-        AND s.nivel_gobierno=r.nivel_gobierno
-        AND s.origen_cobertura=CASE WHEN r.scope_rule='META_DEPARTAMENTO' THEN 'META_DEPARTAMENTO' ELSE 'SEDE_EJECUTORA' END
+  ${coverageJoin}
       WHERE ${filters.join(" AND ")}
       GROUP BY r.sector_id,r.sector_nombre,r.entity_code,r.entity_name_publicado,r.entity_kind,r.nivel_gobierno,r.scope_rule,
                s.estado_cobertura,s.fecha_corte,s.record_count
@@ -152,22 +180,22 @@ sectorsRouter.get("/inventory", asyncHandler(async (req, res) => {
 sectorsRouter.get("/comparativo", asyncHandler(async (req, res) => {
   const query = parseQuery(CompareQuery, req.query, res); if (!query) return;
   const sectorIds = query.sectores?.split(",").map((item) => item.trim().toUpperCase()).filter(Boolean) ?? [];
-  const all = await budgetByRegistry(query.anio, query.departamento.toUpperCase());
+  const all = await budgetByRegistry(query.anio, query.departamento.toUpperCase(), query.ambito === "NACIONAL");
   const rows = sectorIds.length ? all.filter((row) => sectorIds.includes(row.sector_id)) : all;
-  res.json({ anio: query.anio, departamento: query.departamento.toUpperCase(), resultados: rows.map(mapBudget), limitation: "El comparativo muestra responsabilidades distintas. No suma Gobierno Nacional dirigido al departamento y Gobierno Regional ejecutado por sede como un único presupuesto." });
+  res.json({ anio: query.anio, departamento: query.ambito === "NACIONAL" ? "TODOS" : query.departamento.toUpperCase(), resultados: rows.map(mapBudget), limitation: "El comparativo muestra responsabilidades distintas. No suma Gobierno Nacional dirigido al departamento y Gobierno Regional ejecutado por sede como un único presupuesto." });
 }));
 
 sectorsRouter.get("/movimiento-presupuestal", asyncHandler(async (req, res) => {
   const query = parseQuery(CompareQuery, req.query, res); if (!query) return;
   const sectorIds = query.sectores?.split(",").map((item) => item.trim().toUpperCase()).filter(Boolean) ?? [];
-  const all = await budgetByRegistry(query.anio, query.departamento.toUpperCase());
+  const all = await budgetByRegistry(query.anio, query.departamento.toUpperCase(), query.ambito === "NACIONAL");
   const rows = (sectorIds.length ? all.filter((row) => sectorIds.includes(row.sector_id)) : all).map(mapBudget);
   const movement = summarizeBudgetMovement(rows.map((row) => ({
     sectorId: row.sectorId, sector: row.sector, entidad: row.entidad, reglaTerritorial: row.reglaTerritorial,
     pia: row.pia, pim: row.pim, devengado: row.devengado, cortesUsados: row.cortesUsados,
   })));
   const cortesUsados = [...new Set(rows.flatMap((row) => row.cortesUsados).map((fechaCorte) => `${fechaCorte}`))].sort();
-  res.json({ anio: query.anio, departamento: query.departamento.toUpperCase(), sectoresSolicitados: sectorIds, cortesUsados, ...movement });
+  res.json({ anio: query.anio, departamento: query.ambito === "NACIONAL" ? "TODOS" : query.departamento.toUpperCase(), sectoresSolicitados: sectorIds, cortesUsados, ...movement });
 }));
 
 sectorsRouter.get("/revision", asyncHandler(async (req, res) => {
@@ -187,17 +215,18 @@ sectorsRouter.get("/revision", asyncHandler(async (req, res) => {
 sectorsRouter.get("/:sectorId/ficha", asyncHandler(async (req, res) => {
   const query = parseQuery(BaseQuery, req.query, res); if (!query) return;
   const sectorId = req.params.sectorId.toUpperCase();
-  const rows = await budgetByRegistry(query.anio, query.departamento.toUpperCase(), sectorId);
+  const ambitoNacional = query.ambito === "NACIONAL";
+  const rows = await budgetByRegistry(query.anio, query.departamento.toUpperCase(), ambitoNacional, sectorId);
   if (rows.length === 0) { res.status(404).json({ error: "Sector no verificado o sin entidades registradas." }); return; }
   const budget = rows.map(mapBudget); const projects = await projectsForEntities(rows.map((row) => row.entity_code));
   const works = await worksForCuis(projects.map((project) => project.cui));
   const procurement = await procurementForEntities(rows.map((row) => row.entity_code));
-  res.json({ sector: { id: sectorId, nombre: rows[0].sector_nombre }, anio: query.anio, departamento: query.departamento.toUpperCase(), entidades: budget, inversiones: { estado: projects.length ? "VINCULO_OFICIAL" : "SIN_VINCULO_OFICIAL", resultados: projects }, obras: works, contrataciones: procurement, advertenciaGasto: "No sumar entidades con reglaTerritorial META_DEPARTAMENTO y SEDE_EJECUTORA: miden gasto nacional dirigido vs ejecución con sede regional.", limitation: "CUI, obra y contratación aparecen solo mediante claves exactas verificadas. La ausencia de un puente no equivale a ausencia de inversión, obra o contratación." });
+  res.json({ sector: { id: sectorId, nombre: rows[0].sector_nombre }, anio: query.anio, departamento: ambitoNacional ? "TODOS" : query.departamento.toUpperCase(), entidades: budget, inversiones: { estado: projects.length ? "VINCULO_OFICIAL" : "SIN_VINCULO_OFICIAL", resultados: projects }, obras: works, contrataciones: procurement, advertenciaGasto: "No sumar entidades con reglaTerritorial META_DEPARTAMENTO y SEDE_EJECUTORA: miden gasto nacional dirigido vs ejecución con sede regional.", limitation: "CUI, obra y contratación aparecen solo mediante claves exactas verificadas. La ausencia de un puente no equivale a ausencia de inversión, obra o contratación." });
 }));
 
 sectorsRouter.get("/entidades/:entityCode/ficha", asyncHandler(async (req, res) => {
   const query = parseQuery(BaseQuery, req.query, res); if (!query) return;
-  const rows = await budgetByRegistry(query.anio, query.departamento.toUpperCase(), undefined, req.params.entityCode);
+  const rows = await budgetByRegistry(query.anio, query.departamento.toUpperCase(), query.ambito === "NACIONAL", undefined, req.params.entityCode);
   if (rows.length === 0) { res.status(404).json({ error: "Entidad no verificada en el registro sectorial." }); return; }
   const projects = await projectsForEntities([req.params.entityCode]);
   res.json({ entidad: mapBudget(rows[0]), inversiones: { estado: projects.length ? "VINCULO_OFICIAL" : "SIN_VINCULO_OFICIAL", resultados: projects }, obras: await worksForCuis(projects.map((project) => project.cui)), contrataciones: await procurementForEntities([req.params.entityCode]), limitation: "La ficha no sustituye reglas territoriales ni atribuye gasto a CUI por nombre." });
