@@ -31,6 +31,13 @@ export const INITIAL_SECTOR_SEEDS: SectorSeed[] = [
   { sectorId: "EDUCACION", sectorNombre: "Educación", entityCode: "1728", entityName: "PROYECTO ESPECIAL DE INVERSION PUBLICA ESCUELAS BICENTENARIO", entityKind: "PROGRAMA", nivelGobierno: "GOBIERNO NACIONAL", scopeRule: "META_DEPARTAMENTO" },
   { sectorId: "SALUD", sectorNombre: "Salud", entityCode: "1655", entityName: "PROGRAMA NACIONAL DE INVERSIONES EN SALUD", entityKind: "PROGRAMA", nivelGobierno: "GOBIERNO NACIONAL", scopeRule: "META_DEPARTAMENTO" },
   { sectorId: "SALUD", sectorNombre: "Salud", entityCode: "1091", entityName: "SEGURO INTEGRAL DE SALUD", entityKind: "ORGANISMO", nivelGobierno: "GOBIERNO NACIONAL", scopeRule: "META_DEPARTAMENTO" },
+  // PV-01 (2026-09-12): sector Producción no tenía ninguna entidad registrada
+  // — el propio one-pager `Radar Produce` calculó su ejecución con SQL directo
+  // contra `budget_execution` porque este registro no cubría el pliego. Solo
+  // se agrega el pliego (1086); sus organismos adscritos (ITP, FONDEPES,
+  // Innóvate Perú) quedan fuera de este seed y pueden sumarse después si se
+  // decide ampliar el alcance del sector.
+  { sectorId: "PRODUCCION", sectorNombre: "Producción", entityCode: "1086", entityName: "MINISTERIO DE LA PRODUCCION", entityKind: "MINISTERIO", nivelGobierno: "GOBIERNO NACIONAL", scopeRule: "META_DEPARTAMENTO" },
   { sectorId: "REGIONAL_LL", sectorNombre: "Gobierno Regional La Libertad", entityCode: "831", entityName: "REGION LA LIBERTAD-SEDE CENTRAL", entityKind: "GOBIERNO_REGIONAL", nivelGobierno: "GOBIERNOS REGIONALES", scopeRule: "SEDE_EJECUTORA" },
   { sectorId: "TRANSPORTE", sectorNombre: "Transporte", entityCode: "833", entityName: "REGION LA LIBERTAD-TRANSPORTES", entityKind: "UNIDAD_EJECUTORA", nivelGobierno: "GOBIERNOS REGIONALES", scopeRule: "SEDE_EJECUTORA" },
   { sectorId: "AGRARIO", sectorNombre: "Desarrollo agrario", entityCode: "832", entityName: "REGION LA LIBERTAD-AGRICULTURA", entityKind: "UNIDAD_EJECUTORA", nivelGobierno: "GOBIERNOS REGIONALES", scopeRule: "SEDE_EJECUTORA" },

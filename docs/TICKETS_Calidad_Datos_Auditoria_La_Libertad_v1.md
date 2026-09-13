@@ -258,6 +258,22 @@
 - **Prioridad:** P1 · **Esfuerzo:** M
 - **Estado:** Pendiente — documentado 2026-09-09, no resuelto esta sesión (se priorizó no expandir el alcance de SI-09 en la misma sesión que lo descubrió).
 
+### DQ-18 · `provincia`/`distrito` estructurados no confiables en OxI (Ficha técnica / Por Priorizar) — `inversion-privada`
+
+- **Historia:** Como consumidor de `inversion_privada_oxi_projects`, quiero saber cuándo los campos estructurados `provincia`/`distrito` de un proyecto OxI no son confiables, para no citarlos ni usarlos en cruces territoriales sin verificar primero contra `nombreProyecto` (texto libre).
+- **Contexto verificado (hallazgo 2026-09-10, durante una exploración ad-hoc de inversión departamental en La Libertad):** de los 31 proyectos OxI en fase "Por Priorizar" para La Libertad, 9 (29%) tienen `provincia` con un valor puramente numérico en vez de un nombre de provincia real (ej. "469", "478") y `distrito` vacío/ausente. Todos comparten `nivelEstudio: "Ficha técnica"` y `nivelGobierno: "Gobierno Regional"`.
+  1. **El valor no es un ubigeo:** se re-descargó en vivo el XLSX fuente (`investmentpromotionExport.php` de PROINVERSIÓN/VERTIX) 3 días después de la ingesta original (2026-09-07 → 2026-09-10) y la misma fila (`oxi_id 5346`, `codigo_referencia 2702563`, mismo proyecto) cambió de `provincia: "469"` a `provincia: "478"`. Un ubigeo real no cambia entre corridas.
+  2. **El "código" se repite entre provincias reales distintas:** filas de Pacasmayo, Sánchez Carrión, Virú y Santiago de Chuco (provincias distintas entre sí) comparten el mismo valor `"478"` en `provincia` en la misma descarga — si fuera un código geográfico real, cuatro provincias distintas no podrían compartir el mismo valor.
+  3. **No es un bug del parser de Rastro:** `parseOxiSheetXml` (`apps/inversion-privada/api/src/ingest/oxi-connector.ts`) lee cada celda por su referencia exacta (`r="H600"`, etc.), sin indexación posicional — se verificó en vivo que la celda `H` de esas filas trae literalmente el valor numérico en el XLSX de origen, y que la celda `I` (`distrito`) directamente no existe en el XML de esas filas (no vacía: ausente). El dato mal formado viene de la fuente oficial, no de cómo se lee.
+  4. **El dato correcto sí existe, en otro campo:** `nombreProyecto` (columna M, texto libre) trae la provincia/distrito reales de forma consistente (ej. "...DISTRITO DE CHAO...PROVINCIA DE VIRU...").
+- **Criterios de aceptación:**
+  - Marcar (no rechazar) las filas OxI cuya `provincia`/`distrito` estructurados no pasan una validación básica (ej. `provincia` no es un texto conocido del catálogo de provincias peruanas) — mismo patrón que `distrito_sospechoso` de DQ-14, expuesto como campo explícito, nunca en silencio.
+  - Evaluar si vale la pena extraer provincia/distrito de `nombreProyecto` por regex como fallback verificado, o si alcanza con la marca de "no confiable" sin inferir.
+  - Confirmar si el patrón (Ficha técnica + Gobierno Regional + Por Priorizar) se repite en otros departamentos antes de asumir que es exclusivo de La Libertad.
+- **Dependencias:** ninguna — hallazgo aislado en `inversion-privada`, no depende de otro ticket.
+- **Prioridad:** P2 · **Esfuerzo:** S
+- **Estado:** Pendiente — documentado 2026-09-10, no resuelto esta sesión (exploración ad-hoc, fuera del alcance de la auditoría original).
+
 ### SI-09 · Advertencias de calidad de dato en el score institucional (sin pesar en el score)
 
 - **Historia:** Como consumidor del score institucional, quiero ver si los componentes que lo alimentan tienen advertencias de calidad de dato conocidas (ej. obras con distrito dudoso), sin que esas advertencias cambien el cálculo del score — la fórmula debe seguir siendo comparable en el tiempo.

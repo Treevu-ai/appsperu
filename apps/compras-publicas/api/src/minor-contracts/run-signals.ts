@@ -14,6 +14,42 @@ import {
 // completa no intente materializar una relación cuadrática de evidencia.
 const MAX_EVIDENCE_INPUTS_PER_SIGNAL = 25;
 
+// Con miles de señales por corrida (21,293 para La Libertad, 2026-09-10), un
+// INSERT por fila vuelve la corrida impráctica a escala Lima/nacional. Se
+// inserta por lotes de este tamaño vía jsonb_to_recordset — lo bastante chico
+// para no acercarse al límite de parámetros/tamaño de una sola query.
+const INSERT_BATCH_SIZE = 500;
+
+interface SignalInsertRow {
+  signal_id: string;
+  signal_run_id: string;
+  signal_type: string;
+  contracting_id: string;
+  municipality_id: string;
+  supplier_id: string | null;
+  metric: string;
+  observed_value: Record<string, unknown>;
+  reference_value: Record<string, unknown> | null;
+  severity: string;
+  confidence: number;
+  rule_version: string;
+  model_version: string | null;
+  explanation: string;
+}
+
+interface EvidenceInsertRow {
+  contracting_id: string;
+  signal_id: string;
+  source_url: string;
+  source_timestamp: string | null;
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+  return chunks;
+}
+
 interface SignalSourceRow {
   contracting_id: string;
   source_contracting_id: string;
@@ -111,6 +147,9 @@ export async function runMinorContractSignals(options: RunSignalsOptions = {}): 
       [signalRunId, department, year, limitAmount, MINOR_CONTRACT_RULE_VERSION, runModelVersion, MINOR_CONTRACT_NORMATIVE_VERSION]
     );
 
+    const signalRows: SignalInsertRow[] = [];
+    const evidenceRows: EvidenceInsertRow[] = [];
+
     for (const signal of signals) {
       const signalId = randomUUID();
       const relatedContractingIds = [...new Set(signal.relatedContractingIds)];
@@ -129,31 +168,52 @@ export async function runMinorContractSignals(options: RunSignalsOptions = {}): 
         evidenceInputsTotal: relatedContractingIds.length,
         evidenceInputsCaptured: evidenceInputs.length,
       };
+      signalRows.push({
+        signal_id: signalId, signal_run_id: signalRunId, signal_type: signal.signalType,
+        contracting_id: signal.contractingId, municipality_id: signal.municipalityId,
+        supplier_id: signal.supplierId, metric: signal.metric, observed_value: observedValue,
+        reference_value: signal.referenceValue, severity: signal.severity, confidence: signal.confidence,
+        rule_version: MINOR_CONTRACT_RULE_VERSION, model_version: signal.modelVersion,
+        explanation: signal.explanation,
+      });
+      for (const input of evidenceInputs) {
+        evidenceRows.push({
+          contracting_id: input.contracting_id, signal_id: signalId,
+          source_url: input.source_url, source_timestamp: input.source_timestamp,
+        });
+      }
+    }
+
+    for (const batch of chunk(signalRows, INSERT_BATCH_SIZE)) {
       await client.query(
         `INSERT INTO contract_signals
            (signal_id, signal_run_id, signal_type, contracting_id, municipality_id, supplier_id,
             metric, observed_value, reference_value, severity, confidence, rule_version,
             model_version, explanation)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb,$10,$11,$12,$13,$14)`,
-        [
-          signalId, signalRunId, signal.signalType, signal.contractingId, signal.municipalityId,
-          signal.supplierId, signal.metric, JSON.stringify(observedValue),
-          signal.referenceValue === null ? null : JSON.stringify(signal.referenceValue), signal.severity,
-          signal.confidence, MINOR_CONTRACT_RULE_VERSION, signal.modelVersion, signal.explanation,
-        ]
+         SELECT s.signal_id, s.signal_run_id, s.signal_type, s.contracting_id, s.municipality_id,
+                s.supplier_id, s.metric, s.observed_value, s.reference_value, s.severity,
+                s.confidence, s.rule_version, s.model_version, s.explanation
+         FROM jsonb_to_recordset($1::jsonb) AS s(
+                signal_id uuid, signal_run_id uuid, signal_type text, contracting_id text,
+                municipality_id text, supplier_id text, metric text, observed_value jsonb,
+                reference_value jsonb, severity text, confidence numeric, rule_version text,
+                model_version text, explanation text)`,
+        [JSON.stringify(batch)]
       );
-      if (evidenceInputs.length > 0) {
-        await client.query(
-          `INSERT INTO contract_evidence
-             (contracting_id, signal_id, evidence_type, source_record, source_url, field, observed_value,
-              capture_timestamp, confidence, source_batch_id, minor_source_batch_id)
-           SELECT input.contracting_id,$1,'SIGNAL_INPUT',input.contracting_id,input.source_url,'contracting_id',
-                  jsonb_build_object('contractingId', input.contracting_id),COALESCE(input.source_timestamp, now()),1,NULL,NULL
-           FROM jsonb_to_recordset($2::jsonb) AS input(contracting_id text, source_url text, source_timestamp timestamptz)
-           ON CONFLICT DO NOTHING`,
-          [signalId, JSON.stringify(evidenceInputs)]
-        );
-      }
+    }
+
+    for (const batch of chunk(evidenceRows, INSERT_BATCH_SIZE)) {
+      await client.query(
+        `INSERT INTO contract_evidence
+           (contracting_id, signal_id, evidence_type, source_record, source_url, field, observed_value,
+            capture_timestamp, confidence, source_batch_id, minor_source_batch_id)
+         SELECT e.contracting_id, e.signal_id, 'SIGNAL_INPUT', e.contracting_id, e.source_url, 'contracting_id',
+                jsonb_build_object('contractingId', e.contracting_id), COALESCE(e.source_timestamp, now()), 1, NULL, NULL
+         FROM jsonb_to_recordset($1::jsonb) AS e(
+                contracting_id text, signal_id uuid, source_url text, source_timestamp timestamptz)
+         ON CONFLICT DO NOTHING`,
+        [JSON.stringify(batch)]
+      );
     }
 
     await client.query("COMMIT");
