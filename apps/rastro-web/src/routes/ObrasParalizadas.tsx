@@ -8,23 +8,23 @@ import {
   type PublicWorksResponse,
 } from "../lib/api-client.js";
 import { AppUnavailableError } from "../lib/types.js";
+import { ORIGEN_CONTRATO_LABEL } from "../lib/origen-contrato.js";
 import { CoverageBadge } from "../components/CoverageBadge.js";
-import { NumberWithMetadata, metaNumber } from "../components/NumberWithMetadata.js";
+import {
+  NumberWithMetadata,
+  metaNumber,
+} from "../components/NumberWithMetadata.js";
 
 const FUENTE = "infobras / infobras_public_works";
 const SIN_CORTE = "sin corte declarado por la fuente";
 const PAGE_SIZE = 50;
 
-const ORDER_BY_OPTIONS: { value: InfobrasPublicWorksOrderBy; label: string }[] = [
-  { value: "diasParalizado_desc", label: "Días paralizado (mayor primero)" },
-  { value: "montoViable_desc", label: "Monto viable (mayor primero)" },
-  { value: "nombre_asc", label: "Nombre de obra (A-Z)" },
-];
-
-const ORIGEN_CONTRATO_LABEL: Record<"awards" | "minor_contracts", string> = {
-  awards: "Adjudicación (OCDS)",
-  minor_contracts: "Contrato menor (SEACE)",
-};
+const ORDER_BY_OPTIONS: { value: InfobrasPublicWorksOrderBy; label: string }[] =
+  [
+    { value: "diasParalizado_desc", label: "Días paralizado (mayor primero)" },
+    { value: "montoViable_desc", label: "Monto viable (mayor primero)" },
+    { value: "nombre_asc", label: "Nombre de obra (A-Z)" },
+  ];
 
 /**
  * Ranking nacional de obras paralizadas (GORE-06b, PV-03/PV-04). Esta vista
@@ -46,7 +46,9 @@ const FILTER_DEBOUNCE_MS = 400;
 export function ObrasParalizadas() {
   const [sectorEntidad, setSectorEntidad] = useState("");
   const [diasParalizadoMinInput, setDiasParalizadoMinInput] = useState("180");
-  const [orderBy, setOrderBy] = useState<InfobrasPublicWorksOrderBy>("diasParalizado_desc");
+  const [orderBy, setOrderBy] = useState<InfobrasPublicWorksOrderBy>(
+    "diasParalizado_desc",
+  );
   const [page, setPage] = useState(0);
 
   const [data, setData] = useState<PublicWorksResponse | null>(null);
@@ -58,7 +60,9 @@ export function ObrasParalizadas() {
   // sucesivos contra un endpoint que documenta ~191k filas de universo sin
   // filtrar (revisión de GORE-06b).
   const [debouncedSector, setDebouncedSector] = useState(sectorEntidad);
-  const [debouncedDiasMinInput, setDebouncedDiasMinInput] = useState(diasParalizadoMinInput);
+  const [debouncedDiasMinInput, setDebouncedDiasMinInput] = useState(
+    diasParalizadoMinInput,
+  );
   useEffect(() => {
     const id = setTimeout(() => {
       setDebouncedSector(sectorEntidad);
@@ -80,19 +84,28 @@ export function ObrasParalizadas() {
         // del backend en vez de una degradación silenciosa razonable.
         const parsedDiasMin = Number(debouncedDiasMinInput);
         const diasParalizadoMin =
-          debouncedDiasMinInput.trim() === "" || Number.isNaN(parsedDiasMin) || parsedDiasMin < 0
+          debouncedDiasMinInput.trim() === "" ||
+          Number.isNaN(parsedDiasMin) ||
+          parsedDiasMin < 0
             ? undefined
             : parsedDiasMin;
         const result = await getInfobrasPublicWorks({
           conParalizacion: true,
-          sectorEntidad: debouncedSector.trim() === "" ? undefined : debouncedSector.trim().toUpperCase(),
+          sectorEntidad:
+            debouncedSector.trim() === ""
+              ? undefined
+              : debouncedSector.trim().toUpperCase(),
           diasParalizadoMin,
           orderBy,
         });
         if (!cancelled) setData(result);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof AppUnavailableError ? err.message : (err as Error).message);
+          setError(
+            err instanceof AppUnavailableError
+              ? err.message
+              : (err as Error).message,
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -103,7 +116,9 @@ export function ObrasParalizadas() {
     };
   }, [debouncedSector, debouncedDiasMinInput, orderBy]);
 
-  const totalPaginas = data ? Math.max(1, Math.ceil(data.resultados.length / PAGE_SIZE)) : 1;
+  const totalPaginas = data
+    ? Math.max(1, Math.ceil(data.resultados.length / PAGE_SIZE))
+    : 1;
   const filasPagina = useMemo(() => {
     if (!data) return [];
     const start = page * PAGE_SIZE;
@@ -112,12 +127,15 @@ export function ObrasParalizadas() {
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-12">
-      <p className="text-xs text-muted font-mono">RANKING NACIONAL · INFOBRAS</p>
+      <p className="text-xs text-muted font-mono">
+        RANKING NACIONAL · INFOBRAS
+      </p>
       <h1 className="font-serif text-3xl text-fg mt-2">Obras paralizadas</h1>
       <p className="text-fg-soft mt-2 max-w-3xl">
-        Ranking nacional de obras con paralización vigente registrada en INFOBRAS, sin acotar a ningún
-        departamento. Sin filtro de sector, es el mismo universo que el ranking nacional (referencia
-        2026-09-12: 1,319 obras +180 días — puede variar según el corte más reciente).
+        Ranking nacional de obras con paralización vigente registrada en
+        INFOBRAS, sin acotar a ningún departamento. Sin filtro de sector, es el
+        mismo universo que el ranking nacional (referencia 2026-09-12: 1,319
+        obras +180 días — puede variar según el corte más reciente).
       </p>
 
       <div className="mt-6 card">
@@ -147,7 +165,9 @@ export function ObrasParalizadas() {
             Orden
             <select
               value={orderBy}
-              onChange={(e) => setOrderBy(e.target.value as InfobrasPublicWorksOrderBy)}
+              onChange={(e) =>
+                setOrderBy(e.target.value as InfobrasPublicWorksOrderBy)
+              }
               className="mt-1 bg-ink-900 border border-line rounded-md px-3 py-2 text-fg"
             >
               {ORDER_BY_OPTIONS.map((opt) => (
@@ -169,47 +189,87 @@ export function ObrasParalizadas() {
             </div>
           ) : !data || data.resultados.length === 0 ? (
             <p className="text-fg-soft text-sm">
-              Sin obras paralizadas para estos filtros. Prueba quitar el sector o bajar el mínimo de días.
+              Sin obras paralizadas para estos filtros. Prueba quitar el sector
+              o bajar el mínimo de días.
             </p>
           ) : (
             <>
               <div className="flex items-center gap-3 flex-wrap">
-                <h2 className="text-fg font-semibold">{data.resultados.length} obras paralizadas</h2>
+                <h2 className="text-fg font-semibold">
+                  {data.resultados.length} obras paralizadas
+                </h2>
                 <CoverageBadge cobertura="NO_APLICA" />
               </div>
-              <p className="text-xs text-muted mt-1">El endpoint no declara fecha de corte, matcher ni cobertura para esta consulta.</p>
+              <p className="text-xs text-muted mt-1">
+                El endpoint no declara fecha de corte, matcher ni cobertura para
+                esta consulta.
+              </p>
 
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full text-sm min-w-[880px]">
                   <thead className="text-xs text-muted text-left">
                     <tr>
                       <th className="py-2 pr-3">Obra</th>
-                      <th className="py-2 pr-3 whitespace-nowrap">Entidad / sector</th>
-                      <th className="py-2 pr-3 text-right whitespace-nowrap">Días paral.</th>
-                      <th className="py-2 pr-3 text-right whitespace-nowrap">Monto viable</th>
-                      <th className="py-2 pr-3 text-right whitespace-nowrap">Cost Drift</th>
+                      <th className="py-2 pr-3 whitespace-nowrap">
+                        Entidad / sector
+                      </th>
+                      <th className="py-2 pr-3 text-right whitespace-nowrap">
+                        Días paral.
+                      </th>
+                      <th className="py-2 pr-3 text-right whitespace-nowrap">
+                        Monto viable
+                      </th>
+                      <th className="py-2 pr-3 text-right whitespace-nowrap">
+                        Cost Drift
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line-soft">
                     {filasPagina.map((w: PublicWork) => (
                       <tr key={w.codigoInfobras}>
-                        <td className="py-2 pr-3 text-fg max-w-sm truncate" title={w.nombreObra}>
+                        <td
+                          className="py-2 pr-3 text-fg max-w-sm truncate"
+                          title={w.nombreObra}
+                        >
                           {w.nombreObra}
                         </td>
-                        <td className="py-2 pr-3 text-fg-soft max-w-xs truncate" title={w.entidadNombre}>
+                        <td
+                          className="py-2 pr-3 text-fg-soft max-w-xs truncate"
+                          title={w.entidadNombre}
+                        >
                           {w.entidadNombre}
-                          {w.sectorEntidad ? <span className="text-muted"> · {w.sectorEntidad}</span> : null}
+                          {w.sectorEntidad ? (
+                            <span className="text-muted">
+                              {" "}
+                              · {w.sectorEntidad}
+                            </span>
+                          ) : null}
                         </td>
                         <td className="py-2 pr-3 text-right text-fg">
                           {w.diasParalizado != null ? (
-                            <NumberWithMetadata data={metaNumber(w.diasParalizado, FUENTE, SIN_CORTE, "NO_APLICA")} />
+                            <NumberWithMetadata
+                              data={metaNumber(
+                                w.diasParalizado,
+                                FUENTE,
+                                SIN_CORTE,
+                                "NO_APLICA",
+                              )}
+                            />
                           ) : (
                             "—"
                           )}
                         </td>
                         <td className="py-2 pr-3 text-right text-fg">
                           {w.montoViable != null ? (
-                            <NumberWithMetadata data={metaNumber(w.montoViable, FUENTE, SIN_CORTE, "NO_APLICA")} suffix="S/" />
+                            <NumberWithMetadata
+                              data={metaNumber(
+                                w.montoViable,
+                                FUENTE,
+                                SIN_CORTE,
+                                "NO_APLICA",
+                              )}
+                              suffix="S/"
+                            />
                           ) : (
                             "—"
                           )}
@@ -220,9 +280,18 @@ export function ObrasParalizadas() {
                         >
                           {w.costDriftPct != null ? (
                             <NumberWithMetadata
-                              data={metaNumber(w.costDriftPct, `${FUENTE} (signals.costDriftPct)`, SIN_CORTE, "NO_APLICA")}
-                              format={(n) => `${n > 0 ? "+" : ""}${n.toFixed(1)}%`}
-                              className={w.costDriftPct > 0 ? "text-warn" : undefined}
+                              data={metaNumber(
+                                w.costDriftPct,
+                                `${FUENTE} (signals.costDriftPct)`,
+                                SIN_CORTE,
+                                "NO_APLICA",
+                              )}
+                              format={(n) =>
+                                `${n > 0 ? "+" : ""}${n.toFixed(1)}%`
+                              }
+                              className={
+                                w.costDriftPct > 0 ? "text-warn" : undefined
+                              }
                             />
                           ) : (
                             "—"
@@ -245,12 +314,15 @@ export function ObrasParalizadas() {
                     ← Anterior
                   </button>
                   <span>
-                    Página {page + 1} de {totalPaginas} · Mostrando {filasPagina.length} de {data.resultados.length}
+                    Página {page + 1} de {totalPaginas} · Mostrando{" "}
+                    {filasPagina.length} de {data.resultados.length}
                   </span>
                   <button
                     type="button"
                     disabled={page >= totalPaginas - 1}
-                    onClick={() => setPage((p) => Math.min(totalPaginas - 1, p + 1))}
+                    onClick={() =>
+                      setPage((p) => Math.min(totalPaginas - 1, p + 1))
+                    }
                     className="btn-ghost px-3 py-1 disabled:opacity-40"
                   >
                     Siguiente →
@@ -291,7 +363,8 @@ export function ObrasParalizadas() {
  * habría sido inconsistente con esa convención existente.
  */
 function SancionadosNuevosSection() {
-  const [data, setData] = useState<ProveedoresSancionadosCrossrefResponse | null>(null);
+  const [data, setData] =
+    useState<ProveedoresSancionadosCrossrefResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -309,7 +382,11 @@ function SancionadosNuevosSection() {
         if (!cancelled) setData(result);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof AppUnavailableError ? err.message : (err as Error).message);
+          setError(
+            err instanceof AppUnavailableError
+              ? err.message
+              : (err as Error).message,
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -324,10 +401,12 @@ function SancionadosNuevosSection() {
     <div className="mt-8 card">
       <h2 className="text-fg font-semibold">Sancionados nuevos (nacional)</h2>
       <p className="text-xs text-muted mt-1">
-        Proveedores con inhabilitación vigente ante el Tribunal de Contrataciones detectados por{" "}
-        <strong className="text-fg-soft">primera vez en esta corrida</strong> — "nuevo" describe cuándo se detectó,
-        no cuándo se sancionó: un caso puede tener años de inhabilitado y aparecer acá si es la primera vez que
-        este cruce lo revisa. Solo lectura, sin envío de notificaciones.
+        Proveedores con inhabilitación vigente ante el Tribunal de
+        Contrataciones detectados por{" "}
+        <strong className="text-fg-soft">primera vez en esta corrida</strong> —
+        "nuevo" describe cuándo se detectó, no cuándo se sancionó: un caso puede
+        tener años de inhabilitado y aparecer acá si es la primera vez que este
+        cruce lo revisa. Solo lectura, sin envío de notificaciones.
       </p>
 
       <div className="mt-4">
@@ -339,26 +418,42 @@ function SancionadosNuevosSection() {
             <p className="text-fg-soft mt-1">{error}</p>
           </div>
         ) : !data || data.resultados.length === 0 ? (
-          <p className="text-fg-soft text-sm">Sin casos nuevos desde la última corrida.</p>
+          <p className="text-fg-soft text-sm">
+            Sin casos nuevos desde la última corrida.
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[820px]">
               <thead className="text-xs text-muted text-left">
                 <tr>
                   <th className="py-2 pr-3">Proveedor</th>
-                  <th className="py-2 pr-3 whitespace-nowrap">Entidad compradora</th>
-                  <th className="py-2 pr-3 text-right whitespace-nowrap">Monto</th>
-                  <th className="py-2 pr-3 whitespace-nowrap">Fecha adjudicación</th>
+                  <th className="py-2 pr-3 whitespace-nowrap">
+                    Entidad compradora
+                  </th>
+                  <th className="py-2 pr-3 text-right whitespace-nowrap">
+                    Monto
+                  </th>
+                  <th className="py-2 pr-3 whitespace-nowrap">
+                    Fecha adjudicación
+                  </th>
                   <th className="py-2 pr-3 whitespace-nowrap">Origen</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line-soft">
                 {data.resultados.map((row) => (
-                  <tr key={`${row.origen}:${row.ocid ?? ""}:${row.awardId ?? ""}`}>
-                    <td className="py-2 pr-3 text-fg max-w-xs truncate" title={row.supplierId ?? undefined}>
+                  <tr
+                    key={`${row.origen}:${row.ocid ?? ""}:${row.awardId ?? ""}`}
+                  >
+                    <td
+                      className="py-2 pr-3 text-fg max-w-xs truncate"
+                      title={row.supplierId ?? undefined}
+                    >
                       {row.supplierName ?? row.supplierId ?? "—"}
                     </td>
-                    <td className="py-2 pr-3 text-fg-soft max-w-xs truncate" title={row.buyerName ?? undefined}>
+                    <td
+                      className="py-2 pr-3 text-fg-soft max-w-xs truncate"
+                      title={row.buyerName ?? undefined}
+                    >
                       {row.buyerName ?? "—"}
                     </td>
                     <td className="py-2 pr-3 text-right text-fg">
@@ -377,9 +472,13 @@ function SancionadosNuevosSection() {
                       )}
                     </td>
                     <td className="py-2 pr-3 text-fg-soft whitespace-nowrap">
-                      {row.fechaAdjudicacion ? row.fechaAdjudicacion.slice(0, 10) : "—"}
+                      {row.fechaAdjudicacion
+                        ? row.fechaAdjudicacion.slice(0, 10)
+                        : "—"}
                     </td>
-                    <td className="py-2 pr-3 text-fg-soft whitespace-nowrap">{ORIGEN_CONTRATO_LABEL[row.origen]}</td>
+                    <td className="py-2 pr-3 text-fg-soft whitespace-nowrap">
+                      {ORIGEN_CONTRATO_LABEL[row.origen]}
+                    </td>
                   </tr>
                 ))}
               </tbody>
