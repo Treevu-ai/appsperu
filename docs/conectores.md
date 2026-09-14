@@ -776,6 +776,23 @@ beneficio real.
 
 ---
 
+<a id="riesgo-fiscal-isds"></a>
+## riesgo-fiscal-isds — Pasivos contingentes explícitos por ISDS/APP (MEF, Marco Macroeconómico Multianual)
+
+| | |
+|---|---|
+| **Descripción** | Cuánto del PBI reconoce el propio MEF como pasivo contingente explícito por controversias internacionales de inversión (ISDS/ICSID), por contingencias de Asociaciones Público-Privadas (APP), y por procesos judiciales/administrativos/arbitraje nacional — desglosado por edición del Marco Macroeconómico Multianual (MMM). |
+| **Qué hace** | Expone tres tablas (`mmm_ediciones`, `mmm_pasivos_contingentes`, `mmm_serie_historica_secundaria`) cargadas por semilla manual revisada, no por conector de descarga. |
+| **Cómo lo hace** | **Sin conector, único caso del proyecto junto a `salud-institucional`** (que tampoco ingiere, pero por ser agregador — acá es porque no hay forma automatizable de leer la fuente). El MMM del MEF se publica 1-2 veces al año; los PDFs que se intentaron leer con `WebFetch` no devolvieron texto útil (parecen escaneados/sin capa de texto, a diferencia del PDF de `bcrp-la-libertad`, que sí es legible con `pdf-parse`). Cada edición se verifica contra cobertura periodística que cita las cifras exactas del MMM (ver `docs/data-contracts/riesgo-fiscal-isds.md`) y se carga como `INSERT` en una migración SQL versionada (`002_seed_ediciones_verificadas.sql`). Actualizar cuando sale una edición nueva del MMM es agregar una migración `00N_seed_edicion_<periodo>.sql`, no correr un script. |
+| **Frecuencia** | Manual, 1-2 veces al año — coherente con la frecuencia real de publicación del MMM, no una limitación del proyecto. |
+| **Fuente de datos** | `mef.gob.pe/es/marco-macroeconomico/marco-macroeconomico-multianualmmm` (documento oficial); cobertura periodística citada por fila para la verificación (Gestión.pe, La República). |
+| **Cobertura real ingerida** | 3 ediciones cargadas (2025-2028, 2026-2029, 2027-2030). Desglose completo (ISDS + APP + judicial/administrativo + total) solo confirmado para 2025-2028; 2027-2030 tiene ISDS y APP pero no judicial/administrativo; 2026-2029 quedó sin ningún valor por cifras contradictorias entre fuentes secundarias — ver `estado` por fila en `mmm_ediciones`. Más una serie histórica secundaria (2014/2021/2024) en tabla aparte, sin mezclar metodologías. |
+| **Detalle completo** | [`docs/data-contracts/riesgo-fiscal-isds.md`](data-contracts/riesgo-fiscal-isds.md) |
+| **Cruces** | Ninguno implementado — candidato conceptual, no por clave compartida: el proyecto externo `clasificado` (memos ISDS, `informe_isds_peru.tex`, `modulo_riesgo_institucional.md`) ya cita esta misma cifra ancla (2.15% PBI ISDS, MMM 2027-2030). |
+| **ADR** | [`docs/adr/0023-riesgo-fiscal-isds-semilla-manual.md`](adr/0023-riesgo-fiscal-isds-semilla-manual.md) |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada
@@ -863,4 +880,5 @@ OCDS); esos resultados devuelven `valorMoneda: null` en vez de asumir soles.
 | `ruias-connector.ts` | infracciones-ambientales | OEFA RUIAS (datosabiertos.gob.pe) | Descarga CSV directo, hash de contenido como clave (sin clave natural única) | Manual | Completa (nacional, 14,724 filas únicas; La Libertad 610/12 provincias) |
 | `pvd-connector.ts` | red-vial-subnacional | MTC/Provías Descentralizado (datosabiertos.gob.pe) | Descarga CSV directo (Latin-1), hash de contenido como clave | Manual | Completa (nacional, 12,536 filas; La Libertad 461/12 provincias) |
 | `residuos-connector.ts` | residuos-solidos | MINAM/SIGERSOL (datosabiertos.gob.pe) | Descarga CSV directo, clave natural (ubigeo, anio) | Manual | Completa (nacional, 11,310 filas, serie 2019-2024; La Libertad 500/12 provincias) |
+| — (semilla SQL, sin conector) | riesgo-fiscal-isds | MEF, Marco Macroeconómico Multianual (PDF sin capa de texto extraíble) | Migración SQL versionada, verificada contra cobertura periodística | Manual, 1-2 veces/año (según frecuencia real de publicación del MMM) | Parcial (3 ediciones; desglose completo solo en 1 de 3 — ver `estado` por fila) |
 

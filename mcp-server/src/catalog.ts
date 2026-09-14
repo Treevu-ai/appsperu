@@ -2170,4 +2170,46 @@ export const TOOL_CATALOG: ToolSpec[] = [
       historico: z.enum(["true", "false"]).optional().describe("true trae todos los cortes (DQ-03); default: solo el más reciente."),
     },
   },
+
+  // ---- riesgo-fiscal-isds (MEF, Marco Macroeconómico Multianual) ----
+  {
+    name: "riesgo_fiscal_isds_pasivos_contingentes",
+    app: "riesgo-fiscal-isds",
+    description:
+      "Pasivos contingentes explícitos del Sector Público No Financiero, por edición del Marco " +
+      "Macroeconómico Multianual (MEF): controversias internacionales de inversión (ISDS/ICSID), " +
+      "contingencias de Asociaciones Público-Privadas (APP), y procesos judiciales/administrativos/" +
+      "arbitraje nacional. A diferencia del resto del catálogo, esta fuente se carga con SEMILLA " +
+      "MANUAL REVISADA, no con un conector de descarga — el MMM se publica solo 1-2 veces al año y " +
+      "sus PDFs no tienen capa de texto extraíble con las herramientas disponibles (ver ADR-0023). " +
+      "`pctPbi` es `null` cuando la categoría de esa edición no se pudo verificar contra una fuente " +
+      "citable — nunca se completa con un valor supuesto; revisar `estadoEdicion`.",
+    pathTemplate: "/api/mmm/pasivos-contingentes",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
+    name: "riesgo_fiscal_isds_ediciones",
+    app: "riesgo-fiscal-isds",
+    description:
+      "Metadata de cada edición del MMM registrada (fecha de publicación, fuente oficial y secundaria, " +
+      "fecha de verificación, estado verificado/no_localizado) — útil para saber qué ediciones ya están " +
+      "cargadas antes de consultar el detalle en `riesgo_fiscal_isds_pasivos_contingentes`.",
+    pathTemplate: "/api/mmm/ediciones",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
+    name: "riesgo_fiscal_isds_serie_historica",
+    app: "riesgo-fiscal-isds",
+    description:
+      "Serie histórica 2014/2021/2024 citada por Luis Miguel Castilla (ex-MEF, PERUMIN 37, sept-2025) " +
+      "sobre el peso de las controversias internacionales como % del PBI. Es una FUENTE SECUNDARIA " +
+      "(declaración pública, no cita directa del documento MMM) con una metodología no necesariamente " +
+      "idéntica a la categoría `isds` de `riesgo_fiscal_isds_pasivos_contingentes` — la respuesta trae " +
+      "`fuente: \"secundaria\"` explícito; no combinar ambas series sin esa aclaración.",
+    pathTemplate: "/api/mmm/serie-historica",
+    pathParams: [],
+    querySchema: {},
+  },
 ];

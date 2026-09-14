@@ -2,6 +2,32 @@
 
 Última actualización: 2026-09-13.
 
+## App nueva `riesgo-fiscal-isds` — pasivos contingentes MEF-MMM, semilla manual (2026-09-13)
+
+28ª app del monorepo, originada en un proyecto externo (`clasificado`) que ya había identificado
+la cifra ancla: el MEF, en su Marco Macroeconómico Multianual (MMM), reconoce 2.15% del PBI como
+pasivo contingente explícito por controversias internacionales de inversión (ISDS) en la edición
+2027-2030 — el mayor pasivo contingente individual reconocido por el Estado, por encima del 1.58%
+del PBI de contingencias de APP.
+
+Segunda fuente del proyecto sin conector de descarga automatizado (junto a `bcrp-la-libertad`),
+pero con un mecanismo distinto: acá no hay ni siquiera un script manual — los datos se cargan
+como `INSERT` en migraciones SQL versionadas, verificados contra cobertura periodística que cita
+la cifra exacta del MMM. `WebFetch` no logró extraer texto de los PDFs del MEF (a diferencia del
+PDF de `bcrp-la-libertad`, que sí es legible con `pdf-parse`) — no se probó `pdf-parse`
+directamente, así que la puerta a automatizar esto más adelante sigue abierta (ver ADR-0023).
+
+3 ediciones cargadas (2025-2028, 2026-2029, 2027-2030); desglose completo de las 4 categorías
+(ISDS, APP, judicial/administrativo, total) solo confirmado para 2025-2028 — las otras dos
+quedan con campos `NULL` explícitos donde no se pudo verificar, nunca con un valor inventado.
+Más una serie histórica secundaria (2014/2021/2024, declaración pública de un ex-MEF) en tabla
+separada, para no mezclar metodologías. 3 tools nuevas en el catálogo MCP (152 tools, 28 apps —
+antes 149). Puerto 4027, Postgres 5459.
+
+Detalle completo: [`docs/conectores.md#riesgo-fiscal-isds`](conectores.md#riesgo-fiscal-isds),
+[`docs/data-contracts/riesgo-fiscal-isds.md`](data-contracts/riesgo-fiscal-isds.md),
+[`docs/adr/0023-riesgo-fiscal-isds-semilla-manual.md`](adr/0023-riesgo-fiscal-isds-semilla-manual.md).
+
 ## CX-15 — catálogo MCP desincronizado de rutas Express reales (2026-09-13, cerrado)
 
 Al mergear #148/#149 se notó que ambos PR tenían el check `mcp-server` en rojo. Verificado en vivo
@@ -927,6 +953,7 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `infracciones-ambientales` | Registro de infractores ambientales sancionados (OEFA/RUIAS) | 4023 | 5454 | Construida, probada, verificada (14,724 filas, La Libertad: 610/12 provincias) |
 | `red-vial-subnacional` | Intervenciones viales departamentales/vecinales (MTC/Provías Descentralizado) | 4024 | 5455 | Construida, probada, verificada (12,536 filas, La Libertad: 461/12 provincias) |
 | `residuos-solidos` | Generación anual de residuos sólidos por distrito, serie 2019-2024 (MINAM/SIGERSOL) | 4025 | 5456 | Construida, probada, verificada (11,310 filas, La Libertad: 500/12 provincias) |
+| `riesgo-fiscal-isds` | Pasivos contingentes explícitos por ISDS/APP, por edición del MMM (MEF) — semilla manual, sin conector | 4027 | 5459 | Construida, probada, verificada (parcial: 3 ediciones, desglose completo solo en 1 de 3) |
 
 ## `bcrp-la-libertad` — ingesta manual, distinto a todo el resto del proyecto (2026-08-28)
 
