@@ -776,6 +776,23 @@ beneficio real.
 
 ---
 
+<a id="riesgo-fiscal-isds"></a>
+## riesgo-fiscal-isds — Pasivos contingentes explícitos por ISDS/APP (MEF, Marco Macroeconómico Multianual / IAPM)
+
+| | |
+|---|---|
+| **Descripción** | Cuánto del PBI reconoce el propio MEF como pasivo contingente explícito por controversias internacionales de inversión (ISDS/ICSID), por contingencias de Asociaciones Público-Privadas (APP), y por procesos judiciales/administrativos/arbitraje nacional — serie por **año de cierre** (no por edición del documento; cada MMM/IAPM nuevo extiende o revisa la misma serie). |
+| **Qué hace** | Parsea el recuadro "Pasivos Contingentes Explícitos del SPNF" del MMM o IAPM con `pdf-parse`, y hace upsert por `(anio_cierre, categoria)` en `mmm_pasivos_contingentes`. |
+| **Cómo lo hace** | **Ingesta manual como `bcrp-la-libertad`**: `npm run ingest:pdf -- <ruta> <edicion>` sobre un PDF ya descargado — el MEF/gob.pe bloquean la descarga automatizada de la edición vigente (404 en el nombre de archivo esperado, WAF en el mirror de BCRP, HTTP 418 en la página de publicaciones), pero una vez con el archivo en disco la extracción de texto y el parseo de tabla son 100% automáticos (`pdf-parse` extrae texto limpio, a diferencia de lo que se creyó inicialmente — ver ADR-0023, sección "Corrección posterior"). Solo reconoce el formato de tabla de `IAPM_2025_2028` (encabezado de N años); el formato distinto de `MMM_2024_2027` en la misma sección (año actual/previo/diferencia) se detecta y se descarta, sin insertar filas. |
+| **Frecuencia** | Manual, 1-2 veces al año — coherente con la frecuencia real de publicación del MMM/IAPM. |
+| **Fuente de datos** | `mef.gob.pe/contenidos/pol_econ/marco_macro/*.pdf` — ver `docs/data-contracts/riesgo-fiscal-isds.md` para las URLs exactas verificadas y los intentos fallidos de descarga automatizada. |
+| **Cobertura real ingerida** | Serie 2020-2023 completa (4 categorías × 4 años, 16 filas), cargada desde `IAPM_2025_2028` y cross-validada contra `MMM_2024_2027` para 2022 (coincidencia exacta: 9.92/6.19/2.15/1.58). Edición vigente (MMM 2027-2030) sin ingerir — `estado = 'no_localizado'` en `mmm_ediciones`, pendiente de descarga manual. Más una serie histórica secundaria (2014/2021/2024, declaración pública) en tabla aparte, sin mezclar metodologías. |
+| **Detalle completo** | [`docs/data-contracts/riesgo-fiscal-isds.md`](data-contracts/riesgo-fiscal-isds.md) |
+| **Cruces** | Ninguno implementado — candidato conceptual, no por clave compartida: el proyecto externo `clasificado` (memos ISDS, `informe_isds_peru.tex`, `modulo_riesgo_institucional.md`) cita esta misma serie. |
+| **ADR** | [`docs/adr/0023-riesgo-fiscal-isds-semilla-manual.md`](adr/0023-riesgo-fiscal-isds-semilla-manual.md) — **incluye una corrección importante**, leer antes de citar cualquier cifra de esta fuente en otro documento. |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada
@@ -863,4 +880,5 @@ OCDS); esos resultados devuelven `valorMoneda: null` en vez de asumir soles.
 | `ruias-connector.ts` | infracciones-ambientales | OEFA RUIAS (datosabiertos.gob.pe) | Descarga CSV directo, hash de contenido como clave (sin clave natural única) | Manual | Completa (nacional, 14,724 filas únicas; La Libertad 610/12 provincias) |
 | `pvd-connector.ts` | red-vial-subnacional | MTC/Provías Descentralizado (datosabiertos.gob.pe) | Descarga CSV directo (Latin-1), hash de contenido como clave | Manual | Completa (nacional, 12,536 filas; La Libertad 461/12 provincias) |
 | `residuos-connector.ts` | residuos-solidos | MINAM/SIGERSOL (datosabiertos.gob.pe) | Descarga CSV directo, clave natural (ubigeo, anio) | Manual | Completa (nacional, 11,310 filas, serie 2019-2024; La Libertad 500/12 provincias) |
+| `pdf-connector.ts` | riesgo-fiscal-isds | MEF, Marco Macroeconómico Multianual / IAPM (PDF, descarga manual — automatización bloqueada solo para la edición vigente) | Parseo de texto tabulado con `pdf-parse`, mismo motor que bcrp-la-libertad | Manual (archivo local) | Parcial (serie 2020-2023 completa; edición vigente sin ingerir) |
 
