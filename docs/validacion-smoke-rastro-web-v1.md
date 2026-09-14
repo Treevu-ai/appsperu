@@ -29,6 +29,23 @@ Ticket [`TICKETS_GORE_La_Libertad_S1_v1.md`](TICKETS_GORE_La_Libertad_S1_v1.md) 
 
 ---
 
+## Checklist GORE S2 — smoke manual contra APIs en vivo (2026-09-13)
+
+Ticket [`TICKETS_GORE_La_Libertad_S2_v1.md`](TICKETS_GORE_La_Libertad_S2_v1.md) · GORE-07c.
+
+A diferencia del checklist de S1 (arriba) y de las 15 capturas de este documento — todas contra fixtures fijas — este checklist se corrió contra **Postgres real, con los datos ya ingeridos en sesiones anteriores** (se levantaron `radar-ejecucion`, `infobras`, `proveedores-sancionados`, `compras-publicas` e `identidad-fiscal` vía `docker compose up`, y sus APIs Express en local, luego se apagó todo al terminar). Es la primera verificación de S2 contra datos vivos, no contra fixtures — el criterio de aceptación de GORE-07c pedía explícitamente coincidir con cifras ya verificadas en vivo el 2026-09-12.
+
+| Ítem | Estado | Resultado en vivo |
+|---|---|---|
+| `/sector/PRODUCCION` (ámbito nacional) — cobertura NO_VERIFICADA + cifras 2026-09-12 | [x] | `GET /api/sectores/PRODUCCION/ficha?ambito=NACIONAL`: `cobertura.estado: "NO_VERIFICADA"` en la única entidad, PIM 208,104,679 y devengado 128,209,085.25 — **coincide exacto** con la cifra citada en `docs/ESTADO.md` (PV-01, 2026-09-12) |
+| `/obras-paralizadas` sin filtros — orden y conteo ≈ cifra de referencia | [x] | `GET /api/public-works?conParalizacion=true&diasParalizadoMin=180&orderBy=diasParalizado_desc`: **1,319 obras** — coincide exacto con la cifra de PV-04 (2026-09-12); orden descendente por `diasParalizado` verificado fila a fila (máximo 6,201 días primero) |
+| `/obras-paralizadas?sectorEntidad=...` — el filtro reduce el conteo | [x] | Mismo query + `sectorEntidad=PRODUCCIÓN`: **4 obras** (de 1,319 nacional) — coincide exacto con "4 obras del sector paralizadas +180 días" citado en `docs/ESTADO.md` (one-pager Radar Produce, 2026-09-12) |
+| Bloque sancionados nuevos — al menos 1 caso o mensaje "sin casos nuevos" | [x] | `GET /api/crossref?departamento=TODOS&soloInhabilitados=true&soloNuevos=true`: **0 resultados** — de los 346 casos con inhabilitación vigente a nivel nacional (mismo número que PV-06, 2026-09-12), los 346 ya estaban marcados como vistos por la corrida original que pobló `sanciones_contratos_vistos` ese mismo día. Es el segundo desenlace explícitamente válido del criterio de aceptación ("o mensaje de sin casos nuevos") — el componente muestra literalmente "Sin casos nuevos desde la última corrida." en este caso, verificado que es el texto real de `SancionadosNuevosSection` (`ObrasParalizadas.tsx`), no una suposición. |
+
+**Nota de proceso:** la primera corrida de los ítems 1 y 3 con `curl` desde Git Bash en Windows devolvió 0 resultados falsos para `sectorEntidad=PRODUCCIÓN` — el shell mangló el byte UTF-8 de la tilde antes de llegar al servidor (confirmado comparando con el mismo query armado vía `node -e "new URLSearchParams(...)"`, que sí codifica correctamente `%C3%93`). No es un bug de la API ni de la UI — es una limitación del entorno de shell usado para verificar, documentada acá para que quien repita este checklist no la reinterprete como una regresión.
+
+---
+
 ## 1–5. Ficha de sector (`/gore/la-libertad/ficha`)
 
 | Sector | Captura | PIA | PIM | Devengado | Cobertura |

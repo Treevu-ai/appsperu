@@ -160,7 +160,7 @@ export function LaLibertadFicha() {
   );
 }
 
-function BudgetBlock({
+export function BudgetBlock({
   title,
   totals,
   fuente,

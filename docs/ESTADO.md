@@ -2,9 +2,24 @@
 
 Última actualización: 2026-09-13.
 
-## Sprint GORE S2 — tickets planificados, sin implementar (2026-09-13)
+## Sprint GORE S2 — rutas web PV cerradas (2026-09-13)
 
-[`docs/TICKETS_GORE_La_Libertad_S2_v1.md`](TICKETS_GORE_La_Libertad_S2_v1.md) deja planificado el sprint que S1 dejó explícitamente pendiente ("Rutas web PV → S2", ver [`TICKETS_GORE_La_Libertad_S1_v1.md`](TICKETS_GORE_La_Libertad_S1_v1.md) §"Fuera de alcance S1"): exponer en la UI el backend PV-01..06 que ya está implementado y verificado en vivo pero solo se consume por API/MCP. Tres épicas — GORE-05 (`ambito=NACIONAL` en ficha sectorial → ruta nueva `/sector/:id`), GORE-06 (ranking nacional de obras paralizadas → ruta nueva `/obras-paralizadas`, más el bloque de sancionados nuevos PV-05/06), GORE-07 (E2E + smoke). Verificado contra código real que las 3 rutas no existen hoy en `App.tsx` y que `api-client.ts` no expone los parámetros PV (`ambito`, `sectorEntidad`/`diasParalizadoMin`/`orderBy`, `soloNuevos`) en las funciones correspondientes. Cero backend nuevo — S2 es estrictamente capa de consumo. **Ningún ticket implementado todavía.**
+Cierre del sprint definido en [`docs/TICKETS_GORE_La_Libertad_S2_v1.md`](TICKETS_GORE_La_Libertad_S2_v1.md) — el que S1 había dejado explícitamente pendiente ("Rutas web PV → S2", ver [`TICKETS_GORE_La_Libertad_S1_v1.md`](TICKETS_GORE_La_Libertad_S1_v1.md) §"Fuera de alcance S1"). Expone en la UI el backend PV-01..06, implementado y verificado en vivo la semana pasada pero hasta ahora solo consumible por API/MCP. Cero backend nuevo — S2 fue estrictamente capa de consumo, las 7 tickets pasaron revisión de `code-reviewer` en APPROVE (2 hallazgos MEDIUM y 1 LOW no bloqueantes, corregidos igual antes del cierre).
+
+| Ticket | Entregable | Evidencia |
+|---|---|---|
+| GORE-05a | `ambito` en `getRadarEjecucionSectorFicha` (`api-client.ts`) | Tests de regresión + `ambito=NACIONAL` en `api-client.test.ts` |
+| GORE-05b | Ruta `/sector/:sectorId` (ficha nacional, sin selector de departamento) | `Sector.tsx`; E2E `sector-nacional.spec.ts` |
+| GORE-06a | `sectorEntidad`/`diasParalizadoMin`/`orderBy` en `getInfobrasPublicWorks` | Guard en runtime (no unión discriminada — ver nota abajo) + tests |
+| GORE-06b | Ruta `/obras-paralizadas` (ranking nacional, paginación de cliente) | `ObrasParalizadas.tsx` |
+| GORE-06c | Bloque "sancionados nuevos" (PV-05/06), nueva función `getProveedoresSancionadosCrossref` | Mismo componente, sección independiente |
+| GORE-07a | E2E ficha nacional de sector | `sector-nacional.spec.ts` (1 test) |
+| GORE-07b | E2E ranking de obras paralizadas + sancionados nuevos | `obras-paralizadas.spec.ts` (3 tests) |
+| GORE-07c | Smoke manual contra APIs en vivo (no fixtures) | [`docs/validacion-smoke-rastro-web-v1.md`](validacion-smoke-rastro-web-v1.md) §"Checklist GORE S2" |
+
+**Hallazgo real corregido durante S2 (GORE-06a → 06b):** la primera versión de `InfobrasPublicWorksParams` usaba una unión discriminada para forzar en tiempo de compilación la regla "`diasParalizadoMin` requiere `conParalizacion:true`". La revisión de código encontró que TypeScript ensancha `conParalizacion` a `boolean` en cuanto el caller arma el objeto en una variable en vez de un literal inline — exactamente el caso de `ObrasParalizadas.tsx`, que arma los params desde `useState`. Se reemplazó por un tipo plano + un guard en runtime (`throw` síncrono antes del fetch), con tests que verifican que lanza sin llamar a `fetch`.
+
+**Verificado en vivo contra Postgres real (GORE-07c, no solo fixtures):** se levantaron `radar-ejecucion`, `infobras`, `proveedores-sancionados`, `compras-publicas` e `identidad-fiscal` (Docker, volúmenes ya ingeridos de sesiones anteriores) y sus APIs en local. Los 3 números verificables coinciden **exactos** con las cifras ya citadas en este documento el 2026-09-12: PIM 208,104,679 para PRODUCCIÓN nacional (PV-01), 1,319 obras paralizadas +180 días a nivel nacional (PV-04), 4 de esas 1,319 en el sector PRODUCCIÓN. El bloque de sancionados nuevos dio 0 casos — de los 346 con inhabilitación vigente (mismo número que PV-06), los 346 ya estaban marcados como vistos por la corrida que pobló `sanciones_contratos_vistos` ese mismo día; es el segundo desenlace válido del criterio de aceptación, no un fallo. Detalle completo, incluida una nota sobre un falso 0 causado por un problema de encoding UTF-8 de `curl` en Git Bash (no un bug de la API), en el documento de smoke enlazado arriba.
 
 ## `riesgo-fiscal-isds` — edición vigente descargada con navegador real, ISDS al máximo de la serie (2026-09-13)
 
