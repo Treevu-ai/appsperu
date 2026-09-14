@@ -2,6 +2,38 @@
 
 Última actualización: 2026-09-13.
 
+## Sprint GORE S2 — tickets planificados, sin implementar (2026-09-13)
+
+[`docs/TICKETS_GORE_La_Libertad_S2_v1.md`](TICKETS_GORE_La_Libertad_S2_v1.md) deja planificado el sprint que S1 dejó explícitamente pendiente ("Rutas web PV → S2", ver [`TICKETS_GORE_La_Libertad_S1_v1.md`](TICKETS_GORE_La_Libertad_S1_v1.md) §"Fuera de alcance S1"): exponer en la UI el backend PV-01..06 que ya está implementado y verificado en vivo pero solo se consume por API/MCP. Tres épicas — GORE-05 (`ambito=NACIONAL` en ficha sectorial → ruta nueva `/sector/:id`), GORE-06 (ranking nacional de obras paralizadas → ruta nueva `/obras-paralizadas`, más el bloque de sancionados nuevos PV-05/06), GORE-07 (E2E + smoke). Verificado contra código real que las 3 rutas no existen hoy en `App.tsx` y que `api-client.ts` no expone los parámetros PV (`ambito`, `sectorEntidad`/`diasParalizadoMin`/`orderBy`, `soloNuevos`) en las funciones correspondientes. Cero backend nuevo — S2 es estrictamente capa de consumo. **Ningún ticket implementado todavía.**
+
+## `riesgo-fiscal-isds` — edición vigente descargada con navegador real, ISDS al máximo de la serie (2026-09-13)
+
+La descarga automatizada del MMM 2027-2030 seguía bloqueada (404 en el nombre de archivo esperado,
+WAF en el mirror de BCRP, HTTP 418 en gob.pe — ver ADR-0023). Con `claude-in-chrome` (navegador
+real, no `curl`/`WebFetch`) se encontró la URL real (`cdn.www.gob.pe/uploads/document/file/...`,
+resuelta por la página con JS) y se descargó el PDF completo (295 páginas, 15,674,847 bytes,
+verificado byte a byte). El conector `pdf-connector.ts` corrió contra el archivo real y, como se
+esperaba, **falló limpio (0 filas)**: esta edición usa el mismo formato de tabla "año actual/previo
++ Contingencia Esperada + Diferencia" que `MMM_2024_2027`, no el formato limpio que el parser
+soporta.
+
+Los años 2024 y 2025 se cargaron a mano vía migración (`003_seed_2024_2025_mmm_2027_2030.sql`),
+leídos directamente del texto extraído del PDF (página 208/295, no de prensa) — mismo estándar de
+verificación que el resto del proyecto. Hallazgo: **ISDS llegó a 4.24% del PBI en 2025**, el
+máximo de toda la serie 2020-2025 — casi el doble del 2.15% de 2022 que originó este trabajo. Serie
+completa ahora en producción:
+
+| Año | ISDS | APP | Judicial/admin. | Total |
+|---|---|---|---|---|
+| 2020 | 2.01% | 2.02% | 8.68% | 12.70% |
+| 2021 | 3.16% | 1.78% | 7.08% | 12.01% |
+| 2022 | 2.15% | 1.58% | 6.19% | 9.92% |
+| 2023 | 2.91% | 1.42% | 6.59% | 10.92% |
+| 2024 | 2.29% | 1.03% | 5.85% | 9.17% |
+| 2025 | **4.24%** | 0.87% | 5.59% | 10.70% |
+
+Detalle en `docs/data-contracts/riesgo-fiscal-isds.md` y `docs/adr/0023-riesgo-fiscal-isds-semilla-manual.md`.
+
 ## Sprint GORE S1 — tableros La Libertad cerrados (2026-09-13)
 
 Cierre del sprint definido en [`docs/TICKETS_GORE_La_Libertad_S1_v1.md`](TICKETS_GORE_La_Libertad_S1_v1.md) (13–27 sep 2026). Entregables verificados:
@@ -979,7 +1011,7 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `infracciones-ambientales` | Registro de infractores ambientales sancionados (OEFA/RUIAS) | 4023 | 5454 | Construida, probada, verificada (14,724 filas, La Libertad: 610/12 provincias) |
 | `red-vial-subnacional` | Intervenciones viales departamentales/vecinales (MTC/Provías Descentralizado) | 4024 | 5455 | Construida, probada, verificada (12,536 filas, La Libertad: 461/12 provincias) |
 | `residuos-solidos` | Generación anual de residuos sólidos por distrito, serie 2019-2024 (MINAM/SIGERSOL) | 4025 | 5456 | Construida, probada, verificada (11,310 filas, La Libertad: 500/12 provincias) |
-| `riesgo-fiscal-isds` | Pasivos contingentes explícitos por ISDS/APP, por año de cierre (MEF, MMM/IAPM) — conector pdf-parse, descarga manual | 4027 | 5459 | Construida, probada, verificada (serie 2020-2023 completa; edición vigente sin ingerir) |
+| `riesgo-fiscal-isds` | Pasivos contingentes explícitos por ISDS/APP, por año de cierre (MEF, MMM/IAPM) — conector pdf-parse, descarga manual | 4027 | 5459 | Construida, probada, verificada (serie 2020-2025 completa, incluida la edición vigente) |
 
 ## `bcrp-la-libertad` — ingesta manual, distinto a todo el resto del proyecto (2026-08-28)
 

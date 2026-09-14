@@ -2191,9 +2191,10 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "edición del MMM — es una serie continua que cada documento nuevo extiende o revisa): " +
       "controversias internacionales de inversión (categoría `isds`, CIADI/ICSID), contingencias de " +
       "Asociaciones Público-Privadas (`app`), y procesos judiciales/administrativos/arbitraje nacional " +
-      "(`judicial_administrativo`), más el `total`. Serie 2020-2023 verificada por lectura directa del " +
-      "PDF con `pdf-parse` (conector `npm run ingest:pdf`, ver ADR-0023). `pctPbi` es `null` cuando un " +
-      "año/categoría no se pudo verificar — nunca se completa con un valor supuesto.",
+      "(`judicial_administrativo`), más el `total`. Serie 2020-2025 verificada por lectura directa del " +
+      "PDF (conector `pdf-parse` para 2020-2023; 2024-2025 cargados a mano por formato de tabla no " +
+      "soportado, ver ADR-0023). ISDS llegó a 4.24% del PBI en 2025, el máximo de toda la serie. " +
+      "`pctPbi` es `null` cuando un año/categoría no se pudo verificar — nunca se completa con un valor supuesto.",
     pathTemplate: "/api/mmm/pasivos-contingentes",
     pathParams: [],
     querySchema: {},
@@ -2203,10 +2204,11 @@ export const TOOL_CATALOG: ToolSpec[] = [
     app: "riesgo-fiscal-isds",
     description:
       "Metadata de cada documento fuente (MMM o IAPM) registrado: fecha de publicación, fuente oficial, " +
-      "fecha de verificación, estado verificado/no_localizado. La edición vigente (MMM 2027-2030) está " +
-      "`no_localizado` — el PDF no se pudo descargar de forma automatizada (mef.gob.pe/gob.pe bloquean " +
-      "herramientas automatizadas; ver docs/data-contracts/riesgo-fiscal-isds.md). Útil para saber qué " +
-      "documentos ya están cargados antes de consultar `riesgo_fiscal_isds_pasivos_contingentes`.",
+      "fecha de verificación, estado verificado/no_localizado. Los 3 documentos leídos hasta ahora " +
+      "(MMM_2024_2027, IAPM_2025_2028, MMM_2027_2030) están `verificado` — mef.gob.pe/gob.pe bloquean " +
+      "descarga automatizada con curl/WebFetch, pero un navegador real la resuelve (ver " +
+      "docs/data-contracts/riesgo-fiscal-isds.md). Útil para saber qué documentos ya están cargados " +
+      "antes de consultar `riesgo_fiscal_isds_pasivos_contingentes`.",
     pathTemplate: "/api/mmm/ediciones",
     pathParams: [],
     querySchema: {},

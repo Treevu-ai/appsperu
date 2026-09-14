@@ -12,18 +12,18 @@
   la primera versión de esta app sí lo hizo así y produjo una cifra mal atribuida a la edición
   equivocada; ver ADR-0023, sección "Corrección posterior").
 
-## Estado: CONFIRMADO — serie 2020-2023 verificada, edición vigente pendiente de descarga manual
+## Estado: CONFIRMADO — serie 2020-2025 verificada, incluida la edición vigente
 
-### Acceso — extracción de texto funciona, descarga automatizada de la edición vigente no
+### Acceso — extracción de texto funciona; descarga automatizada con `curl`/`WebFetch` no, con navegador real sí
 
-Dos PDFs ya descargados (`MMM_2024_2027.pdf`, `IAPM_2025-2028.pdf`) se leyeron con `pdf-parse`
-sin ningún problema: texto completo y limpio, 262 y 144 páginas respectivamente. Un intento
-anterior con `WebFetch` había fallado sobre los mismos archivos — **eso era una limitación de esa
-herramienta específica, no del PDF** (`WebFetch` usa un modelo pequeño para convertir a markdown,
-no apto para binarios de este tamaño/complejidad).
+Tres PDFs descargados (`MMM_2024_2027.pdf`, `IAPM_2025-2028.pdf`, `MMM_2027_2030.pdf`) se leyeron
+con `pdf-parse` sin ningún problema: texto completo y limpio (262, 144 y 295 páginas
+respectivamente). Un intento anterior con `WebFetch` había fallado sobre los dos primeros —
+**eso era una limitación de esa herramienta específica, no del PDF** (`WebFetch` usa un modelo
+pequeño para convertir a markdown, no apto para binarios de este tamaño/complejidad).
 
-La edición vigente al momento de escribir esto (MMM 2027-2030, aprobada ago-2026) sí está
-bloqueada para descarga automatizada — se probaron 4 rutas, las 4 fallaron:
+La descarga automatizada de la edición vigente (MMM 2027-2030, aprobada ago-2026) sí estaba
+bloqueada para herramientas tipo `curl`/`WebFetch` — se probaron 4 rutas, las 4 fallaron:
 
 | Intento | Resultado |
 |---|---|
@@ -32,9 +32,19 @@ bloqueada para descarga automatizada — se probaron 4 rutas, las 4 fallaron:
 | `bcrp.gob.pe/docs/Publicaciones/Programa-Economico/mmm-2027-2030.pdf` (mirror) | Bloqueado por WAF Incapsula — mismo bloqueo que `bcrp-la-libertad`, ver ADR-0014 |
 | `gob.pe/institucion/mef/informes-publicaciones/8533022` (página de publicaciones) | HTTP 418 — bloqueo anti-bot deliberado |
 
-**Conclusión**: alguien con navegador real debe descargar el PDF de la edición vigente y correr
-`npm run ingest:pdf -- <ruta> <edicion>`. Una vez con el archivo en disco, la extracción y el
-parseo son completamente automáticos y ya están probados contra dos documentos reales.
+**Resuelto con un navegador real** (`claude-in-chrome`): la página de MEF resuelve la URL real del
+PDF vía JavaScript (`cdn.www.gob.pe/uploads/document/file/10528873/8533022-marco-macroeconomico-multianual-2027-2030.pdf`,
+no predecible desde el patrón de ediciones anteriores) y el navegador la carga sin bloqueo —
+confirma que el bloqueo es anti-automatización (challenge JS / heurística de comportamiento), no
+un problema de red/IP. Descargado y verificado: 295 páginas, 15,674,847 bytes exactos. El PDF
+resultante tiene el formato de tabla "año actual/previo + Diferencia" (ver abajo), no soportado
+por el conector — los años 2024/2025 se cargaron a mano, leídos directamente del texto extraído.
+
+**Conclusión**: para una futura edición, alguien con navegador real (o `claude-in-chrome`) debe
+encontrar y descargar el PDF, luego correr `npm run ingest:pdf -- <ruta> <edicion>`. Si el formato
+de tabla es el soportado (`IAPM_2025_2028`), el conector inserta todo automáticamente; si es el
+otro formato, hay que leer el texto y cargar los años nuevos a mano vía migración (ver ejemplo en
+`003_seed_2024_2025_mmm_2027_2030.sql`).
 
 ### Contenido — dos formatos de tabla distintos en la misma sección, solo uno soportado
 
@@ -72,17 +82,20 @@ Categorías → clave interna:
 
 ### Corte verificado
 
-Serie 2020-2023 cargada por el conector real desde `IAPM_2025_2028` (16 filas: 4 categorías × 4
-años). Cross-validado contra `MMM_2024_2027` para el año 2022: ambos documentos reportan
-exactamente 9.92% (total) / 6.19% (judicial) / 2.15% (ISDS) / 1.58% (APP) — coincidencia exacta,
-buena señal de que el dato es estable entre ediciones que se solapan.
+2020-2023 cargados por el conector real desde `IAPM_2025_2028` (16 filas: 4 categorías × 4 años).
+Cross-validado contra `MMM_2024_2027` para el año 2022: ambos documentos reportan exactamente
+9.92% (total) / 6.19% (judicial) / 2.15% (ISDS) / 1.58% (APP) — coincidencia exacta. 2024-2025
+cargados a mano desde `MMM_2027_2030` (migración `003`, formato de tabla no soportado por el
+conector), leídos directamente del texto extraído, página 208/295.
 
-| Año de cierre | Total | Judicial/administrativo | ISDS (CIADI) | APP |
-|---|---|---|---|---|
-| 2020 | 12.70% | 8.68% | 2.01% | 2.02% |
-| 2021 | 12.01% | 7.08% | 3.16% | 1.78% |
-| 2022 | 9.92% | 6.19% | 2.15% | 1.58% |
-| 2023 | 10.92% | 6.59% | 2.91% | 1.42% |
+| Año de cierre | Total | Judicial/administrativo | ISDS (CIADI) | APP | Fuente |
+|---|---|---|---|---|---|
+| 2020 | 12.70% | 8.68% | 2.01% | 2.02% | Conector (`IAPM_2025_2028`) |
+| 2021 | 12.01% | 7.08% | 3.16% | 1.78% | Conector (`IAPM_2025_2028`) |
+| 2022 | 9.92% | 6.19% | 2.15% | 1.58% | Conector, cross-validado con `MMM_2024_2027` |
+| 2023 | 10.92% | 6.59% | 2.91% | 1.42% | Conector (`IAPM_2025_2028`) |
+| 2024 | 9.17% | 5.85% | 2.29% | 1.03% | Manual (`MMM_2027_2030`, p. 208/295) |
+| 2025 | 10.70% | 5.59% | **4.24%** | 0.87% | Manual (`MMM_2027_2030`, p. 208/295) — máximo ISDS de la serie |
 
 ## Implicaciones para cruces con el ecosistema
 
@@ -93,14 +106,17 @@ buena señal de que el dato es estable entre ediciones que se solapan.
 
 ## Riesgos de ingesta
 
-1. **Descarga de la edición vigente sigue siendo manual** — el MMM se publica ~fines de agosto
-   cada año; si nadie descarga el PDF y corre el conector, la serie queda un año atrás.
-2. **Solo un formato de tabla soportado** — si una futura edición cambia el layout del recuadro
-   (como ya ocurre entre `MMM_2024_2027` y `IAPM_2025_2028` dentro del mismo período), el
-   conector fallará explícitamente (`Error`, 0 filas insertadas) en vez de leer mal los datos.
-   Extender el normalizer para el segundo formato es trabajo futuro, no bloqueante.
-3. **Datos verificados contra 2 documentos, ambos de 2023-2025** — la serie no cubre 2024 ni 2025
-   todavía; requiere descargar y correr el conector contra el IAPM/MMM más reciente disponible.
+1. **Descarga de cada edición nueva sigue siendo manual** — el MMM se publica ~fines de agosto
+   cada año; requiere un navegador real (curl/WebFetch quedan bloqueados), así que si nadie la
+   descarga y corre el conector (o carga los años a mano si el formato no es el soportado), la
+   serie queda desactualizada.
+2. **Solo un formato de tabla tiene parser automático** — 2 de 3 documentos leídos hasta ahora
+   (`MMM_2024_2027`, `MMM_2027_2030`) usan el formato "año actual/previo + Diferencia", no
+   soportado; esos años se cargan a mano vía migración. Extender el normalizer para ese segundo
+   formato evitaría la carga manual, pero no es bloqueante — ver ejemplo de migración manual en
+   `003_seed_2024_2025_mmm_2027_2030.sql`.
+3. **Datos de fuente primaria completos 2020-2025** — sin brecha conocida en la serie por ahora;
+   revisar de nuevo cuando salga la edición MMM 2028-2031 (~ago-2027).
 4. **Metodología del `2. Controversias internacionales... - CIADI` no confirmada como idéntica
    entre ediciones** — el MMM 2024-2027 explica la metodología de cálculo (tiempo esperado ×
    monto de exposición × severidad histórica de casos CIADI) pero no hay garantía de que el
