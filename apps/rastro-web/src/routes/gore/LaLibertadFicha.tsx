@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { getRadarEjecucionSectorFicha, type SectorFichaResponse } from "../../lib/api-client.js";
-import { AppUnavailableError } from "../../lib/types.js";
+import { aggregateSectorBudget } from "../../lib/sector-ficha.js";
+import { AppUnavailableError, type Cobertura } from "../../lib/types.js";
 import { CoverageBadge } from "../../components/CoverageBadge.js";
 import { NumberWithMetadata, metaNumber } from "../../components/NumberWithMetadata.js";
+import { SectorFichaSections } from "./SectorFichaSections.js";
 
 const SECTORES = [
   "TRANSPORTE",
@@ -103,71 +105,108 @@ export function LaLibertadFicha() {
             <p className="text-fg-soft mt-1">{error}</p>
           </div>
         ) : data ? (
+          (() => {
+            const budget = aggregateSectorBudget(data.entidades);
+            const fuente = "radar-ejecucion / radar_ejecucion_sector_ficha";
+            return (
           <div>
             <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="text-fg font-semibold">{data.sectorId}</h2>
-              <CoverageBadge cobertura={data.cobertura} />
-              <span className="text-xs text-muted">corte: {data.corte}</span>
+              <h2 className="text-fg font-semibold">{data.sector.id}</h2>
+              <CoverageBadge cobertura={budget.cobertura} />
+              <span className="text-xs text-muted">corte: {budget.corte}</span>
             </div>
             <p className="text-xs text-muted mt-1">
-              matcher: {data.matcher} · regla: {data.regla}
+              matcher: {budget.matcher} · regla: {budget.regla}
             </p>
 
-            <div className="mt-6 grid grid-cols-3 gap-4">
-              <div>
-                <p className="text-xs text-muted">PIA</p>
-                <p className="text-2xl text-fg">
-                  <NumberWithMetadata
-                    data={metaNumber(
-                      data.pia,
-                      "radar-ejecucion / radar_ejecucion_sector_ficha",
-                      data.corte,
-                      data.cobertura,
-                      data.matcher,
-                    )}
-                    suffix="S/"
-                  />
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted">PIM</p>
-                <p className="text-2xl text-fg">
-                  <NumberWithMetadata
-                    data={metaNumber(
-                      data.pim,
-                      "radar-ejecucion / radar_ejecucion_sector_ficha",
-                      data.corte,
-                      data.cobertura,
-                      data.matcher,
-                    )}
-                    suffix="S/"
-                  />
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted">Devengado</p>
-                <p className="text-2xl text-accent">
-                  <NumberWithMetadata
-                    data={metaNumber(
-                      data.devengado,
-                      "radar-ejecucion / radar_ejecucion_sector_ficha",
-                      data.corte,
-                      data.cobertura,
-                      data.matcher,
-                    )}
-                    suffix="S/"
-                  />
-                </p>
-              </div>
+            <div className="mt-6 space-y-6">
+              {budget.metaDepartamento.entidades > 0 ? (
+                <BudgetBlock
+                  title="Gasto nacional dirigido al departamento (META_DEPARTAMENTO)"
+                  totals={budget.metaDepartamento}
+                  fuente={fuente}
+                  corte={budget.corte}
+                  cobertura={budget.cobertura}
+                  matcher={budget.matcher}
+                />
+              ) : null}
+              {budget.sedeEjecutora.entidades > 0 ? (
+                <BudgetBlock
+                  title="Ejecución regional con sede en La Libertad (SEDE_EJECUTORA)"
+                  totals={budget.sedeEjecutora}
+                  fuente={fuente}
+                  corte={budget.corte}
+                  cobertura={budget.cobertura}
+                  matcher={budget.matcher}
+                />
+              ) : null}
             </div>
 
-            <p className="mt-6 text-xs text-muted">
-              Reglas territoriales: las entidades nacionales se consultan por gasto dirigido al departamento
-              (meta_departamento); las regionales, por la unidad ejecutora con sede en La Libertad. Esta vista no
-              suma ambos universos.
-            </p>
+            <SectorFichaSections
+              data={data}
+              corte={budget.corte}
+              cobertura={budget.cobertura}
+              matcher={budget.matcher}
+            />
+
+            <p className="mt-6 text-xs text-muted">{data.advertenciaGasto}</p>
+            <p className="mt-2 text-xs text-muted">{data.limitation}</p>
           </div>
+            );
+          })()
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+function BudgetBlock({
+  title,
+  totals,
+  fuente,
+  corte,
+  cobertura,
+  matcher,
+}: {
+  title: string;
+  totals: { pia: number; pim: number; devengado: number; entidades: number };
+  fuente: string;
+  corte: string;
+  cobertura: Cobertura;
+  matcher: string;
+}) {
+  return (
+    <div>
+      <p className="text-sm text-fg-soft">{title}</p>
+      <p className="text-xs text-muted mt-0.5">{totals.entidades} entidad(es) verificada(s)</p>
+      <div className="mt-3 grid grid-cols-3 gap-4">
+        <div>
+          <p className="text-xs text-muted">PIA</p>
+          <p className="text-2xl text-fg">
+            <NumberWithMetadata
+              data={metaNumber(totals.pia, fuente, corte, cobertura, matcher)}
+              suffix="S/"
+            />
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted">PIM</p>
+          <p className="text-2xl text-fg">
+            <NumberWithMetadata
+              data={metaNumber(totals.pim, fuente, corte, cobertura, matcher)}
+              suffix="S/"
+            />
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted">Devengado</p>
+          <p className="text-2xl text-accent">
+            <NumberWithMetadata
+              data={metaNumber(totals.devengado, fuente, corte, cobertura, matcher)}
+              suffix="S/"
+            />
+          </p>
+        </div>
       </div>
     </div>
   );

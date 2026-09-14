@@ -7,8 +7,46 @@ import { asyncHandler } from "../lib/async-handler.js";
 import { parseQuery } from "../lib/validate-query.js";
 import { scopeLabel } from "../sector/registry.js";
 import { summarizeBudgetMovement } from "../sector/movement.js";
+import { costDriftPct } from "@appsperu/shared-signals";
 
 export const sectorsRouter = Router();
+
+/** Paridad con `apps/infobras/api/src/signals/signals.ts` — no importar la app infobras. */
+function gapFisicoFinanciero(
+  avanceFisicoRealPct: number | null,
+  ejecucionFinancieraPct: number | null,
+): number | null {
+  if (avanceFisicoRealPct === null || ejecucionFinancieraPct === null) return null;
+  return Math.round((avanceFisicoRealPct - ejecucionFinancieraPct) * 100) / 100;
+}
+
+function nullableNumber(value: unknown): number | null {
+  return value === null || value === undefined ? null : number(value);
+}
+
+function mapInfobrasWork(row: Record<string, unknown>) {
+  const montoViable = nullableNumber(row.monto_viable);
+  const costoActualizado = nullableNumber(row.costo_actualizado);
+  const avanceFisicoRealPct = nullableNumber(row.avance_fisico_real_pct);
+  const ejecucionFinancieraPct = nullableNumber(row.ejecucion_financiera_pct);
+
+  return {
+    codigoInfobras: row.codigo_infobras,
+    cui: row.cui,
+    nombre: row.nombre_obra,
+    estadoEjecucion: row.estado_ejecucion,
+    departamento: row.departamento,
+    provincia: row.provincia,
+    distrito: row.distrito,
+    avanceFisicoRealPct,
+    ejecucionFinancieraPct,
+    existeParalizacion: row.existe_paralizacion,
+    diasParalizado: nullableNumber(row.dias_paralizado),
+    fechaParalizacion: row.fecha_paralizacion ?? null,
+    costDriftPct: costDriftPct(montoViable, costoActualizado),
+    gapFisicoFinanciero: gapFisicoFinanciero(avanceFisicoRealPct, ejecucionFinancieraPct),
+  };
+}
 
 const BaseQuery = z.object({
   anio: z.coerce.number().int().min(2009).max(2100).default(2026),
@@ -112,16 +150,11 @@ async function worksForCuis(cuis: string[]) {
   if (!infobrasPool) return { estado: "INFOBRAS_NO_CONFIGURADO", resultados: [] as unknown[] };
   const { rows } = await infobrasPool.query(
     `SELECT codigo_infobras,cui,nombre_obra,estado_ejecucion,departamento,provincia,distrito,
-            avance_fisico_real_pct,ejecucion_financiera_pct,existe_paralizacion
+            avance_fisico_real_pct,ejecucion_financiera_pct,existe_paralizacion,
+            dias_paralizado,fecha_paralizacion,monto_viable,costo_actualizado
        FROM public_works WHERE cui=ANY($1) ORDER BY codigo_infobras`, [cuis],
   );
-  return { estado: "CUI_EXACTO", resultados: rows.map((row) => ({
-    codigoInfobras: row.codigo_infobras, cui: row.cui, nombre: row.nombre_obra, estadoEjecucion: row.estado_ejecucion,
-    departamento: row.departamento, provincia: row.provincia, distrito: row.distrito,
-    avanceFisicoRealPct: row.avance_fisico_real_pct === null ? null : number(row.avance_fisico_real_pct),
-    ejecucionFinancieraPct: row.ejecucion_financiera_pct === null ? null : number(row.ejecucion_financiera_pct),
-    existeParalizacion: row.existe_paralizacion,
-  })) };
+  return { estado: "CUI_EXACTO", resultados: rows.map((row) => mapInfobrasWork(row as Record<string, unknown>)) };
 }
 
 async function procurementForEntities(entityCodes: string[]) {

@@ -2,15 +2,22 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import request from "supertest";
 
 const queryMock = vi.fn();
+const infobrasQueryMock = vi.fn();
 
 vi.mock("../db/pool.js", () => ({
   pool: { query: queryMock },
+}));
+
+vi.mock("../db/external-pools.js", () => ({
+  infobrasPool: { query: (...args: unknown[]) => infobrasQueryMock(...args) },
+  comprasPool: null,
 }));
 
 const { createApp } = await import("../app.js");
 
 beforeEach(() => {
   queryMock.mockReset();
+  infobrasQueryMock.mockReset();
 });
 
 function budgetRow(overrides: Record<string, unknown> = {}) {
@@ -104,6 +111,68 @@ describe("GET /sectors/:sectorId/ficha (PV-01: ambito=NACIONAL)", () => {
 
     expect(res.status).toBe(400);
     expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it("obras vinculadas por CUI incluyen paralización y señales INFOBRAS (GORE-01c)", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [budgetRow({ sector_id: "TRANSPORTE", sector_nombre: "Transporte", entity_code: "831" })] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            cui: "2456789",
+            actividad_literal: "OBRA TEST",
+            entidad_responsable: "GR LL",
+            departamento: "LA LIBERTAD",
+            pia_legal: 1000,
+            pim: 2000,
+            devengado: 500,
+            estado_pim: "VIABLE",
+            entity_code: "831",
+            evidence_url: null,
+            alerta_consistencia_territorial: null,
+            observed_at: "2026-08-20",
+          },
+        ],
+      });
+
+    infobrasQueryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          codigo_infobras: "INF-TEST",
+          cui: "2456789",
+          nombre_obra: "OBRA TEST",
+          estado_ejecucion: "PARALIZADA",
+          departamento: "LA LIBERTAD",
+          provincia: "TRUJILLO",
+          distrito: "TRUJILLO",
+          avance_fisico_real_pct: 70,
+          ejecucion_financiera_pct: 40,
+          existe_paralizacion: true,
+          dias_paralizado: 90,
+          fecha_paralizacion: "2026-06-01",
+          monto_viable: 1000,
+          costo_actualizado: 1500,
+        },
+      ],
+    });
+
+    const app = createApp();
+    const res = await request(app).get("/api/sectores/TRANSPORTE/ficha").query({ departamento: "LA LIBERTAD" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.obras.estado).toBe("CUI_EXACTO");
+    expect(res.body.obras.resultados).toHaveLength(1);
+    expect(res.body.obras.resultados[0]).toMatchObject({
+      diasParalizado: 90,
+      costDriftPct: 50,
+      gapFisicoFinanciero: 30,
+      existeParalizacion: true,
+    });
+
+    const [sql] = infobrasQueryMock.mock.calls[0];
+    expect(sql).toMatch(/dias_paralizado/);
+    expect(sql).toMatch(/monto_viable/);
+    expect(sql).toMatch(/costo_actualizado/);
   });
 });
 

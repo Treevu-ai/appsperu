@@ -1,7 +1,219 @@
 {
-  "TRANSPORTE": { "sectorId": "TRANSPORTE", "anio": 2026, "pia": 12500000, "pim": 18300000, "devengado": 9100000, "regla": "PIA/PIM/Devengado agregados por sector y año fiscal.", "cobertura": "COMPLETA", "matcher": "exacto-funcion", "corte": "2026-08-20" },
-  "SALUD": { "sectorId": "SALUD", "anio": 2026, "pia": 8200000, "pim": 9750000, "devengado": 4300000, "regla": "PIA/PIM/Devengado agregados por sector y año fiscal.", "cobertura": "PARCIAL", "matcher": "exacto-funcion", "corte": "2026-08-20" },
-  "EDUCACION": { "sectorId": "EDUCACION", "anio": 2026, "pia": 21000000, "pim": 25400000, "devengado": 15200000, "regla": "PIA/PIM/Devengado agregados por sector y año fiscal.", "cobertura": "COMPLETA", "matcher": "exacto-funcion", "corte": "2026-08-20" },
-  "AGRICULTURA": { "sectorId": "AGRICULTURA", "anio": 2026, "pia": 4100000, "pim": 5600000, "devengado": 2450000, "regla": "PIA/PIM/Devengado agregados por sector y año fiscal.", "cobertura": "COMPLETA", "matcher": "exacto-funcion", "corte": "2026-08-20" },
-  "VIVIENDA": { "sectorId": "VIVIENDA", "anio": 2026, "pia": 3300000, "pim": 4200000, "devengado": 1100000, "regla": "PIA/PIM/Devengado agregados por sector y año fiscal.", "cobertura": "PARCIAL", "matcher": "exacto-funcion", "corte": "2026-08-20" }
+  "TRANSPORTE": {
+    "sector": { "id": "TRANSPORTE", "nombre": "Transporte" },
+    "anio": 2026,
+    "departamento": "LA LIBERTAD",
+    "entidades": [
+      {
+        "sectorId": "TRANSPORTE",
+        "sector": "Transporte",
+        "entityCode": "108",
+        "entidad": "Ministerio de Transportes y Comunicaciones",
+        "tipoEntidad": "PLIEGO",
+        "nivelGobierno": "GOBIERNO NACIONAL",
+        "reglaTerritorial": "META_DEPARTAMENTO",
+        "alcance": "Gasto nacional dirigido a La Libertad",
+        "pia": 10000000,
+        "pim": 12000000,
+        "devengado": 6000000,
+        "saldoPorDevengar": 6000000,
+        "cobertura": { "estado": "COMPLETA", "fechaCorteParticion": "2026-08-20", "registrosParticion": 12 },
+        "cortesUsados": ["2026-08-20"],
+        "recursos": ["R1"]
+      },
+      {
+        "sectorId": "TRANSPORTE",
+        "sector": "Transporte",
+        "entityCode": "831",
+        "entidad": "Gobierno Regional La Libertad — Transporte",
+        "tipoEntidad": "UNIDAD_EJECUTORA",
+        "nivelGobierno": "GOBIERNOS REGIONALES",
+        "reglaTerritorial": "SEDE_EJECUTORA",
+        "alcance": "Ejecución con sede en La Libertad",
+        "pia": 2500000,
+        "pim": 6300000,
+        "devengado": 3100000,
+        "saldoPorDevengar": 3200000,
+        "cobertura": { "estado": "COMPLETA", "fechaCorteParticion": "2026-08-20", "registrosParticion": 8 },
+        "cortesUsados": ["2026-08-20"],
+        "recursos": ["R2"]
+      }
+    ],
+    "inversiones": {
+      "estado": "VINCULO_OFICIAL",
+      "resultados": [
+        {
+          "cui": "2456789",
+          "actividad": "MEJORAMIENTO DE CARRETERA TRUJILLO - OTUZCO",
+          "entidadResponsable": "GOBIERNO REGIONAL LA LIBERTAD",
+          "departamento": "LA LIBERTAD",
+          "piaLegal": 45000000,
+          "pim": 52000000,
+          "devengado": 31000000,
+          "estadoPim": "VIABLE",
+          "entityCode": "831",
+          "evidenceUrl": null,
+          "alertaConsistenciaTerritorial": null,
+          "fechaObservacion": "2026-08-20"
+        }
+      ]
+    },
+    "obras": {
+      "estado": "CUI_EXACTO",
+      "resultados": [
+        {
+          "codigoInfobras": "INF-2025-001",
+          "cui": "2456789",
+          "nombre": "MEJORAMIENTO DE CARRETERA TRUJILLO - OTUZCO",
+          "estadoEjecucion": "PARALIZADA",
+          "departamento": "LA LIBERTAD",
+          "provincia": "TRUJILLO",
+          "distrito": "TRUJILLO",
+          "avanceFisicoRealPct": 65,
+          "ejecucionFinancieraPct": 30,
+          "existeParalizacion": true,
+          "diasParalizado": 120,
+          "fechaParalizacion": "2026-06-01",
+          "costDriftPct": 50,
+          "gapFisicoFinanciero": 35
+        }
+      ]
+    },
+    "contrataciones": {
+      "estado": "IDENTIDAD_MEF_COMPRAS_VERIFICADA",
+      "resultados": [
+        {
+          "contractingId": "c-001",
+          "ocid": "ocds-001",
+          "awardId": "aw-001",
+          "objeto": "SERVICIO DE SUPERVISION DE OBRA VIAL",
+          "montoAdjudicado": 850000,
+          "publicationDate": "2026-03-15",
+          "awardDate": "2026-04-01",
+          "entidadCompradora": "GOBIERNO REGIONAL LA LIBERTAD",
+          "provincia": "TRUJILLO",
+          "distrito": "TRUJILLO",
+          "fuenteUrl": null
+        }
+      ]
+    },
+    "advertenciaGasto": "No sumar entidades con reglaTerritorial META_DEPARTAMENTO y SEDE_EJECUTORA: miden gasto nacional dirigido vs ejecución con sede regional.",
+    "limitation": "CUI, obra y contratación aparecen solo mediante claves exactas verificadas. La ausencia de un puente no equivale a ausencia de inversión, obra o contratación."
+  },
+  "SALUD": {
+    "sector": { "id": "SALUD", "nombre": "Salud" },
+    "anio": 2026,
+    "departamento": "LA LIBERTAD",
+    "entidades": [
+      {
+        "sectorId": "SALUD",
+        "sector": "Salud",
+        "entityCode": "832",
+        "entidad": "Gobierno Regional La Libertad — Salud",
+        "tipoEntidad": "UNIDAD_EJECUTORA",
+        "nivelGobierno": "GOBIERNOS REGIONALES",
+        "reglaTerritorial": "SEDE_EJECUTORA",
+        "alcance": "Ejecución con sede en La Libertad",
+        "pia": 8200000,
+        "pim": 9750000,
+        "devengado": 4300000,
+        "saldoPorDevengar": 5450000,
+        "cobertura": { "estado": "PARCIAL", "fechaCorteParticion": "2026-08-20", "registrosParticion": 5 },
+        "cortesUsados": ["2026-08-20"],
+        "recursos": ["R1"]
+      }
+    ],
+    "inversiones": { "estado": "SIN_VINCULO_OFICIAL", "resultados": [] },
+    "obras": { "estado": "SIN_CUI_CON_VINCULO_OFICIAL", "resultados": [] },
+    "contrataciones": { "estado": "SIN_VINCULO_MEF_COMPRAS_VERIFICADO", "resultados": [] },
+    "advertenciaGasto": "No sumar entidades con reglaTerritorial META_DEPARTAMENTO y SEDE_EJECUTORA: miden gasto nacional dirigido vs ejecución con sede regional.",
+    "limitation": "CUI, obra y contratación aparecen solo mediante claves exactas verificadas. La ausencia de un puente no equivale a ausencia de inversión, obra o contratación."
+  },
+  "EDUCACION": {
+    "sector": { "id": "EDUCACION", "nombre": "Educación" },
+    "anio": 2026,
+    "departamento": "LA LIBERTAD",
+    "entidades": [
+      {
+        "sectorId": "EDUCACION",
+        "sector": "Educación",
+        "entityCode": "833",
+        "entidad": "Gobierno Regional La Libertad — Educación",
+        "tipoEntidad": "UNIDAD_EJECUTORA",
+        "nivelGobierno": "GOBIERNOS REGIONALES",
+        "reglaTerritorial": "SEDE_EJECUTORA",
+        "alcance": "Ejecución con sede en La Libertad",
+        "pia": 21000000,
+        "pim": 25400000,
+        "devengado": 15200000,
+        "saldoPorDevengar": 10200000,
+        "cobertura": { "estado": "COMPLETA", "fechaCorteParticion": "2026-08-20", "registrosParticion": 14 },
+        "cortesUsados": ["2026-08-20"],
+        "recursos": ["R1"]
+      }
+    ],
+    "inversiones": { "estado": "SIN_VINCULO_OFICIAL", "resultados": [] },
+    "obras": { "estado": "SIN_CUI_CON_VINCULO_OFICIAL", "resultados": [] },
+    "contrataciones": { "estado": "SIN_VINCULO_MEF_COMPRAS_VERIFICADO", "resultados": [] },
+    "advertenciaGasto": "No sumar entidades con reglaTerritorial META_DEPARTAMENTO y SEDE_EJECUTORA: miden gasto nacional dirigido vs ejecución con sede regional.",
+    "limitation": "CUI, obra y contratación aparecen solo mediante claves exactas verificadas. La ausencia de un puente no equivale a ausencia de inversión, obra o contratación."
+  },
+  "AGRICULTURA": {
+    "sector": { "id": "AGRICULTURA", "nombre": "Agricultura" },
+    "anio": 2026,
+    "departamento": "LA LIBERTAD",
+    "entidades": [
+      {
+        "sectorId": "AGRICULTURA",
+        "sector": "Agricultura",
+        "entityCode": "834",
+        "entidad": "Gobierno Regional La Libertad — Agricultura",
+        "tipoEntidad": "UNIDAD_EJECUTORA",
+        "nivelGobierno": "GOBIERNOS REGIONALES",
+        "reglaTerritorial": "SEDE_EJECUTORA",
+        "alcance": "Ejecución con sede en La Libertad",
+        "pia": 4100000,
+        "pim": 5600000,
+        "devengado": 2450000,
+        "saldoPorDevengar": 3150000,
+        "cobertura": { "estado": "COMPLETA", "fechaCorteParticion": "2026-08-20", "registrosParticion": 6 },
+        "cortesUsados": ["2026-08-20"],
+        "recursos": ["R1"]
+      }
+    ],
+    "inversiones": { "estado": "SIN_VINCULO_OFICIAL", "resultados": [] },
+    "obras": { "estado": "SIN_CUI_CON_VINCULO_OFICIAL", "resultados": [] },
+    "contrataciones": { "estado": "SIN_VINCULO_MEF_COMPRAS_VERIFICADO", "resultados": [] },
+    "advertenciaGasto": "No sumar entidades con reglaTerritorial META_DEPARTAMENTO y SEDE_EJECUTORA: miden gasto nacional dirigido vs ejecución con sede regional.",
+    "limitation": "CUI, obra y contratación aparecen solo mediante claves exactas verificadas. La ausencia de un puente no equivale a ausencia de inversión, obra o contratación."
+  },
+  "VIVIENDA": {
+    "sector": { "id": "VIVIENDA", "nombre": "Vivienda" },
+    "anio": 2026,
+    "departamento": "LA LIBERTAD",
+    "entidades": [
+      {
+        "sectorId": "VIVIENDA",
+        "sector": "Vivienda",
+        "entityCode": "835",
+        "entidad": "Gobierno Regional La Libertad — Vivienda",
+        "tipoEntidad": "UNIDAD_EJECUTORA",
+        "nivelGobierno": "GOBIERNOS REGIONALES",
+        "reglaTerritorial": "SEDE_EJECUTORA",
+        "alcance": "Ejecución con sede en La Libertad",
+        "pia": 3300000,
+        "pim": 4200000,
+        "devengado": 1100000,
+        "saldoPorDevengar": 3100000,
+        "cobertura": { "estado": "PARCIAL", "fechaCorteParticion": "2026-08-20", "registrosParticion": 4 },
+        "cortesUsados": ["2026-08-20"],
+        "recursos": ["R1"]
+      }
+    ],
+    "inversiones": { "estado": "SIN_VINCULO_OFICIAL", "resultados": [] },
+    "obras": { "estado": "SIN_CUI_CON_VINCULO_OFICIAL", "resultados": [] },
+    "contrataciones": { "estado": "SIN_VINCULO_MEF_COMPRAS_VERIFICADO", "resultados": [] },
+    "advertenciaGasto": "No sumar entidades con reglaTerritorial META_DEPARTAMENTO y SEDE_EJECUTORA: miden gasto nacional dirigido vs ejecución con sede regional.",
+    "limitation": "CUI, obra y contratación aparecen solo mediante claves exactas verificadas. La ausencia de un puente no equivale a ausencia de inversión, obra o contratación."
+  }
 }

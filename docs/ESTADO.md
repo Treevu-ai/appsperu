@@ -2,6 +2,28 @@
 
 Última actualización: 2026-09-13.
 
+## Sprint GORE S1 — tableros La Libertad cerrados (2026-09-13)
+
+Cierre del sprint definido en [`docs/TICKETS_GORE_La_Libertad_S1_v1.md`](TICKETS_GORE_La_Libertad_S1_v1.md) (13–27 sep 2026). Entregables verificados:
+
+| Ticket | Entregable | Evidencia |
+|---|---|---|
+| GORE-01a–c | Ficha sectorial con presupuesto, CUI/obra/contrato, señales INFOBRAS | `LaLibertadFicha.tsx`, `SectorFichaSections.tsx`, E2E `ficha-sector.spec.ts` (5/5) |
+| GORE-02 | Frescura INFOBRAS + compras en layout GORE | `GoreFreshnessStrip.tsx`, endpoint `GET /api/meta/sources` (infobras) |
+| GORE-03 | `ABOUT_RASTRO.md` al estado sep 2026 (27 apps, 149 tools) | rev. 2026-09-13 |
+| GORE-04a/b | E2E comparativo + benchmark | `comparativo-sectores.spec.ts`, `benchmark-entidad.spec.ts` (3 tests) |
+| GORE-04c | Checklist smoke GORE | [`docs/validacion-smoke-rastro-web-v1.md`](validacion-smoke-rastro-web-v1.md) §checklist + 3 PNG en `docs/smoke-rastro-web/` |
+
+**Demo sin terminal (5 consultas):**
+
+1. `/gore/la-libertad/ficha?sector=TRANSPORTE&anio=2026` — presupuesto + inversiones/obras/contratos
+2. `/gore/la-libertad/ficha?sector=SALUD&anio=2026` — sector con cobertura PARCIAL
+3. `/gore/la-libertad/comparativo?sectores=TRANSPORTE,SALUD&anio=2026` — tabla comparativa
+4. `/gore/la-libertad/benchmark?entityCode=831&anio=2026` — percentil P60
+5. `/gore/la-libertad/benchmark?entityCode=999&anio=2026` — `datos_insuficientes` declarado
+
+En producción (`VITE_PUBLIC_APIS_LIVE=false`) las rutas GORE consumen el snapshot semanal bundleado; en dev local o CI con fixtures, los E2E comparan JSON fixture = HTML renderizado.
+
 ## CX-15 — catálogo MCP desincronizado de rutas Express reales (2026-09-13, cerrado)
 
 Al mergear #148/#149 se notó que ambos PR tenían el check `mcp-server` en rojo. Verificado en vivo
