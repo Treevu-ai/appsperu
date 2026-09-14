@@ -258,14 +258,22 @@ export function getComprasPublicasMetaFreshness(options?: RequestOptions) {
   return requestJson<ComprasFreshnessResponse>("compras-publicas", "/api/meta/freshness", options);
 }
 
-/** radar_ejecucion_sector_ficha — ficha de un sector verificado. */
+/**
+ * radar_ejecucion_sector_ficha — ficha de un sector verificado.
+ *
+ * `ambito: "NACIONAL"` (PV-01/GORE-05a) omite el filtro de departamento en
+ * el backend — usarlo SIN `departamento`. Con `ambito` nacional, cada
+ * `SectorFichaEntidad.cobertura.estado` viene `"NO_VERIFICADA"` (los
+ * snapshots de cobertura territorial son por departamento, no hay uno
+ * nacional); la UI debe declarar eso explícitamente, no inventar un badge.
+ */
 export function getRadarEjecucionSectorFicha(
-  params: { sectorId: string; anio?: number; departamento?: string },
+  params: { sectorId: string; anio?: number; departamento?: string; ambito?: "NACIONAL" | "REGIONAL" },
   options?: RequestOptions,
 ) {
   return requestJson<SectorFichaResponse>("radar-ejecucion", `/api/sectores/${encodeURIComponent(params.sectorId)}/ficha`, {
     ...options,
-    query: { anio: params.anio, departamento: params.departamento },
+    query: { anio: params.anio, departamento: params.departamento, ambito: params.ambito },
   });
 }
 
@@ -363,6 +371,58 @@ export function getProveedoresSancionadosPorRuc(ruc: string, options?: RequestOp
 }
 
 /**
+ * proveedores_sancionados_crossref — cruce proveedor↔Tribunal de
+ * Contrataciones por RUC, con `esNuevoDesdeUltimaCorrida` (PV-05: persiste
+ * en `sanciones_contratos_vistos` qué pares RUC+contrato ya se vieron antes).
+ * `departamento: "TODOS"` (PV-06) agrega awards+minor_contracts a nivel
+ * nacional en una sola consulta. Ver `apps/proveedores-sancionados/api/src/routes/crossref.ts`.
+ */
+export interface ProveedoresSancionadosCrossrefRow {
+  origen: "awards" | "minor_contracts";
+  ocid: string | null;
+  awardId: string | null;
+  supplierId: string | null;
+  supplierName: string | null;
+  buyerName: string | null;
+  valorMonto: number | null;
+  valorMoneda: string | null;
+  fechaAdjudicacion: string | null;
+  rucValido: boolean;
+  inhabilitacionesEncontradas: number;
+  tieneInhabilitacionVigente: boolean;
+  estadoActualFuente: {
+    tieneInhabilitacionVigente: boolean;
+    inhabilitacionExtraidaEn: string | null;
+    estadoContribuyente: string | null;
+    condicionDomicilio: string | null;
+    padronExtraidoEn: string | null;
+  };
+  inhabilitadoEnFechaAdjudicacion: boolean | "NO_VERIFICABLE";
+  estadoTributarioEnFechaAdjudicacion: "NO_DISPONIBLE";
+  estadoContribuyente: string | null;
+  condicionDomicilio: string | null;
+  /** PV-05: solo tiene sentido junto a `tieneInhabilitacionVigente: true` — en el resto siempre `false`. */
+  esNuevoDesdeUltimaCorrida: boolean;
+}
+export interface ProveedoresSancionadosCrossrefResponse {
+  departamento: string;
+  resultados: ProveedoresSancionadosCrossrefRow[];
+}
+export function getProveedoresSancionadosCrossref(
+  params: { departamento?: string; soloInhabilitados?: boolean; soloNuevos?: boolean },
+  options?: RequestOptions,
+) {
+  return requestJson<ProveedoresSancionadosCrossrefResponse>("proveedores-sancionados", "/api/crossref", {
+    ...options,
+    query: {
+      departamento: params.departamento,
+      soloInhabilitados: params.soloInhabilitados,
+      soloNuevos: params.soloNuevos,
+    },
+  });
+}
+
+/**
  * infobras_public_works — obras de un departamento, con señales derivadas
  * (Cost Drift, Gap físico-financiero).
  *
@@ -408,10 +468,46 @@ export interface PublicWork {
 export interface PublicWorksResponse {
   resultados: PublicWork[];
 }
-export function getInfobrasPublicWorks(params: { departamento?: string; estado?: string; conParalizacion?: boolean }, options?: RequestOptions) {
+/** Mismas 3 claves que `ORDER_BY_COLUMNS` en `apps/infobras/api/src/routes/public-works.ts`. */
+export type InfobrasPublicWorksOrderBy = "nombre_asc" | "diasParalizado_desc" | "montoViable_desc";
+
+export interface InfobrasPublicWorksParams {
+  departamento?: string;
+  estado?: string;
+  conParalizacion?: boolean;
+  /** PV-03/GORE-06a: acota el ranking a un sector (`sector_entidad` en INFOBRAS). */
+  sectorEntidad?: string;
+  /**
+   * Requiere `conParalizacion: true` — ver el guard más abajo. Una unión
+   * discriminada para forzar esto en tiempo de compilación se intentó y se
+   * descartó (revisión de GORE-06a): TS ensancha `conParalizacion` a
+   * `boolean` en cuanto el caller arma el objeto en una variable en vez de
+   * un literal inline (ej. un filtro condicional en un componente — el
+   * caso de uso real de GORE-06b), y la llamada deja de compilar aunque sea
+   * válida para el backend. Guard en runtime: más simple, sin esa trampa.
+   */
+  diasParalizadoMin?: number;
+  /** PV-03/GORE-06a: `nombre_asc` (default del backend) u orden por severidad. */
+  orderBy?: InfobrasPublicWorksOrderBy;
+}
+
+export function getInfobrasPublicWorks(params: InfobrasPublicWorksParams, options?: RequestOptions) {
+  if (params.diasParalizadoMin !== undefined && params.conParalizacion !== true) {
+    throw new Error(
+      "getInfobrasPublicWorks: diasParalizadoMin requiere conParalizacion:true — el backend responde 400 si no " +
+        "(dias_paralizado no es significativo en obras sin paralización, ver PublicWorksQuerySchema.refine en public-works.ts).",
+    );
+  }
   return requestJson<PublicWorksResponse>("infobras", "/api/public-works", {
     ...options,
-    query: { departamento: params.departamento, estado: params.estado, conParalizacion: params.conParalizacion },
+    query: {
+      departamento: params.departamento,
+      estado: params.estado,
+      conParalizacion: params.conParalizacion,
+      sectorEntidad: params.sectorEntidad,
+      diasParalizadoMin: params.diasParalizadoMin,
+      orderBy: params.orderBy,
+    },
   });
 }
 
