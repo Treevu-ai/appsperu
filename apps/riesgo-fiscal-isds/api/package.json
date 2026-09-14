@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "migrate": "tsx src/db/migrate.ts",
+    "ingest:pdf": "tsx src/ingest/pdf-connector.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
@@ -17,6 +18,7 @@
     "express": "^4.19.2",
     "express-rate-limit": "^8.6.2",
     "helmet": "^8.3.0",
+    "pdf-parse": "^2.4.5",
     "pg": "^8.12.0",
     "zod": "^4.4.3"
   },

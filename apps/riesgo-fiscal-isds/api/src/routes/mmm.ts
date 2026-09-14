@@ -8,7 +8,7 @@ mmmRouter.get(
   "/ediciones",
   asyncHandler(async (_req, res) => {
     const { rows } = await pool.query(
-      `SELECT edicion, fecha_publicacion, fuente_url, fuente_secundaria_url,
+      `SELECT edicion, tipo_documento, fecha_publicacion, fuente_url,
               fecha_verificacion, estado, notas
        FROM mmm_ediciones
        ORDER BY edicion`
@@ -17,9 +17,9 @@ mmmRouter.get(
     res.json({
       ediciones: rows.map((r) => ({
         edicion: r.edicion,
+        tipoDocumento: r.tipo_documento,
         fechaPublicacion: r.fecha_publicacion,
         fuenteUrl: r.fuente_url,
-        fuenteSecundariaUrl: r.fuente_secundaria_url,
         fechaVerificacion: r.fecha_verificacion,
         estado: r.estado,
         notas: r.notas,
@@ -32,24 +32,21 @@ mmmRouter.get(
   "/pasivos-contingentes",
   asyncHandler(async (_req, res) => {
     const { rows } = await pool.query(
-      `SELECT e.edicion, e.fecha_publicacion, e.estado AS estado_edicion,
-              p.categoria, p.pct_pbi, p.notas AS notas_categoria,
-              e.fuente_url, e.fuente_secundaria_url, e.fecha_verificacion
+      `SELECT p.anio_cierre, p.categoria, p.pct_pbi, p.notas AS notas_categoria,
+              p.edicion_fuente, e.fuente_url, e.fecha_verificacion
        FROM mmm_pasivos_contingentes p
-       JOIN mmm_ediciones e ON e.edicion = p.edicion
-       ORDER BY e.edicion, p.categoria`
+       JOIN mmm_ediciones e ON e.edicion = p.edicion_fuente
+       ORDER BY p.anio_cierre, p.categoria`
     );
 
     res.json({
       pasivosContingentes: rows.map((r) => ({
-        edicion: r.edicion,
-        fechaPublicacion: r.fecha_publicacion,
-        estadoEdicion: r.estado_edicion,
+        anioCierre: r.anio_cierre,
         categoria: r.categoria,
         pctPbi: r.pct_pbi === null ? null : Number(r.pct_pbi),
         notas: r.notas_categoria,
+        edicionFuente: r.edicion_fuente,
         fuenteUrl: r.fuente_url,
-        fuenteSecundariaUrl: r.fuente_secundaria_url,
         fechaVerificacion: r.fecha_verificacion,
       })),
     });
@@ -77,6 +74,35 @@ mmmRouter.get(
         fuenteUrl: r.fuente_url,
         notas: r.notas,
       })),
+    });
+  })
+);
+
+mmmRouter.get(
+  "/meta/sources",
+  asyncHandler(async (_req, res) => {
+    const { rows } = await pool.query(
+      `SELECT id AS batch_id, edicion, file_name, checksum, filas_insertadas, ingested_at
+       FROM raw_mmm_batches
+       ORDER BY ingested_at DESC
+       LIMIT 10`
+    );
+
+    res.json({
+      fuentes: [
+        {
+          dataset: "MEF - Pasivos contingentes explícitos del SPNF (MMM/IAPM)",
+          metodo: "Ingesta manual: pdf-parse sobre PDF descargado a mano (npm run ingest:pdf)",
+          ultimosLotes: rows.map((r) => ({
+            batchId: r.batch_id,
+            edicion: r.edicion,
+            fileName: r.file_name,
+            checksum: r.checksum,
+            filasInsertadas: r.filas_insertadas,
+            ingestadoEl: r.ingested_at,
+          })),
+        },
+      ],
     });
   })
 );

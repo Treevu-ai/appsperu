@@ -14,29 +14,16 @@ beforeEach(() => {
 });
 
 describe("GET /api/mmm/pasivos-contingentes", () => {
-  it("devuelve las categorías por edición, sin inventar valores faltantes", async () => {
+  it("devuelve las categorías por año de cierre, sin inventar valores faltantes", async () => {
     queryMock.mockResolvedValueOnce({
       rows: [
         {
-          edicion: "2027-2030",
-          fecha_publicacion: "ago-2026 (aprobado por Consejo de Ministros)",
-          estado_edicion: "verificado",
+          anio_cierre: 2022,
           categoria: "isds",
           pct_pbi: "2.15",
-          notas_categoria: "Cifra ancla del proyecto.",
-          fuente_url: "https://www.mef.gob.pe/es/marco-macroeconomico/marco-macroeconomico-multianualmmm",
-          fuente_secundaria_url: "https://gestion.pe/economia/este-es-el-impacto-economico-que-el-mef-calcula-en-caso-peru-pierda-sus-arbitrajes-y-casos-activos-en-el-ciadi-noticia/",
-          fecha_verificacion: "2026-09-13",
-        },
-        {
-          edicion: "2026-2029",
-          fecha_publicacion: "27-ago-2025",
-          estado_edicion: "no_localizado",
-          categoria: "isds",
-          pct_pbi: null,
-          notas_categoria: "No localizado — ver notas en mmm_ediciones.",
-          fuente_url: "https://www.mef.gob.pe/es/marco-macroeconomico/marco-macroeconomico-multianualmmm",
-          fuente_secundaria_url: null,
+          notas_categoria: null,
+          edicion_fuente: "IAPM_2025_2028",
+          fuente_url: "https://www.mef.gob.pe/contenidos/pol_econ/marco_macro/IAPM_2025-2028.pdf",
           fecha_verificacion: "2026-09-13",
         },
       ],
@@ -46,10 +33,9 @@ describe("GET /api/mmm/pasivos-contingentes", () => {
     const res = await request(app).get("/api/mmm/pasivos-contingentes");
 
     expect(res.status).toBe(200);
-    expect(res.body.pasivosContingentes).toHaveLength(2);
+    expect(res.body.pasivosContingentes).toHaveLength(1);
+    expect(res.body.pasivosContingentes[0].anioCierre).toBe(2022);
     expect(res.body.pasivosContingentes[0].pctPbi).toBe(2.15);
-    expect(res.body.pasivosContingentes[1].pctPbi).toBeNull();
-    expect(res.body.pasivosContingentes[1].estadoEdicion).toBe("no_localizado");
     expect(queryMock).toHaveBeenCalledTimes(1);
   });
 });
@@ -68,5 +54,30 @@ describe("GET /api/mmm/serie-historica", () => {
     expect(res.status).toBe(200);
     expect(res.body.fuente).toBe("secundaria");
     expect(res.body.serie[0].pctPbi).toBe(0.8);
+  });
+});
+
+describe("GET /api/mmm/meta/sources", () => {
+  it("agrega los lotes de ingesta manual más recientes", async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          batch_id: 1,
+          edicion: "IAPM_2025_2028",
+          file_name: "IAPM_2025-2028.pdf",
+          checksum: "abc123",
+          filas_insertadas: 16,
+          ingested_at: "2026-09-13T21:00:00.000Z",
+        },
+      ],
+    });
+
+    const app = createApp();
+    const res = await request(app).get("/api/mmm/meta/sources");
+
+    expect(res.status).toBe(200);
+    expect(res.body.fuentes[0].ultimosLotes).toHaveLength(1);
+    expect(res.body.fuentes[0].ultimosLotes[0].filasInsertadas).toBe(16);
+    expect(queryMock).toHaveBeenCalledTimes(1);
   });
 });

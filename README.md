@@ -45,7 +45,7 @@ Rastro es una plataforma de inteligencia que ayuda a equipos y organizaciones a 
 | `red-vial-subnacional` | Intervenciones en redes viales departamentales/vecinales (MTC/Provías Descentralizado) | 4024 |
 | `residuos-solidos` | Generación anual de residuos sólidos por distrito, serie 2019-2024 (MINAM/SIGERSOL) | 4025 |
 | `infraestructura-mtc` | Terminales portuarios, aeródromos y peajes de la red vial nacional (MTC) | 4026 |
-| `riesgo-fiscal-isds` | Pasivos contingentes explícitos por ISDS/APP, por edición del MMM (MEF) — semilla manual, sin conector | 4027 |
+| `riesgo-fiscal-isds` | Pasivos contingentes explícitos por ISDS/APP, por año de cierre (MEF, MMM/IAPM) — conector `pdf-parse`, descarga manual | 4027 |
 
 ## Levantar una app
 
@@ -62,7 +62,7 @@ de las otras bases y `npm run dev`.
 
 ## Servidor MCP (Model Context Protocol)
 
-[`mcp-server/`](mcp-server/) expone las 28 apps como **152 tools de solo lectura**, buscables desde
+[`mcp-server/`](mcp-server/) expone las 28 apps como **153 tools de solo lectura**, buscables desde
 2 meta-tools (`rastro_buscar_tools` + `rastro_llamar`, no 146 registrados uno por uno) para agentes IA
 vía MCP (transporte stdio). Compatible con Claude Code, Claude Desktop, Cursor, Windsurf, Cline y
 Continue.dev. Una vez conectado, el agente busca el tool exacto, lo ejecuta, encadena resultados y

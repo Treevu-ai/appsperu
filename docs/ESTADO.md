@@ -2,27 +2,53 @@
 
 Última actualización: 2026-09-13.
 
-## App nueva `riesgo-fiscal-isds` — pasivos contingentes MEF-MMM, semilla manual (2026-09-13)
+## Sprint GORE S1 — tableros La Libertad cerrados (2026-09-13)
 
-28ª app del monorepo, originada en un proyecto externo (`clasificado`) que ya había identificado
-la cifra ancla: el MEF, en su Marco Macroeconómico Multianual (MMM), reconoce 2.15% del PBI como
-pasivo contingente explícito por controversias internacionales de inversión (ISDS) en la edición
-2027-2030 — el mayor pasivo contingente individual reconocido por el Estado, por encima del 1.58%
-del PBI de contingencias de APP.
+Cierre del sprint definido en [`docs/TICKETS_GORE_La_Libertad_S1_v1.md`](TICKETS_GORE_La_Libertad_S1_v1.md) (13–27 sep 2026). Entregables verificados:
 
-Segunda fuente del proyecto sin conector de descarga automatizado (junto a `bcrp-la-libertad`),
-pero con un mecanismo distinto: acá no hay ni siquiera un script manual — los datos se cargan
-como `INSERT` en migraciones SQL versionadas, verificados contra cobertura periodística que cita
-la cifra exacta del MMM. `WebFetch` no logró extraer texto de los PDFs del MEF (a diferencia del
-PDF de `bcrp-la-libertad`, que sí es legible con `pdf-parse`) — no se probó `pdf-parse`
-directamente, así que la puerta a automatizar esto más adelante sigue abierta (ver ADR-0023).
+| Ticket | Entregable | Evidencia |
+|---|---|---|
+| GORE-01a–c | Ficha sectorial con presupuesto, CUI/obra/contrato, señales INFOBRAS | `LaLibertadFicha.tsx`, `SectorFichaSections.tsx`, E2E `ficha-sector.spec.ts` (5/5) |
+| GORE-02 | Frescura INFOBRAS + compras en layout GORE | `GoreFreshnessStrip.tsx`, endpoint `GET /api/meta/sources` (infobras) |
+| GORE-03 | `ABOUT_RASTRO.md` al estado sep 2026 (27 apps, 149 tools) | rev. 2026-09-13 |
+| GORE-04a/b | E2E comparativo + benchmark | `comparativo-sectores.spec.ts`, `benchmark-entidad.spec.ts` (3 tests) |
+| GORE-04c | Checklist smoke GORE | [`docs/validacion-smoke-rastro-web-v1.md`](validacion-smoke-rastro-web-v1.md) §checklist + 3 PNG en `docs/smoke-rastro-web/` |
 
-3 ediciones cargadas (2025-2028, 2026-2029, 2027-2030); desglose completo de las 4 categorías
-(ISDS, APP, judicial/administrativo, total) solo confirmado para 2025-2028 — las otras dos
-quedan con campos `NULL` explícitos donde no se pudo verificar, nunca con un valor inventado.
-Más una serie histórica secundaria (2014/2021/2024, declaración pública de un ex-MEF) en tabla
-separada, para no mezclar metodologías. 3 tools nuevas en el catálogo MCP (152 tools, 28 apps —
-antes 149). Puerto 4027, Postgres 5459.
+**Demo sin terminal (5 consultas):**
+
+1. `/gore/la-libertad/ficha?sector=TRANSPORTE&anio=2026` — presupuesto + inversiones/obras/contratos
+2. `/gore/la-libertad/ficha?sector=SALUD&anio=2026` — sector con cobertura PARCIAL
+3. `/gore/la-libertad/comparativo?sectores=TRANSPORTE,SALUD&anio=2026` — tabla comparativa
+4. `/gore/la-libertad/benchmark?entityCode=831&anio=2026` — percentil P60
+5. `/gore/la-libertad/benchmark?entityCode=999&anio=2026` — `datos_insuficientes` declarado
+
+En producción (`VITE_PUBLIC_APIS_LIVE=false`) las rutas GORE consumen el snapshot semanal bundleado; en dev local o CI con fixtures, los E2E comparan JSON fixture = HTML renderizado.
+
+## App nueva `riesgo-fiscal-isds` — pasivos contingentes MEF-MMM, conector pdf-parse (2026-09-13)
+
+28ª app del monorepo, originada en un proyecto externo (`clasificado`) que había identificado que
+el MEF, en su Marco Macroeconómico Multianual (MMM) e Informe de Actualización de Proyecciones
+Macroeconómicas (IAPM), reconoce anualmente qué porcentaje del PBI es pasivo contingente
+explícito por controversias internacionales de inversión (ISDS/CIADI) — la categoría, junto con
+APP y procesos judiciales/administrativos, que el propio Estado reporta como exposición máxima
+del SPNF.
+
+**Nota de proceso:** la primera versión de esta entrada (misma fecha) daba una cifra ancla
+"2.15% ISDS / 1.58% APP para la edición 2027-2030" y decía que los PDFs del MEF no tenían texto
+extraíble. Ambas cosas eran incorrectas — un spike posterior con `pdf-parse` (en vez de
+`WebFetch`) mostró que el texto sí se extrae limpio, y que esas cifras exactas corresponden al
+**cierre de 2022** (reportado en `MMM_2024_2027`), no a la edición 2027-2030. Detalle completo de
+qué se corrigió y por qué en `docs/adr/0023-riesgo-fiscal-isds-semilla-manual.md`, sección
+"Corrección posterior".
+
+Con el dato corregido: conector real `npm run ingest:pdf -- <ruta> <edicion>` (mismo patrón que
+`bcrp-la-libertad`, `pdf-parse` + checksum + upsert transaccional), esquema por **año de cierre**
+(`mmm_pasivos_contingentes`, `UNIQUE (anio_cierre, categoria)` — el dato es una serie continua
+que cada documento nuevo extiende/revisa, no "una tabla por edición"). Serie 2020-2023 verificada
+y cargada (16 filas, 4 categorías × 4 años), cross-validada contra dos documentos distintos para
+2022 (coincidencia exacta). Edición vigente (MMM 2027-2030) sin ingerir — descarga automatizada
+bloqueada (404/WAF/418 en los 4 intentos), pendiente de que alguien la baje a mano. 4 tools en el
+catálogo MCP (153 tools, 28 apps — antes 149). Puerto 4027, Postgres 5459.
 
 Detalle completo: [`docs/conectores.md#riesgo-fiscal-isds`](conectores.md#riesgo-fiscal-isds),
 [`docs/data-contracts/riesgo-fiscal-isds.md`](data-contracts/riesgo-fiscal-isds.md),
@@ -953,7 +979,7 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `infracciones-ambientales` | Registro de infractores ambientales sancionados (OEFA/RUIAS) | 4023 | 5454 | Construida, probada, verificada (14,724 filas, La Libertad: 610/12 provincias) |
 | `red-vial-subnacional` | Intervenciones viales departamentales/vecinales (MTC/Provías Descentralizado) | 4024 | 5455 | Construida, probada, verificada (12,536 filas, La Libertad: 461/12 provincias) |
 | `residuos-solidos` | Generación anual de residuos sólidos por distrito, serie 2019-2024 (MINAM/SIGERSOL) | 4025 | 5456 | Construida, probada, verificada (11,310 filas, La Libertad: 500/12 provincias) |
-| `riesgo-fiscal-isds` | Pasivos contingentes explícitos por ISDS/APP, por edición del MMM (MEF) — semilla manual, sin conector | 4027 | 5459 | Construida, probada, verificada (parcial: 3 ediciones, desglose completo solo en 1 de 3) |
+| `riesgo-fiscal-isds` | Pasivos contingentes explícitos por ISDS/APP, por año de cierre (MEF, MMM/IAPM) — conector pdf-parse, descarga manual | 4027 | 5459 | Construida, probada, verificada (serie 2020-2023 completa; edición vigente sin ingerir) |
 
 ## `bcrp-la-libertad` — ingesta manual, distinto a todo el resto del proyecto (2026-08-28)
 

@@ -94,9 +94,93 @@ no el dominio de datos.
 - No hay scheduler — coherente con el resto del proyecto, y en este caso también con la
   frecuencia real de la fuente (no tendría sentido revisar más de 1-2 veces al año).
 
+## Corrección posterior (misma fecha, tras un spike real con `pdf-parse`)
+
+Todo lo anterior en este ADR quedó **parcialmente invalidado** por un spike técnico hecho
+inmediatamente después de la primera implementación, al continuar el trabajo el mismo día. Se
+deja el contexto y la decisión originales arriba sin editar (son el registro de qué se pensaba y
+por qué), y se documenta acá qué resultó ser incorrecto y qué se corrigió.
+
+### Hallazgo 1: `pdf-parse` sí extrae texto limpio — la premisa del punto 1 del Contexto era falsa
+
+Se corrió `pdf-parse` directamente (no `WebFetch`) sobre los dos PDFs del MEF ya descargados
+(`MMM_2024_2027.pdf`, `IAPM_2025-2028.pdf`): ambos dieron texto limpio y completo (869k y 491k
+caracteres, 262 y 144 páginas). El fallo original de `WebFetch` era una limitación de esa
+herramienta específica (su pipeline de extracción con un modelo pequeño, no diseñado para PDFs
+de ese tamaño), no una propiedad del PDF. **Conclusión corregida: estos PDFs no son un caso como
+`bcrp-la-libertad` (bloqueo de WAF) — el único bloqueo real es la descarga automatizada de la
+edición vigente** (ver Hallazgo 3).
+
+### Hallazgo 2: la cifra ancla (2.15% ISDS / 1.58% APP) estaba mal atribuida a la edición 2027-2030
+
+El Contexto original atribuye 2.15%/1.58% a "la edición 2027-2030", basado en un artículo de
+prensa (Gestión.pe) encontrado por búsqueda web. La lectura directa del PDF de `MMM_2024_2027`
+(aprobado 27-ago-2023) muestra que esas cifras exactas corresponden al **cierre de 2022**:
+
+```
+2021    2022
+Total   12,01   9,92
+1. Procesos judiciales, administrativos y arbitrajes   7,08   6,19
+2. Controversias internacionales en temas de inversión - CIADI   3,16   2,15
+3. Contingencias explícitas asumidos en contratos de APP   1,78   1,58
+```
+
+Es decir: el dato es real y viene de fuente primaria del MEF, pero la sesión de investigación
+anterior (basada en búsqueda web, sin leer el PDF) le puso la fecha equivocada. Este error ya se
+había propagado a `informe_isds_peru.tex` y `modulo_riesgo_institucional.md` del proyecto externo
+`clasificado`, y a la primera versión de las migraciones de esta app — todo eso se corrigió en el
+mismo commit que corrige este ADR.
+
+**Lección operativa**: una cifra encontrada por búsqueda web y atribuida a una edición específica
+de un documento periódico (MMM, MMR, cualquier serie con múltiples ediciones) debe verificarse
+contra el documento mismo antes de fijarla a una fecha — la cobertura de prensa a veces no aclara
+o generaliza a qué año de cierre se refiere una cifra, y un resumen de búsqueda puede
+mal-atribuirla a la edición más reciente por defecto.
+
+### Hallazgo 3: la descarga automatizada de la edición vigente (MMM 2027-2030) sí está bloqueada
+
+Se intentaron 4 rutas para conseguir el PDF del MMM 2027-2030 sin intervención humana:
+`mef.gob.pe/contenidos/.../MMM_2027_2030.pdf` (404 — el nombre real del archivo no sigue el
+patrón de ediciones anteriores), el mismo patrón para `MMM_2026_2029.pdf` (404), el mirror en
+`bcrp.gob.pe/docs/Publicaciones/Programa-Economico/mmm-2027-2030.pdf` (bloqueado por el mismo
+WAF Incapsula de `bcrp-la-libertad`, ver ADR-0014), y la página de publicaciones en gob.pe
+(HTTP 418, bloqueo anti-bot deliberado). **Esta parte del diagnóstico original sí era correcta**:
+la descarga sigue siendo manual. Lo que cambió es que, una vez con el archivo en disco, la
+extracción de texto y el parseo de la tabla SÍ son automatizables.
+
+### Decisión revisada: esquema por año de cierre + conector real `pdf-parse`
+
+- El esquema original (`mmm_ediciones` como clave de `mmm_pasivos_contingentes`, modelando el
+  dato como "una tabla por edición del MMM") estaba mal diseñado: el dato real es una **serie
+  continua por año de cierre** que cada documento nuevo extiende o revisa. Se rediseñó
+  `mmm_pasivos_contingentes` con `anio_cierre` como parte de la clave (`UNIQUE (anio_cierre,
+  categoria)`) y `edicion_fuente` como referencia a qué documento reportó ese número.
+- Como ninguna otra sesión/desarrollador llegó a depender de las migraciones originales (solo se
+  habían corrido contra un contenedor Postgres de prueba local, nunca desplegadas), se corrigió
+  el contenido de `001_init.sql` y `002_seed_ediciones_verificadas.sql` directamente en vez de
+  agregar migraciones `003`/`004` sobre un diseño que se sabía incorrecto desde el día uno.
+- Se construyó `src/ingest/pdf-connector.ts` + `src/ingest/pdf-normalize.ts` (mismo patrón que
+  `bcrp-la-libertad`: `npm run ingest:pdf -- <ruta> <edicion>`, checksum, batch crudo, upsert
+  transaccional). El normalizer solo reconoce el formato de tabla limpio confirmado en
+  `IAPM_2025_2028` (encabezado de N años + filas "Total"/"1."/"2. CIADI"/"3. APP" tab-separadas) —
+  el formato distinto que usa `MMM_2024_2027` en la misma sección (año actual + año previo +
+  "Contingencia Esperada" + "Diferencia") se detecta y se descarta explícitamente, devolviendo 0
+  filas en vez de datos mal ubicados. Verificado con un test que confirma ambos comportamientos.
+- **Bug real encontrado durante el spike**: la primera versión de los regex de categoría usaba
+  `.*` codicioso sin un literal de anclaje al final de la fila "1. Procesos judiciales..." — sin
+  un ancla como "CIADI" o "APP" para detener el backtracking, `.*\t` consumía hasta el ÚLTIMO tab
+  de la fila, capturando solo el valor final en vez de los N valores completos. Se corrigió a
+  `.*?` (no codicioso). Este es exactamente el tipo de error silencioso que la salvaguarda de
+  "todas las categorías deben encontrarse o se devuelve `[]`" existe para atrapar — con esa
+  salvaguarda, el bug se manifestó como "0 filas" (visible, investigable) en vez de datos
+  parcialmente corruptos.
+- Serie verificada y cargada por el conector real (no por `INSERT` manual): 2020-2023, 4
+  categorías cada uno, 16 filas, desde `IAPM_2025_2028`. La edición vigente (`MMM_2027_2030`)
+  queda con `estado = 'no_localizado'` — pendiente de que alguien descargue el PDF a mano.
+
 ## Referencias
 
 - Data contract: `docs/data-contracts/riesgo-fiscal-isds.md`
 - Precedente de ingesta manual por bloqueo de PDF: `docs/adr/0014-bcrp-la-libertad-sintesis-economica-ingesta-manual.md`
 - Criterio de alcance del workspace compartido: `docs/adr/0019-alcance-workspace-utilidades-compartidas.md`
-- Proyecto externo que originó este trabajo: `clasificado/archivos_conflicto_peru/tracker_mmm_pasivos_contingentes.html`, `informe_isds_peru.tex`, `modulo_riesgo_institucional.md`
+- Proyecto externo que originó este trabajo: `clasificado/archivos_conflicto_peru/tracker_mmm_pasivos_contingentes.html`, `informe_isds_peru.tex`, `modulo_riesgo_institucional.md` (los tres también corregidos, misma fecha)

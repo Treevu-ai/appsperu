@@ -99,6 +99,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "riesgo_fiscal_isds_pasivos_contingentes",
     "riesgo_fiscal_isds_ediciones",
     "riesgo_fiscal_isds_serie_historica",
+    "riesgo_fiscal_isds_meta_sources",
   ],
   "identidad-fiscal": [
     "identidad_fiscal_contribuyente_by_ruc",

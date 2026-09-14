@@ -1,90 +1,107 @@
-# Data contract — MEF: pasivos contingentes explícitos (Marco Macroeconómico Multianual)
+# Data contract — MEF: pasivos contingentes explícitos (Marco Macroeconómico Multianual / IAPM)
 
-> Ficha técnica: `docs/adr/0023-riesgo-fiscal-isds-semilla-manual.md`.
+> Ficha técnica: `docs/adr/0023-riesgo-fiscal-isds-semilla-manual.md` (incluye una corrección
+> posterior importante — leer esa sección antes de confiar en cualquier cifra de esta fuente).
 > Owner del conector: app `riesgo-fiscal-isds` (`apps/riesgo-fiscal-isds/api`).
 
 - Fuente oficial: Ministerio de Economía y Finanzas del Perú (MEF), Marco Macroeconómico
-  Multianual (MMM), sección de pasivos contingentes explícitos del Sector Público No
-  Financiero (SPNF). `mef.gob.pe/es/marco-macroeconomico/marco-macroeconomico-multianualmmm`.
-- **Sin confirmación por lectura directa del PDF** — a diferencia de `bcrp-la-libertad`, no se
-  logró un spike técnico exitoso de extracción de texto (ver sección Acceso). Cada cifra
-  cargada se verificó contra cobertura periodística especializada que cita el número exacto y
-  su fuente dentro del MMM, con fecha de verificación registrada por fila.
+  Multianual (MMM) o Informe de Actualización de Proyecciones Macroeconómicas (IAPM), sección de
+  pasivos contingentes explícitos del Sector Público No Financiero (SPNF).
+  `mef.gob.pe/es/marco-macroeconomico/marco-macroeconomico-multianualmmm`.
+- **Confirmado por lectura directa del PDF con `pdf-parse` v2** (no por cobertura periodística —
+  la primera versión de esta app sí lo hizo así y produjo una cifra mal atribuida a la edición
+  equivocada; ver ADR-0023, sección "Corrección posterior").
 
-## Estado: PARCIALMENTE CONFIRMADO — acceso al PDF no resuelto, datos cargados por fuente secundaria citable
+## Estado: CONFIRMADO — serie 2020-2023 verificada, edición vigente pendiente de descarga manual
 
-### Acceso — PDFs sin capa de texto extraíble
+### Acceso — extracción de texto funciona, descarga automatizada de la edición vigente no
 
-Se intentó `WebFetch` sobre tres ediciones (`MMM_2024_2027.pdf`, `IAPM_2025-2028.pdf`, y la URL
-general del MMM vigente) el 2026-09-13. Los tres devolvieron contenido no interpretable
-("corrupted PDF data, JPEG image streams") en vez de texto — a diferencia de `bcrp-la-libertad`,
-donde el mismo tipo de intento con `pdf-parse` sí extrajo texto tabulado limpio. No se probó
-`pdf-parse` directamente sobre estos archivos (solo `WebFetch`, que usa un pipeline distinto) —
-**queda pendiente un spike real con `pdf-parse` antes de descartar la extracción automatizada
-por completo**; ver "Riesgos" más abajo.
+Dos PDFs ya descargados (`MMM_2024_2027.pdf`, `IAPM_2025-2028.pdf`) se leyeron con `pdf-parse`
+sin ningún problema: texto completo y limpio, 262 y 144 páginas respectivamente. Un intento
+anterior con `WebFetch` había fallado sobre los mismos archivos — **eso era una limitación de esa
+herramienta específica, no del PDF** (`WebFetch` usa un modelo pequeño para convertir a markdown,
+no apto para binarios de este tamaño/complejidad).
 
-**Conclusión operativa actual**: sin un spike que confirme o descarte la extracción por
-`pdf-parse`, no se construyó ningún conector. Los datos se cargaron por verificación cruzada
-contra prensa especializada que cita las cifras exactas del documento.
+La edición vigente al momento de escribir esto (MMM 2027-2030, aprobada ago-2026) sí está
+bloqueada para descarga automatizada — se probaron 4 rutas, las 4 fallaron:
 
-### Contenido — estructura confirmada indirectamente
-
-El MMM reporta, bajo la etiqueta "pasivos contingentes explícitos", tres categorías (más un
-total) como % del PBI:
-
-| Categoría | Qué cubre |
+| Intento | Resultado |
 |---|---|
-| Judicial/administrativo | Procesos judiciales, administrativos y arbitrajes nacionales |
-| ISDS | Controversias internacionales en materia de inversión (CIADI/ICSID) |
-| APP | Contingencias explícitas de Asociaciones Público-Privadas |
-| Total | Suma de las tres anteriores — exposición máxima del SPNF |
+| `mef.gob.pe/contenidos/pol_econ/marco_macro/MMM_2027_2030.pdf` | 404 (nombre de archivo real distinto) |
+| `mef.gob.pe/contenidos/pol_econ/marco_macro/MMM_2026_2029.pdf` | 404 |
+| `bcrp.gob.pe/docs/Publicaciones/Programa-Economico/mmm-2027-2030.pdf` (mirror) | Bloqueado por WAF Incapsula — mismo bloqueo que `bcrp-la-libertad`, ver ADR-0014 |
+| `gob.pe/institucion/mef/informes-publicaciones/8533022` (página de publicaciones) | HTTP 418 — bloqueo anti-bot deliberado |
 
-### Corte verificado por edición
+**Conclusión**: alguien con navegador real debe descargar el PDF de la edición vigente y correr
+`npm run ingest:pdf -- <ruta> <edicion>`. Una vez con el archivo en disco, la extracción y el
+parseo son completamente automáticos y ya están probados contra dos documentos reales.
 
-- **MMM 2025-2028** (publicado 23-ago-2024): 6.6% (judicial/administrativo) + 2.9% (ISDS) +
-  1.4% (APP) = 10.9% PBI total. Desglose completo, única edición con las 4 categorías
-  confirmadas. Fuente: cobertura de búsqueda web verificada 2026-09-13, citando directamente el
-  MMM.
-- **MMM 2026-2029** (publicado 27-ago-2025): fuentes secundarias contradictorias — un artículo
-  cita "3.01% PBI en valor presente" (sin desglose ISDS/APP) y otro "9.28% PBI de exposición
-  máxima ~US$30 mil millones" (también sin desglose). No se registró ningún `pct_pbi` para esta
-  edición; se prefirió `NULL` + `estado: no_localizado` antes que adivinar cuál cifra corresponde
-  a qué categoría.
-- **MMM 2027-2030** (aprobado ago-2026): 2.15% PBI ISDS, 1.58% PBI APP — cifra ancla ya citada
-  en el proyecto externo `clasificado` (`informe_isds_peru.tex`, `modulo_riesgo_institucional.md`).
-  Categoría judicial/administrativo y total no localizados para esta edición.
+### Contenido — dos formatos de tabla distintos en la misma sección, solo uno soportado
 
-### Serie histórica secundaria (tabla aparte, no mezclar)
+El recuadro de pasivos contingentes explícitos aparece en ambos tipos de documento, pero con
+estructuras distintas:
 
-Luis Miguel Castilla (ex-MEF, director ejecutivo de Videnza) citó en PERUMIN 37 (sept-2025) una
-serie de "controversias internacionales" como % PBI para 2014 (0.8%), 2021 (3.2%, US$7,200M, 27
-casos) y 2024 (2.3%, US$6,700M, 24 casos). Es una declaración pública con acceso privilegiado a
-la data del MEF, pero **no es una cita directa del documento MMM** ni necesariamente la misma
-categoría exacta que "ISDS" en `mmm_pasivos_contingentes` — se guarda en
-`mmm_serie_historica_secundaria`, tabla separada, y la API la devuelve con `fuente: "secundaria"`
-explícito.
+**Formato soportado (confirmado en `IAPM_2025_2028`)**: encabezado de N años en columnas
+tab-separadas, seguido de 4 filas ("Total", "1. Procesos judiciales, administrativos y
+arbitrajes", "2. Controversias internacionales en temas de inversión - CIADI", "3. Contingencias
+explícitas asumidos en contratos de APP"), cada una con N valores tab-separados en formato
+"12,70" (coma decimal):
+
+```
+2020    2021    2022    2023
+Total    12,70    12,01    9,92    10,92
+1. Procesos judiciales, administrativos y arbitrajes    8,68    7,08    6,19    6,59
+2. Controversias internacionales en temas de inversión - CIADI    2,01    3,16    2,15    2,91
+3. Contingencias explícitas asumidos en contratos de APP    2,02    1,78    1,58    1,42
+```
+
+**Formato NO soportado (confirmado en `MMM_2024_2027`)**: mismas 4 filas, pero el encabezado es
+año-actual + año-previo + "Contingencia Esperada" + "Diferencia" (ej. "2021 2022 2023
+2022/2021"), no una serie de años — `parsePasivosContingentesTable` lo detecta (el patrón de
+encabezado de años consecutivos no matchea "2022/2021") y devuelve `[]` en vez de leer las
+columnas equivocadas como si fueran años.
+
+Categorías → clave interna:
+
+| Texto en el PDF | `categoria` |
+|---|---|
+| Total | `total` |
+| 1. Procesos judiciales, administrativos y arbitrajes | `judicial_administrativo` |
+| 2. Controversias internacionales en temas de inversión - CIADI | `isds` |
+| 3. Contingencias explícitas asumidos en contratos de APP | `app` |
+
+### Corte verificado
+
+Serie 2020-2023 cargada por el conector real desde `IAPM_2025_2028` (16 filas: 4 categorías × 4
+años). Cross-validado contra `MMM_2024_2027` para el año 2022: ambos documentos reportan
+exactamente 9.92% (total) / 6.19% (judicial) / 2.15% (ISDS) / 1.58% (APP) — coincidencia exacta,
+buena señal de que el dato es estable entre ediciones que se solapan.
+
+| Año de cierre | Total | Judicial/administrativo | ISDS (CIADI) | APP |
+|---|---|---|---|---|
+| 2020 | 12.70% | 8.68% | 2.01% | 2.02% |
+| 2021 | 12.01% | 7.08% | 3.16% | 1.78% |
+| 2022 | 9.92% | 6.19% | 2.15% | 1.58% |
+| 2023 | 10.92% | 6.59% | 2.91% | 1.42% |
 
 ## Implicaciones para cruces con el ecosistema
 
 | Entidad destino | Clave disponible | Viabilidad |
 |---|---|---|
-| `radar-ejecucion` (MEF) | Ninguna clave exacta — el MMM es un documento de proyección fiscal agregada, no tiene `SEC_EJEC` ni entidad ejecutora por fila | No — solo lectura conjunta descriptiva |
-| Proyecto `clasificado` (fuera del monorepo) | Ninguna clave técnica — cita conceptual de la misma cifra (2.15% PBI, MMM 2027-2030) en `informe_isds_peru.tex` y `modulo_riesgo_institucional.md` | Sí, como referencia cruzada documental, no como join de datos |
+| `radar-ejecucion` (MEF) | Ninguna clave exacta — el MMM/IAPM es un documento de proyección fiscal agregada, no tiene `SEC_EJEC` ni entidad ejecutora por fila | No — solo lectura conjunta descriptiva |
+| Proyecto `clasificado` (fuera del monorepo) | Ninguna clave técnica — cita conceptual de la misma serie en `informe_isds_peru.tex` y `modulo_riesgo_institucional.md` (corregidos junto con esta app, misma fecha) | Sí, como referencia cruzada documental, no como join de datos |
 
 ## Riesgos de ingesta
 
-1. **Sin spike confirmado de `pdf-parse` sobre los PDFs reales del MEF** — el fallo de
-   `WebFetch` no descarta necesariamente que `pdf-parse` (usado con éxito en `bcrp-la-libertad`)
-   logre extraer texto. Antes de asumir que estos PDFs son 100% escaneados, correr
-   `pdf-parse` directamente sobre un PDF del MMM descargado a mano es el siguiente paso lógico
-   si se quiere automatizar en el futuro.
-2. **Datos verificados contra fuente secundaria, no contra el documento primario leído
-   directamente** — cada cifra tiene su URL de cobertura periodística citada, pero ninguna se
-   confirmó leyendo el PDF oficial línea por línea (a diferencia de `bcrp-la-libertad`, donde sí
-   se leyó y verificó una cifra narrativa del propio reporte). Riesgo de que la prensa haya
-   redondeado o mal transcrito algún decimal.
-3. **Cobertura desigual entre ediciones** — solo 1 de 3 ediciones tiene el desglose completo de
-   las 4 categorías; las otras 2 tienen campos `NULL` explícitos en vez de valores inventados.
-4. **Actualización depende de que alguien la haga a mano** — sin conector, sin scheduler, sin
-   forma de saber automáticamente cuándo sale una edición nueva del MMM (normalmente
-   fines de agosto, más alguna revisión a mitad de año).
+1. **Descarga de la edición vigente sigue siendo manual** — el MMM se publica ~fines de agosto
+   cada año; si nadie descarga el PDF y corre el conector, la serie queda un año atrás.
+2. **Solo un formato de tabla soportado** — si una futura edición cambia el layout del recuadro
+   (como ya ocurre entre `MMM_2024_2027` y `IAPM_2025_2028` dentro del mismo período), el
+   conector fallará explícitamente (`Error`, 0 filas insertadas) en vez de leer mal los datos.
+   Extender el normalizer para el segundo formato es trabajo futuro, no bloqueante.
+3. **Datos verificados contra 2 documentos, ambos de 2023-2025** — la serie no cubre 2024 ni 2025
+   todavía; requiere descargar y correr el conector contra el IAPM/MMM más reciente disponible.
+4. **Metodología del `2. Controversias internacionales... - CIADI` no confirmada como idéntica
+   entre ediciones** — el MMM 2024-2027 explica la metodología de cálculo (tiempo esperado ×
+   monto de exposición × severidad histórica de casos CIADI) pero no hay garantía de que el
+   método no se revise entre ediciones sin aviso explícito en el texto.

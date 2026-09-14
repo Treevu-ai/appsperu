@@ -2171,19 +2171,18 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
 
-  // ---- riesgo-fiscal-isds (MEF, Marco Macroeconómico Multianual) ----
+  // ---- riesgo-fiscal-isds (MEF, Marco Macroeconómico Multianual / IAPM) ----
   {
     name: "riesgo_fiscal_isds_pasivos_contingentes",
     app: "riesgo-fiscal-isds",
     description:
-      "Pasivos contingentes explícitos del Sector Público No Financiero, por edición del Marco " +
-      "Macroeconómico Multianual (MEF): controversias internacionales de inversión (ISDS/ICSID), " +
-      "contingencias de Asociaciones Público-Privadas (APP), y procesos judiciales/administrativos/" +
-      "arbitraje nacional. A diferencia del resto del catálogo, esta fuente se carga con SEMILLA " +
-      "MANUAL REVISADA, no con un conector de descarga — el MMM se publica solo 1-2 veces al año y " +
-      "sus PDFs no tienen capa de texto extraíble con las herramientas disponibles (ver ADR-0023). " +
-      "`pctPbi` es `null` cuando la categoría de esa edición no se pudo verificar contra una fuente " +
-      "citable — nunca se completa con un valor supuesto; revisar `estadoEdicion`.",
+      "Pasivos contingentes explícitos del Sector Público No Financiero, POR AÑO DE CIERRE (no por " +
+      "edición del MMM — es una serie continua que cada documento nuevo extiende o revisa): " +
+      "controversias internacionales de inversión (categoría `isds`, CIADI/ICSID), contingencias de " +
+      "Asociaciones Público-Privadas (`app`), y procesos judiciales/administrativos/arbitraje nacional " +
+      "(`judicial_administrativo`), más el `total`. Serie 2020-2023 verificada por lectura directa del " +
+      "PDF con `pdf-parse` (conector `npm run ingest:pdf`, ver ADR-0023). `pctPbi` es `null` cuando un " +
+      "año/categoría no se pudo verificar — nunca se completa con un valor supuesto.",
     pathTemplate: "/api/mmm/pasivos-contingentes",
     pathParams: [],
     querySchema: {},
@@ -2192,9 +2191,11 @@ export const TOOL_CATALOG: ToolSpec[] = [
     name: "riesgo_fiscal_isds_ediciones",
     app: "riesgo-fiscal-isds",
     description:
-      "Metadata de cada edición del MMM registrada (fecha de publicación, fuente oficial y secundaria, " +
-      "fecha de verificación, estado verificado/no_localizado) — útil para saber qué ediciones ya están " +
-      "cargadas antes de consultar el detalle en `riesgo_fiscal_isds_pasivos_contingentes`.",
+      "Metadata de cada documento fuente (MMM o IAPM) registrado: fecha de publicación, fuente oficial, " +
+      "fecha de verificación, estado verificado/no_localizado. La edición vigente (MMM 2027-2030) está " +
+      "`no_localizado` — el PDF no se pudo descargar de forma automatizada (mef.gob.pe/gob.pe bloquean " +
+      "herramientas automatizadas; ver docs/data-contracts/riesgo-fiscal-isds.md). Útil para saber qué " +
+      "documentos ya están cargados antes de consultar `riesgo_fiscal_isds_pasivos_contingentes`.",
     pathTemplate: "/api/mmm/ediciones",
     pathParams: [],
     querySchema: {},
@@ -2205,10 +2206,21 @@ export const TOOL_CATALOG: ToolSpec[] = [
     description:
       "Serie histórica 2014/2021/2024 citada por Luis Miguel Castilla (ex-MEF, PERUMIN 37, sept-2025) " +
       "sobre el peso de las controversias internacionales como % del PBI. Es una FUENTE SECUNDARIA " +
-      "(declaración pública, no cita directa del documento MMM) con una metodología no necesariamente " +
-      "idéntica a la categoría `isds` de `riesgo_fiscal_isds_pasivos_contingentes` — la respuesta trae " +
-      "`fuente: \"secundaria\"` explícito; no combinar ambas series sin esa aclaración.",
+      "(declaración pública, no cita directa del documento MMM), consistente dentro de un margen de " +
+      "redondeo razonable con la fuente primaria para 2021 (3.2% citado vs. 3.16% verificado) — la " +
+      "respuesta trae `fuente: \"secundaria\"` explícito; no combinar ambas series sin esa aclaración.",
     pathTemplate: "/api/mmm/serie-historica",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
+    name: "riesgo_fiscal_isds_meta_sources",
+    app: "riesgo-fiscal-isds",
+    description:
+      "Metadata de los últimos 10 lotes de ingesta manual (PDF por PDF vía `npm run ingest:pdf`) — " +
+      "checksum, edición, filas insertadas. Útil para confirmar qué documentos ya se ingirieron sin " +
+      "consultar `pasivos-contingentes` directamente. " + SIN_SCHEDULER,
+    pathTemplate: "/api/mmm/meta/sources",
     pathParams: [],
     querySchema: {},
   },
