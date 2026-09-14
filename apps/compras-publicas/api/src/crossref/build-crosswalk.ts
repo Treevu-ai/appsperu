@@ -37,7 +37,19 @@ export async function buildCrosswalk(departamento: string): Promise<BuildCrosswa
   const oeceEntities: OeceEntityInput[] = oeceRows.map((r) => ({ buyerId: r.buyer_id, buyerName: r.buyer_name }));
 
   const matches = matchEntities(mefEntities, oeceEntities);
-  const oeceBuyerIds = oeceEntities.map((e) => e.buyerId);
+  const mefEntityCodes = mefEntities.map((e) => e.entityCode);
+
+  // El DELETE de abajo depende de que `mefEntityCodes` no esté vacío para
+  // limpiar filas obsoletas (mismo riesgo que motivó mover el scoping desde
+  // `oece_buyer_id`, ver comentario en el DELETE) — si `entities`/`territories`
+  // todavía no tiene ingeridas entidades para este departamento, o el nombre
+  // no calza con `territories.departamento`, el DELETE hace un no-op
+  // silencioso. Se advierte en vez de asumir que nunca pasa.
+  if (mefEntityCodes.length === 0) {
+    console.warn(
+      `[build-crosswalk] 0 entidades MEF para departamento="${wantedDepartamento}" — el DELETE de entity_crosswalk no se ejecutará (no-op), posibles filas obsoletas no se limpiarán.`,
+    );
+  }
 
   const client = await pool.connect();
   try {
@@ -46,7 +58,18 @@ export async function buildCrosswalk(departamento: string): Promise<BuildCrosswa
     // `matches` (p.ej. un ajuste al matcher compartido la descarta), debe
     // desaparecer al recalcular, no quedar huérfana con su `computed_at`
     // viejo — mismo fix que `infobras/src/crossref/build-crosswalk.ts` (DQ-17).
-    await client.query(`DELETE FROM entity_crosswalk WHERE oece_buyer_id = ANY($1)`, [oeceBuyerIds]);
+    //
+    // Se borra por `mef_entity_code` (scoped por departamento vía el JOIN
+    // con `territories` de arriba), NO por `oece_buyer_id` (hallazgo de
+    // CodeRabbit en PR #144, sin corregir por 5 días): `entity_crosswalk` no
+    // tiene columna `departamento` — si un mismo buyer OECE aparece en más
+    // de un departamento, borrar por `oece_buyer_id` podía arrastrar
+    // matches válidos de otras regiones. Borrar por `oece_buyer_id` también
+    // se saltaba el DELETE por completo cuando `oeceEntities` salía vacío
+    // (`ANY('{}')` no matchea nada), dejando filas huérfanas para siempre;
+    // `mefEntityCodes` sí está garantizado no-vacío mientras el departamento
+    // tenga al menos una entidad MEF registrada.
+    await client.query(`DELETE FROM entity_crosswalk WHERE mef_entity_code = ANY($1)`, [mefEntityCodes]);
     for (const m of matches) {
       await client.query(
         `INSERT INTO entity_crosswalk (mef_entity_code, mef_nombre, oece_buyer_id, oece_buyer_name, confidence, score)

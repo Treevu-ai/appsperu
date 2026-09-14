@@ -45,7 +45,20 @@ export async function buildCrosswalk(departamento: string): Promise<BuildCrosswa
   }));
 
   const matches = matchEntities(ejecucionEntities, infobrasEntities);
-  const infobrasCodigos = infobrasEntities.map((e) => e.codigoEntidad);
+  const ejecucionEntityCodes = ejecucionEntities.map((e) => e.entityCode);
+
+  // El DELETE de abajo depende de que `ejecucionEntityCodes` no esté vacío
+  // para limpiar filas obsoletas (mismo riesgo que motivó mover el scoping
+  // desde `infobras_codigo_entidad`, ver comentario en el DELETE) — si
+  // `entities`/`territories` todavía no tiene ingeridas entidades para este
+  // departamento, o el nombre no calza con `territories.departamento`, el
+  // DELETE hace un no-op silencioso. Se advierte en vez de asumir que nunca
+  // pasa.
+  if (ejecucionEntityCodes.length === 0) {
+    console.warn(
+      `[build-crosswalk] 0 entidades radar-ejecucion para departamento="${wantedDepartamento}" — el DELETE de entity_crosswalk no se ejecutará (no-op), posibles filas obsoletas no se limpiarán.`,
+    );
+  }
 
   const client = await pool.connect();
   try {
@@ -54,7 +67,16 @@ export async function buildCrosswalk(departamento: string): Promise<BuildCrosswa
     // existente ya no aparece en `matches` (p.ej. porque un ajuste al
     // matcher dejó de considerarla válida — ver DQ-17), debe desaparecer al
     // recalcular, no quedar huérfana con su `computed_at` viejo.
-    await client.query(`DELETE FROM entity_crosswalk WHERE infobras_codigo_entidad = ANY($1)`, [infobrasCodigos]);
+    //
+    // Se borra por `ejecucion_entity_code` (scoped por departamento vía el
+    // JOIN con `territories` de arriba), NO por `infobras_codigo_entidad`
+    // (hallazgo de CodeRabbit en PR #144, sin corregir por 5 días): mismo
+    // razonamiento que `compras-publicas/src/crossref/build-crosswalk.ts` —
+    // `entity_crosswalk` no tiene columna `departamento`, así que borrar por
+    // el código del lado sin scope territorial garantizado puede arrastrar
+    // matches válidos de otro departamento, y se salta el DELETE por
+    // completo cuando `infobrasEntities` sale vacío.
+    await client.query(`DELETE FROM entity_crosswalk WHERE ejecucion_entity_code = ANY($1)`, [ejecucionEntityCodes]);
     for (const m of matches) {
       await client.query(
         `INSERT INTO entity_crosswalk
