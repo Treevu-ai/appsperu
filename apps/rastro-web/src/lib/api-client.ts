@@ -13,6 +13,7 @@
  */
 
 import { AppUnavailableError, type AppKey, APP_CATALOG } from "./types.js";
+import type { SectorFichaResponse } from "./sector-ficha.js";
 import { apisPublishedForBrowser } from "./api-config.js";
 import { snapshotKey } from "./snapshot-key.js";
 import snapshot from "../data/snapshot.json" with { type: "json" };
@@ -167,17 +168,28 @@ export interface MetaSourcesResponse {
   items: MetaSource[];
 }
 
-export interface SectorFichaResponse {
-  sectorId: string;
-  anio: number;
-  pia: number;
-  pim: number;
-  devengado: number;
-  regla: string;
-  cobertura: "COMPLETA" | "PARCIAL" | "BLOQUEADA";
-  matcher: string;
-  corte: string;
+export interface ComprasFreshnessSource {
+  source: string;
+  fetchedAt: string;
+  records: number;
+  latestBatchId: number | null;
+  rejectedInLatestBatch: number | null;
+  coverage: string;
 }
+
+export interface ComprasFreshnessResponse {
+  sources: ComprasFreshnessSource[];
+  limitation: string;
+}
+
+export type {
+  SectorBudgetAggregate,
+  SectorFichaContratacion,
+  SectorFichaEntidad,
+  SectorFichaInversion,
+  SectorFichaObra,
+} from "./sector-ficha.js";
+export type { SectorFichaResponse } from "./sector-ficha.js";
 
 /** radar_ejecucion_sector_comparativo — comparativo entre sectores verificados. */
 export interface SectorComparativoRow {
@@ -234,6 +246,16 @@ export interface BenchmarkResponse {
 /** radar_ejecucion_meta_sources — fuente de verdad de la frescura. */
 export function getRadarEjecucionMetaSources(options?: RequestOptions) {
   return requestJson<MetaSourcesResponse>("radar-ejecucion", "/api/meta/sources", options);
+}
+
+/** infobras_meta_sources — lotes de ingesta INFOBRAS (obras por CUI en ficha GORE). */
+export function getInfobrasMetaSources(options?: RequestOptions) {
+  return requestJson<MetaSourcesResponse>("infobras", "/api/meta/sources", options);
+}
+
+/** compras_publicas_freshness — metadata de corrida OECE/SEACE (contratos en ficha GORE). */
+export function getComprasPublicasMetaFreshness(options?: RequestOptions) {
+  return requestJson<ComprasFreshnessResponse>("compras-publicas", "/api/meta/freshness", options);
 }
 
 /** radar_ejecucion_sector_ficha — ficha de un sector verificado. */

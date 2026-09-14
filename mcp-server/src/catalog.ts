@@ -872,6 +872,17 @@ export const TOOL_CATALOG: ToolSpec[] = [
 
   // ---- infobras (Contraloría) ----
   {
+    name: "infobras_meta_sources",
+    app: "infobras",
+    description:
+      "Metadata de los últimos lotes de ingesta INFOBRAS (cuándo se corrió, cuántos registros, cobertura). " +
+      "Usado por la barra de frescura GORE al mostrar obras vinculadas por CUI. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/meta/sources",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
     name: "infobras_public_works",
     app: "infobras",
     description:

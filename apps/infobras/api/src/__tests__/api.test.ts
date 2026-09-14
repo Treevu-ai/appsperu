@@ -19,6 +19,30 @@ beforeEach(() => {
   queryMock.mockReset();
 });
 
+describe("GET /api/meta/sources", () => {
+  it("returns INFOBRAS ingestion batches for freshness UI", async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          batch_id: 1,
+          filename: "obras-publicas-la-libertad.csv",
+          fetched_at: "2026-08-20T12:00:00.000Z",
+          record_count: 420,
+          checksum: "abc123",
+        },
+      ],
+    });
+
+    const res = await request(createApp()).get("/api/meta/sources");
+    expect(res.status).toBe(200);
+    expect(res.body.items[0]).toMatchObject({
+      runAt: "2026-08-20T12:00:00.000Z",
+      records: 420,
+      cobertura: "PARCIAL",
+    });
+  });
+});
+
 function dbRow(overrides: Record<string, unknown> = {}) {
   return {
     codigo_infobras: "6",

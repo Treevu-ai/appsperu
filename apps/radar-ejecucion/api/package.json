@@ -44,6 +44,7 @@
   },
   "dependencies": {
     "@appsperu/shared-queries": "*",
+    "@appsperu/shared-signals": "*",
     "cors": "^2.8.6",
     "csv-parse": "^5.5.6",
     "dotenv": "^17.4.2",

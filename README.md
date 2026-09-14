@@ -9,7 +9,7 @@ Monorepo con 28 apps backend (APIs Express + Postgres por app) que exponen datos
 del Estado peruano (presupuesto, contrataciones, inversiones, obras públicas) cruzados por
 claves compartidas o matching difuso de nombres de entidad. La capa de lectura pública para
 humanos y agentes IA es **Rastro** (`apps/rastro-web/`, publicada en `rastro.fyi`); el
-servidor MCP (`mcp-server/`) expone las 27 APIs como tools de solo lectura para Claude Code,
+servidor MCP (`mcp-server/`) expone las 28 APIs como tools de solo lectura para Claude Code,
 Claude Desktop, Cursor, Windsurf, Cline y Continue.dev.
 
 Rastro es una plataforma de inteligencia que ayuda a equipos y organizaciones a encontrar, conectar y entender las señales que importan. Transformamos información dispersa en contexto accionable, con foco en trazabilidad, claridad y decisiones más seguras. Porque detrás de cada cambio, oportunidad o riesgo hay un rastro, y verlo a tiempo cambia lo que viene después.
@@ -62,8 +62,8 @@ de las otras bases y `npm run dev`.
 
 ## Servidor MCP (Model Context Protocol)
 
-[`mcp-server/`](mcp-server/) expone las 28 apps como **153 tools de solo lectura**, buscables desde
-2 meta-tools (`rastro_buscar_tools` + `rastro_llamar`, no 146 registrados uno por uno) para agentes IA
+[`mcp-server/`](mcp-server/) expone las 28 apps como **154 tools de solo lectura**, buscables desde
+2 meta-tools (`rastro_buscar_tools` + `rastro_llamar`, no 154 registrados uno por uno) para agentes IA
 vía MCP (transporte stdio). Compatible con Claude Code, Claude Desktop, Cursor, Windsurf, Cline y
 Continue.dev. Una vez conectado, el agente busca el tool exacto, lo ejecuta, encadena resultados y
 entrega respuestas con citas verificables. Requiere que las apps ya estén corriendo — ver

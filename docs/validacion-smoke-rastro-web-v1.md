@@ -1,15 +1,31 @@
 # Validación smoke test — rastro-web v1 (AL3-20)
 
-**Fecha:** 2026-09-02
+**Fecha:** 2026-09-13 (actualizado GORE S1) · primera versión 2026-09-02
 **Generado con:** `apps/rastro-web/e2e-smoke/capture.spec.ts` (`npx playwright test --config=playwright.smoke.config.ts`), reutilizando las mismas fixtures que la suite de CI (AL3-14, `apps/rastro-web/e2e/fixtures/`).
 
 ## Cómo leer este reporte (importante)
 
-Estas 12 capturas **no son contra datos en vivo de producción** — `api.rastro.pe` todavía no está publicado (`VITE_PUBLIC_APIS_LIVE=false` en `.env.production`, ver `docs/ESTADO.md`). Son capturas contra `vite preview` (build real de producción) con las respuestas HTTP interceptadas por fixtures fijas y conocidas (`e2e/fixtures/*.json`) — el mismo mecanismo que ya valida AL3-14 en cada PR.
+Estas 15 capturas **no son contra datos en vivo de producción** — `api.rastro.pe` todavía no está publicado (`VITE_PUBLIC_APIS_LIVE=false` en `.env.production`, ver `docs/ESTADO.md`). Son capturas contra `vite preview` (build real de producción) con las respuestas HTTP interceptadas por fixtures fijas y conocidas (`e2e/fixtures/*.json`) — el mismo mecanismo que ya valida AL3-14 en cada PR.
 
 Esto es deliberado y más útil que una captura contra datos reales para el propósito de este documento: cada fila de "JSON crudo" de abajo **es exactamente** el JSON que la UI recibió (porque yo lo escribí como fixture), así que la comparación "¿lo que dice la API es lo que muestra la UI?" es exacta, no aproximada por lo que hubiera en la base de datos ese día. Cuando `api.rastro.pe` esté publicado, este mismo script puede regenerarse apuntando a datos reales.
 
-**Resultado**: en las 12 capturas, el texto renderizado coincide exactamente con el JSON de la fixture — no se encontró ninguna divergencia. Ver el detalle por captura abajo.
+**Resultado**: en las 15 capturas, el texto renderizado coincide exactamente con el JSON de la fixture — no se encontró ninguna divergencia en la corrida del 2026-09-13. Ver el detalle por captura abajo.
+
+---
+
+## Checklist GORE S1 — smoke manual (2026-09-13)
+
+Ticket [`TICKETS_GORE_La_Libertad_S1_v1.md`](TICKETS_GORE_La_Libertad_S1_v1.md) · GORE-04c.
+
+| Ítem | Estado | Evidencia automatizada |
+|---|---|---|
+| 5 sectores en ficha (`/gore/la-libertad/ficha`) | [x] | E2E `e2e/ficha-sector.spec.ts` (5 tests) + capturas §1 |
+| Comparativo 2 sectores | [x] | E2E `e2e/comparativo-sectores.spec.ts` + [`gore-comparativo.png`](smoke-rastro-web/gore-comparativo.png) |
+| Benchmark entidad 831 | [x] | E2E `e2e/benchmark-entidad.spec.ts` + [`gore-benchmark-831.png`](smoke-rastro-web/gore-benchmark-831.png) |
+| Frescura visible en layout GORE | [x] | `GoreFreshnessStrip` en capturas §13–15 + [`gore-frescura.png`](smoke-rastro-web/gore-frescura.png) |
+| PNG archivadas en `docs/smoke-rastro-web/` | [x] | 3 capturas nuevas + `manifest.json` regenerado |
+
+**Nota:** las capturas GORE usan fixtures de `e2e/fixtures/` (mismo mecanismo que CI). La frescura INFOBRAS/compras se mockea con fechas fijas (`2026-08-26T…`) — no implica que las APIs estén corriendo en producción.
 
 ---
 
@@ -134,6 +150,64 @@ se filtran en el borde (edge), acotados a LA LIBERTAD.
 
 ---
 
+## 13. Comparativo GORE (`/gore/la-libertad/comparativo`)
+
+[`gore-comparativo.png`](smoke-rastro-web/gore-comparativo.png)
+
+**JSON crudo:** `e2e/fixtures/comparativo.json` — TRANSPORTE (PIM 6,300,000 · COMPLETA) y SALUD (PIM 4,100,000 · PARCIAL).
+
+**Texto renderizado (extracto):**
+```
+Frescura de cruces:
+infobras · última corrida: 2026-08-26T12:00:00Z
+compras-publicas · última corrida: 2026-08-26T18:00:00Z
+TRANSPORTE  …  6,300,000  3,100,000  COMPLETA
+SALUD       …  4,100,000  1,980,000  PARCIAL
+⚠ El comparativo muestra responsabilidades distintas…
+```
+
+**Divergencia:** ninguna.
+
+---
+
+## 14. Benchmark GORE entidad 831 (`/gore/la-libertad/benchmark`)
+
+[`gore-benchmark-831.png`](smoke-rastro-web/gore-benchmark-831.png)
+
+**JSON crudo:** `e2e/fixtures/benchmark-ok.json` — `{ "status": "ok", "percentil": 60, "medianaAvancePct": 49.5 }`.
+
+**Texto renderizado (extracto):**
+```
+Entidad 831
+Percentil de avance
+P60
+Mediana de la cohorte
+49.5%
+corte: 2026-08-26
+```
+
+**Divergencia:** ninguna.
+
+---
+
+## 15. Frescura GORE en layout (`/gore/la-libertad/ficha?sector=TRANSPORTE`)
+
+[`gore-frescura.png`](smoke-rastro-web/gore-frescura.png)
+
+**JSON crudo (meta):** mocks de `infobras/api/meta/sources` y `compras-publicas/api/meta/freshness` en `e2e-smoke/capture.spec.ts`.
+
+**Texto renderizado (extracto):**
+```
+Frescura de cruces:
+infobras · última corrida: 2026-08-26T12:00:00Z
+compras-publicas · última corrida: 2026-08-26T18:00:00Z
+ver lotes →
+```
+
+**Divergencia:** ninguna. La barra aparece bajo el subtítulo del layout GORE en todas las pestañas (ficha, comparativo, benchmark).
+
+---
+
 ## Resumen
 
 | # | Ruta | Divergencia encontrada |
@@ -143,8 +217,11 @@ se filtran en el borde (edge), acotados a LA LIBERTAD.
 | 9–10 | `/distrito/{ubigeo}` (2 distritos) | Ninguna |
 | 11 | `/estado` | Ninguna (nota metodológica: mock optimista, ver arriba) |
 | 12 | `/buscar` | Ninguna |
+| 13 | `/gore/la-libertad/comparativo` | Ninguna |
+| 14 | `/gore/la-libertad/benchmark` (831) | Ninguna |
+| 15 | Layout GORE — frescura INFOBRAS+compras | Ninguna |
 
-**12/12 capturas: el texto renderizado coincide exactamente con el JSON de la fuente (fixture).** Ninguna cifra mostrada en la UI fue inventada, redondeada de forma distinta, ni omitida sin explicación — y en los 2 casos donde el backend real tiene una limitación conocida (cobertura ausente en `/api/suppliers`, filtro departamental en vez de distrital en `/api/public-works`), la UI la declara explícitamente en vez de ocultarla.
+**15/15 capturas: el texto renderizado coincide exactamente con el JSON de la fuente (fixture).**
 
 Manifiesto completo (rutas + texto íntegro de cada captura): [`smoke-rastro-web/manifest.json`](smoke-rastro-web/manifest.json).
 

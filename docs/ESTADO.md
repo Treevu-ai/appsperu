@@ -10,7 +10,7 @@ Cierre del sprint definido en [`docs/TICKETS_GORE_La_Libertad_S1_v1.md`](TICKETS
 |---|---|---|
 | GORE-01a–c | Ficha sectorial con presupuesto, CUI/obra/contrato, señales INFOBRAS | `LaLibertadFicha.tsx`, `SectorFichaSections.tsx`, E2E `ficha-sector.spec.ts` (5/5) |
 | GORE-02 | Frescura INFOBRAS + compras en layout GORE | `GoreFreshnessStrip.tsx`, endpoint `GET /api/meta/sources` (infobras) |
-| GORE-03 | `ABOUT_RASTRO.md` al estado sep 2026 (27 apps, 149 tools) | rev. 2026-09-13 |
+| GORE-03 | `ABOUT_RASTRO.md` al estado sep 2026 (28 apps, 154 tools) | rev. 2026-09-13 |
 | GORE-04a/b | E2E comparativo + benchmark | `comparativo-sectores.spec.ts`, `benchmark-entidad.spec.ts` (3 tests) |
 | GORE-04c | Checklist smoke GORE | [`docs/validacion-smoke-rastro-web-v1.md`](validacion-smoke-rastro-web-v1.md) §checklist + 3 PNG en `docs/smoke-rastro-web/` |
 
@@ -48,7 +48,7 @@ que cada documento nuevo extiende/revisa, no "una tabla por edición"). Serie 20
 y cargada (16 filas, 4 categorías × 4 años), cross-validada contra dos documentos distintos para
 2022 (coincidencia exacta). Edición vigente (MMM 2027-2030) sin ingerir — descarga automatizada
 bloqueada (404/WAF/418 en los 4 intentos), pendiente de que alguien la baje a mano. 4 tools en el
-catálogo MCP (153 tools, 28 apps — antes 149). Puerto 4027, Postgres 5459.
+catálogo MCP (154 tools, 28 apps — antes 149). Puerto 4027, Postgres 5459.
 
 Detalle completo: [`docs/conectores.md#riesgo-fiscal-isds`](conectores.md#riesgo-fiscal-isds),
 [`docs/data-contracts/riesgo-fiscal-isds.md`](data-contracts/riesgo-fiscal-isds.md),

@@ -787,6 +787,15 @@
     "sinScheduler": false
   },
   {
+    "name": "infobras_meta_sources",
+    "app": "infobras",
+    "description": "Metadata de los últimos lotes de ingesta INFOBRAS (cuándo se corrió, cuántos registros, cobertura). Usado por la barra de frescura GORE al mostrar obras vinculadas por CUI. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/meta/sources",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
     "name": "infobras_public_works",
     "app": "infobras",
     "description": "Obras públicas monitoreadas por la Contraloría (INFOBRAS) — avance físico/financiero, paralización, entidad responsable. Cobertura completa (snapshot nacional del XLSX). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
@@ -1058,6 +1067,15 @@
     "sinScheduler": true
   },
   {
+    "name": "ceplan_geo_crossref_salud",
+    "app": "ceplan-geo",
+    "description": "Salud del caché de territory_name_crosswalk (audit 2026-09-13): filas/confirmadas/candidatas/sinMatch y `departamentosConstruidos` (de 25 posibles). Una tabla vacía o con pocos departamentos NO significa que el cruce falle — `GET /crossref/obras` recalcula en vivo cualquier tríada sin entrada cacheada, esto solo mide qué tan caliente está el caché. `estado: 'VACIO'` si 0 filas. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/crossref/salud",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
     "name": "ceplan_geo_denominadores_poblacion",
     "app": "ceplan-geo",
     "description": "Población por UBIGEO (piloto provincia Trujillo, Censo INEI 2017) para denominadores territoriales. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
@@ -1172,14 +1190,15 @@
   {
     "name": "proveedores_sancionados_crossref",
     "app": "proveedores-sancionados",
-    "description": "Cruce proveedores-sancionados <-> compras-publicas por RUC exacto — señal más fuerte que el estatus tributario: una inhabilitación VIGENTE es prohibición LEGAL de contratar con el Estado. `soloInhabilitados=true` filtra solo adjudicaciones con inhabilitación vigente. Default: LA LIBERTAD.",
+    "description": "Cruce proveedores-sancionados <-> compras-publicas por RUC exacto — señal más fuerte que el estatus tributario: una inhabilitación VIGENTE es prohibición LEGAL de contratar con el Estado. `soloInhabilitados=true` filtra solo adjudicaciones con inhabilitación vigente. Default: LA LIBERTAD; `departamento=TODOS` (PV-06, 2026-09-13) agrega awards+minor_contracts a nivel nacional en una sola consulta. `soloNuevos=true` filtra a los casos marcados `esNuevoDesdeUltimaCorrida` (PV-05): la tabla `sanciones_contratos_vistos` recuerda qué par proveedor-contrato ya se había visto en una corrida anterior — combinado con `departamento=TODOS` es el punto de entrada para vigilancia nacional, sin repetir los casos ya conocidos. No envía notificaciones (correo/Slack/webhook): es un endpoint de consulta, no una alerta activa. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/crossref",
     "pathParams": [],
     "queryParams": [
       "departamento",
-      "soloInhabilitados"
+      "soloInhabilitados",
+      "soloNuevos"
     ],
-    "sinScheduler": false
+    "sinScheduler": true
   },
   {
     "name": "proveedores_sancionados_personas",
@@ -1189,6 +1208,30 @@
     "pathParams": [],
     "queryParams": [
       "soloVigentes"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "proveedores_sancionados_candidatos_sancionados",
+    "app": "proveedores-sancionados",
+    "description": "Cruce candidato<->sanción (OE-03, 2026-09-10): candidatos de candidatos-erm (por departamento, o una lista explícita de DNI separada por comas) contra vínculos societarios (supplier_conformacion, compras-publicas) y sanciones directas (inhabilitaciones/multas) del Tribunal de Contrataciones. El cruce es siempre por DNI exacto, nunca por nombre — el DNI se enmascara en toda respuesta (últimos 3 dígitos visibles), el nombre del candidato no se enmascara (ya es público por ley en su candidatura). Distingue explícitamente vínculo societario sin sanción de sanción directa — nunca las fusiona en una sola categoría de 'hallazgo'. Requiere `departamento` o `dni`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/crossref/candidatos-sancionados",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "dni"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "proveedores_sancionados_recurrente",
+    "app": "proveedores-sancionados",
+    "description": "Señal de sancionado recurrente (OE-04, 2026-09-10): agrupa inhabilitaciones por RUC y marca los que tienen `minResoluciones` o más resoluciones DISTINTAS cuyo rango completo (primera a última fecha `desde`) cae dentro de `ventanaDias`. Preselección exploratoria, NO una conclusión de patrón de conducta — cada resultado trae su propia `explicacion` diciéndolo explícitamente. Cobertura nacional completa (1993-2026). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/crossref/sancionado-recurrente",
+    "pathParams": [],
+    "queryParams": [
+      "minResoluciones",
+      "ventanaDias"
     ],
     "sinScheduler": true
   },
@@ -1787,6 +1830,42 @@
       "fechaCorte",
       "historico"
     ],
+    "sinScheduler": true
+  },
+  {
+    "name": "riesgo_fiscal_isds_pasivos_contingentes",
+    "app": "riesgo-fiscal-isds",
+    "description": "Pasivos contingentes explícitos del Sector Público No Financiero, POR AÑO DE CIERRE (no por edición del MMM — es una serie continua que cada documento nuevo extiende o revisa): controversias internacionales de inversión (categoría `isds`, CIADI/ICSID), contingencias de Asociaciones Público-Privadas (`app`), y procesos judiciales/administrativos/arbitraje nacional (`judicial_administrativo`), más el `total`. Serie 2020-2023 verificada por lectura directa del PDF con `pdf-parse` (conector `npm run ingest:pdf`, ver ADR-0023). `pctPbi` es `null` cuando un año/categoría no se pudo verificar — nunca se completa con un valor supuesto.",
+    "pathTemplate": "/api/mmm/pasivos-contingentes",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "riesgo_fiscal_isds_ediciones",
+    "app": "riesgo-fiscal-isds",
+    "description": "Metadata de cada documento fuente (MMM o IAPM) registrado: fecha de publicación, fuente oficial, fecha de verificación, estado verificado/no_localizado. La edición vigente (MMM 2027-2030) está `no_localizado` — el PDF no se pudo descargar de forma automatizada (mef.gob.pe/gob.pe bloquean herramientas automatizadas; ver docs/data-contracts/riesgo-fiscal-isds.md). Útil para saber qué documentos ya están cargados antes de consultar `riesgo_fiscal_isds_pasivos_contingentes`.",
+    "pathTemplate": "/api/mmm/ediciones",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "riesgo_fiscal_isds_serie_historica",
+    "app": "riesgo-fiscal-isds",
+    "description": "Serie histórica 2014/2021/2024 citada por Luis Miguel Castilla (ex-MEF, PERUMIN 37, sept-2025) sobre el peso de las controversias internacionales como % del PBI. Es una FUENTE SECUNDARIA (declaración pública, no cita directa del documento MMM), consistente dentro de un margen de redondeo razonable con la fuente primaria para 2021 (3.2% citado vs. 3.16% verificado) — la respuesta trae `fuente: \\\"secundaria\\\"` explícito; no combinar ambas series sin esa aclaración.",
+    "pathTemplate": "/api/mmm/serie-historica",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "riesgo_fiscal_isds_meta_sources",
+    "app": "riesgo-fiscal-isds",
+    "description": "Metadata de los últimos 10 lotes de ingesta manual (PDF por PDF vía `npm run ingest:pdf`) — checksum, edición, filas insertadas. Útil para confirmar qué documentos ya se ingirieron sin consultar `pasivos-contingentes` directamente. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/mmm/meta/sources",
+    "pathParams": [],
+    "queryParams": [],
     "sinScheduler": true
   }
 ]
