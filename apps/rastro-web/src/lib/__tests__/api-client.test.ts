@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  getIdentidadFiscalCrossref,
   getInfobrasPublicWorks,
   getProveedoresSancionadosCrossref,
   getRadarEjecucionSectorFicha,
@@ -133,5 +134,32 @@ describe("getProveedoresSancionadosCrossref", () => {
     expect(calledUrl.searchParams.has("departamento")).toBe(false);
     expect(calledUrl.searchParams.has("soloInhabilitados")).toBe(false);
     expect(calledUrl.searchParams.has("soloNuevos")).toBe(false);
+  });
+});
+
+describe("getIdentidadFiscalCrossref", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("departamento + soloIrregulares arma la query regional (CX-01 en GORE La Libertad, S3)", async () => {
+    const fetchMock = mockFetchOnce({ departamento: "LA LIBERTAD", resultados: [] });
+
+    await getIdentidadFiscalCrossref({ departamento: "LA LIBERTAD", soloIrregulares: true });
+
+    const calledUrl = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(calledUrl.pathname).toBe("/api/crossref");
+    expect(calledUrl.searchParams.get("departamento")).toBe("LA LIBERTAD");
+    expect(calledUrl.searchParams.get("soloIrregulares")).toBe("true");
+  });
+
+  it("sin params, no manda ningun query param (default regional del backend, LA LIBERTAD)", async () => {
+    const fetchMock = mockFetchOnce({ departamento: "LA LIBERTAD", resultados: [] });
+
+    await getIdentidadFiscalCrossref({});
+
+    const calledUrl = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(calledUrl.searchParams.has("departamento")).toBe(false);
+    expect(calledUrl.searchParams.has("soloIrregulares")).toBe(false);
   });
 });

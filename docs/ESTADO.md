@@ -1,6 +1,38 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-09-13.
+Última actualización: 2026-09-14.
+
+## CX-01 minor_contracts expuesto en GORE La Libertad (2026-09-14)
+
+Resuelve el ítem que tanto [`TICKETS_GORE_La_Libertad_S1_v1.md`](TICKETS_GORE_La_Libertad_S1_v1.md)
+§"Fuera de alcance S1" como [`TICKETS_GORE_La_Libertad_S2_v1.md`](TICKETS_GORE_La_Libertad_S2_v1.md)
+§"Fuera de alcance S2" dejaron diferido a S3 ("CX-01 minor_contracts"). El backend de CX-01
+(`GET /api/crossref` de `identidad-fiscal` y `proveedores-sancionados`, agregando `awards` +
+`minor_contracts` con campo `origen`) cerró el 2026-09-02, pero no tenía **ningún** consumidor en
+`rastro-web` — ni siquiera un cliente HTTP para `identidad-fiscal/api/crossref` existía antes de
+este cambio.
+
+Nueva sección `ProveedoresRiesgoSection` en `/gore/la-libertad/ficha`
+(`apps/rastro-web/src/routes/gore/ProveedoresRiesgoSection.tsx`), con dos subsecciones
+independientes: proveedores sancionados con contrato vigente
+(`getProveedoresSancionadosCrossref({ departamento: "LA LIBERTAD", soloInhabilitados: true })`) y
+proveedores con estado tributario irregular
+(`getIdentidadFiscalCrossref({ departamento: "LA LIBERTAD", soloIrregulares: true })`, función
+nueva en `api-client.ts`). Nuevo tipo compartido `ORIGEN_CONTRATO_LABEL`
+(`apps/rastro-web/src/lib/origen-contrato.ts`), extraído de `ObrasParalizadas.tsx` para no
+duplicarlo.
+
+**Restricción de alcance real, encontrada al implementar (no documentada en los tickets S1/S2
+originales):** ninguno de los dos endpoints de crossref filtra por sector, solo por
+departamento — a diferencia de la ficha GORE La Libertad, que sí está scoped a un sector. La
+sección nueva se muestra por eso como vista departamental completa e independiente del sector
+seleccionado arriba, con una nota explícita de alcance en la UI, en vez de fingir un filtro que
+el backend no soporta.
+
+E2E nuevo: `gore-proveedores-riesgo.spec.ts` — confirmó en el camino que, en dev local,
+`proveedores-sancionados` (puerto 4008) e `identidad-fiscal` (puerto 4006) comparten literalmente
+el mismo path `/api/crossref`, así que el mock de rutas debe distinguir por puerto, no solo por
+path (el patrón de producción sí distingue por prefijo de app).
 
 ## Sprint GORE S2 — rutas web PV cerradas (2026-09-13)
 

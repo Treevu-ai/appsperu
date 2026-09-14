@@ -54,7 +54,11 @@ function envBaseUrl(appKey: AppKey): string {
  * path) se publique. Fix: resolver `path` como RELATIVO (sin "/" inicial)
  * contra una `base` que siempre termina en "/".
  */
-function buildUrl(base: string, path: string, query?: RequestOptions["query"]): string {
+function buildUrl(
+  base: string,
+  path: string,
+  query?: RequestOptions["query"],
+): string {
   const normalizedBase = base.endsWith("/") ? base : `${base}/`;
   const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
   const url = new URL(normalizedPath, normalizedBase);
@@ -75,13 +79,21 @@ function buildUrl(base: string, path: string, query?: RequestOptions["query"]): 
  * de las vistas de dashboard; RUC/texto libre (Proveedor, Buscar) no están
  * en el snapshot y siguen devolviendo "no disponible".
  */
-function readSnapshot<T>(appKey: AppKey, path: string, query?: RequestOptions["query"]): T | undefined {
+function readSnapshot<T>(
+  appKey: AppKey,
+  path: string,
+  query?: RequestOptions["query"],
+): T | undefined {
   const key = snapshotKey(appKey, path, query);
   const entries = snapshot.entries as Record<string, unknown>;
   return key in entries ? (entries[key] as T) : undefined;
 }
 
-async function requestJson<T>(appKey: AppKey, path: string, options: RequestOptions = {}): Promise<T> {
+async function requestJson<T>(
+  appKey: AppKey,
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
   if (!apisPublishedForBrowser()) {
     const snapshotted = readSnapshot<T>(appKey, path, options.query);
     if (snapshotted !== undefined) return snapshotted;
@@ -121,7 +133,8 @@ async function requestJson<T>(appKey: AppKey, path: string, options: RequestOpti
   clearTimeout(timer);
 
   if (!response.ok) {
-    const kind: AppUnavailableError["kind"] = response.status >= 500 ? "http_5xx" : "http_4xx";
+    const kind: AppUnavailableError["kind"] =
+      response.status >= 500 ? "http_5xx" : "http_4xx";
     let bodyText = "";
     try {
       bodyText = await response.text();
@@ -245,17 +258,29 @@ export interface BenchmarkResponse {
 
 /** radar_ejecucion_meta_sources — fuente de verdad de la frescura. */
 export function getRadarEjecucionMetaSources(options?: RequestOptions) {
-  return requestJson<MetaSourcesResponse>("radar-ejecucion", "/api/meta/sources", options);
+  return requestJson<MetaSourcesResponse>(
+    "radar-ejecucion",
+    "/api/meta/sources",
+    options,
+  );
 }
 
 /** infobras_meta_sources — lotes de ingesta INFOBRAS (obras por CUI en ficha GORE). */
 export function getInfobrasMetaSources(options?: RequestOptions) {
-  return requestJson<MetaSourcesResponse>("infobras", "/api/meta/sources", options);
+  return requestJson<MetaSourcesResponse>(
+    "infobras",
+    "/api/meta/sources",
+    options,
+  );
 }
 
 /** compras_publicas_freshness — metadata de corrida OECE/SEACE (contratos en ficha GORE). */
 export function getComprasPublicasMetaFreshness(options?: RequestOptions) {
-  return requestJson<ComprasFreshnessResponse>("compras-publicas", "/api/meta/freshness", options);
+  return requestJson<ComprasFreshnessResponse>(
+    "compras-publicas",
+    "/api/meta/freshness",
+    options,
+  );
 }
 
 /**
@@ -268,13 +293,26 @@ export function getComprasPublicasMetaFreshness(options?: RequestOptions) {
  * nacional); la UI debe declarar eso explícitamente, no inventar un badge.
  */
 export function getRadarEjecucionSectorFicha(
-  params: { sectorId: string; anio?: number; departamento?: string; ambito?: "NACIONAL" | "REGIONAL" },
+  params: {
+    sectorId: string;
+    anio?: number;
+    departamento?: string;
+    ambito?: "NACIONAL" | "REGIONAL";
+  },
   options?: RequestOptions,
 ) {
-  return requestJson<SectorFichaResponse>("radar-ejecucion", `/api/sectores/${encodeURIComponent(params.sectorId)}/ficha`, {
-    ...options,
-    query: { anio: params.anio, departamento: params.departamento, ambito: params.ambito },
-  });
+  return requestJson<SectorFichaResponse>(
+    "radar-ejecucion",
+    `/api/sectores/${encodeURIComponent(params.sectorId)}/ficha`,
+    {
+      ...options,
+      query: {
+        anio: params.anio,
+        departamento: params.departamento,
+        ambito: params.ambito,
+      },
+    },
+  );
 }
 
 /** radar_ejecucion_sector_comparativo — comparativo entre sectores verificados. */
@@ -282,14 +320,18 @@ export function getRadarEjecucionSectorComparativo(
   params: { anio?: number; departamento?: string; sectores?: string[] },
   options?: RequestOptions,
 ) {
-  return requestJson<SectorComparativoResponse>("radar-ejecucion", "/api/sectores/comparativo", {
-    ...options,
-    query: {
-      anio: params.anio,
-      departamento: params.departamento,
-      sectores: params.sectores?.join(","),
+  return requestJson<SectorComparativoResponse>(
+    "radar-ejecucion",
+    "/api/sectores/comparativo",
+    {
+      ...options,
+      query: {
+        anio: params.anio,
+        departamento: params.departamento,
+        sectores: params.sectores?.join(","),
+      },
     },
-  });
+  );
 }
 
 /** radar_ejecucion_benchmark — percentil de una entidad contra su cohorte. */
@@ -323,9 +365,17 @@ export interface Supplier {
 }
 export interface SuppliersResponse {
   resultados: Supplier[];
-  concentracion: { cr3: number; cr5: number; hhi: number; proveedoresConsiderados: number };
+  concentracion: {
+    cr3: number;
+    cr5: number;
+    hhi: number;
+    proveedoresConsiderados: number;
+  };
 }
-export function getComprasPublicasSuppliers(params: { departamento?: string }, options?: RequestOptions) {
+export function getComprasPublicasSuppliers(
+  params: { departamento?: string },
+  options?: RequestOptions,
+) {
   return requestJson<SuppliersResponse>("compras-publicas", "/api/suppliers", {
     ...options,
     query: { departamento: params.departamento },
@@ -347,8 +397,15 @@ export interface ContribuyenteResponse {
   matcher: string;
   corte: string;
 }
-export function getIdentidadFiscalContribuyente(ruc: string, options?: RequestOptions) {
-  return requestJson<ContribuyenteResponse>("identidad-fiscal", `/api/contribuyentes/${encodeURIComponent(ruc)}`, options);
+export function getIdentidadFiscalContribuyente(
+  ruc: string,
+  options?: RequestOptions,
+) {
+  return requestJson<ContribuyenteResponse>(
+    "identidad-fiscal",
+    `/api/contribuyentes/${encodeURIComponent(ruc)}`,
+    options,
+  );
 }
 
 /** proveedores_sancionados_sanciones — sanciones vigentes. */
@@ -366,8 +423,15 @@ export interface SancionesResponse {
   matcher: string;
   corte: string;
 }
-export function getProveedoresSancionadosPorRuc(ruc: string, options?: RequestOptions) {
-  return requestJson<SancionesResponse>("proveedores-sancionados", `/api/sanciones/${encodeURIComponent(ruc)}`, options);
+export function getProveedoresSancionadosPorRuc(
+  ruc: string,
+  options?: RequestOptions,
+) {
+  return requestJson<SancionesResponse>(
+    "proveedores-sancionados",
+    `/api/sanciones/${encodeURIComponent(ruc)}`,
+    options,
+  );
 }
 
 /**
@@ -409,17 +473,73 @@ export interface ProveedoresSancionadosCrossrefResponse {
   resultados: ProveedoresSancionadosCrossrefRow[];
 }
 export function getProveedoresSancionadosCrossref(
-  params: { departamento?: string; soloInhabilitados?: boolean; soloNuevos?: boolean },
+  params: {
+    departamento?: string;
+    soloInhabilitados?: boolean;
+    soloNuevos?: boolean;
+  },
   options?: RequestOptions,
 ) {
-  return requestJson<ProveedoresSancionadosCrossrefResponse>("proveedores-sancionados", "/api/crossref", {
-    ...options,
-    query: {
-      departamento: params.departamento,
-      soloInhabilitados: params.soloInhabilitados,
-      soloNuevos: params.soloNuevos,
+  return requestJson<ProveedoresSancionadosCrossrefResponse>(
+    "proveedores-sancionados",
+    "/api/crossref",
+    {
+      ...options,
+      query: {
+        departamento: params.departamento,
+        soloInhabilitados: params.soloInhabilitados,
+        soloNuevos: params.soloNuevos,
+      },
     },
-  });
+  );
+}
+
+/**
+ * identidad_fiscal_crossref — cruce proveedor↔padrón RUC por RUC exacto
+ * (extraído de `supplier_id`), incluyendo `awards` y `minor_contracts`
+ * (campo `origen` distingue cada fila — CX-01). A diferencia del cruce de
+ * proveedores-sancionados (Tribunal de Contrataciones), acá "irregular"
+ * refleja el estado ACTUAL del padrón SUNAT (no ACTIVO/HABIDO), sin fecha
+ * histórica confiable — ver `estadoTributarioEnFechaAdjudicacion`.
+ * Ver `apps/identidad-fiscal/api/src/routes/crossref.ts`.
+ */
+export interface IdentidadFiscalCrossrefRow {
+  origen: "awards" | "minor_contracts";
+  ocid: string | null;
+  awardId: string | null;
+  supplierId: string | null;
+  supplierName: string | null;
+  buyerName: string | null;
+  valorMonto: number | null;
+  valorMoneda: string | null;
+  fecha: string | null;
+  rucValido: boolean;
+  encontradoEnPadron: boolean;
+  estadoContribuyente: string | null;
+  condicionDomicilio: string | null;
+  ubigeoProveedor: string | null;
+  irregular: boolean;
+  estadoTributarioEnFechaAdjudicacion: boolean | "NO_VERIFICABLE";
+}
+export interface IdentidadFiscalCrossrefResponse {
+  departamento: string;
+  resultados: IdentidadFiscalCrossrefRow[];
+}
+export function getIdentidadFiscalCrossref(
+  params: { departamento?: string; soloIrregulares?: boolean },
+  options?: RequestOptions,
+) {
+  return requestJson<IdentidadFiscalCrossrefResponse>(
+    "identidad-fiscal",
+    "/api/crossref",
+    {
+      ...options,
+      query: {
+        departamento: params.departamento,
+        soloIrregulares: params.soloIrregulares,
+      },
+    },
+  );
 }
 
 /**
@@ -469,7 +589,8 @@ export interface PublicWorksResponse {
   resultados: PublicWork[];
 }
 /** Mismas 3 claves que `ORDER_BY_COLUMNS` en `apps/infobras/api/src/routes/public-works.ts`. */
-export type InfobrasPublicWorksOrderBy = "nombre_asc" | "diasParalizado_desc" | "montoViable_desc";
+export type InfobrasPublicWorksOrderBy =
+  "nombre_asc" | "diasParalizado_desc" | "montoViable_desc";
 
 export interface InfobrasPublicWorksParams {
   departamento?: string;
@@ -491,8 +612,14 @@ export interface InfobrasPublicWorksParams {
   orderBy?: InfobrasPublicWorksOrderBy;
 }
 
-export function getInfobrasPublicWorks(params: InfobrasPublicWorksParams, options?: RequestOptions) {
-  if (params.diasParalizadoMin !== undefined && params.conParalizacion !== true) {
+export function getInfobrasPublicWorks(
+  params: InfobrasPublicWorksParams,
+  options?: RequestOptions,
+) {
+  if (
+    params.diasParalizadoMin !== undefined &&
+    params.conParalizacion !== true
+  ) {
     throw new Error(
       "getInfobrasPublicWorks: diasParalizadoMin requiere conParalizacion:true — el backend responde 400 si no " +
         "(dias_paralizado no es significativo en obras sin paralización, ver PublicWorksQuerySchema.refine en public-works.ts).",
@@ -536,10 +663,14 @@ export function getInfobrasCrossrefEjecucion(
   params: { confidence?: "confirmada" | "candidata" },
   options?: RequestOptions,
 ) {
-  return requestJson<InfobrasCrossrefEjecucionResponse>("infobras", "/api/crossref/ejecucion", {
-    ...options,
-    query: { confidence: params.confidence },
-  });
+  return requestJson<InfobrasCrossrefEjecucionResponse>(
+    "infobras",
+    "/api/crossref/ejecucion",
+    {
+      ...options,
+      query: { confidence: params.confidence },
+    },
+  );
 }
 
 /**
@@ -570,14 +701,18 @@ export function getRadarEjecucionInfrastructureIntegrity(
   params: { departamento?: string; sector?: string; estricto?: boolean },
   options?: RequestOptions,
 ) {
-  return requestJson<InfrastructureIntegrityResponse>("radar-ejecucion", "/api/infraestructura/integridad", {
-    ...options,
-    query: {
-      departamento: params.departamento,
-      sector: params.sector,
-      estricto: params.estricto,
+  return requestJson<InfrastructureIntegrityResponse>(
+    "radar-ejecucion",
+    "/api/infraestructura/integridad",
+    {
+      ...options,
+      query: {
+        departamento: params.departamento,
+        sector: params.sector,
+        estricto: params.estricto,
+      },
     },
-  });
+  );
 }
 
 /**
@@ -591,8 +726,17 @@ export interface InfrastructureAsset {
   id: string;
   familia: string;
   activo: string;
-  territorio: { departamento: string | null; provincia: string | null; distrito: string | null };
-  identidad: { cui: string | null; codigoInfobras: string | null; codigoSectorial: string | null; estado: string };
+  territorio: {
+    departamento: string | null;
+    provincia: string | null;
+    distrito: string | null;
+  };
+  identidad: {
+    cui: string | null;
+    codigoInfobras: string | null;
+    codigoSectorial: string | null;
+    estado: string;
+  };
   etapas: {
     cierre: string;
     operador: string;
@@ -615,10 +759,14 @@ export function getRadarEjecucionInfrastructureAssets(
   params: { departamento?: string; sector?: string },
   options?: RequestOptions,
 ) {
-  return requestJson<InfrastructureAssetsResponse>("radar-ejecucion", "/api/infraestructura/activos", {
-    ...options,
-    query: { departamento: params.departamento, sector: params.sector },
-  });
+  return requestJson<InfrastructureAssetsResponse>(
+    "radar-ejecucion",
+    "/api/infraestructura/activos",
+    {
+      ...options,
+      query: { departamento: params.departamento, sector: params.sector },
+    },
+  );
 }
 
 /**
@@ -657,13 +805,22 @@ export interface InvestmentsResponse {
   resultados: Investment[];
 }
 export function getRadarInversionesInvestments(
-  params: { departamento?: string; estado?: string; situacion?: string; funcion?: string },
+  params: {
+    departamento?: string;
+    estado?: string;
+    situacion?: string;
+    funcion?: string;
+  },
   options?: RequestOptions,
 ) {
-  return requestJson<InvestmentsResponse>("radar-inversiones", "/api/investments", {
-    ...options,
-    query: params,
-  });
+  return requestJson<InvestmentsResponse>(
+    "radar-inversiones",
+    "/api/investments",
+    {
+      ...options,
+      query: params,
+    },
+  );
 }
 
 /** ceplan_estrategico_indicators — indicadores agregados por nivel de gobierno (sin modelo per-entidad). */
@@ -686,10 +843,14 @@ export function getCeplanEstrategicoIndicators(
   params: { indicatorCode?: string; nivelGobierno?: string },
   options?: RequestOptions,
 ) {
-  return requestJson<CeplanIndicadoresResponse>("ceplan-estrategico", "/api/indicators", {
-    ...options,
-    query: params,
-  });
+  return requestJson<CeplanIndicadoresResponse>(
+    "ceplan-estrategico",
+    "/api/indicators",
+    {
+      ...options,
+      query: params,
+    },
+  );
 }
 
 /**
@@ -707,7 +868,12 @@ export interface Territory {
   matchStatus?: string;
 }
 export function getCeplanGeoTerritory(
-  params: { ubigeo?: string; departamento?: string; provincia?: string; distrito?: string },
+  params: {
+    ubigeo?: string;
+    departamento?: string;
+    provincia?: string;
+    distrito?: string;
+  },
   options?: RequestOptions,
 ) {
   return requestJson<Territory>("ceplan-geo", "/api/territories", {
@@ -743,10 +909,14 @@ export function getSaludInstitucionalScore(
   params: { departamento?: string; anio?: string },
   options?: RequestOptions,
 ) {
-  return requestJson<SaludInstitucionalScoreResponse>("salud-institucional", "/api/score", {
-    ...options,
-    query: params,
-  });
+  return requestJson<SaludInstitucionalScoreResponse>(
+    "salud-institucional",
+    "/api/score",
+    {
+      ...options,
+      query: params,
+    },
+  );
 }
 
 /**
@@ -768,10 +938,14 @@ export function getActividadAgrariaWage(
   params: { departamento?: string; anio?: string },
   options?: RequestOptions,
 ) {
-  return requestJson<RegionalMonthlyResponse>("actividad-agraria", "/api/wage", {
-    ...options,
-    query: params,
-  });
+  return requestJson<RegionalMonthlyResponse>(
+    "actividad-agraria",
+    "/api/wage",
+    {
+      ...options,
+      query: params,
+    },
+  );
 }
 
 /** seguridad_ciudadana_denuncias — denuncias policiales agregadas (SIDPOL). */
@@ -789,13 +963,22 @@ export interface DenunciasResponse {
   resultados: DenunciaRow[];
 }
 export function getSeguridadCiudadanaDenuncias(
-  params: { departamento?: string; provincia?: string; anio?: string; modalidad?: string },
+  params: {
+    departamento?: string;
+    provincia?: string;
+    anio?: string;
+    modalidad?: string;
+  },
   options?: RequestOptions,
 ) {
-  return requestJson<DenunciasResponse>("seguridad-ciudadana", "/api/denuncias", {
-    ...options,
-    query: params,
-  });
+  return requestJson<DenunciasResponse>(
+    "seguridad-ciudadana",
+    "/api/denuncias",
+    {
+      ...options,
+      query: params,
+    },
+  );
 }
 
 /** bcrp_comercio_exterior_trade — comercio exterior agregado nacional (BCRP), sin desagregación territorial. */
@@ -851,13 +1034,23 @@ export interface InversionPrivadaProjectsResponse {
   extraidoEl: string | null;
 }
 export function getInversionPrivadaProjects(
-  params: { departamento?: string; sector?: string; tipo?: "APP" | "PA"; titular?: string; fase?: string },
+  params: {
+    departamento?: string;
+    sector?: string;
+    tipo?: "APP" | "PA";
+    titular?: string;
+    fase?: string;
+  },
   options?: RequestOptions,
 ) {
-  return requestJson<InversionPrivadaProjectsResponse>("inversion-privada", "/api/projects", {
-    ...options,
-    query: params,
-  });
+  return requestJson<InversionPrivadaProjectsResponse>(
+    "inversion-privada",
+    "/api/projects",
+    {
+      ...options,
+      query: params,
+    },
+  );
 }
 
 /**
@@ -882,13 +1075,20 @@ export function getBcrpLaLibertadIndicadores(
   params: { anexo?: number; indicador?: string; anio?: number; mes?: number },
   options?: RequestOptions,
 ) {
-  return requestJson<BcrpLaLibertadIndicadoresResponse>("bcrp-la-libertad", "/api/indicadores", {
-    ...options,
-    query: params,
-  });
+  return requestJson<BcrpLaLibertadIndicadoresResponse>(
+    "bcrp-la-libertad",
+    "/api/indicadores",
+    {
+      ...options,
+      query: params,
+    },
+  );
 }
 
 /** health-check genérico (un endpoint por app). */
-export function getAppHealth(appKey: AppKey, options?: RequestOptions): Promise<{ status: string }> {
+export function getAppHealth(
+  appKey: AppKey,
+  options?: RequestOptions,
+): Promise<{ status: string }> {
   return requestJson<{ status: string }>(appKey, "/health", options);
 }
