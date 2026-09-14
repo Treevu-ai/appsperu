@@ -28,8 +28,9 @@ function routeFicha(page: import("@playwright/test").Page) {
   ]);
 }
 
-function routeSancionados(page: import("@playwright/test").Page) {
+function routeSancionados(page: import("@playwright/test").Page, onRequest?: (url: URL) => void) {
   const handler = async (route: import("@playwright/test").Route) => {
+    onRequest?.(new URL(route.request().url()));
     await route.fulfill({ json: sancionados });
   };
   return Promise.all([
@@ -51,8 +52,9 @@ function routeIdentidadFiscal(page: import("@playwright/test").Page) {
 test("ficha GORE La Libertad: sección de riesgo de proveedores = JSON de ambos crossref (CX-01)", async ({
   page,
 }) => {
+  const sancionadosUrls: URL[] = [];
   await routeFicha(page);
-  await routeSancionados(page);
+  await routeSancionados(page, (url) => sancionadosUrls.push(url));
   await routeIdentidadFiscal(page);
 
   await page.goto("/gore/la-libertad/ficha?sector=TRANSPORTE&anio=2026");
@@ -60,7 +62,7 @@ test("ficha GORE La Libertad: sección de riesgo de proveedores = JSON de ambos 
   await expect(page.getByRole("heading", { name: "Riesgo de proveedores en La Libertad" })).toBeVisible();
 
   // Subsección de sanciones (proveedores-sancionados) — una fila por origen del fixture.
-  const sancionadosHeading = page.getByRole("heading", { name: "Proveedores sancionados con contrato vigente" });
+  const sancionadosHeading = page.getByRole("heading", { name: "Proveedores sancionados con contratación registrada" });
   await expect(sancionadosHeading).toBeVisible();
   const tablaSancionados = page.locator("table").filter({ has: page.getByText("Fecha adjudicación") });
   const proveedoresSancionados = await tablaSancionados.locator("tbody tr td:first-child").allTextContents();
@@ -76,4 +78,13 @@ test("ficha GORE La Libertad: sección de riesgo de proveedores = JSON de ambos 
   expect(proveedoresIrregulares).toEqual(identidadFiscal.resultados.map((r) => r.supplierName));
   await expect(tablaIrregulares.getByText("BAJA PROVISIONAL")).toBeVisible();
   await expect(tablaIrregulares.getByText("NO HABIDO")).toBeVisible();
+
+  // Regresión: esta sección es de solo lectura y NO debe "gastar" el flag de
+  // "nuevo desde la última corrida" que usa el widget nacional de
+  // sancionados nuevos (ObrasParalizadas.tsx) — ver crossref.ts (backend) y
+  // el comentario en getProveedoresSancionadosCrossref (api-client.ts).
+  expect(sancionadosUrls.length).toBeGreaterThan(0);
+  for (const url of sancionadosUrls) {
+    expect(url.searchParams.get("soloLectura")).toBe("true");
+  }
 });

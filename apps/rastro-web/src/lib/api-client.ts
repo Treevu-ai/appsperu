@@ -477,6 +477,13 @@ export function getProveedoresSancionadosCrossref(
     departamento?: string;
     soloInhabilitados?: boolean;
     soloNuevos?: boolean;
+    /**
+     * Salta el `INSERT` en `sanciones_contratos_vistos` del backend — usar
+     * siempre que la llamada sea de solo lectura/visualización (ej. una
+     * ficha regional), para no "gastar" el flag de `esNuevoDesdeUltimaCorrida`
+     * antes de que la corrida nacional (PV-05/06) procese el mismo caso.
+     */
+    soloLectura?: boolean;
   },
   options?: RequestOptions,
 ) {
@@ -489,6 +496,7 @@ export function getProveedoresSancionadosCrossref(
         departamento: params.departamento,
         soloInhabilitados: params.soloInhabilitados,
         soloNuevos: params.soloNuevos,
+        soloLectura: params.soloLectura,
       },
     },
   );

@@ -130,6 +130,29 @@ describe("GET /api/crossref (PV-05: esNuevoDesdeUltimaCorrida)", () => {
     expect(res.status).toBe(200);
     expect(res.body.resultados).toHaveLength(0);
   });
+
+  it("soloLectura=true no inserta en sanciones_contratos_vistos aunque haya inhabilitación vigente (CX-01 en GORE La Libertad, S3)", async () => {
+    // Sin soloLectura, este mismo caso insertaría y marcaría esNuevoDesdeUltimaCorrida:true
+    // (ver el primer test de este describe) — con soloLectura:true no debe tocar la tabla.
+    mockCrossrefQueries({
+      inhabilitaciones: [INHABILITACION_VIGENTE],
+      insertados: [{ ruc: "20601567335", referencia_contrato: "awards:ocds-peru-1:AWARD-1" }],
+    });
+
+    const app = createApp();
+    const res = await request(app)
+      .get("/api/crossref")
+      .query({ departamento: "LIMA", soloLectura: "true" });
+
+    expect(res.status).toBe(200);
+    const result = res.body.resultados[0];
+    expect(result.tieneInhabilitacionVigente).toBe(true);
+    expect(result.esNuevoDesdeUltimaCorrida).toBe(false);
+
+    // Solo la consulta de inhabilitaciones — sin INSERT sobre sanciones_contratos_vistos,
+    // sin importar que `insertados` (mockeado arriba) hubiera traído una fila.
+    expect(sancionadosQueryMock).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("GET /api/crossref (PV-06: departamento=TODOS y soloNuevos)", () => {

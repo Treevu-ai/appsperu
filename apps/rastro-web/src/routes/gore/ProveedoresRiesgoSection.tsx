@@ -59,6 +59,10 @@ function SancionadosSubsection() {
         const result = await getProveedoresSancionadosCrossref({
           departamento: "LA LIBERTAD",
           soloInhabilitados: true,
+          // Esta sección es de solo visualización — nunca debe "gastar" el
+          // flag de nuevo desde la última corrida que usa el widget nacional
+          // (ver getProveedoresSancionadosCrossref para el detalle).
+          soloLectura: true,
         });
         if (!cancelled) setData(result);
       } catch (err) {
@@ -81,11 +85,13 @@ function SancionadosSubsection() {
   return (
     <section>
       <h3 className="text-fg-soft font-medium text-sm">
-        Proveedores sancionados con contrato vigente
+        Proveedores sancionados con contratación registrada
       </h3>
       <p className="text-xs text-muted mt-1">
         Proveedores con inhabilitación vigente ante el Tribunal de
-        Contrataciones que tienen al menos una contratación en La Libertad.
+        Contrataciones que tienen al menos una contratación registrada en La
+        Libertad — la fuente no indica si esa contratación específica sigue
+        activa.
       </p>
       <div className="mt-3">
         {loading ? (
@@ -143,7 +149,7 @@ function SancionadosSubsection() {
                             SIN_CORTE,
                             "NO_APLICA",
                           )}
-                          suffix={row.valorMoneda ?? "S/"}
+                          suffix={row.valorMoneda ?? undefined}
                         />
                       ) : (
                         "—"
@@ -210,8 +216,8 @@ function IrregularesSubsection() {
       </h3>
       <p className="text-xs text-muted mt-1">
         Proveedores encontrados en el padrón SUNAT cuyo estado de contribuyente
-        o condición de domicilio no es regular (no ACTIVO/HABIDO) al corte
-        actual del padrón.
+        o condición de domicilio no es regular (no ACTIVO/HABIDO), según el
+        padrón consultado.
       </p>
       <div className="mt-3">
         {loading ? (
@@ -272,7 +278,7 @@ function IrregularesSubsection() {
                             SIN_CORTE,
                             "NO_APLICA",
                           )}
-                          suffix={row.valorMoneda ?? "S/"}
+                          suffix={row.valorMoneda ?? undefined}
                         />
                       ) : (
                         "—"

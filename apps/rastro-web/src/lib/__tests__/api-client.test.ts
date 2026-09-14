@@ -135,6 +135,15 @@ describe("getProveedoresSancionadosCrossref", () => {
     expect(calledUrl.searchParams.has("soloInhabilitados")).toBe(false);
     expect(calledUrl.searchParams.has("soloNuevos")).toBe(false);
   });
+
+  it("soloLectura:true arma la query de solo-lectura (CX-01 en GORE La Libertad, S3 — no debe gastar el flag de nuevo)", async () => {
+    const fetchMock = mockFetchOnce({ departamento: "LA LIBERTAD", resultados: [] });
+
+    await getProveedoresSancionadosCrossref({ departamento: "LA LIBERTAD", soloInhabilitados: true, soloLectura: true });
+
+    const calledUrl = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(calledUrl.searchParams.get("soloLectura")).toBe("true");
+  });
 });
 
 describe("getIdentidadFiscalCrossref", () => {

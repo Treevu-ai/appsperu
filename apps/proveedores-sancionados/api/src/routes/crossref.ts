@@ -18,6 +18,16 @@ const CrossrefQuerySchema = z.object({
   // `soloNuevos` filtra a los casos que PV-05 marcó como nunca vistos antes —
   // el punto de entrada pensado para vigilancia, no para el reporte completo.
   soloNuevos: z.enum(["true", "false"]).optional(),
+  // CX-01 en GORE La Libertad (S3, hallazgo de CodeRabbit en el PR): sin este
+  // flag, CUALQUIER GET a este endpoint marca en `sanciones_contratos_vistos`
+  // los pares RUC+contrato con inhabilitación vigente que aparezcan en su
+  // dataset -- sin importar los demás query params. Un segundo punto de
+  // llamada de solo-lectura (ej. una ficha regional) "gastaría" el flag de
+  // "nuevo" antes de que la corrida nacional (PV-05/06) lo vea. `soloLectura`
+  // salta por completo el bloque de INSERT para llamadas que solo muestran
+  // datos y no deben participar en la detección de "nuevo desde la última
+  // corrida".
+  soloLectura: z.enum(["true", "false"]).optional(),
 });
 
 type ContractRow = {
@@ -58,6 +68,7 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
   const wantedDepartamento = parsed.departamento?.toUpperCase().trim() ?? "LA LIBERTAD";
   const soloInhabilitados = parsed.soloInhabilitados === "true";
   const soloNuevos = parsed.soloNuevos === "true";
+  const soloLectura = parsed.soloLectura === "true";
   const ambitoNacional = wantedDepartamento === "TODOS";
 
   const [{ rows: awardRows }, { rows: minorContractRows }] = await Promise.all([
@@ -184,7 +195,7 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
   // así que sirve como fuente de verdad directa de "nuevo desde la última
   // corrida" sin depender de una lectura previa.
   const nuevosDesdeUltimaCorrida = new Set<string>();
-  if (sancionadosRucContrato.length > 0) {
+  if (!soloLectura && sancionadosRucContrato.length > 0) {
     // Deduplicar antes de insertar: el mismo par RUC+contrato puede repetirse
     // si `contractRows` tiene mas de una fila para el mismo award (no deberia,
     // pero el indice unico de la tabla es la garantia real, no este dedupe).
