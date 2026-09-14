@@ -29,6 +29,21 @@ Ticket [`TICKETS_GORE_La_Libertad_S1_v1.md`](TICKETS_GORE_La_Libertad_S1_v1.md) 
 
 ---
 
+## Checklist CX-01 en GORE La Libertad (S3) — smoke manual contra Postgres real (2026-09-14)
+
+PR #153 (mergeado) · pendiente marcado en su test plan como "smoke manual contra Postgres real — pendiente de acceso a las DBs desde este entorno". Se levantaron `identidad-fiscal`, `proveedores-sancionados` y `compras-publicas` vía `docker compose up` (contenedores no existían, pero los volúmenes con datos ya ingeridos de sesiones anteriores sí — `identidad-fiscal_fiscal_pgdata`, `proveedores-sancionados_sanciones_pgdata`, `compras-publicas_compras_pgdata`), sus APIs Express en local, y `rastro-web` con `vite --host`. `WEB_ORIGIN` de ambas APIs (default `localhost:3006`/`3008`) tuvo que sobreescribirse temporalmente a `http://localhost:5173` (puerto real de Vite en este entorno) para que el navegador pudiera llamarlas sin CORS — no es un bug del código, es un desajuste de convención de puertos entre el `WEB_ORIGIN` por defecto de cada API y el puerto real de `vite dev`. Todo se apagó al terminar (contenedores detenidos, procesos Node matados); los volúmenes quedaron intactos.
+
+| Ítem | Estado | Resultado en vivo |
+|---|---|---|
+| `GET identidad-fiscal/api/crossref?departamento=LA LIBERTAD&soloIrregulares=true` — datos reales, shape correcto | [x] | 7 resultados reales (4 `awards`, 3 `minor_contracts`), todos con `irregular: true` y `estadoTributarioEnFechaAdjudicacion: "NO_VERIFICABLE"` como documenta el backend; renderizados en la UI (`ProveedoresRiesgoSection`) con los mismos 7 proveedores, montos y "Origen" correctos |
+| `GET proveedores-sancionados/api/crossref?departamento=LA LIBERTAD&soloInhabilitados=true&soloLectura=true` — datos reales | [x] | 4 resultados reales (AGUSTINA SERVICIOS GENERALES, QUBITS CONSULTING ×2, CHAVEZ MINCHOLA), todos con `tieneInhabilitacionVigente: true`; renderizados en la UI con los mismos 4 proveedores |
+| **Fix de `soloLectura` (CodeRabbit, corregido antes de mergear) funciona contra Postgres real, no solo en el test con mocks** | [x] | Prueba diferencial directa sobre la tabla real `sanciones_contratos_vistos` (346 filas): se borraron las 4 filas correspondientes a los casos de La Libertad, se llamó con `soloLectura=true` → **346 → 342, sin cambio tras la llamada** (no insertó), `esNuevoDesdeUltimaCorrida: false` en las 4 filas. Luego se llamó al mismo endpoint **sin** `soloLectura` → las 4 filas se reinsertaron (**342 → 346**, estado original restaurado) y las 4 pasaron a `esNuevoDesdeUltimaCorrida: true` — confirma tanto que el bug original era real (cualquier GET sin el flag inserta) como que el fix lo evita por completo |
+| `valorMoneda: null` en filas `minor_contracts` no se renderiza con moneda inventada | [x] | En la UI, las 4 filas `minor_contracts` de la sección de irregularidad tributaria (MORILLAS CONSTRUCTORA, TIERRA VIVA H&M, GRUPO NR, SMAPERU GROUP) muestran el monto **sin sufijo de moneda** (ej. "41,000", no "41,000 S/"); las filas `awards` sí muestran "PEN" — confirma el fix de `suffix={row.valorMoneda ?? undefined}` |
+
+**Nota de proceso:** la ficha de sector en sí (`radar-ejecucion`, puerto 4000) no se levantó para este smoke — fuera de alcance de CX-01, que es 100% independiente del sector seleccionado (por diseño, ver `ProveedoresRiesgoSection.tsx`). La página mostró su error de red esperado para esa parte ("No se pudo obtener la ficha"), mientras las dos secciones de CX-01 cargaron y renderizaron correctamente en la misma vista.
+
+---
+
 ## Checklist GORE S2 — smoke manual contra APIs en vivo (2026-09-13)
 
 Ticket [`TICKETS_GORE_La_Libertad_S2_v1.md`](TICKETS_GORE_La_Libertad_S2_v1.md) · GORE-07c.
