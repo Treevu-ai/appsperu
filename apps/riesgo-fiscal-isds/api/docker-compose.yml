@@ -1,0 +1,16 @@
+name: riesgo-fiscal-isds
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: riesgo_fiscal
+      POSTGRES_PASSWORD: riesgo_fiscal
+      POSTGRES_DB: riesgo_fiscal_isds
+    ports:
+      - "127.0.0.1:5459:5432"
+    volumes:
+      - riesgo_fiscal_isds_pgdata:/var/lib/postgresql/data
+
+volumes:
+  riesgo_fiscal_isds_pgdata:

@@ -21,11 +21,25 @@ const PublicWorksResumenQuerySchema = z.object({
     .describe("DQ-06: desglosa el resumen por categoría — sectorEntidad, nivelGobierno, naturalezaObra, modalidadEjecucion o causalParalizacion. Un valor no soportado responde 400, nunca se ignora en silencio."),
 });
 
+const ORDER_BY_COLUMNS = {
+  nombre_asc: "pw.nombre_obra ASC",
+  diasParalizado_desc: "pw.dias_paralizado DESC NULLS LAST",
+  montoViable_desc: "pw.monto_viable DESC NULLS LAST",
+} as const;
+
 const PublicWorksQuerySchema = z.object({
   departamento: z.string().min(1).optional(),
   estado: z.string().min(1).optional(),
   conParalizacion: z.enum(["true", "false"]).optional(),
   distritoSospechoso: z.enum(["true", "false"]).optional(),
+  // PV-03: permiten pedir directamente "obras de este sector paralizadas
+  // hace más de N días" sin escribir SQL ad-hoc contra la base.
+  sectorEntidad: z.string().min(1).optional(),
+  diasParalizadoMin: z.coerce.number().int().min(0).optional(),
+  orderBy: z.enum(Object.keys(ORDER_BY_COLUMNS) as [string, ...string[]]).default("nombre_asc"),
+}).refine((value) => value.diasParalizadoMin === undefined || value.conParalizacion === "true", {
+  message: "diasParalizadoMin requiere conParalizacion=true — dias_paralizado no es significativo en obras sin paralización.",
+  path: ["diasParalizadoMin"],
 });
 
 function toNumberOrNull(value: unknown): number | null {
@@ -141,7 +155,7 @@ publicWorksRouter.get(
   asyncHandler(async (req, res) => {
     const parsed = parseQuery(PublicWorksQuerySchema, req.query, res);
     if (!parsed) return;
-    const { departamento, estado, conParalizacion, distritoSospechoso } = parsed;
+    const { departamento, estado, conParalizacion, distritoSospechoso, sectorEntidad, diasParalizadoMin, orderBy } = parsed;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -161,6 +175,14 @@ publicWorksRouter.get(
     } else if (distritoSospechoso === "false") {
       conditions.push("pw.distrito_sospechoso = false");
     }
+    if (sectorEntidad) {
+      params.push(sectorEntidad);
+      conditions.push(`pw.sector_entidad = $${params.length}`);
+    }
+    if (diasParalizadoMin !== undefined) {
+      params.push(diasParalizadoMin);
+      conditions.push(`pw.dias_paralizado >= $${params.length}`);
+    }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
     const { rows } = await pool.query(
@@ -168,7 +190,7 @@ publicWorksRouter.get(
        FROM public_works pw
        JOIN raw_infobras_batches rb ON rb.id = pw.source_batch_id
        ${where}
-       ORDER BY pw.nombre_obra ASC`,
+       ORDER BY ${ORDER_BY_COLUMNS[orderBy as keyof typeof ORDER_BY_COLUMNS]}`,
       params
     );
 

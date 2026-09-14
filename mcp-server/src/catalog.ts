@@ -872,6 +872,17 @@ export const TOOL_CATALOG: ToolSpec[] = [
 
   // ---- infobras (Contraloría) ----
   {
+    name: "infobras_meta_sources",
+    app: "infobras",
+    description:
+      "Metadata de los últimos lotes de ingesta INFOBRAS (cuándo se corrió, cuántos registros, cobertura). " +
+      "Usado por la barra de frescura GORE al mostrar obras vinculadas por CUI. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/meta/sources",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
     name: "infobras_public_works",
     app: "infobras",
     description:
@@ -1179,6 +1190,18 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: { ubigeo: z.string().regex(/^\d{6}$/) },
   },
   {
+    name: "ceplan_geo_crossref_salud",
+    app: "ceplan-geo",
+    description:
+      "Salud del caché de territory_name_crosswalk (audit 2026-09-13): filas/confirmadas/candidatas/sinMatch " +
+      "y `departamentosConstruidos` (de 25 posibles). Una tabla vacía o con pocos departamentos NO significa " +
+      "que el cruce falle — `GET /crossref/obras` recalcula en vivo cualquier tríada sin entrada cacheada, " +
+      "esto solo mide qué tan caliente está el caché. `estado: 'VACIO'` si 0 filas. " + SIN_SCHEDULER,
+    pathTemplate: "/api/crossref/salud",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
     name: "ceplan_geo_denominadores_poblacion",
     app: "ceplan-geo",
     description:
@@ -1313,12 +1336,19 @@ export const TOOL_CATALOG: ToolSpec[] = [
     description:
       "Cruce proveedores-sancionados <-> compras-publicas por RUC exacto — señal más fuerte que el estatus " +
       "tributario: una inhabilitación VIGENTE es prohibición LEGAL de contratar con el Estado. " +
-      "`soloInhabilitados=true` filtra solo adjudicaciones con inhabilitación vigente. Default: LA LIBERTAD.",
+      "`soloInhabilitados=true` filtra solo adjudicaciones con inhabilitación vigente. Default: LA LIBERTAD; " +
+      "`departamento=TODOS` (PV-06, 2026-09-13) agrega awards+minor_contracts a nivel nacional en una sola " +
+      "consulta. `soloNuevos=true` filtra a los casos marcados `esNuevoDesdeUltimaCorrida` (PV-05): la tabla " +
+      "`sanciones_contratos_vistos` recuerda qué par proveedor-contrato ya se había visto en una corrida " +
+      "anterior — combinado con `departamento=TODOS` es el punto de entrada para vigilancia nacional, sin " +
+      "repetir los casos ya conocidos. No envía notificaciones (correo/Slack/webhook): es un endpoint de " +
+      "consulta, no una alerta activa. " + SIN_SCHEDULER,
     pathTemplate: "/api/crossref",
     pathParams: [],
     querySchema: {
-      departamento: z.string().min(1).optional(),
+      departamento: z.string().min(1).optional().describe("Default LA LIBERTAD. 'TODOS' agrega a nivel nacional."),
       soloInhabilitados: z.enum(["true", "false"]).optional(),
+      soloNuevos: z.enum(["true", "false"]).optional().describe("Filtra a esNuevoDesdeUltimaCorrida=true (PV-05/PV-06)."),
     },
   },
   {
@@ -1335,6 +1365,40 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: [],
     querySchema: {
       soloVigentes: z.enum(["true", "false"]).optional(),
+    },
+  },
+  {
+    name: "proveedores_sancionados_candidatos_sancionados",
+    app: "proveedores-sancionados",
+    description:
+      "Cruce candidato<->sanción (OE-03, 2026-09-10): candidatos de candidatos-erm (por departamento, o una " +
+      "lista explícita de DNI separada por comas) contra vínculos societarios (supplier_conformacion, " +
+      "compras-publicas) y sanciones directas (inhabilitaciones/multas) del Tribunal de Contrataciones. " +
+      "El cruce es siempre por DNI exacto, nunca por nombre — el DNI se enmascara en toda respuesta (últimos " +
+      "3 dígitos visibles), el nombre del candidato no se enmascara (ya es público por ley en su candidatura). " +
+      "Distingue explícitamente vínculo societario sin sanción de sanción directa — nunca las fusiona en una " +
+      "sola categoría de 'hallazgo'. Requiere `departamento` o `dni`. " + SIN_SCHEDULER,
+    pathTemplate: "/api/crossref/candidatos-sancionados",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Requerido si no se pasa 'dni'."),
+      dni: z.string().min(1).optional().describe("Lista de DNI separados por comas. Requerido si no se pasa 'departamento'."),
+    },
+  },
+  {
+    name: "proveedores_sancionados_recurrente",
+    app: "proveedores-sancionados",
+    description:
+      "Señal de sancionado recurrente (OE-04, 2026-09-10): agrupa inhabilitaciones por RUC y marca los que " +
+      "tienen `minResoluciones` o más resoluciones DISTINTAS cuyo rango completo (primera a última fecha " +
+      "`desde`) cae dentro de `ventanaDias`. Preselección exploratoria, NO una conclusión de patrón de " +
+      "conducta — cada resultado trae su propia `explicacion` diciéndolo explícitamente. Cobertura nacional " +
+      "completa (1993-2026). " + SIN_SCHEDULER,
+    pathTemplate: "/api/crossref/sancionado-recurrente",
+    pathParams: [],
+    querySchema: {
+      minResoluciones: z.coerce.number().int().min(2).max(20).optional().describe("Default 2."),
+      ventanaDias: z.coerce.number().int().min(1).max(3650).optional().describe("Default 180."),
     },
   },
   {
@@ -2116,5 +2180,61 @@ export const TOOL_CATALOG: ToolSpec[] = [
       fechaCorte: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Corte exacto YYYY-MM-DD."),
       historico: z.enum(["true", "false"]).optional().describe("true trae todos los cortes (DQ-03); default: solo el más reciente."),
     },
+  },
+
+  // ---- riesgo-fiscal-isds (MEF, Marco Macroeconómico Multianual / IAPM) ----
+  {
+    name: "riesgo_fiscal_isds_pasivos_contingentes",
+    app: "riesgo-fiscal-isds",
+    description:
+      "Pasivos contingentes explícitos del Sector Público No Financiero, POR AÑO DE CIERRE (no por " +
+      "edición del MMM — es una serie continua que cada documento nuevo extiende o revisa): " +
+      "controversias internacionales de inversión (categoría `isds`, CIADI/ICSID), contingencias de " +
+      "Asociaciones Público-Privadas (`app`), y procesos judiciales/administrativos/arbitraje nacional " +
+      "(`judicial_administrativo`), más el `total`. Serie 2020-2025 verificada por lectura directa del " +
+      "PDF (conector `pdf-parse` para 2020-2023; 2024-2025 cargados a mano por formato de tabla no " +
+      "soportado, ver ADR-0023). ISDS llegó a 4.24% del PBI en 2025, el máximo de toda la serie. " +
+      "`pctPbi` es `null` cuando un año/categoría no se pudo verificar — nunca se completa con un valor supuesto.",
+    pathTemplate: "/api/mmm/pasivos-contingentes",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
+    name: "riesgo_fiscal_isds_ediciones",
+    app: "riesgo-fiscal-isds",
+    description:
+      "Metadata de cada documento fuente (MMM o IAPM) registrado: fecha de publicación, fuente oficial, " +
+      "fecha de verificación, estado verificado/no_localizado. Los 3 documentos leídos hasta ahora " +
+      "(MMM_2024_2027, IAPM_2025_2028, MMM_2027_2030) están `verificado` — mef.gob.pe/gob.pe bloquean " +
+      "descarga automatizada con curl/WebFetch, pero un navegador real la resuelve (ver " +
+      "docs/data-contracts/riesgo-fiscal-isds.md). Útil para saber qué documentos ya están cargados " +
+      "antes de consultar `riesgo_fiscal_isds_pasivos_contingentes`.",
+    pathTemplate: "/api/mmm/ediciones",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
+    name: "riesgo_fiscal_isds_serie_historica",
+    app: "riesgo-fiscal-isds",
+    description:
+      "Serie histórica 2014/2021/2024 citada por Luis Miguel Castilla (ex-MEF, PERUMIN 37, sept-2025) " +
+      "sobre el peso de las controversias internacionales como % del PBI. Es una FUENTE SECUNDARIA " +
+      "(declaración pública, no cita directa del documento MMM), consistente dentro de un margen de " +
+      "redondeo razonable con la fuente primaria para 2021 (3.2% citado vs. 3.16% verificado) — la " +
+      "respuesta trae `fuente: \"secundaria\"` explícito; no combinar ambas series sin esa aclaración.",
+    pathTemplate: "/api/mmm/serie-historica",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
+    name: "riesgo_fiscal_isds_meta_sources",
+    app: "riesgo-fiscal-isds",
+    description:
+      "Metadata de los últimos 10 lotes de ingesta manual (PDF por PDF vía `npm run ingest:pdf`) — " +
+      "checksum, edición, filas insertadas. Útil para confirmar qué documentos ya se ingirieron sin " +
+      "consultar `pasivos-contingentes` directamente. " + SIN_SCHEDULER,
+    pathTemplate: "/api/mmm/meta/sources",
+    pathParams: [],
+    querySchema: {},
   },
 ];

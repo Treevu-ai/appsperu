@@ -15,6 +15,8 @@ import { LaLibertadBenchmark } from "./routes/gore/LaLibertadBenchmark.js";
 import { Home } from "./routes/Home.js";
 import { Proveedor } from "./routes/Proveedor.js";
 import { Proveedores } from "./routes/prensa/Proveedores.js";
+import { Sector } from "./routes/Sector.js";
+import { ObrasParalizadas } from "./routes/ObrasParalizadas.js";
 
 export default function App() {
   return (
@@ -27,6 +29,8 @@ export default function App() {
           <Route path="comparativo" element={<LaLibertadComparativo />} />
           <Route path="benchmark" element={<LaLibertadBenchmark />} />
         </Route>
+        <Route path="sector/:sectorId" element={<Sector />} />
+        <Route path="obras-paralizadas" element={<ObrasParalizadas />} />
         <Route path="proveedor/:ruc" element={<Proveedor />} />
         <Route path="prensa/proveedores" element={<Proveedores />} />
         <Route path="distrito/:ubigeo" element={<Distrito />} />

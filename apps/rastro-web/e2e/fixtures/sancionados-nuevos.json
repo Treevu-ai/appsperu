@@ -1,0 +1,31 @@
+{
+  "departamento": "TODOS",
+  "resultados": [
+    {
+      "origen": "awards",
+      "ocid": "ocds-777",
+      "awardId": "aw-777",
+      "supplierId": "PE-RUC-20556677889",
+      "supplierName": "CONSTRUCTORA DEL NORTE SAC",
+      "buyerName": "MUNICIPALIDAD PROVINCIAL DE TRUJILLO",
+      "valorMonto": 950000,
+      "valorMoneda": "PEN",
+      "fechaAdjudicacion": "2026-07-10",
+      "rucValido": true,
+      "inhabilitacionesEncontradas": 1,
+      "tieneInhabilitacionVigente": true,
+      "estadoActualFuente": {
+        "tieneInhabilitacionVigente": true,
+        "inhabilitacionExtraidaEn": "2026-09-01",
+        "estadoContribuyente": "ACTIVO",
+        "condicionDomicilio": "HABIDO",
+        "padronExtraidoEn": "2026-09-01"
+      },
+      "inhabilitadoEnFechaAdjudicacion": true,
+      "estadoTributarioEnFechaAdjudicacion": "NO_DISPONIBLE",
+      "estadoContribuyente": "ACTIVO",
+      "condicionDomicilio": "HABIDO",
+      "esNuevoDesdeUltimaCorrida": true
+    }
+  ]
+}

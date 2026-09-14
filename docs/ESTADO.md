@@ -1,6 +1,482 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-09-07.
+Última actualización: 2026-09-14.
+
+## CX-01 minor_contracts expuesto en GORE La Libertad (2026-09-14)
+
+Resuelve el ítem que tanto [`TICKETS_GORE_La_Libertad_S1_v1.md`](TICKETS_GORE_La_Libertad_S1_v1.md)
+§"Fuera de alcance S1" como [`TICKETS_GORE_La_Libertad_S2_v1.md`](TICKETS_GORE_La_Libertad_S2_v1.md)
+§"Fuera de alcance S2" dejaron diferido a S3 ("CX-01 minor_contracts"). El backend de CX-01
+(`GET /api/crossref` de `identidad-fiscal` y `proveedores-sancionados`, agregando `awards` +
+`minor_contracts` con campo `origen`) cerró el 2026-09-02, pero no tenía **ningún** consumidor en
+`rastro-web` — ni siquiera un cliente HTTP para `identidad-fiscal/api/crossref` existía antes de
+este cambio.
+
+Nueva sección `ProveedoresRiesgoSection` en `/gore/la-libertad/ficha`
+(`apps/rastro-web/src/routes/gore/ProveedoresRiesgoSection.tsx`), con dos subsecciones
+independientes: proveedores sancionados con contratación registrada
+(`getProveedoresSancionadosCrossref({ departamento: "LA LIBERTAD", soloInhabilitados: true, soloLectura: true })`)
+y proveedores con estado tributario irregular
+(`getIdentidadFiscalCrossref({ departamento: "LA LIBERTAD", soloIrregulares: true })`, función
+nueva en `api-client.ts`). Nuevo tipo compartido `ORIGEN_CONTRATO_LABEL`
+(`apps/rastro-web/src/lib/origen-contrato.ts`), extraído de `ObrasParalizadas.tsx` para no
+duplicarlo.
+
+**Efecto secundario real encontrado por CodeRabbit y corregido antes de mergear:**
+`proveedores-sancionados/api/crossref` hace un `INSERT ... ON CONFLICT DO NOTHING` en
+`sanciones_contratos_vistos` en **cualquier** GET, sin importar los query params — es cómo PV-05
+detecta "nuevo desde la última corrida". Agregar un segundo punto de llamada (esta sección, ámbito
+LA LIBERTAD) podía "gastar" ese flag antes de que la corrida nacional lo procesara. Fix: nuevo
+query param `soloLectura` que salta el `INSERT` por completo; esta sección lo usa siempre.
+Verificado con Postgres real (ver checklist de smoke abajo), no solo con el test mockeado.
+
+**Restricción de alcance real, encontrada al implementar (no documentada en los tickets S1/S2
+originales):** ninguno de los dos endpoints de crossref filtra por sector, solo por
+departamento — a diferencia de la ficha GORE La Libertad, que sí está scoped a un sector. La
+sección nueva se muestra por eso como vista departamental completa e independiente del sector
+seleccionado arriba, con una nota explícita de alcance en la UI, en vez de fingir un filtro que
+el backend no soporta.
+
+E2E nuevo: `gore-proveedores-riesgo.spec.ts` — confirmó en el camino que, en dev local,
+`proveedores-sancionados` (puerto 4008) e `identidad-fiscal` (puerto 4006) comparten literalmente
+el mismo path `/api/crossref`, así que el mock de rutas debe distinguir por puerto, no solo por
+path (el patrón de producción sí distingue por prefijo de app).
+
+**Smoke manual contra Postgres real (2026-09-14, pendiente que dejó PR #153):** confirmado en
+vivo — 7 proveedores irregulares y 4 sancionados reales de La Libertad, renderizados
+correctamente en la UI. La prueba clave fue diferencial: se borraron a mano las 4 filas de
+`sanciones_contratos_vistos` correspondientes, se llamó al endpoint con `soloLectura=true` (no
+insertó nada, 342 filas) y luego sin el flag (sí insertó, volvió a 346) — confirma que el bug
+que reportó CodeRabbit era real y que el fix lo evita contra datos reales, no solo en el test
+con mocks. Detalle completo en
+[`docs/validacion-smoke-rastro-web-v1.md`](validacion-smoke-rastro-web-v1.md) §"Checklist CX-01
+en GORE La Libertad (S3)".
+
+## Sprint GORE S2 — rutas web PV cerradas (2026-09-13)
+
+Cierre del sprint definido en [`docs/TICKETS_GORE_La_Libertad_S2_v1.md`](TICKETS_GORE_La_Libertad_S2_v1.md) — el que S1 había dejado explícitamente pendiente ("Rutas web PV → S2", ver [`TICKETS_GORE_La_Libertad_S1_v1.md`](TICKETS_GORE_La_Libertad_S1_v1.md) §"Fuera de alcance S1"). Expone en la UI el backend PV-01..06, implementado y verificado en vivo la semana pasada pero hasta ahora solo consumible por API/MCP. Cero backend nuevo — S2 fue estrictamente capa de consumo, las 7 tickets pasaron revisión de `code-reviewer` en APPROVE (2 hallazgos MEDIUM y 1 LOW no bloqueantes, corregidos igual antes del cierre).
+
+| Ticket | Entregable | Evidencia |
+|---|---|---|
+| GORE-05a | `ambito` en `getRadarEjecucionSectorFicha` (`api-client.ts`) | Tests de regresión + `ambito=NACIONAL` en `api-client.test.ts` |
+| GORE-05b | Ruta `/sector/:sectorId` (ficha nacional, sin selector de departamento) | `Sector.tsx`; E2E `sector-nacional.spec.ts` |
+| GORE-06a | `sectorEntidad`/`diasParalizadoMin`/`orderBy` en `getInfobrasPublicWorks` | Guard en runtime (no unión discriminada — ver nota abajo) + tests |
+| GORE-06b | Ruta `/obras-paralizadas` (ranking nacional, paginación de cliente) | `ObrasParalizadas.tsx` |
+| GORE-06c | Bloque "sancionados nuevos" (PV-05/06), nueva función `getProveedoresSancionadosCrossref` | Mismo componente, sección independiente |
+| GORE-07a | E2E ficha nacional de sector | `sector-nacional.spec.ts` (1 test) |
+| GORE-07b | E2E ranking de obras paralizadas + sancionados nuevos | `obras-paralizadas.spec.ts` (3 tests) |
+| GORE-07c | Smoke manual contra APIs en vivo (no fixtures) | [`docs/validacion-smoke-rastro-web-v1.md`](validacion-smoke-rastro-web-v1.md) §"Checklist GORE S2" |
+
+**Hallazgo real corregido durante S2 (GORE-06a → 06b):** la primera versión de `InfobrasPublicWorksParams` usaba una unión discriminada para forzar en tiempo de compilación la regla "`diasParalizadoMin` requiere `conParalizacion:true`". La revisión de código encontró que TypeScript ensancha `conParalizacion` a `boolean` en cuanto el caller arma el objeto en una variable en vez de un literal inline — exactamente el caso de `ObrasParalizadas.tsx`, que arma los params desde `useState`. Se reemplazó por un tipo plano + un guard en runtime (`throw` síncrono antes del fetch), con tests que verifican que lanza sin llamar a `fetch`.
+
+**Verificado en vivo contra Postgres real (GORE-07c, no solo fixtures):** se levantaron `radar-ejecucion`, `infobras`, `proveedores-sancionados`, `compras-publicas` e `identidad-fiscal` (Docker, volúmenes ya ingeridos de sesiones anteriores) y sus APIs en local. Los 3 números verificables coinciden **exactos** con las cifras ya citadas en este documento el 2026-09-12: PIM 208,104,679 para PRODUCCIÓN nacional (PV-01), 1,319 obras paralizadas +180 días a nivel nacional (PV-04), 4 de esas 1,319 en el sector PRODUCCIÓN. El bloque de sancionados nuevos dio 0 casos — de los 346 con inhabilitación vigente (mismo número que PV-06), los 346 ya estaban marcados como vistos por la corrida que pobló `sanciones_contratos_vistos` ese mismo día; es el segundo desenlace válido del criterio de aceptación, no un fallo. Detalle completo, incluida una nota sobre un falso 0 causado por un problema de encoding UTF-8 de `curl` en Git Bash (no un bug de la API), en el documento de smoke enlazado arriba.
+
+## `riesgo-fiscal-isds` — edición vigente descargada con navegador real, ISDS al máximo de la serie (2026-09-13)
+
+La descarga automatizada del MMM 2027-2030 seguía bloqueada (404 en el nombre de archivo esperado,
+WAF en el mirror de BCRP, HTTP 418 en gob.pe — ver ADR-0023). Con `claude-in-chrome` (navegador
+real, no `curl`/`WebFetch`) se encontró la URL real (`cdn.www.gob.pe/uploads/document/file/...`,
+resuelta por la página con JS) y se descargó el PDF completo (295 páginas, 15,674,847 bytes,
+verificado byte a byte). El conector `pdf-connector.ts` corrió contra el archivo real y, como se
+esperaba, **falló limpio (0 filas)**: esta edición usa el mismo formato de tabla "año actual/previo
++ Contingencia Esperada + Diferencia" que `MMM_2024_2027`, no el formato limpio que el parser
+soporta.
+
+Los años 2024 y 2025 se cargaron a mano vía migración (`003_seed_2024_2025_mmm_2027_2030.sql`),
+leídos directamente del texto extraído del PDF (página 208/295, no de prensa) — mismo estándar de
+verificación que el resto del proyecto. Hallazgo: **ISDS llegó a 4.24% del PBI en 2025**, el
+máximo de toda la serie 2020-2025 — casi el doble del 2.15% de 2022 que originó este trabajo. Serie
+completa ahora en producción:
+
+| Año | ISDS | APP | Judicial/admin. | Total |
+|---|---|---|---|---|
+| 2020 | 2.01% | 2.02% | 8.68% | 12.70% |
+| 2021 | 3.16% | 1.78% | 7.08% | 12.01% |
+| 2022 | 2.15% | 1.58% | 6.19% | 9.92% |
+| 2023 | 2.91% | 1.42% | 6.59% | 10.92% |
+| 2024 | 2.29% | 1.03% | 5.85% | 9.17% |
+| 2025 | **4.24%** | 0.87% | 5.59% | 10.70% |
+
+Detalle en `docs/data-contracts/riesgo-fiscal-isds.md` y `docs/adr/0023-riesgo-fiscal-isds-semilla-manual.md`.
+
+## Sprint GORE S1 — tableros La Libertad cerrados (2026-09-13)
+
+Cierre del sprint definido en [`docs/TICKETS_GORE_La_Libertad_S1_v1.md`](TICKETS_GORE_La_Libertad_S1_v1.md) (13–27 sep 2026). Entregables verificados:
+
+| Ticket | Entregable | Evidencia |
+|---|---|---|
+| GORE-01a–c | Ficha sectorial con presupuesto, CUI/obra/contrato, señales INFOBRAS | `LaLibertadFicha.tsx`, `SectorFichaSections.tsx`, E2E `ficha-sector.spec.ts` (5/5) |
+| GORE-02 | Frescura INFOBRAS + compras en layout GORE | `GoreFreshnessStrip.tsx`, endpoint `GET /api/meta/sources` (infobras) |
+| GORE-03 | `ABOUT_RASTRO.md` al estado sep 2026 (28 apps, 154 tools) | rev. 2026-09-13 |
+| GORE-04a/b | E2E comparativo + benchmark | `comparativo-sectores.spec.ts`, `benchmark-entidad.spec.ts` (3 tests) |
+| GORE-04c | Checklist smoke GORE | [`docs/validacion-smoke-rastro-web-v1.md`](validacion-smoke-rastro-web-v1.md) §checklist + 3 PNG en `docs/smoke-rastro-web/` |
+
+**Demo sin terminal (5 consultas):**
+
+1. `/gore/la-libertad/ficha?sector=TRANSPORTE&anio=2026` — presupuesto + inversiones/obras/contratos
+2. `/gore/la-libertad/ficha?sector=SALUD&anio=2026` — sector con cobertura PARCIAL
+3. `/gore/la-libertad/comparativo?sectores=TRANSPORTE,SALUD&anio=2026` — tabla comparativa
+4. `/gore/la-libertad/benchmark?entityCode=831&anio=2026` — percentil P60
+5. `/gore/la-libertad/benchmark?entityCode=999&anio=2026` — `datos_insuficientes` declarado
+
+En producción (`VITE_PUBLIC_APIS_LIVE=false`) las rutas GORE consumen el snapshot semanal bundleado; en dev local o CI con fixtures, los E2E comparan JSON fixture = HTML renderizado.
+
+## App nueva `riesgo-fiscal-isds` — pasivos contingentes MEF-MMM, conector pdf-parse (2026-09-13)
+
+28ª app del monorepo, originada en un proyecto externo (`clasificado`) que había identificado que
+el MEF, en su Marco Macroeconómico Multianual (MMM) e Informe de Actualización de Proyecciones
+Macroeconómicas (IAPM), reconoce anualmente qué porcentaje del PBI es pasivo contingente
+explícito por controversias internacionales de inversión (ISDS/CIADI) — la categoría, junto con
+APP y procesos judiciales/administrativos, que el propio Estado reporta como exposición máxima
+del SPNF.
+
+**Nota de proceso:** la primera versión de esta entrada (misma fecha) daba una cifra ancla
+"2.15% ISDS / 1.58% APP para la edición 2027-2030" y decía que los PDFs del MEF no tenían texto
+extraíble. Ambas cosas eran incorrectas — un spike posterior con `pdf-parse` (en vez de
+`WebFetch`) mostró que el texto sí se extrae limpio, y que esas cifras exactas corresponden al
+**cierre de 2022** (reportado en `MMM_2024_2027`), no a la edición 2027-2030. Detalle completo de
+qué se corrigió y por qué en `docs/adr/0023-riesgo-fiscal-isds-semilla-manual.md`, sección
+"Corrección posterior".
+
+Con el dato corregido: conector real `npm run ingest:pdf -- <ruta> <edicion>` (mismo patrón que
+`bcrp-la-libertad`, `pdf-parse` + checksum + upsert transaccional), esquema por **año de cierre**
+(`mmm_pasivos_contingentes`, `UNIQUE (anio_cierre, categoria)` — el dato es una serie continua
+que cada documento nuevo extiende/revisa, no "una tabla por edición"). Serie 2020-2023 verificada
+y cargada (16 filas, 4 categorías × 4 años), cross-validada contra dos documentos distintos para
+2022 (coincidencia exacta). Edición vigente (MMM 2027-2030) sin ingerir — descarga automatizada
+bloqueada (404/WAF/418 en los 4 intentos), pendiente de que alguien la baje a mano. 4 tools en el
+catálogo MCP (154 tools, 28 apps — antes 149). Puerto 4027, Postgres 5459.
+
+Detalle completo: [`docs/conectores.md#riesgo-fiscal-isds`](conectores.md#riesgo-fiscal-isds),
+[`docs/data-contracts/riesgo-fiscal-isds.md`](data-contracts/riesgo-fiscal-isds.md),
+[`docs/adr/0023-riesgo-fiscal-isds-semilla-manual.md`](adr/0023-riesgo-fiscal-isds-semilla-manual.md).
+
+## CX-15 — catálogo MCP desincronizado de rutas Express reales (2026-09-13, cerrado)
+
+Al mergear #148/#149 se notó que ambos PR tenían el check `mcp-server` en rojo. Verificado en vivo
+que **también fallaba en `master` limpio, sin ningún cambio de esta sesión** — no era una regresión
+de los PR, era un gap preexistente: dos endpoints de la sesión OE-02/OE-03 (2026-09-10) nunca se
+agregaron al catálogo MCP (`/api/crossref/candidatos-sancionados`, `/api/crossref/sancionado-recurrente`
+en `proveedores-sancionados`). Al corregirlo apareció un tercer gap, esta vez introducido en esta
+misma sesión: `/api/crossref/salud` (ceplan-geo, ya mergeado en #149) tampoco tenía tool.
+
+Se agregaron las 3 tools faltantes a `mcp-server/src/catalog.ts` (mismo patrón que las entradas
+existentes) y se actualizó `proveedores_sancionados_crossref` para reflejar los parámetros nuevos de
+PV-05/PV-06 (`departamento=TODOS`, `soloNuevos`) que esta sesión ya implementó en el endpoint real
+pero no se habían propagado al catálogo. También se actualizó `EXPECTED_TOOLS_BY_APP` en
+`catalog.test.ts` (lista hermana que detecta desincronización del catálogo consigo mismo) con los 3
+nombres nuevos. 113/113 en `mcp-server`, TypeScript limpio.
+
+## Audit de tablas registro/crosswalk + `territory_name_crosswalk` (2026-09-13)
+
+A partir de encontrar `sector_entity_registry` vacío durante PV-01 (ver abajo), se auditaron las 7
+tablas tipo registro/crosswalk/lookup de las 4 apps que tienen ese patrón (ceplan-geo,
+compras-publicas, infobras, radar-ejecucion). Hallazgos:
+
+- `sector_entity_registry` (radar-ejecucion): 0 filas → **corregido** (PV-01, ver abajo).
+- `territory_name_crosswalk` (ceplan-geo): **0 filas**, `npm run crossref:build` nunca corrido —
+  corregido en esta sesión (ver detalle abajo).
+- `entity_crosswalk` (compras-publicas: 71/1,711 buyers ≈ 4.1%; infobras: 91/2,454 ≈ 3.7%): bajo
+  pero no "olvidado" — ambas apps ya tienen `GET /api/crossref/salud` reportando `estado: OK`
+  (documentado en SI-07). No es hallazgo nuevo.
+- `supplier_conformacion`/`_lookup` (compras-publicas): 18% de cobertura, ya documentado en OE-05.
+- `sector_link_review_queue` (radar-ejecucion): 0 filas, pero es una cola de revisión humana — vacía
+  es el estado normal cuando nada se ha marcado para revisar, no un bug.
+
+**`territory_name_crosswalk` (ceplan-geo)** fue el único hallazgo nuevo real: 0 filas, tercer caso
+del mismo patrón que ya había aparecido en esta app (`infrastructure`, DQ-12) y en `entity_crosswalk`
+de infobras/compras-publicas antes de su primera corrida. Severidad más baja que los otros casos
+porque `GET /crossref/obras` ya tenía fallback en vivo (`lookupTerritoryByNames`) para cualquier
+tríada sin caché — el resultado era correcto, solo recalculaba en vez de usar caché. El problema real
+era que esta app, a diferencia de infobras/compras-publicas, no tenía ningún `GET /api/crossref/salud`
+para notarlo sin leer el código fuente. Se agregó ese endpoint (`filas`/`confirmadas`/`candidatas`/
+`sinMatch`/`departamentosConstruidos`/`ultimaConstruccion`/`estado`) y se corrió
+`npm run crossref:build` para LA LIBERTAD: 86 tríadas, 83 confirmadas, 0 candidatas, 3 sin match —
+verificado en vivo contra `GET /api/crossref/salud` (`estado: "OK"`). 6 tests nuevos en
+`crossref-api.test.ts`, suite completa de la app en 38/38, TypeScript limpio. `docs/conectores.md`
+documenta el hallazgo y deja explícito que faltan las otras 24 jurisdicciones por construir.
+
+Revisión de `code-reviewer` (APPROVE) encontró un MEDIUM real: la query de `/salud` no filtraba por
+`source = 'infobras'` como sí hace `/obras` — inofensivo hoy (una sola fuente existe), pero mezclaría
+conteos si se agrega una segunda fuente al mismo crosswalk en el futuro. Corregido agregando el mismo
+filtro, con comentario explicando por qué. 38/38 sigue en verde tras el fix.
+
+**Construidas las 25 jurisdicciones (2026-09-13, mismo día):** se corrió `crossref:build` para las 24
+regiones restantes. Total nacional verificado en vivo vía `GET /api/crossref/salud`: **2,020 tríadas,
+1,780 confirmadas (88%), 0 candidatas, 240 sin match, `departamentosConstruidos: 25`**.
+
+**Hallazgo — CALLAO en 0% de confirmación (7/7 sin match), corregido el mismo día:** INFOBRAS reporta
+la provincia como `"PROV CONST DEL CALLAO"`, mientras que `territories.provincia` la tiene como
+`"CALLAO"` — un alias de provincia no normalizado, mismo tipo de problema que el ya resuelto a nivel
+de *departamento* en infobras (`canonicalizarDepartamentoFuente()`, CT-06) pero a nivel de *provincia*.
+Se agregó `canonicalizarProvinciaFuente()` (`ingest/normalize.ts`, mapa `PROVINCIA_ALIASES`) aplicada
+en el único punto de match (`lookupTerritoryByNames`), compartido por el endpoint en vivo
+(`GET /crossref/obras`) y por `build-crosswalk.ts` — un solo fix cubre ambos caminos. Deliberadamente
+**no** se aplicó en `territories`/`parseDistrictProperties` (esos datos vienen de GeoServer, ya
+correctos) ni afecta `departamento`/`distrito` (el alias es específico de provincia). Reconstruido
+Callao: 0/7 → **7/7 confirmadas**. Total nacional tras el fix (`GET /api/crossref/salud`): 2,020
+tríadas, **1,787 confirmadas** (antes 1,780), 233 sin match (antes 240), `departamentosConstruidos:
+25`. 4 tests nuevos (`normalize.test.ts` + `territory-lookup.test.ts`, este último nuevo), suite
+completa de la app en 42/42, TypeScript limpio.
+
+Nota de alcance: se revisaron otros `sin_match` de alta incidencia (ej. Huancavelica, 57/154) y
+resultaron ser un problema distinto — provincia/distrito de INFOBRAS no correspondientes entre sí
+(mismo patrón que DQ-18 en OxI), no un alias de nombre. No se tocó — fuera de lo pedido.
+
+Revisión de `code-reviewer` (APPROVE) encontró un MEDIUM de organización: `canonicalizarProvinciaFuente`
+vivía en `ingest/normalize.ts` (funciones de parseo de GeoServer) pero su único consumidor es
+`crossref/territory-lookup.ts` — es un alias de cruce, no de ingesta. Movida a
+`territory-lookup.ts`, junto a su caller. Dos LOW de cobertura también cerrados: test que confirma
+que `parseDistrictProperties` (GeoServer) nunca aplica este alias, y test de `lookupTerritoryByNames`
+con `provincia = null`. 44/44 tras la reorganización, TypeScript limpio.
+
+## Bug de la "Ñ" en la fuente INFOBRAS/Contraloría (2026-09-13)
+
+Al investigar los 233 `sin_match` restantes del crosswalk territorial (pedido explícito: "data
+quality de Huancavelica/otros sin_match"), se clasificaron en tres grupos bien distintos:
+
+- **57 (24%):** mismo departamento, provincia mal etiquetada por INFOBRAS (ej. Huancavelica con
+  distritos reales de Ica/Lima) — defecto genuino de la fuente, no corregible sin adivinar el dato
+  correcto (mismo criterio que DQ-18). **No se tocó.**
+- **109 (47%):** departamento completamente mal etiquetado (el distrito existe, pero en otro
+  departamento real) — mismo tipo de defecto, mismo criterio. **No se tocó.**
+- **67 (29%):** el distrito no existe bajo ningún nombre. Al investigar, la mayoría resultó ser un
+  patrón nacional: **el propio XLSX de INFOBRAS/Contraloría trae la letra "Ñ" reemplazada por un
+  espacio** (verificado descomprimiendo el `.xlsx` descargado e inspeccionando el XML crudo del
+  sheet — "CA ETE" en vez de "CAÑETE" ya está así en el archivo que publican, confirmado con
+  `grep` sobre 726MB de XML: 0 ocurrencias de "Ñ" en todo el archivo, 1 ocurrencia exacta de
+  "CA ETE"). Afecta a nivel nacional: FERRE AFE, PARI AS, MU ANI, NU OA, CA ETE, y ~30 más.
+
+**Fix (recomendado y aprobado por el usuario: recuperación algorítmica, no tabla fija):**
+`territory-lookup.ts` agrega `candidatosConEnyeRestaurada()` (genera variantes reemplazando cada
+espacio interno por "N" — no "Ñ": se descubrió en el camino que `territories` ya guarda toda "Ñ"
+como "N" sin tilde vía `normalizeTerritoryToken`/`ACCENT_MAP`, así que "CAÑETE" vive en la tabla
+como "CANETE") e `intentarRecuperacionEnye()` (tres niveles: distrito corregido, provincia
+corregida, ambos corregidos a la vez — necesario porque en casos reales como Cañete la corrupción
+aparece en provincia Y distrito simultáneamente). Solo acepta la recuperación si exactamente un
+candidato produce exactamente una fila — cualquier ambigüedad se descarta sin adivinar, mismo
+criterio que el resto del matcher. Se activa solo cuando el match exacto falla y hay al menos un
+espacio, para no agregar queries en el camino feliz.
+
+Verificado en vivo reconstruyendo el crosswalk completo de las 25 regiones: **confirmadas 1,787→1,851
+(+64), sin_match 233→169 (-64)** — el resto de los sin_match (Huancavelica y similares) son los
+grupos 1 y 2, correctamente sin tocar. 7 tests nuevos en `territory-lookup.test.ts` (17 en total),
+suite completa de la app en 49/49, TypeScript limpio.
+
+Revisión de `code-reviewer` (APPROVE) encontró 3 MEDIUM: (1) una "Ñ" en la *primera* posición de un
+token se pierde antes de que la recuperación la vea (`normalizeTerritoryToken` hace `.trim()` antes
+del `candidatosConNRestaurada`) — documentado como límite conocido en el código; verificado que hoy
+no hay ningún caso real de esto en las 25 regiones (0 filas con espacio inicial), así que no se
+resolvió sin evidencia de necesidad; (2) el costo de la recuperación (hasta ~20 queries secuenciales
+por obra corrupta) también se dispara en el camino en vivo de `GET /crossref/obras`, no solo en el
+build batch — documentado en el código como algo a revisar si el volumen sin caché crece, no
+resuelto ahora (habría requerido rediseñar ese endpoint, fuera del alcance de este fix puntual); (3)
+faltaba cobertura de test para el nivel 1 y nivel 2 de la recuperación en escenario exitoso — cerrado
+con 2 tests nuevos (Azángaro/Muñani para nivel 1, Ferreñafe/Pueblo Nuevo para nivel 2, ambos casos
+reales). Un LOW (nombre de función desactualizado) también cerrado:
+`candidatosConEnyeRestaurada` → `candidatosConNRestaurada`. 51/51 tras los cambios, TypeScript
+limpio.
+## PV-01/PV-02 — Ámbito nacional en la ficha sectorial (2026-09-12, implementados)
+
+Últimos dos tickets de `docs/PRD_Propuesta_Valor_Bajo_Esfuerzo_v1.md`. Al implementar PV-01 se
+encontró que **`sector_entity_registry` (radar-ejecucion) estaba completamente vacío** en este
+entorno — 0 filas, y `sector_link_review_queue` también en 0, así que ni siquiera había candidatos
+pendientes de revisión. `GET /api/sectores/:sectorId/ficha` existía en el código pero era
+efectivamente inalcanzable para cualquier sector: el one-pager `Radar Produce` del mismo día se
+había armado con SQL directo contra la base sin que nadie notara que este endpoint ya cubría casi
+todo lo que ese SQL hacía a mano. Se corrió `npm run sectors:seed` (21 entidades, ninguna sin
+encontrar) y se agregó una entrada nueva a `INITIAL_SECTOR_SEEDS` (`sector/registry.ts`) para el
+pliego 1086 (Ministerio de la Producción) — el único sector que faltaba para poder verificar
+PV-01 contra el caso real del día.
+
+**PV-01**: `budgetByRegistry` (`sectors.ts`) acepta ahora un modo `ambitoNacional` que omite el
+filtro de `meta_departamento` en el JOIN contra `latest_budget` — agrega el pliego completo sin
+acotar a un departamento. Como los snapshots de cobertura territorial son por departamento, en modo
+nacional `cobertura.estado` queda explícitamente `"NO_VERIFICADA"` en vez de inventar un agregado.
+Expuesto vía `?ambito=NACIONAL` en `BaseQuery`, que también alcanza `/comparativo` y
+`/movimiento-presupuestal` al compartir la misma función. Verificado en vivo:
+`GET /api/sectores/PRODUCCION/ficha?ambito=NACIONAL` devuelve `pim: 208104679, devengado:
+128209085.25` — exactamente las cifras ya verificadas a mano el mismo día para el Ministerio de la
+Producción. El modo regional (sin `ambito`, o `ambito=REGIONAL`) no cambió de comportamiento:
+`departamento=LA LIBERTAD` sigue devolviendo 0 para Produce (correcto — ese pliego no dirige gasto
+a La Libertad en el dataset actual). 5 tests nuevos en `sectors.test.ts` (ruta sin cobertura previa),
+suite completa de la app en 96/96, TypeScript limpio.
+
+**PV-02**: `docs/conectores.md` (ficha de `radar-ejecucion`) documenta esta ruta como el punto de
+entrada recomendado para armar un one-pager sectorial, con el ejemplo real de PRODUCCION y una nota
+explícita: antes de repetir el ejercicio para otro sector, confirmar que esté en
+`INITIAL_SECTOR_SEEDS` y correr `npm run sectors:seed` — un 404 en este endpoint casi siempre
+significa eso, no un bug.
+
+Revisión de `code-reviewer` (APPROVE) encontró un MEDIUM real: la suite nueva solo cubría
+`GET /:sectorId/ficha`, dejando sin test el call site con más riesgo de desalineación de parámetros
+(`/entidades/:entityCode/ficha`, donde `sectorId` se pasa `undefined` y `entityCode` se desplaza a
+la 5ª posición de `budgetByRegistry`). Se agregaron 2 tests que fijan ese call site en ambos modos
+(nacional: `$2` para `entity_code`, sin `meta_departamento`; regional: `$2` departamento + `$3`
+`entity_code`) — 7/7 en `sectors.test.ts`, 98/98 en la suite completa.
+
+**Los seis tickets del PRD de bajo esfuerzo quedan implementados y verificados en vivo el mismo día
+que se escribió el PRD, con sus tres tandas de revisión de código en APPROVE.**
+
+## PV-03/PV-04/PV-06 — Ranking de obras paralizadas + vigilancia nacional (2026-09-12, implementados)
+
+Tercer y cuarto ticket del PRD de bajo esfuerzo, seguidos por PV-06:
+
+**PV-03**: `GET /api/public-works` (infobras) suma `sectorEntidad`, `diasParalizadoMin` (con validación
+`.refine()`: exige `conParalizacion=true`, responde 400 si no) y `orderBy` (`nombre_asc` default,
+`diasParalizado_desc`, `montoViable_desc`). Verificado en vivo: reproduce exactamente las 4 obras de
+Producción ya identificadas en el one-pager del 2026-09-12, en el mismo orden. 5 tests nuevos en
+`api.test.ts`, suite de la app en 110/110, TypeScript limpio.
+
+**PV-04**: con PV-03 hecho, el ranking nacional es el mismo endpoint sin `sectorEntidad` — cero código
+adicional. Medido en vivo: **1,319 obras** paralizadas +180 días a nivel nacional, por encima del
+umbral de ~500 filas que el ticket usaba para decidir si paginar. Se documenta la cifra en
+`docs/conectores.md` y se difiere la paginación (opción explícitamente permitida por el ticket), en
+vez de construir paginación sin que nadie la haya pedido.
+
+**PV-06**: `GET /api/crossref` (proveedores-sancionados) acepta `departamento=TODOS` (agrega
+`awards`+`minor_contracts` a nivel nacional en una sola consulta, no un loop de 25 llamadas) y
+`soloNuevos=true` (filtra a los casos que PV-05 marcó como nuevos). Verificado en vivo: con la tabla
+`sanciones_contratos_vistos` vacía, `departamento=TODOS&soloInhabilitados=true` devuelve 346
+adjudicaciones con inhabilitación vigente a nivel nacional, las 346 nuevas; repitiendo el mismo request,
+`soloNuevos=true` devuelve 0. 3 tests nuevos en `crossref.test.ts` (7 en total), suite en 40/40,
+TypeScript limpio. `docs/conectores.md` deja explícito que esto sigue sin enviar notificaciones — es
+un endpoint de consulta, el canal de entrega es un ticket de seguimiento aparte.
+
+Pendientes del mismo PRD: PV-01 (ámbito nacional en `GET /sectors/:sectorId/ficha`) y PV-02
+(documentar esa ruta como recomendada para one-pagers).
+
+## PV-05 — Persistir "primera vez visto" en el cruce de sancionados (2026-09-12, implementado)
+
+Primer ticket ejecutado de `docs/PRD_Propuesta_Valor_Bajo_Esfuerzo_v1.md`. Migración nueva
+`003_sanciones_contratos_vistos.sql` en `proveedores-sancionados` (tabla `sanciones_contratos_vistos`,
+`UNIQUE(ruc, referencia_contrato)`). `GET /api/crossref` ahora identifica, entre los proveedores con
+inhabilitación vigente, cuáles ya estaban registrados como vistos; inserta los nuevos y expone
+`esNuevoDesdeUltimaCorrida` en cada resultado — sin cambiar ningún campo existente de la respuesta.
+
+Verificado en vivo (no solo con mocks): con la tabla vacía, `GET /api/crossref?departamento=LIMA&soloInhabilitados=true`
+devuelve 136 casos, los 136 marcados `esNuevoDesdeUltimaCorrida: true`; al correrlo de nuevo sin
+cambios en la fuente, los mismos 136 casos quedan `false` — el experimento exacto que pedía el
+criterio de aceptación del ticket. 4 tests nuevos en `crossref.test.ts` (antes sin cobertura), suite
+completa de la app en 37/37, TypeScript limpio.
+
+Revisión de `code-reviewer` encontró un MEDIUM real: el diseño original (`SELECT` de vistos, luego
+`INSERT` aparte) dejaba una ventana de carrera entre dos corridas concurrentes del cruce — ambas
+podían leer "no visto" antes de que la otra terminara de insertar, y devolver `esNuevoDesdeUltimaCorrida:
+true` dos veces para el mismo caso (sin duplicar filas en la tabla, gracias al `UNIQUE` + `ON CONFLICT`,
+pero sí duplicando la señal de "nuevo"). Corregido reemplazando el par SELECT+INSERT por un único
+`INSERT ... ON CONFLICT DO NOTHING RETURNING ruc, referencia_contrato`, atómico: las filas que vuelve
+son, por definición de Postgres, exactamente las que esa sentencia insertó. Reverificado en vivo con
+el mismo experimento de dos corridas (136 nuevos → 0 nuevos), tests actualizados al nuevo flujo de una
+sola query, 37/37 y TypeScript limpio otra vez.
+
+Nota operativa: durante la implementación un archivo se corrompió con bytes nulos tras un intento de
+edición fallido (causa no confirmada — posible interacción de herramienta en este entorno Windows);
+se detectó con `file`/`od` antes de continuar y se reescribió limpio desde el contenido ya verificado,
+sin pérdida de trabajo.
+
+## PV-01..PV-06 — Propuesta de valor de bajo esfuerzo: PRD + tickets (2026-09-12, propuesto)
+
+A partir de armar un one-pager de inteligencia para el sector Producción (artifact `Radar Produce`,
+tres datos verificados en vivo: 244 proveedores con sanción vigente hoy, S/ 46.0M devengados en
+bienes y servicios de PRODUCE en 2026, 4 obras del sector paralizadas +180 días según INFOBRAS), se
+revisó el código de los endpoints relevantes y se confirmó que **la mayor parte de esa capacidad ya
+existe** — `GET /sectors/:sectorId/ficha` en `radar-ejecucion` ya arma presupuesto+inversiones+obras+
+contrataciones por sector, y `public-works.ts`/`crossref.ts` ya filtran por departamento. El one-pager
+se armó igual con SQL directo porque tres brechas puntuales lo impedían: la ficha sectorial no tiene
+modo nacional (`ambito=NACIONAL`), `GET /public-works` no filtra por sector/umbral de días parado ni
+ordena por `dias_paralizado`, y el cruce de sancionados (`crossref.ts`) es una foto sin estado — no
+distingue un caso ya conocido de uno nuevo desde la última corrida.
+
+Documentado como `docs/PRD_Propuesta_Valor_Bajo_Esfuerzo_v1.md` (nueva serie de tickets **PV-**) y
+`docs/TICKETS_Propuesta_Valor_Bajo_Esfuerzo_v1.md`, seis tickets en tres épicas: PV-01/PV-02 (ámbito
+nacional en la ficha sectorial + documentarla como ruta recomendada), PV-03/PV-04 (filtro de sector,
+umbral de días paralizado y orden en `GET /public-works`, luego el mismo ranking sin filtro de
+sector = ranking nacional), PV-05/PV-06 (persistir "primera vez visto" en el cruce de sancionados
+con una tabla nueva `sanciones_contratos_vistos`, luego un endpoint nacional que solo devuelve los
+casos nuevos desde la última corrida). Explícitamente fuera de alcance: cualquier canal de envío de
+notificaciones (correo/Slack/webhook) — no hay infraestructura de notificación en el repo hoy
+(verificado con `grep` de `nodemailer`/`sendgrid`/`webhook`/`slack` en `apps/*/api/src`, sin
+resultados) y añadirla es una decisión de producto aparte.
+
+**Ningún ticket está implementado todavía — este PRD queda propuesto, pendiente de owner.**
+
+## OE-04/OE-05/OE-06 — Sancionado recurrente, cobertura de conformación societaria, límite de mindef (2026-09-10)
+
+Cierran los 6 tickets de `docs/PRD_Observatorio_Electoral_y_Riesgo_v1.md`, todos implementados el
+mismo día que se escribió el PRD.
+
+**OE-04**: `GET /api/crossref/sancionado-recurrente?minResoluciones=2&ventanaDias=180` en
+`proveedores-sancionados` — agrupa `inhabilitaciones` por RUC y marca proveedores con varias
+resoluciones distintas en poco tiempo. Verificado contra el registro nacional completo: Serpaem
+(4 resoluciones/142 días), Mejesa (2/81 días) y Protektor (2/22 días) — los 3 casos ya conocidos de
+Lima — aparecen con los mismos números exactos, dentro de **637 resultados a nivel nacional** con
+los parámetros por defecto (universo sin analizar, fuera del alcance de este ticket de
+infraestructura). 3 tests nuevos, suite en 33/33.
+
+**OE-05**: se descubrió que la cifra de cobertura de conformación societaria documentada el
+2026-09-04 ("100%, 3,818/3,818 RUC") quedó desactualizada por la propia ingesta de Lima de hoy — el
+universo real de proveedores creció a 21,119 RUC mientras el conector sigue en 3,809 (18.0%).
+`docs/conectores.md` ahora documenta la cifra vigente con fecha, marcando la anterior como
+histórica. La ampliación de cobertura (parte condicional del ticket) queda pendiente y evaluable.
+
+**OE-06**: `docs/conectores.md` (ficha de `mindef`) deja registrado, sin código nuevo, que esa app
+no tiene ni tuvo nunca datos de capacidad/brechas militares — solo diplomacia de defensa,
+capacitación en el exterior y misiones de paz — y que no existe fuente oficial abierta para eso.
+
+## OE-03 — Endpoint reusable de cruce candidato↔sanción (2026-09-10)
+
+Siguiendo a OE-01/OE-02 (abajo), se agregó `GET /api/crossref/candidatos-sancionados` en
+`proveedores-sancionados` (`?departamento=X` o `?dni=a,b,c`), que cruza candidatos de
+[candidatos-erm](conectores.md#candidatos-erm) contra vínculos societarios
+(`supplier_conformacion`) y sanciones directas por DNI (`inhabilitaciones`/`multas`), y revisa
+por separado si la empresa vinculada tiene sus propias sanciones — sin fusionar ambas categorías,
+tal como pedía el ticket. Reemplaza el script de Node ad-hoc usado el mismo día antes de que este
+endpoint existiera. Verificado en vivo: reproduce exactamente los mismos casos encontrados a mano
+— La Libertad (4,637 candidatos revisados → 6 resultados) y Lima (12,770 revisados → 9 resultados,
+3 con inhabilitación vigente hoy: Inga Zapata, Canto Vidal, Ríos Padilla). 6 tests nuevos, suite
+completa de la app en 30/30.
+
+## OE-01/OE-02 — Batch insert en detector de señales + conector de candidatos ERM (2026-09-10)
+
+A partir del ejercicio de cruce contrataciones×sanciones×candidatos hecho en vivo para La Libertad
+y Lima (ver `docs/PRD_Observatorio_Electoral_y_Riesgo_v1.md` y
+`docs/TICKETS_Observatorio_Electoral_y_Riesgo_v1.md`), se implementaron dos tickets el mismo día:
+
+**OE-01**: `apps/compras-publicas/api/src/minor-contracts/run-signals.ts` insertaba cada señal y
+cada lote de evidencia con un `INSERT` separado, uno por `await` dentro del loop — impráctico a
+escala Lima (se había decidido no correrlo esa misma sesión). Se cambió a inserción por lotes de
+500 vía `jsonb_to_recordset`. Verificado contra datos reales: La Libertad reproduce exactamente los
+mismos números que la corrida secuencial (2,021 contratos, 21,293 señales, 93,577 filas de
+evidencia) en 69s (antes 15+ min, con un intento colgado). Lima —el caso descartado como
+impráctico— corre completo en 5m47s (11,572 contratos tras el filtro de monto, 85,032 señales).
+3 tests nuevos, suite completa de la app en 116/116.
+
+**OE-02**: nueva app `apps/candidatos-erm` (Postgres propio, puerto 4027/5458, mismo patrón que
+`autoridades-electas`). No existe dataset abierto oficial de candidatos ERM 2026 — las plataformas
+del JNE están protegidas contra automatización (Turnstile/Incapsula, verificado en vivo, no se
+evade). Se usa una republicación de terceros (Datapol, JSON estático sin protección) con la
+dependencia documentada explícitamente en `docs/conectores.md`. DNI almacenado sin enmascarar
+(es el mismo dato que el JNE ya publica sin enmascarar en la hoja de vida pública de cada
+candidato) pero enmascarado en toda respuesta de `GET /api/candidatos`. Verificado en vivo:
+101,948 candidatos nacionales ingeridos, 0 rechazados; La Libertad (4,637) y Lima (12,770)
+coinciden exactamente con el conteo manual del mismo día. 18 tests nuevos, TypeScript limpio.
+
+Pendientes del mismo PRD: OE-03 (endpoint reusable de cruce candidato↔sanción), OE-04 (señal de
+sancionado recurrente), OE-05 (cobertura de conformación societaria), OE-06 (nota sobre `mindef`).
+
+## DQ-18 — `provincia`/`distrito` no confiables en OxI Ficha técnica/Por Priorizar (2026-09-10)
+
+Durante una exploración ad-hoc de inversión pública/privada en La Libertad (a pedido del usuario, sin
+ticket previo), se encontró que 9 de los 31 proyectos OxI en fase "Por Priorizar" traen `provincia`
+con un código numérico en vez de un nombre de provincia (ej. "469"/"478") y `distrito` vacío. Se
+verificó en vivo que **no es un bug del conector**: `parseOxiSheetXml` lee cada celda por referencia
+exacta sin desfases, y el mismo proyecto (`oxi_id 5346`) cambió de "469" a "478" en descargas del XLSX
+fuente separadas por 3 días — un ubigeo real no cambia entre corridas, y 4 provincias reales distintas
+(Pacasmayo, Sánchez Carrión, Virú, Santiago de Chuco) comparten el mismo valor "478" en la misma
+descarga. Es un defecto de calidad de dato de la fuente oficial (PROINVERSIÓN/VERTIX OxI), acotado a
+filas con `nivelEstudio: "Ficha técnica"` + `nivelGobierno: "Gobierno Regional"`. El dato correcto sí
+existe en texto libre dentro de `nombreProyecto`. Documentado como ticket [DQ-18](TICKETS_Calidad_Datos_Auditoria_La_Libertad_v1.md) — pendiente, no resuelto esta sesión.
 
 ## Fix — `infobras.costo_actualizado` corregido, no solo documentado (2026-09-07)
 
@@ -600,6 +1076,7 @@ Registro técnico reproducible, resultados de recarga y límites:
 | `infracciones-ambientales` | Registro de infractores ambientales sancionados (OEFA/RUIAS) | 4023 | 5454 | Construida, probada, verificada (14,724 filas, La Libertad: 610/12 provincias) |
 | `red-vial-subnacional` | Intervenciones viales departamentales/vecinales (MTC/Provías Descentralizado) | 4024 | 5455 | Construida, probada, verificada (12,536 filas, La Libertad: 461/12 provincias) |
 | `residuos-solidos` | Generación anual de residuos sólidos por distrito, serie 2019-2024 (MINAM/SIGERSOL) | 4025 | 5456 | Construida, probada, verificada (11,310 filas, La Libertad: 500/12 provincias) |
+| `riesgo-fiscal-isds` | Pasivos contingentes explícitos por ISDS/APP, por año de cierre (MEF, MMM/IAPM) — conector pdf-parse, descarga manual | 4027 | 5459 | Construida, probada, verificada (serie 2020-2025 completa, incluida la edición vigente) |
 
 ## `bcrp-la-libertad` — ingesta manual, distinto a todo el resto del proyecto (2026-08-28)
 

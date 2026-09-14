@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
+import { GoreFreshnessStrip } from "./GoreFreshnessStrip.js";
 
 const SUB_NAV = [
   { to: "/gore/la-libertad/ficha", label: "Ficha" },
@@ -15,6 +16,7 @@ export function LaLibertadLayout() {
         Ejecución presupuestal del sector verificado, dirigida al departamento o ejecutada por la sede regional. La
         ausencia de un dato se declara como vacío, no como conclusión.
       </p>
+      <GoreFreshnessStrip />
 
       <nav className="mt-6 flex items-center gap-1 text-sm border-b border-line">
         {SUB_NAV.map((item) => (
