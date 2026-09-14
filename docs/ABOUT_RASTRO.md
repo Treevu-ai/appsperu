@@ -70,7 +70,7 @@ vez de inventarlo.
 **Estado al 2026-09-13.** El monorepo tiene **27 apps backend** operativas con
 datos ingeridos para La Libertad (más agregadores sin BD propia). La capa web
 `rastro.fyi` publica un **corte semanal** con tableros de lectura no técnica.
-El servidor MCP expone **149 tools** de solo lectura (más 2 meta-tools de
+El servidor MCP expone **150 tools** de solo lectura (más 2 meta-tools de
 descubrimiento, no contados en ese total). La API pública está protegida con
 Cloudflare Access. **Sprint GORE S1 (sep 2026):** ficha sectorial del GORE La
 Libertad con cruces CUI/obra/contrato, señales INFOBRAS y barra de frescura
@@ -173,7 +173,7 @@ cae** cuando una API del Estado está caída.
 ### 3.2 El servidor MCP — para agentes de IA
 
 Un servidor local que se conecta a Claude Code, Claude Desktop, Cursor,
-Windsurf, Cline y Continue.dev, y le entrega al agente **149 tools** de solo
+Windsurf, Cline y Continue.dev, y le entrega al agente **150 tools** de solo
 lectura (más 2 meta-tools para buscar e invocar) sobre las **27 APIs**
 backend. Un agente con el MCP conectado puede responder preguntas como:
 
@@ -439,7 +439,7 @@ embeben en el bundle, así que tampoco quedan visibles en DevTools.
 ### 6.8 El servidor MCP
 
 `mcp-server/` es un paquete independiente que usa el SDK oficial de
-MCP. Expone **149 tools** de solo lectura sobre las 27 APIs (más 2
+MCP. Expone **150 tools** de solo lectura sobre las 27 APIs (más 2
 meta-tools de descubrimiento). No transforma shapes: la respuesta de un
 tool es la respuesta del endpoint, con la misma metadata de cobertura,
 matcher y corte que devuelve la API.
@@ -477,7 +477,7 @@ con datos: titular, números, fuente, fecha.
 | `/gore/la-libertad/ficha` | Ficha sectorial GORE (presupuesto + CUI + obras + contratos) |
 | `/gore/la-libertad/comparativo` | Comparativo entre sectores verificados |
 | `/gore/la-libertad/benchmark` | Percentil de entidad contra cohorte |
-| `/docs/api` | Catálogo MCP (149 tools, generado desde el repo) |
+| `/docs/api` | Catálogo MCP (150 tools, generado desde el repo) |
 | `/docs/integridad` | Metodología de integridad documental |
 
 ### 7.3 El buscador (`/buscar`)
@@ -520,7 +520,7 @@ pregunte.
 
 ### 8.2 Qué hace el servidor MCP de Rastro
 
-Expone las 27 APIs como **149 tools de solo lectura**, sin transformar
+Expone las 27 APIs como **150 tools de solo lectura**, sin transformar
 shapes. Cada tool tiene un nombre semántico (ej.
 `infobras_public_works`, `radar_ejecucion_sector_ficha`,
 `compras_publicas_suppliers`), un input schema (validado con zod) y
@@ -636,7 +636,7 @@ cambio).
 - **Comparar entidades.** `/entidad/<code>` muestra el percentil de
   una entidad contra su cohorte. Una entidad que ejecuta mucho menos
   que sus pares es noticia.
-- **Bajar el catálogo.** `/docs/api` lista los 149 tools del MCP con
+- **Bajar el catálogo.** `/docs/api` lista los 150 tools del MCP con
   ejemplos de uso. Si tenés un data journalist en el equipo, el
   MCP server se instala en 5 minutos.
 - **Citar la fuente.** Cada número en la web tiene la fecha del
@@ -795,7 +795,7 @@ Rastro no cubre:
 - **Sostenibilidad:** un plan de servicios pagados para empresas
   (alertas, datasets premium, integraciones) que financie la capa
   gratuita sin comprometer la apertura.
-- **MCP ampliado:** mantener el catálogo al día (149 tools verificados
+- **MCP ampliado:** mantener el catálogo al día (150 tools verificados
   en sep 2026) e incorporar alertas/comparaciones automáticas.
 - **Cobertura completa del GORE La Libertad:** terminar las 5
   dependencias ministeriales que hoy se miran a medias.
