@@ -15,8 +15,9 @@ export interface BuildCrosswalkSummary {
  * Recalcula el cruce radar-ejecucion (MEF) <-> INFOBRAS por nombre de
  * entidad, para un departamento, y lo persiste en `entity_crosswalk`. Se
  * puede correr de nuevo cuando haya más datos ingeridos en cualquiera de las
- * dos fuentes — hace upsert por (ejecucion_entity_code,
- * infobras_codigo_entidad), no acumula duplicados. Mismo patrón que
+ * dos fuentes, o cuando cambie el matcher compartido — reemplaza (borra +
+ * inserta) las filas del departamento en vez de solo upsert, para no dejar
+ * matches obsoletos huérfanos. Mismo patrón que
  * `compras-publicas/src/crossref/build-crosswalk.ts`.
  */
 export async function buildCrosswalk(departamento: string): Promise<BuildCrosswalkSummary> {
@@ -44,21 +45,43 @@ export async function buildCrosswalk(departamento: string): Promise<BuildCrosswa
   }));
 
   const matches = matchEntities(ejecucionEntities, infobrasEntities);
+  const ejecucionEntityCodes = ejecucionEntities.map((e) => e.entityCode);
+
+  // El DELETE de abajo depende de que `ejecucionEntityCodes` no esté vacío
+  // para limpiar filas obsoletas (mismo riesgo que motivó mover el scoping
+  // desde `infobras_codigo_entidad`, ver comentario en el DELETE) — si
+  // `entities`/`territories` todavía no tiene ingeridas entidades para este
+  // departamento, o el nombre no calza con `territories.departamento`, el
+  // DELETE hace un no-op silencioso. Se advierte en vez de asumir que nunca
+  // pasa.
+  if (ejecucionEntityCodes.length === 0) {
+    console.warn(
+      `[build-crosswalk] 0 entidades radar-ejecucion para departamento="${wantedDepartamento}" — el DELETE de entity_crosswalk no se ejecutará (no-op), posibles filas obsoletas no se limpiarán.`,
+    );
+  }
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    // Reemplaza, no solo inserta: si una fila de `entity_crosswalk` ya
+    // existente ya no aparece en `matches` (p.ej. porque un ajuste al
+    // matcher dejó de considerarla válida — ver DQ-17), debe desaparecer al
+    // recalcular, no quedar huérfana con su `computed_at` viejo.
+    //
+    // Se borra por `ejecucion_entity_code` (scoped por departamento vía el
+    // JOIN con `territories` de arriba), NO por `infobras_codigo_entidad`
+    // (hallazgo de CodeRabbit en PR #144, sin corregir por 5 días): mismo
+    // razonamiento que `compras-publicas/src/crossref/build-crosswalk.ts` —
+    // `entity_crosswalk` no tiene columna `departamento`, así que borrar por
+    // el código del lado sin scope territorial garantizado puede arrastrar
+    // matches válidos de otro departamento, y se salta el DELETE por
+    // completo cuando `infobrasEntities` sale vacío.
+    await client.query(`DELETE FROM entity_crosswalk WHERE ejecucion_entity_code = ANY($1)`, [ejecucionEntityCodes]);
     for (const m of matches) {
       await client.query(
         `INSERT INTO entity_crosswalk
            (ejecucion_entity_code, ejecucion_nombre, infobras_codigo_entidad, infobras_entidad_nombre, confidence, score)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (ejecucion_entity_code, infobras_codigo_entidad) DO UPDATE
-           SET ejecucion_nombre = EXCLUDED.ejecucion_nombre,
-               infobras_entidad_nombre = EXCLUDED.infobras_entidad_nombre,
-               confidence = EXCLUDED.confidence,
-               score = EXCLUDED.score,
-               computed_at = now()`,
+         VALUES ($1, $2, $3, $4, $5, $6)`,
         [m.ejecucionEntityCode, m.ejecucionNombre, m.infobrasCodigoEntidad, m.infobrasEntidadNombre, m.confidence, m.score]
       );
     }
