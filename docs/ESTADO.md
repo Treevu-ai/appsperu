@@ -14,13 +14,21 @@ este cambio.
 
 Nueva sección `ProveedoresRiesgoSection` en `/gore/la-libertad/ficha`
 (`apps/rastro-web/src/routes/gore/ProveedoresRiesgoSection.tsx`), con dos subsecciones
-independientes: proveedores sancionados con contrato vigente
-(`getProveedoresSancionadosCrossref({ departamento: "LA LIBERTAD", soloInhabilitados: true })`) y
-proveedores con estado tributario irregular
+independientes: proveedores sancionados con contratación registrada
+(`getProveedoresSancionadosCrossref({ departamento: "LA LIBERTAD", soloInhabilitados: true, soloLectura: true })`)
+y proveedores con estado tributario irregular
 (`getIdentidadFiscalCrossref({ departamento: "LA LIBERTAD", soloIrregulares: true })`, función
 nueva en `api-client.ts`). Nuevo tipo compartido `ORIGEN_CONTRATO_LABEL`
 (`apps/rastro-web/src/lib/origen-contrato.ts`), extraído de `ObrasParalizadas.tsx` para no
 duplicarlo.
+
+**Efecto secundario real encontrado por CodeRabbit y corregido antes de mergear:**
+`proveedores-sancionados/api/crossref` hace un `INSERT ... ON CONFLICT DO NOTHING` en
+`sanciones_contratos_vistos` en **cualquier** GET, sin importar los query params — es cómo PV-05
+detecta "nuevo desde la última corrida". Agregar un segundo punto de llamada (esta sección, ámbito
+LA LIBERTAD) podía "gastar" ese flag antes de que la corrida nacional lo procesara. Fix: nuevo
+query param `soloLectura` que salta el `INSERT` por completo; esta sección lo usa siempre.
+Verificado con Postgres real (ver checklist de smoke abajo), no solo con el test mockeado.
 
 **Restricción de alcance real, encontrada al implementar (no documentada en los tickets S1/S2
 originales):** ninguno de los dos endpoints de crossref filtra por sector, solo por
@@ -33,6 +41,16 @@ E2E nuevo: `gore-proveedores-riesgo.spec.ts` — confirmó en el camino que, en 
 `proveedores-sancionados` (puerto 4008) e `identidad-fiscal` (puerto 4006) comparten literalmente
 el mismo path `/api/crossref`, así que el mock de rutas debe distinguir por puerto, no solo por
 path (el patrón de producción sí distingue por prefijo de app).
+
+**Smoke manual contra Postgres real (2026-09-14, pendiente que dejó PR #153):** confirmado en
+vivo — 7 proveedores irregulares y 4 sancionados reales de La Libertad, renderizados
+correctamente en la UI. La prueba clave fue diferencial: se borraron a mano las 4 filas de
+`sanciones_contratos_vistos` correspondientes, se llamó al endpoint con `soloLectura=true` (no
+insertó nada, 342 filas) y luego sin el flag (sí insertó, volvió a 346) — confirma que el bug
+que reportó CodeRabbit era real y que el fix lo evita contra datos reales, no solo en el test
+con mocks. Detalle completo en
+[`docs/validacion-smoke-rastro-web-v1.md`](validacion-smoke-rastro-web-v1.md) §"Checklist CX-01
+en GORE La Libertad (S3)".
 
 ## Sprint GORE S2 — rutas web PV cerradas (2026-09-13)
 
