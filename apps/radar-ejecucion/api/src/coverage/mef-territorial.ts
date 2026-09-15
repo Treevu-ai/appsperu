@@ -29,22 +29,22 @@ const SOURCES = [
     sourceName: "MEF_GR_SEDE_EJECUTORA",
     origenCobertura: "SEDE_EJECUTORA",
     nivelGobierno: "GOBIERNOS REGIONALES",
-    restriction:
-      "Offsets HTTP Range observados para La Libertad en 2026-Gasto-Mensual.csv (GR, MES_EJE 0-7). No se afirma otra región ni el archivo nacional completo.",
+    restriction: (departamento: string) =>
+      `Offsets/escaneo de secciones observados para ${departamento} en 2026-Gasto-Mensual.csv (GR, mensual). No se afirma otra región ni el archivo nacional completo.`,
   },
   {
     sourceName: "MEF_GL_SEDE_EJECUTORA",
     origenCobertura: "SEDE_EJECUTORA",
     nivelGobierno: "GOBIERNOS LOCALES",
-    restriction:
-      "Offsets HTTP Range observados para La Libertad en 2026-Gasto-Mensual.csv (GL, MES_EJE 0-7). No se afirma otra región ni el archivo nacional completo.",
+    restriction: (departamento: string) =>
+      `Offsets/escaneo de secciones observados para ${departamento} en 2026-Gasto-Mensual.csv (GL, mensual). No se afirma otra región ni el archivo nacional completo.`,
   },
   {
     sourceName: "MEF_GN_META_DEPARTAMENTO",
     origenCobertura: "META_DEPARTAMENTO",
     nivelGobierno: "GOBIERNO NACIONAL",
-    restriction:
-      "Gobierno Nacional filtrado por DEPARTAMENTO_META. Completa en el alcance de las 8 secciones mensuales materializadas; no certifica el universo MEF ni otras regiones. Un lote cacheado no equivale a una recrawl en vivo del CSV.",
+    restriction: (departamento: string) =>
+      `Gobierno Nacional filtrado por DEPARTAMENTO_META=${departamento}. Completa en el alcance de las secciones mensuales materializadas; no certifica el universo MEF ni otras regiones. Un lote cacheado no equivale a una recrawl en vivo del CSV.`,
   },
 ] as const;
 
@@ -61,7 +61,7 @@ function matchSnapshot(snapshots: readonly MefBudgetSnapshot[], departamento: st
 function blockedRow(
   sourceName: MefTerritorialCoverageRow["sourceName"],
   departamento: string,
-  restriction: string
+  restriction: string,
 ): MefTerritorialCoverageRow {
   return {
     appName: "radar-ejecucion",
@@ -85,9 +85,10 @@ export function coverageRowsFromMefSnapshots(input: {
 }): MefTerritorialCoverageRow[] {
   const departamento = input.departamento.toUpperCase().trim();
   return SOURCES.map((source) => {
+    const restriction = source.restriction(departamento);
     const snapshot = matchSnapshot(input.snapshots, departamento, source.origenCobertura, source.nivelGobierno);
     if (!snapshot || snapshot.lotes.length === 0 || !snapshot.fechaCorte) {
-      return blockedRow(source.sourceName, departamento, source.restriction);
+      return blockedRow(source.sourceName, departamento, restriction);
     }
     const persisted = snapshot.registros;
     const completeness: CoverageState = persisted === 0 ? "SIN_DATOS_EN_FUENTE" : "COMPLETA_VERIFICADA";
@@ -104,7 +105,7 @@ export function coverageRowsFromMefSnapshots(input: {
       completeness,
       sourceBatchRef,
       cutoffAt,
-      restriction: source.restriction,
+      restriction,
       coverageClaimable: canClaimCoverage({
         state: completeness,
         batch: sourceBatchRef,
