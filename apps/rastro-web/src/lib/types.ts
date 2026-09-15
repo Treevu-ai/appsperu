@@ -76,7 +76,7 @@ export type AppKey =
  * variable de entorno para su fetcher en api-client.ts).
  *
  * Decisión de alcance deliberada, no una brecha por cerrar: Rastro es
- * agentic-first. Las 27 apps reales (146 tools) ya tienen cobertura completa
+ * agentic-first. Las 28 apps reales (154 tools) ya tienen cobertura completa
  * hoy vía el servidor MCP (`rastro_buscar_tools` + `rastro_llamar`, ver
  * mcp-server/README.md y /docs/api) — ese es el canal principal de consumo.
  * Un dashboard visual dedicado por app no escala 1:1 con el crecimiento del

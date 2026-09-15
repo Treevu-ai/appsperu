@@ -19,18 +19,54 @@ export const handlers = [
     }),
   ),
 
-  // radar-ejecucion sector ficha
+  http.get("*/api/meta/freshness", () =>
+    HttpResponse.json({
+      sources: [
+        {
+          source: "seace_contratos_menores",
+          fetchedAt: new Date().toISOString(),
+          records: 500,
+          latestBatchId: 7,
+          rejectedInLatestBatch: null,
+          coverage: "Materializada para La Libertad",
+        },
+      ],
+      limitation: "La fecha de extracción y la cobertura no son equivalentes.",
+    }),
+  ),
+
+  // radar-ejecucion sector ficha — shape real (GORE-01a)
   http.get("*/api/sectores/:sectorId/ficha", ({ params }) =>
     HttpResponse.json({
-      sectorId: params.sectorId,
+      sector: { id: String(params.sectorId), nombre: String(params.sectorId) },
       anio: 2026,
-      pia: 100_000_000,
-      pim: 120_000_000,
-      devengado: 65_000_000,
-      regla: "gobierno-regional-por-funcion v1",
-      cobertura: "PARCIAL",
-      matcher: "SEC_EJEC exact",
-      corte: "2026-08-26",
+      departamento: "LA LIBERTAD",
+      entidades: [
+        {
+          sectorId: String(params.sectorId),
+          sector: String(params.sectorId),
+          entityCode: "831",
+          entidad: "GOBIERNO REGIONAL LA LIBERTAD",
+          tipoEntidad: "UNIDAD_EJECUTORA",
+          nivelGobierno: "GOBIERNOS REGIONALES",
+          reglaTerritorial: "SEDE_EJECUTORA",
+          alcance: "Ejecutado por sede regional",
+          pia: 100_000_000,
+          pim: 120_000_000,
+          devengado: 65_000_000,
+          saldoPorDevengar: 55_000_000,
+          cobertura: { estado: "PARCIAL", fechaCorteParticion: "2026-08-26", registrosParticion: 10 },
+          cortesUsados: ["2026-08-26"],
+          recursos: ["mef-pim-devengado"],
+        },
+      ],
+      inversiones: { estado: "SIN_VINCULO_OFICIAL", resultados: [] },
+      obras: { estado: "SIN_CUI_CON_VINCULO_OFICIAL", resultados: [] },
+      contrataciones: { estado: "SIN_VINCULO_MEF_COMPRAS_VERIFICADO", resultados: [] },
+      advertenciaGasto:
+        "No sumar entidades con reglaTerritorial META_DEPARTAMENTO y SEDE_EJECUTORA: miden gasto nacional dirigido vs ejecución con sede regional.",
+      limitation:
+        "CUI, obra y contratación aparecen solo mediante claves exactas verificadas. La ausencia de un puente no equivale a ausencia de inversión, obra o contratación.",
     }),
   ),
 

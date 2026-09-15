@@ -49,6 +49,7 @@ export const STATIC_ROUTES = [
   "/gore/la-libertad/benchmark",
   "/prensa/proveedores",
   "/auditoria/entidades-infobras",
+  "/obras-paralizadas",
 ];
 
 function outputPathFor(routePath) {

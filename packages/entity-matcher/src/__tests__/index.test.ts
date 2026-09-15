@@ -65,6 +65,28 @@ describe("matchEntities", () => {
     expect(result[0].a.id).toBe("006");
   });
 
+  it("does NOT match two different 'proyecto especial' irrigation projects that only share generic project words (Chavimochic/Chinecas regression, DQ-17)", () => {
+    // Caso real detectado en producción vía entity_crosswalk: CHAVIMOCHIC
+    // (La Libertad) y CHINECAS (Áncash) son proyectos especiales de
+    // irrigación distintos, sin relación entre sí, unidos solo por
+    // "PROYECTO ESPECIAL".
+    const result = matchEntities(
+      [{ id: "1134", nombre: "REGION LA LIBERTAD-PROYECTO ESPECIAL CHAVIMOCHIC" }],
+      [{ id: "3383", nombre: "PROYECTO ESPECIAL CHINECAS" }],
+    );
+    expect(result).toHaveLength(0);
+  });
+
+  it("still matches the same 'proyecto especial' entity across naming variants", () => {
+    const result = matchEntities(
+      [{ id: "1134", nombre: "REGION LA LIBERTAD-PROYECTO ESPECIAL CHAVIMOCHIC" }],
+      [{ id: "0608", nombre: "PROYECTO ESPECIAL CHAVIMOCHIC" }],
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].confidence).toBe("candidata");
+    expect(result[0].a.id).toBe("1134");
+  });
+
   it("handles empty inputs without throwing", () => {
     expect(matchEntities([], [])).toEqual([]);
     expect(matchEntities([{ id: "1", nombre: "X" }], [])).toEqual([]);

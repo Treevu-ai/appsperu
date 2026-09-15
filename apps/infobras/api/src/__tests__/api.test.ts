@@ -19,6 +19,30 @@ beforeEach(() => {
   queryMock.mockReset();
 });
 
+describe("GET /api/meta/sources", () => {
+  it("returns INFOBRAS ingestion batches for freshness UI", async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          batch_id: 1,
+          filename: "obras-publicas-la-libertad.csv",
+          fetched_at: "2026-08-20T12:00:00.000Z",
+          record_count: 420,
+          checksum: "abc123",
+        },
+      ],
+    });
+
+    const res = await request(createApp()).get("/api/meta/sources");
+    expect(res.status).toBe(200);
+    expect(res.body.items[0]).toMatchObject({
+      runAt: "2026-08-20T12:00:00.000Z",
+      records: 420,
+      cobertura: "PARCIAL",
+    });
+  });
+});
+
 function dbRow(overrides: Record<string, unknown> = {}) {
   return {
     codigo_infobras: "6",
@@ -88,6 +112,54 @@ describe("GET /api/public-works", () => {
     const [sql] = queryMock.mock.calls[0];
     expect(sql).toMatch(/pw\.distrito_sospechoso = true/);
   });
+
+  it("PV-03: applies sectorEntidad, diasParalizadoMin and orderBy=diasParalizado_desc", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+
+    const app = createApp();
+    await request(app)
+      .get("/api/public-works")
+      .query({ sectorEntidad: "PRODUCCIÓN", conParalizacion: "true", diasParalizadoMin: 180, orderBy: "diasParalizado_desc" });
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toMatch(/pw\.existe_paralizacion = true/);
+    expect(sql).toMatch(/pw\.sector_entidad = \$1/);
+    expect(sql).toMatch(/pw\.dias_paralizado >= \$2/);
+    expect(sql).toMatch(/ORDER BY pw\.dias_paralizado DESC NULLS LAST/);
+    expect(params).toEqual(["PRODUCCIÓN", 180]);
+  });
+
+  it("PV-03: sin orderBy mantiene el orden por nombre existente (regresión)", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+
+    const app = createApp();
+    await request(app).get("/api/public-works").query({ departamento: "LA LIBERTAD" });
+
+    const [sql] = queryMock.mock.calls[0];
+    expect(sql).toMatch(/ORDER BY pw\.nombre_obra ASC/);
+  });
+
+  it("PV-03: diasParalizadoMin sin conParalizacion=true responde 400 explícito, no lo ignora en silencio", async () => {
+    const app = createApp();
+    const res = await request(app).get("/api/public-works").query({ diasParalizadoMin: 180 });
+
+    expect(res.status).toBe(400);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it("PV-04: sin sectorEntidad, el ranking de obras paralizadas es nacional (filtro opcional)", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+
+    const app = createApp();
+    await request(app)
+      .get("/api/public-works")
+      .query({ conParalizacion: "true", diasParalizadoMin: 180, orderBy: "diasParalizado_desc" });
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).not.toMatch(/pw\.sector_entidad/);
+    expect(sql).toMatch(/pw\.dias_paralizado >= \$1/);
+    expect(params).toEqual([180]);
+  });
 });
 
 describe("GET /api/public-works (validación de query)", () => {
@@ -97,6 +169,14 @@ describe("GET /api/public-works (validación de query)", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/inválidos/);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it("PV-03: un orderBy no soportado responde 400, nunca lo ignora en silencio", async () => {
+    const app = createApp();
+    const res = await request(app).get("/api/public-works").query({ orderBy: "loQueSea" });
+
+    expect(res.status).toBe(400);
     expect(queryMock).not.toHaveBeenCalled();
   });
 });

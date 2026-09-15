@@ -1,0 +1,41 @@
+{
+  "departamento": "LA LIBERTAD",
+  "resultados": [
+    {
+      "origen": "awards",
+      "ocid": "ocds-902",
+      "awardId": "aw-902",
+      "supplierId": "PE-RUC-20444555667",
+      "supplierName": "TRANSPORTES Y LOGISTICA ANDINA SAC",
+      "buyerName": "GOBIERNO REGIONAL LA LIBERTAD",
+      "valorMonto": 275000,
+      "valorMoneda": "PEN",
+      "fecha": "2026-05-20",
+      "rucValido": true,
+      "encontradoEnPadron": true,
+      "estadoContribuyente": "BAJA PROVISIONAL",
+      "condicionDomicilio": "NO HALLADO",
+      "ubigeoProveedor": "130101",
+      "irregular": true,
+      "estadoTributarioEnFechaAdjudicacion": "NO_VERIFICABLE"
+    },
+    {
+      "origen": "minor_contracts",
+      "ocid": null,
+      "awardId": "mc-777",
+      "supplierId": "seace:ruc:20666777889",
+      "supplierName": "COMERCIAL SANTA ROSA EIRL",
+      "buyerName": "MUNICIPALIDAD DISTRITAL DE LAREDO",
+      "valorMonto": 18500,
+      "valorMoneda": null,
+      "fecha": "2026-07-11",
+      "rucValido": true,
+      "encontradoEnPadron": true,
+      "estadoContribuyente": "ACTIVO",
+      "condicionDomicilio": "NO HABIDO",
+      "ubigeoProveedor": "130113",
+      "irregular": true,
+      "estadoTributarioEnFechaAdjudicacion": "NO_VERIFICABLE"
+    }
+  ]
+}

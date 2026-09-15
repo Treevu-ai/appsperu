@@ -119,3 +119,43 @@ describe("crossref routes", () => {
     expect(res.body.resultados[0].ejecucionSedeRegional).toHaveLength(1);
   });
 });
+
+describe("GET /api/crossref/salud (audit 2026-09-13: territory_name_crosswalk sin diagnóstico)", () => {
+  it("reporta VACIO cuando el caché nunca se construyó, sin tocar ninguna otra dependencia", async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [{ filas: "0", confirmadas: "0", candidatas: "0", sin_match: "0", departamentos_construidos: "0", ultima_construccion: null }],
+    });
+
+    const res = await request(createApp()).get("/api/crossref/salud");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      filas: 0,
+      confirmadas: 0,
+      candidatas: 0,
+      sinMatch: 0,
+      departamentosConstruidos: 0,
+      ultimaConstruccion: null,
+      estado: "VACIO",
+      limitation: expect.stringMatching(/recalcula en vivo/),
+    });
+    expect(fetchInfobrasObrasMock).not.toHaveBeenCalled();
+  });
+
+  it("reporta OK con el desglose por match_status una vez construido el caché", async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [{
+        filas: "314", confirmadas: "270", candidatas: "12", sin_match: "32",
+        departamentos_construidos: "1", ultima_construccion: "2026-09-13T00:00:00.000Z",
+      }],
+    });
+
+    const res = await request(createApp()).get("/api/crossref/salud");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      filas: 314, confirmadas: 270, candidatas: 12, sinMatch: 32,
+      departamentosConstruidos: 1, estado: "OK",
+    });
+  });
+});

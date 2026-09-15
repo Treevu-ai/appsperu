@@ -1,0 +1,46 @@
+{
+  "sector": { "id": "PRODUCCION", "nombre": "Producción" },
+  "anio": 2026,
+  "departamento": "TODOS",
+  "entidades": [
+    {
+      "sectorId": "PRODUCCION",
+      "sector": "Producción",
+      "entityCode": "1086",
+      "entidad": "Ministerio de la Producción",
+      "tipoEntidad": "PLIEGO",
+      "nivelGobierno": "GOBIERNO NACIONAL",
+      "reglaTerritorial": "META_DEPARTAMENTO",
+      "alcance": "Gasto nacional (ámbito nacional, sin acotar a departamento)",
+      "pia": 150000000,
+      "pim": 208104679,
+      "devengado": 128209085,
+      "saldoPorDevengar": 79895594,
+      "cobertura": { "estado": "NO_VERIFICADA", "fechaCorteParticion": null, "registrosParticion": null },
+      "cortesUsados": [],
+      "recursos": ["R1"]
+    },
+    {
+      "sectorId": "PRODUCCION",
+      "sector": "Producción",
+      "entityCode": "999",
+      "entidad": "Fondo Nacional de Desarrollo Pesquero",
+      "tipoEntidad": "UNIDAD_EJECUTORA",
+      "nivelGobierno": "GOBIERNOS REGIONALES",
+      "reglaTerritorial": "SEDE_EJECUTORA",
+      "alcance": "Ejecución (ámbito nacional, sin acotar a departamento)",
+      "pia": 4000000,
+      "pim": 4500000,
+      "devengado": 2100000,
+      "saldoPorDevengar": 2400000,
+      "cobertura": { "estado": "NO_VERIFICADA", "fechaCorteParticion": null, "registrosParticion": null },
+      "cortesUsados": [],
+      "recursos": ["R2"]
+    }
+  ],
+  "inversiones": { "estado": "SIN_VINCULO_OFICIAL", "resultados": [] },
+  "obras": { "estado": "SIN_CUI_CON_VINCULO_OFICIAL", "resultados": [] },
+  "contrataciones": { "estado": "SIN_ENTIDADES_VERIFICADAS", "resultados": [] },
+  "advertenciaGasto": "No sumar entidades con reglaTerritorial META_DEPARTAMENTO y SEDE_EJECUTORA: miden gasto nacional dirigido vs ejecución con sede regional.",
+  "limitation": "CUI, obra y contratación aparecen solo mediante claves exactas verificadas. La ausencia de un puente no equivale a ausencia de inversión, obra o contratación."
+}
