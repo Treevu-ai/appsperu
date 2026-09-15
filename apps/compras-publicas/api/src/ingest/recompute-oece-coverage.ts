@@ -10,6 +10,22 @@ import { radarPool } from "../db/radar-pool.js";
  * que en realidad recorrieron la fuente hasta la página terminal — este backfill
  * corrige el registro de las regiones ya verificadas en dato real (CT-08/CT-09),
  * no re-ejecuta ninguna ingesta.
+ *
+ * **Riesgo aceptado, documentado por hallazgo de CodeRabbit (PR #145, sin
+ * corregir por 5 días):** `insertCoverage()` marca `COMPLETA_VERIFICADA` con
+ * solo `count > 0` — cuenta TODAS las filas actuales de la tabla para ese
+ * departamento, sin ligar el conteo a la procedencia de un batch verificado
+ * como completo. `raw_ocds_batches` no persiste si una corrida llegó a la
+ * página terminal del endpoint, así que esa garantía **no se puede derivar
+ * programáticamente** con el schema actual — solo existe como conocimiento
+ * externo del operador (la corrida nacional real de CT-08/CT-09, documentada
+ * en `docs/ESTADO.md`). Esta función es deliberadamente una herramienta de
+ * backfill **manual**, no un endpoint ni un paso de un pipeline automatizado
+ * (verificar antes de cambiar eso): NUNCA correrla para un departamento cuya
+ * ingesta completa no se haya confirmado por fuera de esta función, aunque la
+ * tabla ya tenga filas para él — filas parciales o de una corrida vieja se
+ * certificarían igual como `COMPLETA_VERIFICADA`, de forma indistinguible de
+ * una corrida realmente completa.
  */
 
 const RESTRICTION_RELEASES =

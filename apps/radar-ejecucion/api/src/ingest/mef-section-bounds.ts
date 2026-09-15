@@ -114,6 +114,24 @@ const SECTION_LOOKBACK_BYTES = 20 * 1024 * 1024;
 const SECTION_WINDOW_BYTES = 60 * 1024 * 1024;
 
 /**
+ * Umbral de deriva para desconfiar de `SECTION_OFFSETS_LA_LIBERTAD` (hallazgo
+ * de CodeRabbit en PR #145, sin corregir por 5 días): el comentario de esa
+ * tabla asume que un offset desactualizado "nunca produce un resultado
+ * incorrecto" porque, si apunta al tramo equivocado, el filtro por
+ * departamento no encuentra NINGUNA fila y cae al escaneo completo. Esa
+ * garantía se rompe si el offset viejo todavía cae *cerca* del bloque real de
+ * LA LIBERTAD (el archivo creció, pero no lo suficiente para desplazar el
+ * offset fuera de rango) — la ventana angosta podría devolver un subconjunto
+ * parcial de filas (no cero) sin disparar el fallback. Un `confirmed` que se
+ * aleja más de un ancho de ventana de la estimación alfabética recalibrada
+ * (que sí usa los límites frescos de `SECTION_NIVEL_MES_BOUNDS`) es indicio
+ * de que quedó desalineado por el crecimiento del archivo — se descarta y se
+ * usa la estimación en su lugar, en vez de confiar ciegamente en el offset
+ * manual.
+ */
+const STALE_OFFSET_DRIFT_BYTES = SECTION_WINDOW_BYTES;
+
+/**
  * Recalibrado CT-10 (2026-09-09) vía búsqueda binaria sobre bytes reales del
  * archivo remoto (mismo método usado originalmente para
  * `NACIONAL_MES_START_BYTE` en mef-connector.ts) — el archivo creció de
@@ -166,10 +184,13 @@ export function departamentoSectionWindow(
 ): { startByte: number; maxBytes: number } {
   const dept = departamento.toUpperCase().trim();
   const confirmed = SECTION_OFFSETS_LA_LIBERTAD[nivelGobierno]?.[mesEje];
-  const center =
-    dept === "LA LIBERTAD" && confirmed !== undefined
-      ? confirmed
-      : estimateDepartamentoCenter(bounds, dept);
+  const estimated = estimateDepartamentoCenter(bounds, dept);
+  const confirmedIsStale =
+    confirmed === undefined ||
+    confirmed < bounds.start ||
+    confirmed > bounds.end ||
+    Math.abs(confirmed - estimated) > STALE_OFFSET_DRIFT_BYTES;
+  const center = dept === "LA LIBERTAD" && !confirmedIsStale ? confirmed : estimated;
 
   const startByte = Math.max(bounds.start, center - SECTION_LOOKBACK_BYTES);
   const endByte = Math.min(bounds.end, startByte + SECTION_WINDOW_BYTES);

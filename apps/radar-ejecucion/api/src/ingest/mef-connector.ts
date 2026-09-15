@@ -850,23 +850,36 @@ export function chunkRowsBySize(rows: Record<string, unknown>[], maxBytes: numbe
   return chunks;
 }
 
-async function saveFilteredBatch(
+export async function saveFilteredBatch(
   client: PoolClient,
   resourceId: string,
   filteredRows: Record<string, unknown>[]
 ): Promise<number[]> {
   const chunks = chunkRowsBySize(filteredRows, MAX_JSONB_PAYLOAD_BYTES);
   const ids: number[] = [];
-  for (const [index, chunkRows] of chunks.entries()) {
-    const chunkResourceId = chunks.length > 1 ? `${resourceId}#chunk=${index}` : resourceId;
-    const payload = JSON.stringify({ rows: chunkRows });
-    const result = await client.query<{ id: number }>(
-      `INSERT INTO raw_mef_batches (resource_id, query, checksum, record_count, payload)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id`,
-      [chunkResourceId, `meta-departamento-download:${resourceId}`, checksumOf(payload), chunkRows.length, payload]
-    );
-    ids.push(result.rows[0].id);
+  // Hallazgo de CodeRabbit (PR #145, sin corregir por 5 días): sin BEGIN/COMMIT,
+  // cada INSERT de chunk hace autocommit por su cuenta — si un chunk posterior
+  // falla, los anteriores quedan persistidos. `loadCachedRows` trata cualquier
+  // chunk que matchee el patrón `resourceId#chunk=%` como un cache hit completo
+  // (no verifica cuántos chunks se esperaban), así que un reintento ingeriría
+  // datos parciales creyendo que ya está todo cacheado.
+  await client.query("BEGIN");
+  try {
+    for (const [index, chunkRows] of chunks.entries()) {
+      const chunkResourceId = chunks.length > 1 ? `${resourceId}#chunk=${index}` : resourceId;
+      const payload = JSON.stringify({ rows: chunkRows });
+      const result = await client.query<{ id: number }>(
+        `INSERT INTO raw_mef_batches (resource_id, query, checksum, record_count, payload)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id`,
+        [chunkResourceId, `meta-departamento-download:${resourceId}`, checksumOf(payload), chunkRows.length, payload]
+      );
+      ids.push(result.rows[0].id);
+    }
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
   }
   return ids;
 }

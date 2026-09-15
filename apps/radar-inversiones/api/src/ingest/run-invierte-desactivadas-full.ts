@@ -93,10 +93,13 @@ export async function ingestFullDeactivatedInvestments(
   return { runId, contentLength, batchIds };
 }
 
-function resolveInvierteDepartamentosFromEnv(): readonly string[] {
+export function resolveInvierteDepartamentosFromEnv(): readonly string[] {
   const raw = process.env.INVIERTE_DEPARTAMENTOS;
   if (!raw) return [...DEFAULT_TERRITORIAL_SCOPE];
-  return raw.split(",").map((value) => value.trim().toUpperCase()).filter(Boolean);
+  const departamentos = raw.split(",").map((value) => value.trim().toUpperCase()).filter(Boolean);
+  // Mismo fix que run-invierte-full.ts (hallazgo de CodeRabbit, PR #145):
+  // no caer en un vacío silencioso cuando la normalización deja 0 departamentos.
+  return departamentos.length > 0 ? departamentos : [...DEFAULT_TERRITORIAL_SCOPE];
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

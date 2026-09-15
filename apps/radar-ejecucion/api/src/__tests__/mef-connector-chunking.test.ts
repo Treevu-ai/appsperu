@@ -6,7 +6,8 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("../db/pool.js", () => ({ pool: {} }));
 vi.mock("../db/budget-coverage.js", () => ({ refreshBudgetCoverageSnapshots: vi.fn() }));
 
-import { chunkRowsBySize } from "../ingest/mef-connector.js";
+import { chunkRowsBySize, saveFilteredBatch } from "../ingest/mef-connector.js";
+import type { PoolClient } from "pg";
 
 describe("chunkRowsBySize (CT-22-LIMA)", () => {
   it("returns a single chunk when everything fits under the limit", () => {
@@ -43,5 +44,45 @@ describe("chunkRowsBySize (CT-22-LIMA)", () => {
 
   it("returns an empty array for no rows", () => {
     expect(chunkRowsBySize([], 1024)).toEqual([]);
+  });
+});
+
+describe("saveFilteredBatch (hallazgo CodeRabbit PR #145: persistencia atómica multi-chunk)", () => {
+  function mockClient(queryImpl: (sql: string) => Promise<unknown>): PoolClient {
+    return { query: vi.fn(queryImpl) } as unknown as PoolClient;
+  }
+
+  it("envuelve todos los INSERT de chunks en BEGIN/COMMIT", async () => {
+    const calls: string[] = [];
+    let nextId = 1;
+    const client = mockClient(async (sql: string) => {
+      calls.push(sql);
+      if (sql.startsWith("INSERT")) return { rows: [{ id: nextId++ }] };
+      return undefined;
+    });
+
+    // saveFilteredBatch trocea por MAX_JSONB_PAYLOAD_BYTES (100MB, interno) —
+    // estas filas caben en un solo chunk; lo que importa acá es que incluso
+    // el caso de un chunk pase por BEGIN/COMMIT (antes del fix, ni ese caso
+    // los tenía).
+    const rows = Array.from({ length: 5 }, (_, i) => ({ valor: "x".repeat(30), i }));
+    const ids = await saveFilteredBatch(client, "resource-1", rows);
+
+    expect(ids).toEqual([1]);
+    expect(calls[0]).toBe("BEGIN");
+    expect(calls.at(-1)).toBe("COMMIT");
+    expect(calls.some((sql) => sql.includes("INSERT INTO raw_mef_batches"))).toBe(true);
+  });
+
+  it("hace ROLLBACK y relanza si un INSERT de chunk falla", async () => {
+    const calls: string[] = [];
+    const client = mockClient(async (sql: string) => {
+      calls.push(sql);
+      if (sql.startsWith("INSERT")) throw new Error("boom");
+      return undefined;
+    });
+
+    await expect(saveFilteredBatch(client, "resource-1", [{ i: 0 }])).rejects.toThrow("boom");
+    expect(calls.at(-1)).toBe("ROLLBACK");
   });
 });

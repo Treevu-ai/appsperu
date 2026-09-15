@@ -93,10 +93,16 @@ export async function ingestFullInvestments(options: Pick<IngestOptions, "depart
 // hardcode de "LA LIBERTAD" que se corrigió en OECE (CT-08) — el barrido "full" ya
 // descarga el CSV nacional completo por rangos, así que ampliar el alcance no cuesta
 // una descarga nueva, solo persistir más departamentos de lo ya recorrido.
-function resolveInvierteDepartamentosFromEnv(): readonly string[] {
+export function resolveInvierteDepartamentosFromEnv(): readonly string[] {
   const raw = process.env.INVIERTE_DEPARTAMENTOS;
   if (!raw) return [...DEFAULT_TERRITORIAL_SCOPE];
-  return raw.split(",").map((value) => value.trim().toUpperCase()).filter(Boolean);
+  const departamentos = raw.split(",").map((value) => value.trim().toUpperCase()).filter(Boolean);
+  // Hallazgo de CodeRabbit (PR #145, sin corregir por 5 días): un valor como
+  // "INVIERTE_DEPARTAMENTOS=, ," normaliza a lista vacía, y ambos entrypoints
+  // CLI terminaban sin materializar cobertura para ningún departamento en vez
+  // de caer al default — mismo criterio que el resto del proyecto (nunca un
+  // vacío silencioso cuando hay un default razonable).
+  return departamentos.length > 0 ? departamentos : [...DEFAULT_TERRITORIAL_SCOPE];
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

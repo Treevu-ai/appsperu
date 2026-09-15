@@ -73,26 +73,45 @@ export async function materializeMefCoverage(departamentos: readonly string[]): 
     if (gn) snapshots.push(gn);
 
     const rows = coverageRowsFromMefSnapshots({ departamento, snapshots });
-    for (const row of rows) {
-      await pool.query(
-        `INSERT INTO territorial_coverage
-          (app_name,source_name,jurisdiction_code,requested,source_records,normalized_records,persisted_records,rejected_records,completeness,source_batch_ref,cutoff_at,restriction,dependencies)
-         SELECT $1,$2,code,$3,$4,$4,$5,$6,$7,$8,$9,$10,'[]'::jsonb
-         FROM territorial_jurisdictions WHERE name=$11`,
-        [
-          row.appName,
-          row.sourceName,
-          row.requested,
-          row.sourceRecords,
-          row.persistedRecords,
-          row.rejectedRecords,
-          row.completeness,
-          row.sourceBatchRef,
-          row.cutoffAt,
-          row.restriction,
-          row.departamento,
-        ]
-      );
+    // Hallazgo de CodeRabbit (PR #145, sin corregir por 5 días): las 3 filas
+    // de un mismo departamento (SEDE_EJECUTORA GR/GL + META_DEPARTAMENTO GN)
+    // se insertaban con `pool.query` sueltos, uno por fuente. Si un INSERT
+    // fallaba a mitad de camino, los anteriores ya committeados quedaban
+    // persistidos — el verificador de cobertura lee la fila más reciente por
+    // fuente, así que un departamento podía terminar con cobertura de
+    // generaciones mezcladas (2 fuentes de esta corrida + 1 fuente vieja).
+    // Una sola transacción por departamento hace que las 3 filas se
+    // persistan juntas o ninguna.
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      for (const row of rows) {
+        await client.query(
+          `INSERT INTO territorial_coverage
+            (app_name,source_name,jurisdiction_code,requested,source_records,normalized_records,persisted_records,rejected_records,completeness,source_batch_ref,cutoff_at,restriction,dependencies)
+           SELECT $1,$2,code,$3,$4,$4,$5,$6,$7,$8,$9,$10,'[]'::jsonb
+           FROM territorial_jurisdictions WHERE name=$11`,
+          [
+            row.appName,
+            row.sourceName,
+            row.requested,
+            row.sourceRecords,
+            row.persistedRecords,
+            row.rejectedRecords,
+            row.completeness,
+            row.sourceBatchRef,
+            row.cutoffAt,
+            row.restriction,
+            row.departamento,
+          ]
+        );
+      }
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
     }
     console.log(JSON.stringify({ departamento, rows: rows.map((row) => ({ source: row.sourceName, completeness: row.completeness, persisted: row.persistedRecords })) }));
   }
