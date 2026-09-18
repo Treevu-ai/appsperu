@@ -7,14 +7,14 @@
     "dev": "tsx watch src/index.ts",
     "migrate": "tsx src/db/migrate.ts",
     "ingest:padron": "tsx src/ingest/padron-connector.ts",
-    "ingest:cooperativas": "tsx src/ingest/produce-cooperativas-connector.ts",
+    "import:ficha-ruc": "tsx src/ingest/ficha-ruc-import.ts",
     "coverage:identidad-fiscal": "tsx src/ingest/materialize-coverage.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@appsperu/shared-identity": "*",
     "@appsperu/entity-matcher": "*",
+    "@appsperu/shared-identity": "*",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^4.19.2",

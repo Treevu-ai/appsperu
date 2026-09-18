@@ -302,18 +302,18 @@ Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distrito
 | **Cobertura real ingerida** | Universo nacional completo (no acotado por departamento en el origen) — 2,339,313 filas aceptadas, 0 rechazadas en la corrida verificada. |
 | **Detalle completo** | [`docs/data-contracts/sunat-padron-ruc.md`](data-contracts/sunat-padron-ruc.md) |
 
-### `produce-cooperativas-connector.ts` — Directorio Nacional de Cooperativas (PRODUCE)
+### `ficha-ruc-import.ts` — Ficha individual de RUC (SUNAT)
 
 | | |
 |---|---|
-| **Descripción** | Trae el registro de cooperativas del sector Agricultura/Ganadería/Silvicultura/Pesca (RUC, razón social, representantes, ubicación, número de socios, contacto) — cierra el hueco de "quién es la cooperativa" para el caso de uso de café/cacao/banano/mango pedido para Rastro. |
-| **Qué hace** | Pagina el endpoint con `actividad=1` (universo completo: 139 cooperativas agropecuarias), normaliza y hace upsert en `cooperativas`. `GET /api/cooperativas` (con `?cultivo=cafe\|cacao\|banano\|mango` u otro texto libre, ILIKE sobre `razon_social`) hace `LEFT JOIN` directo con `contribuyentes` por RUC — misma base, sin pool adicional — trayendo `estado_contribuyente`/`condicion_domicilio` junto a cada cooperativa. |
-| **Cómo lo hace** | Descarga JSON vía `fetch` con reintentos/backoff (mismo patrón que `padron-connector.ts`), paginando con `iDisplayStart`/`iDisplayLength` = 500 hasta agotar `iTotalDisplayRecords`. Se investigó y descartó explícitamente un segundo endpoint del mismo sitio (`directorio-cooperativas-2017.php`, más registros pero sin filtro server-side por actividad) — ver data contract. |
-| **Frecuencia** | Manual (`npm run ingest:cooperativas`, en `apps/identidad-fiscal/api`). Snapshot completo de `actividad=1` en cada corrida. |
-| **Fuente de datos** | `directoriocoop.produce.gob.pe/ajax/busqueda_ajax.php` — Directorio Nacional de Cooperativas, Ministerio de la Producción. Sin autenticación. |
-| **Cobertura real ingerida** | 139 cooperativas del sector agropecuario, 0 rechazadas (corrida verificada 2026-09-18). 139/139 (100%) cruzan contra `contribuyentes` en este entorno. |
-| **Anomalía conocida** | El campo `representante` trae mojibake ya corrompido en el origen (no en el conector) para un subconjunto pequeño de registros — ver data contract, no se intenta reparar. `cultivo` es un filtro de texto libre sobre `razon_social`, no una columna real: PRODUCE no clasifica cooperativas por tipo de cultivo. |
-| **Detalle completo** | [`docs/data-contracts/produce-cooperativas.md`](data-contracts/produce-cooperativas.md) |
+| **Descripción** | Trae la ficha completa de un RUC (tipo de contribuyente, nombre comercial, fechas de inscripción/inicio de actividades, actividad económica CIIU principal y secundarias, si es exportador, representantes legales vigentes, comprobantes/emisión electrónica, padrones) — reemplaza al Directorio Nacional de Cooperativas de PRODUCE, que quedó desactualizado (representante legal obsoleto confirmado en vivo). |
+| **Qué hace** | Parsea el texto de la ficha (y de la sub-página "Representante(s) Legal(es)") ya extraído por navegador, y hace upsert en `ficha_ruc` + `ficha_ruc_actividades` + `ficha_ruc_representantes`. `GET /api/ficha-ruc` (con `?cultivo=`, `?exportador=true`) y `GET /api/ficha-ruc/:ruc` (ficha completa con actividades y representantes). |
+| **Cómo lo hace** | **No es un conector `fetch()` automático** — es el único caso del catálogo. El endpoint de búsqueda (`e-consultaruc.sunat.gob.pe`) exige un token de reCAPTCHA v3 validado en servidor: confirmado en vivo con un POST sin token (error de servidor) y, acto seguido, el IP de origen quedó bloqueado (`net::ERR_CONNECTION_RESET`) específicamente contra ese subdominio — probado también con Playwright (Chromium headless) desde el mismo entorno, mismo bloqueo. La carga es manual: se consulta por navegador real (sesión de usuario, canal no afectado por el bloqueo) y se importa con `npm run import:ficha-ruc -- <archivo.json>`. |
+| **Frecuencia** | Manual, por RUC — sin universo completo cargado todavía. |
+| **Fuente de datos** | `e-consultaruc.sunat.gob.pe/cl-ti-itmrconsruc/` — Consulta RUC, SUNAT. |
+| **Cobertura real ingerida** | 1 RUC importado en la corrida verificada (`20129156083`), de un universo semilla de 139 (extraído del directorio de PRODUCE antes de eliminarlo, ver `src/ingest/cooperativas-ruc-seed.json`) — cargar el resto requiere repetir la consulta por navegador RUC por RUC. |
+| **Anomalía conocida** | `nombre`/`cargo` de representante legal se separan por una lista cerrada de cargos societarios conocidos (no hay delimitador de columna en el texto plano de la tabla fuente) — si el cargo no está en la lista, se conserva sin partir. Ver data contract para las sub-secciones de la ficha aún no investigadas (Deuda Coactiva, Establecimientos Anexos, etc.). |
+| **Detalle completo** | [`docs/data-contracts/sunat-ficha-ruc.md`](data-contracts/sunat-ficha-ruc.md) |
 
 ---
 
