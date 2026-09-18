@@ -1,5 +1,6 @@
 import express, { type ErrorRequestHandler } from "express";
 import { contribuyentesRouter } from "./routes/contribuyentes.js";
+import { cooperativasRouter } from "./routes/cooperativas.js";
 import { crossrefRouter } from "./routes/crossref.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 import { pool } from "./db/pool.js";
@@ -20,6 +21,7 @@ export function createApp() {
 
   app.use("/api", apiRateLimit);
   app.use("/api/contribuyentes", contribuyentesRouter);
+  app.use("/api/cooperativas", cooperativasRouter);
   app.use("/api/crossref", crossrefRouter);
 
   // Debe ir al final: sin esto, un rechazo dentro de un handler async se

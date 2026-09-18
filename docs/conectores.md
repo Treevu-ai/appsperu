@@ -302,6 +302,19 @@ Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distrito
 | **Cobertura real ingerida** | Universo nacional completo (no acotado por departamento en el origen) — 2,339,313 filas aceptadas, 0 rechazadas en la corrida verificada. |
 | **Detalle completo** | [`docs/data-contracts/sunat-padron-ruc.md`](data-contracts/sunat-padron-ruc.md) |
 
+### `produce-cooperativas-connector.ts` — Directorio Nacional de Cooperativas (PRODUCE)
+
+| | |
+|---|---|
+| **Descripción** | Trae el registro de cooperativas del sector Agricultura/Ganadería/Silvicultura/Pesca (RUC, razón social, representantes, ubicación, número de socios, contacto) — cierra el hueco de "quién es la cooperativa" para el caso de uso de café/cacao/banano/mango pedido para Rastro. |
+| **Qué hace** | Pagina el endpoint con `actividad=1` (universo completo: 139 cooperativas agropecuarias), normaliza y hace upsert en `cooperativas`. `GET /api/cooperativas` (con `?cultivo=cafe\|cacao\|banano\|mango` u otro texto libre, ILIKE sobre `razon_social`) hace `LEFT JOIN` directo con `contribuyentes` por RUC — misma base, sin pool adicional — trayendo `estado_contribuyente`/`condicion_domicilio` junto a cada cooperativa. |
+| **Cómo lo hace** | Descarga JSON vía `fetch` con reintentos/backoff (mismo patrón que `padron-connector.ts`), paginando con `iDisplayStart`/`iDisplayLength` = 500 hasta agotar `iTotalDisplayRecords`. Se investigó y descartó explícitamente un segundo endpoint del mismo sitio (`directorio-cooperativas-2017.php`, más registros pero sin filtro server-side por actividad) — ver data contract. |
+| **Frecuencia** | Manual (`npm run ingest:cooperativas`, en `apps/identidad-fiscal/api`). Snapshot completo de `actividad=1` en cada corrida. |
+| **Fuente de datos** | `directoriocoop.produce.gob.pe/ajax/busqueda_ajax.php` — Directorio Nacional de Cooperativas, Ministerio de la Producción. Sin autenticación. |
+| **Cobertura real ingerida** | 139 cooperativas del sector agropecuario, 0 rechazadas (corrida verificada 2026-09-18). 139/139 (100%) cruzan contra `contribuyentes` en este entorno. |
+| **Anomalía conocida** | El campo `representante` trae mojibake ya corrompido en el origen (no en el conector) para un subconjunto pequeño de registros — ver data contract, no se intenta reparar. `cultivo` es un filtro de texto libre sobre `razon_social`, no una columna real: PRODUCE no clasifica cooperativas por tipo de cultivo. |
+| **Detalle completo** | [`docs/data-contracts/produce-cooperativas.md`](data-contracts/produce-cooperativas.md) |
+
 ---
 
 <a id="proveedores-sancionados"></a>
