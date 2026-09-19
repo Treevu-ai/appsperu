@@ -36,7 +36,72 @@ const HEADERS = [
   "Padrones",
   "Representante(s) Legal(es)",
   "Fecha de Consulta SUNAT",
+  // A partir de acá: NO viene de SUNAT — extraído de los archivos base
+  // provistos por el usuario (directorio base.xlsx, PAC MIDAGRI/coops san
+  // martín), cruzado por RUC. Ver `cooperativas-base-extra.json`.
+  "Fecha Inicio Actividades (Base)",
+  "Activo/Habido SUNAT (Base)",
+  "Exporta SI/NO (Base)",
+  "Exportación 2025 FOB USD (Base)",
+  "Exportación 2025 Kilos (Base)",
+  "Destinos Exportación (Base)",
+  "Gerente General (Base)",
+  "Representante Legal (Base)",
+  "Ventas Totales 2018-2025 (Base)",
+  "Ventas Totales 2025 (Base)",
+  "Ventas Exportación 2025 (Base)",
+  "Ventas Nacionales 2025 (Base)",
+  "Sede (Base)",
+  "Ubigeo (Base)",
+  "Departamento (Base)",
+  "Provincia (Base)",
+  "Distrito (Base)",
+  "Nombre SUNAT (Base)",
+  "Tipo de Organización (Base)",
+  "Socios Varones (Base)",
+  "Socias Mujeres (Base)",
+  "Hectáreas Totales (Base)",
+  "Certificación Orgánica (Base)",
+  "Certificación Comercio Justo (Base)",
+  "Otras Certificaciones (Base)",
+  "Correo (Base)",
+  "Celular (Base)",
+  "Página Web (Base)",
 ] as const;
+
+interface BaseExtraRow {
+  ruc: string;
+  ventasTotales2018_2025?: number | null;
+  ventasTotales2025?: number | null;
+  ventasExportacion2025?: number | null;
+  ventasNacionales2025?: number | null;
+  activoHabidoSunatBase?: string | null;
+  fechaInicioActividadesBase?: string | null;
+  exportaSiNo?: string | null;
+  exportacion2025FobUsd?: number | null;
+  exportacion2025Kilos?: number | null;
+  destinosExportacion?: string | null;
+  gerenteGeneralBase?: string | null;
+  representanteLegalBase?: string | null;
+  productoDom?: string | null;
+  producto1?: string | null;
+  sede?: string | null;
+  ubigeoBase?: string | null;
+  departamentoBase?: string | null;
+  provinciaBase?: string | null;
+  distritoBase?: string | null;
+  nombreSunatBase?: string | null;
+  tipoOrganizacionBase?: string | null;
+  sociosVarones?: number | null;
+  sociasMujeres?: number | null;
+  hectareasTotales?: number | null;
+  certificacionOrganica?: string | null;
+  certificacionComercioJusto?: string | null;
+  otrasCertificaciones?: string | null;
+  correoBase?: string | null;
+  celularBase?: string | null;
+  paginaWebBase?: string | null;
+}
 
 interface FichaRow {
   ruc: string;
@@ -116,8 +181,13 @@ async function loadData() {
   return { fichasByRuc, actividadesByRuc, representantesByRuc };
 }
 
-export async function exportFichaRucXlsx(seed: { ruc: string; razonSocial: string }[], outPath: string): Promise<number> {
+export async function exportFichaRucXlsx(
+  seed: { ruc: string; razonSocial: string }[],
+  outPath: string,
+  baseExtra: BaseExtraRow[] = []
+): Promise<number> {
   const { fichasByRuc, actividadesByRuc, representantesByRuc } = await loadData();
+  const baseExtraByRuc = new Map(baseExtra.map((b) => [b.ruc, b]));
 
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Cooperativas");
@@ -130,6 +200,7 @@ export async function exportFichaRucXlsx(seed: { ruc: string; razonSocial: strin
     const ficha = fichasByRuc.get(seedRow.ruc);
     const act = actividadesByRuc.get(seedRow.ruc);
     const reps = representantesByRuc.get(seedRow.ruc) ?? "";
+    const base = baseExtraByRuc.get(seedRow.ruc);
 
     sheet.addRow([
       seedRow.razonSocial,
@@ -154,6 +225,34 @@ export async function exportFichaRucXlsx(seed: { ruc: string; razonSocial: strin
       (ficha?.padrones ?? []).join(" | "),
       reps,
       fmtDate(ficha?.fecha_consulta ?? null),
+      base?.fechaInicioActividadesBase ?? "",
+      base?.activoHabidoSunatBase ?? "",
+      base?.exportaSiNo ?? "",
+      base?.exportacion2025FobUsd ?? "",
+      base?.exportacion2025Kilos ?? "",
+      base?.destinosExportacion ?? "",
+      base?.gerenteGeneralBase ?? "",
+      base?.representanteLegalBase ?? "",
+      base?.ventasTotales2018_2025 ?? "",
+      base?.ventasTotales2025 ?? "",
+      base?.ventasExportacion2025 ?? "",
+      base?.ventasNacionales2025 ?? "",
+      base?.sede ?? "",
+      base?.ubigeoBase ?? "",
+      base?.departamentoBase ?? "",
+      base?.provinciaBase ?? "",
+      base?.distritoBase ?? "",
+      base?.nombreSunatBase ?? "",
+      base?.tipoOrganizacionBase ?? "",
+      base?.sociosVarones ?? "",
+      base?.sociasMujeres ?? "",
+      base?.hectareasTotales ?? "",
+      base?.certificacionOrganica ?? "",
+      base?.certificacionComercioJusto ?? "",
+      base?.otrasCertificaciones ?? "",
+      base?.correoBase ?? "",
+      base?.celularBase ?? "",
+      base?.paginaWebBase ?? "",
     ]);
   }
 
@@ -170,10 +269,14 @@ export async function exportFichaRucXlsx(seed: { ruc: string; razonSocial: strin
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const outPath = process.argv[2] ?? "cooperativas-ficha-ruc.xlsx";
 
-  import("./cooperativas-ruc-seed.json", { with: { type: "json" } })
-    .then(async (mod) => {
-      const seed = mod.default as { ruc: string; razonSocial: string }[];
-      const count = await exportFichaRucXlsx(seed, outPath);
+  Promise.all([
+    import("./cooperativas-ruc-seed.json", { with: { type: "json" } }),
+    import("./cooperativas-base-extra.json", { with: { type: "json" } }),
+  ])
+    .then(async ([seedMod, extraMod]) => {
+      const seed = seedMod.default as { ruc: string; razonSocial: string }[];
+      const baseExtra = extraMod.default as BaseExtraRow[];
+      const count = await exportFichaRucXlsx(seed, outPath, baseExtra);
       console.log(`Exportadas ${count} filas a ${outPath}`);
       await pool.end();
     })
