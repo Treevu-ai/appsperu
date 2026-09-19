@@ -45,9 +45,12 @@ const HEADERS = [
   // — bulk hasta 100 RUC por archivo, sin reCAPTCHA, distinto del endpoint
   // individual bloqueado. Ver ruc_consulta_masiva /
   // docs/data-contracts/sunat-consulta-multiple-ruc.md.
+  "Razón Social (Consulta Múltiple)",
   "Tipo Contribuyente (Consulta Múltiple)",
   "Profesión/Oficio (Consulta Múltiple)",
   "Nombre Comercial (Consulta Múltiple)",
+  "Condición Contribuyente (Consulta Múltiple)",
+  "Estado Contribuyente (Consulta Múltiple)",
   "Fecha Inscripción (Consulta Múltiple)",
   "Fecha Inicio Actividades (Consulta Múltiple)",
   "Departamento (Consulta Múltiple)",
@@ -55,6 +58,7 @@ const HEADERS = [
   "Distrito (Consulta Múltiple)",
   "Dirección (Consulta Múltiple)",
   "Teléfono (Consulta Múltiple)",
+  "Fax (Consulta Múltiple)",
   "Actividad Comercio Exterior (Consulta Múltiple)",
   "CIIU Principal (Consulta Múltiple)",
   "CIIU Secundario 1 (Consulta Múltiple)",
@@ -176,9 +180,12 @@ interface PadronRow {
 
 interface RucMasivoRow {
   ruc: string;
+  razon_social: string | null;
   tipo_contribuyente: string | null;
   profesion_oficio: string | null;
   nombre_comercial: string | null;
+  condicion_contribuyente: string | null;
+  estado_contribuyente: string | null;
   fecha_inscripcion: Date | null;
   fecha_inicio_actividades: Date | null;
   departamento: string | null;
@@ -186,6 +193,7 @@ interface RucMasivoRow {
   distrito: string | null;
   direccion: string | null;
   telefono: string | null;
+  fax: string | null;
   actividad_comercio_exterior: string | null;
   ciiu_principal: string | null;
   ciiu_secundario_1: string | null;
@@ -217,9 +225,10 @@ async function loadData(seedRucs: string[]) {
   const padronByRuc = new Map(padron.map((p) => [p.ruc, p]));
 
   const { rows: rucMasivo } = await pool.query<RucMasivoRow>(
-    `SELECT ruc, tipo_contribuyente, profesion_oficio, nombre_comercial, fecha_inscripcion,
+    `SELECT ruc, razon_social, tipo_contribuyente, profesion_oficio, nombre_comercial,
+            condicion_contribuyente, estado_contribuyente, fecha_inscripcion,
             fecha_inicio_actividades, departamento, provincia, distrito, direccion, telefono,
-            actividad_comercio_exterior, ciiu_principal, ciiu_secundario_1, ciiu_secundario_2,
+            fax, actividad_comercio_exterior, ciiu_principal, ciiu_secundario_1, ciiu_secundario_2,
             afecto_nuevo_rus, buen_contribuyente, agente_retencion,
             agente_percepcion_venta_interna, agente_percepcion_combustible
      FROM ruc_consulta_masiva WHERE ruc = ANY($1)`,
@@ -304,9 +313,12 @@ export async function exportFichaRucXlsx(
       fmtDate(ficha?.fecha_consulta ?? null),
       padron?.estado_contribuyente ?? "",
       padron?.condicion_domicilio ?? "",
+      masivo?.razon_social ?? "",
       masivo?.tipo_contribuyente ?? "",
       masivo?.profesion_oficio ?? "",
       masivo?.nombre_comercial ?? "",
+      masivo?.condicion_contribuyente ?? "",
+      masivo?.estado_contribuyente ?? "",
       fmtDate(masivo?.fecha_inscripcion ?? null),
       fmtDate(masivo?.fecha_inicio_actividades ?? null),
       masivo?.departamento ?? "",
@@ -314,6 +326,7 @@ export async function exportFichaRucXlsx(
       masivo?.distrito ?? "",
       masivo?.direccion ?? "",
       masivo?.telefono ?? "",
+      masivo?.fax ?? "",
       masivo?.actividad_comercio_exterior ?? "",
       masivo?.ciiu_principal ?? "",
       masivo?.ciiu_secundario_1 ?? "",

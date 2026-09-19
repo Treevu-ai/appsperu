@@ -27,8 +27,12 @@ Retención/Percepción IGV).
   `gob.pe`, aunque en la prueba real el .txt plano sin comprimir también fue aceptado por la
   variante de ingreso manual — la variante de archivo no se probó todavía, ver pendientes).
 - Al enviar, genera un **.zip descargable** (nombre tipo `RM<timestamp>.zip`) con un único .txt
-  delimitado por `|`, **encoding Latin-1** (igual que el padrón reducido — confirmado: "Ñ"/"°"
-  llegan corruptos bajo lectura UTF-8 ingenua).
+  delimitado por `|`. **El encoding NO es consistente entre descargas** — confirmado en vivo el
+  2026-09-19: dos .zip descargados el mismo día con la misma variante de archivo (100 RUC)
+  llegaron uno en UTF-8 (2 RUC) y otro en Latin-1 (25 RUC). No depende (solo) de la variante
+  (manual vs. archivo) como se pensaba inicialmente. El import script (`ruc-consulta-masiva-import.ts`)
+  detecta el encoding automáticamente: intenta UTF-8 estricto, si falla cae a Latin-1. No asumir
+  un encoding fijo en ningún consumidor nuevo de este .txt.
 - El formulario tiene un campo oculto (token, no reCAPTCHA) — protección CSRF estándar, no
   bloqueante para un flujo de navegador normal.
 
@@ -71,13 +75,23 @@ RUC `20404057805` (ACOPAGRO) y `20132489824` (Chancamayo) — ambos coinciden en
 social, ubicación) con lo ya conocido de otras fuentes. Importados con éxito: `2/2 aceptados, 0
 rechazados`.
 
+## Variante de archivo (hasta 100 RUC) — confirmada en vivo 2026-09-19
+
+Probada con `.txt` plano (`RUC|` una línea por RUC, sin encabezado) — **sin comprimir en .zip**,
+contra lo que sugiere la página de `gob.pe`.
+
+- Primer intento con los 100 primeros RUC de `cooperativas-activas-prioridad.json`: falló con el
+  error genérico "Surgieron problemas al procesar la consulta múltiple de RUC".
+- Bisección: 2 RUC → OK. 50 RUC (RUC 1-50 de la lista) → OK. 50 RUC (RUC 51-100) → OK.
+- Un batch posterior de **100 RUC completos** (RUC 101-200 de la lista) → **OK, sin partir**.
+- Conclusión: el fallo del primer intento de 100 **no fue por volumen** (100 sí funciona). Causa
+  real no determinada — pudo ser intermitencia del servidor o algo puntual de esos RUC específicos
+  que no se volvió a probar. No bloqueante para seguir con el resto en tandas de 100; si un batch
+  falla, reintentar antes de asumir que hay que partirlo.
+
 ## Pendiente / fuera de alcance de este contrato
 
-1. **No se probó la variante de archivo (hasta 100 RUC de una sola vez)** — solo el ingreso
-   manual (hasta 10). Antes de usarla para las 596 cooperativas en batches de 100, hay que
-   confirmar en vivo el formato exacto que espera (extensión, si debe ir comprimido en .zip como
-   dice la página de `gob.pe` o basta el .txt plano, y el nombre del campo del formulario para el
-   `multipart/form-data`).
+1. **Causa exacta del error del primer batch de 100 sin determinar** — ver sección anterior.
 2. **No se determinó si esta fuente también tiene protección anti-abuso más allá del token CSRF**
    (por ejemplo, límite de consultas por sesión) — solo se probaron 2 RUC en una sola sesión, no
    se estresó con volumen.

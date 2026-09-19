@@ -106,12 +106,29 @@ export interface ImportSummary {
 }
 
 /**
+ * SUNAT no es consistente en el encoding del .txt que genera esta fuente
+ * entre una descarga y otra — confirmado en vivo el 2026-09-19: dos .zip
+ * descargados con la misma variante de archivo (100 RUC) llegaron uno en
+ * UTF-8 y otro en Latin-1. No depende (solo) de la variante usada. Ver
+ * `docs/data-contracts/sunat-consulta-multiple-ruc.md`.
+ *
+ * Se detecta intentando decodificar como UTF-8 estricto (`fatal: true`):
+ * si el buffer no es UTF-8 válido, cae a Latin-1.
+ */
+function decodeAuto(buf: Buffer): string {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(buf);
+  } catch {
+    return buf.toString("latin1");
+  }
+}
+
+/**
  * `filePath` es el .txt extraído del .zip que descarga la Consulta Múltiple
- * de RUC (sin decodificar todavía — se lee como latin1 acá, igual que el
- * padrón reducido).
+ * de RUC (encoding detectado automáticamente, ver `decodeAuto` arriba).
  */
 export async function importRucMasivo(filePath: string, fechaConsulta: string): Promise<ImportSummary> {
-  const raw = readFileSync(filePath, "latin1");
+  const raw = decodeAuto(readFileSync(filePath));
   const parsed = parseRucMasivoFile(raw);
 
   const accepted = parsed.filter((r) => !isRejected(r)) as NormalizedRucMasivo[];
