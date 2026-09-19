@@ -8,6 +8,7 @@
     "migrate": "tsx src/db/migrate.ts",
     "ingest:padron": "tsx src/ingest/padron-connector.ts",
     "import:ficha-ruc": "tsx src/ingest/ficha-ruc-import.ts",
+    "import:ruc-masivo": "tsx src/ingest/ruc-consulta-masiva-import.ts",
     "export:ficha-ruc-xlsx": "tsx src/ingest/ficha-ruc-export-xlsx.ts",
     "coverage:identidad-fiscal": "tsx src/ingest/materialize-coverage.ts",
     "test": "vitest run",

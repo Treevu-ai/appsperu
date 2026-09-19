@@ -315,6 +315,19 @@ Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distrito
 | **Anomalía conocida** | `nombre`/`cargo` de representante legal se separan por una lista cerrada de cargos societarios conocidos (no hay delimitador de columna en el texto plano de la tabla fuente) — si el cargo no está en la lista, se conserva sin partir. Ver data contract para las sub-secciones de la ficha aún no investigadas (Deuda Coactiva, Establecimientos Anexos, etc.). |
 | **Detalle completo** | [`docs/data-contracts/sunat-ficha-ruc.md`](data-contracts/sunat-ficha-ruc.md) |
 
+### `ruc-consulta-masiva-import.ts` — Consulta Múltiple de RUC (SUNAT)
+
+| | |
+|---|---|
+| **Descripción** | Tercera fuente de SUNAT, encontrada como alternativa a la ficha individual bloqueada por reCAPTCHA — trae 23 campos por RUC (tipo contribuyente, fechas, ubicación, CIIU principal/secundarios, actividad comercio exterior, Buen Contribuyente, Agentes de Retención/Percepción IGV) sin reCAPTCHA. |
+| **Qué hace** | Parsea el .txt delimitado por "\|" que descarga el servicio (hasta 100 RUC por archivo) y hace upsert en `ruc_consulta_masiva`. Tabla separada de `ficha_ruc` (fuentes distintas, columnas parcialmente solapadas). |
+| **Cómo lo hace** | **Tampoco es un conector `fetch()` automático todavía** — se confirmó en vivo que este entorno de desarrollo está bloqueado a nivel de todo el dominio `e-consultaruc.sunat.gob.pe` (no solo el endpoint de la ficha individual), así que no se pudo probar si un `fetch()` puro funcionaría desde un origen sin ese bloqueo. Funciona sin problema vía navegador real (sin reCAPTCHA, solo un token CSRF oculto en el formulario). Se importa con `npm run import:ruc-masivo -- <archivo.txt>`. |
+| **Frecuencia** | Manual — hasta 10 RUC por ingreso manual en el formulario, hasta 100 por archivo (variante de archivo aún no probada en vivo). |
+| **Fuente de datos** | `e-consultaruc.sunat.gob.pe/cl-ti-itmrconsmulruc/jrmS00Alias` — Consulta Múltiple de RUC, SUNAT (enlazada desde `gob.pe/13397`). |
+| **Cobertura real ingerida** | 2 RUC importados en la corrida verificada (ACOPAGRO, Chancamayo), 0 rechazados. |
+| **Anomalía conocida** | CIIU viene como descripción en texto, no como código — no cruza por código exacto contra `ficha_ruc_actividades`. No se determinó si tiene límite de consultas por sesión (solo se probó con 2 RUC). |
+| **Detalle completo** | [`docs/data-contracts/sunat-consulta-multiple-ruc.md`](data-contracts/sunat-consulta-multiple-ruc.md) |
+
 ---
 
 <a id="proveedores-sancionados"></a>
