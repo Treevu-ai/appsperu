@@ -10,7 +10,10 @@ import { pool } from "../db/pool.js";
  *
  * Fila 1 = encabezados. Columna A = cooperativa (razón social), columna B
  * = RUC, el resto son los campos de la ficha SUNAT — en blanco para los
- * RUC que todavía no se consultaron (no se inventa ni se interpola nada).
+ * RUC que todavía no se consultaron por esta vía (no se inventa ni se
+ * interpola nada, ni se completa con otras fuentes como Padrón, Consulta
+ * Múltiple o los archivos base — ver esas fuentes en
+ * `docs/data-contracts/` si se necesitan por separado).
  */
 
 const HEADERS = [
@@ -36,104 +39,7 @@ const HEADERS = [
   "Padrones",
   "Representante(s) Legal(es)",
   "Fecha de Consulta SUNAT",
-  // Padrón Reducido RUC (bulk, ya ingerido — `contribuyentes`, 2.3M filas).
-  // A diferencia de la ficha individual de arriba, esto no requiere
-  // navegador: cruce directo, disponible para el 100% del universo.
-  "Estado Contribuyente (Padrón)",
-  "Condición Domicilio (Padrón)",
-  // "Consulta Múltiple de RUC" (e-consultaruc.sunat.gob.pe/cl-ti-itmrconsmulruc)
-  // — bulk hasta 100 RUC por archivo, sin reCAPTCHA, distinto del endpoint
-  // individual bloqueado. Ver ruc_consulta_masiva /
-  // docs/data-contracts/sunat-consulta-multiple-ruc.md.
-  "Razón Social (Consulta Múltiple)",
-  "Tipo Contribuyente (Consulta Múltiple)",
-  "Profesión/Oficio (Consulta Múltiple)",
-  "Nombre Comercial (Consulta Múltiple)",
-  "Condición Contribuyente (Consulta Múltiple)",
-  "Estado Contribuyente (Consulta Múltiple)",
-  "Fecha Inscripción (Consulta Múltiple)",
-  "Fecha Inicio Actividades (Consulta Múltiple)",
-  "Departamento (Consulta Múltiple)",
-  "Provincia (Consulta Múltiple)",
-  "Distrito (Consulta Múltiple)",
-  "Dirección (Consulta Múltiple)",
-  "Teléfono (Consulta Múltiple)",
-  "Fax (Consulta Múltiple)",
-  "Actividad Comercio Exterior (Consulta Múltiple)",
-  "CIIU Principal (Consulta Múltiple)",
-  "CIIU Secundario 1 (Consulta Múltiple)",
-  "CIIU Secundario 2 (Consulta Múltiple)",
-  "Afecto Nuevo RUS (Consulta Múltiple)",
-  "Buen Contribuyente (Consulta Múltiple)",
-  "Agente Retención IGV (Consulta Múltiple)",
-  "Agente Percepción Venta Interna (Consulta Múltiple)",
-  "Agente Percepción Combustible (Consulta Múltiple)",
-  // A partir de acá: NO viene de SUNAT — extraído de los archivos base
-  // provistos por el usuario (directorio base.xlsx, PAC MIDAGRI/coops san
-  // martín), cruzado por RUC. Ver `cooperativas-base-extra.json`.
-  "Fecha Inicio Actividades (Base)",
-  "Activo/Habido SUNAT (Base)",
-  "Exporta SI/NO (Base)",
-  "Exportación 2025 FOB USD (Base)",
-  "Exportación 2025 Kilos (Base)",
-  "Destinos Exportación (Base)",
-  "Gerente General (Base)",
-  "Representante Legal (Base)",
-  "Ventas Totales 2018-2025 (Base)",
-  "Ventas Totales 2025 (Base)",
-  "Ventas Exportación 2025 (Base)",
-  "Ventas Nacionales 2025 (Base)",
-  "Sede (Base)",
-  "Ubigeo (Base)",
-  "Departamento (Base)",
-  "Provincia (Base)",
-  "Distrito (Base)",
-  "Nombre SUNAT (Base)",
-  "Tipo de Organización (Base)",
-  "Socios Varones (Base)",
-  "Socias Mujeres (Base)",
-  "Hectáreas Totales (Base)",
-  "Certificación Orgánica (Base)",
-  "Certificación Comercio Justo (Base)",
-  "Otras Certificaciones (Base)",
-  "Correo (Base)",
-  "Celular (Base)",
-  "Página Web (Base)",
 ] as const;
-
-interface BaseExtraRow {
-  ruc: string;
-  ventasTotales2018_2025?: number | null;
-  ventasTotales2025?: number | null;
-  ventasExportacion2025?: number | null;
-  ventasNacionales2025?: number | null;
-  activoHabidoSunatBase?: string | null;
-  fechaInicioActividadesBase?: string | null;
-  exportaSiNo?: string | null;
-  exportacion2025FobUsd?: number | null;
-  exportacion2025Kilos?: number | null;
-  destinosExportacion?: string | null;
-  gerenteGeneralBase?: string | null;
-  representanteLegalBase?: string | null;
-  productoDom?: string | null;
-  producto1?: string | null;
-  sede?: string | null;
-  ubigeoBase?: string | null;
-  departamentoBase?: string | null;
-  provinciaBase?: string | null;
-  distritoBase?: string | null;
-  nombreSunatBase?: string | null;
-  tipoOrganizacionBase?: string | null;
-  sociosVarones?: number | null;
-  sociasMujeres?: number | null;
-  hectareasTotales?: number | null;
-  certificacionOrganica?: string | null;
-  certificacionComercioJusto?: string | null;
-  otrasCertificaciones?: string | null;
-  correoBase?: string | null;
-  celularBase?: string | null;
-  paginaWebBase?: string | null;
-}
 
 interface FichaRow {
   ruc: string;
@@ -172,45 +78,12 @@ interface RepresentanteRow {
   fecha_desde: Date | null;
 }
 
-interface PadronRow {
-  ruc: string;
-  estado_contribuyente: string | null;
-  condicion_domicilio: string | null;
-}
-
-interface RucMasivoRow {
-  ruc: string;
-  razon_social: string | null;
-  tipo_contribuyente: string | null;
-  profesion_oficio: string | null;
-  nombre_comercial: string | null;
-  condicion_contribuyente: string | null;
-  estado_contribuyente: string | null;
-  fecha_inscripcion: Date | null;
-  fecha_inicio_actividades: Date | null;
-  departamento: string | null;
-  provincia: string | null;
-  distrito: string | null;
-  direccion: string | null;
-  telefono: string | null;
-  fax: string | null;
-  actividad_comercio_exterior: string | null;
-  ciiu_principal: string | null;
-  ciiu_secundario_1: string | null;
-  ciiu_secundario_2: string | null;
-  afecto_nuevo_rus: string | null;
-  buen_contribuyente: string | null;
-  agente_retencion: string | null;
-  agente_percepcion_venta_interna: string | null;
-  agente_percepcion_combustible: string | null;
-}
-
 function fmtDate(d: Date | null): string {
   if (!d) return "";
   return d.toISOString().slice(0, 10);
 }
 
-async function loadData(seedRucs: string[]) {
+async function loadData() {
   const { rows: fichas } = await pool.query<FichaRow>(`SELECT * FROM ficha_ruc`);
   const { rows: actividades } = await pool.query<ActividadRow>(
     `SELECT ruc, tipo, codigo_ciiu, descripcion FROM ficha_ruc_actividades ORDER BY ruc, orden`
@@ -218,23 +91,6 @@ async function loadData(seedRucs: string[]) {
   const { rows: representantes } = await pool.query<RepresentanteRow>(
     `SELECT ruc, nombre, cargo, numero_documento, fecha_desde FROM ficha_ruc_representantes ORDER BY ruc, fecha_desde DESC NULLS LAST`
   );
-  const { rows: padron } = await pool.query<PadronRow>(
-    `SELECT ruc, estado_contribuyente, condicion_domicilio FROM contribuyentes WHERE ruc = ANY($1)`,
-    [seedRucs]
-  );
-  const padronByRuc = new Map(padron.map((p) => [p.ruc, p]));
-
-  const { rows: rucMasivo } = await pool.query<RucMasivoRow>(
-    `SELECT ruc, razon_social, tipo_contribuyente, profesion_oficio, nombre_comercial,
-            condicion_contribuyente, estado_contribuyente, fecha_inscripcion,
-            fecha_inicio_actividades, departamento, provincia, distrito, direccion, telefono,
-            fax, actividad_comercio_exterior, ciiu_principal, ciiu_secundario_1, ciiu_secundario_2,
-            afecto_nuevo_rus, buen_contribuyente, agente_retencion,
-            agente_percepcion_venta_interna, agente_percepcion_combustible
-     FROM ruc_consulta_masiva WHERE ruc = ANY($1)`,
-    [seedRucs]
-  );
-  const rucMasivoByRuc = new Map(rucMasivo.map((r) => [r.ruc, r]));
 
   const fichasByRuc = new Map(fichas.map((f) => [f.ruc, f]));
 
@@ -260,18 +116,14 @@ async function loadData(seedRucs: string[]) {
     );
   }
 
-  return { fichasByRuc, actividadesByRuc, representantesByRuc, padronByRuc, rucMasivoByRuc };
+  return { fichasByRuc, actividadesByRuc, representantesByRuc };
 }
 
 export async function exportFichaRucXlsx(
   seed: { ruc: string; razonSocial: string }[],
-  outPath: string,
-  baseExtra: BaseExtraRow[] = []
+  outPath: string
 ): Promise<number> {
-  const { fichasByRuc, actividadesByRuc, representantesByRuc, padronByRuc, rucMasivoByRuc } = await loadData(
-    seed.map((s) => s.ruc)
-  );
-  const baseExtraByRuc = new Map(baseExtra.map((b) => [b.ruc, b]));
+  const { fichasByRuc, actividadesByRuc, representantesByRuc } = await loadData();
 
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Cooperativas");
@@ -284,9 +136,6 @@ export async function exportFichaRucXlsx(
     const ficha = fichasByRuc.get(seedRow.ruc);
     const act = actividadesByRuc.get(seedRow.ruc);
     const reps = representantesByRuc.get(seedRow.ruc) ?? "";
-    const base = baseExtraByRuc.get(seedRow.ruc);
-    const padron = padronByRuc.get(seedRow.ruc);
-    const masivo = rucMasivoByRuc.get(seedRow.ruc);
 
     sheet.addRow([
       seedRow.razonSocial,
@@ -311,59 +160,6 @@ export async function exportFichaRucXlsx(
       (ficha?.padrones ?? []).join(" | "),
       reps,
       fmtDate(ficha?.fecha_consulta ?? null),
-      padron?.estado_contribuyente ?? "",
-      padron?.condicion_domicilio ?? "",
-      masivo?.razon_social ?? "",
-      masivo?.tipo_contribuyente ?? "",
-      masivo?.profesion_oficio ?? "",
-      masivo?.nombre_comercial ?? "",
-      masivo?.condicion_contribuyente ?? "",
-      masivo?.estado_contribuyente ?? "",
-      fmtDate(masivo?.fecha_inscripcion ?? null),
-      fmtDate(masivo?.fecha_inicio_actividades ?? null),
-      masivo?.departamento ?? "",
-      masivo?.provincia ?? "",
-      masivo?.distrito ?? "",
-      masivo?.direccion ?? "",
-      masivo?.telefono ?? "",
-      masivo?.fax ?? "",
-      masivo?.actividad_comercio_exterior ?? "",
-      masivo?.ciiu_principal ?? "",
-      masivo?.ciiu_secundario_1 ?? "",
-      masivo?.ciiu_secundario_2 ?? "",
-      masivo?.afecto_nuevo_rus ?? "",
-      masivo?.buen_contribuyente ?? "",
-      masivo?.agente_retencion ?? "",
-      masivo?.agente_percepcion_venta_interna ?? "",
-      masivo?.agente_percepcion_combustible ?? "",
-      base?.fechaInicioActividadesBase ?? "",
-      base?.activoHabidoSunatBase ?? "",
-      base?.exportaSiNo ?? "",
-      base?.exportacion2025FobUsd ?? "",
-      base?.exportacion2025Kilos ?? "",
-      base?.destinosExportacion ?? "",
-      base?.gerenteGeneralBase ?? "",
-      base?.representanteLegalBase ?? "",
-      base?.ventasTotales2018_2025 ?? "",
-      base?.ventasTotales2025 ?? "",
-      base?.ventasExportacion2025 ?? "",
-      base?.ventasNacionales2025 ?? "",
-      base?.sede ?? "",
-      base?.ubigeoBase ?? "",
-      base?.departamentoBase ?? "",
-      base?.provinciaBase ?? "",
-      base?.distritoBase ?? "",
-      base?.nombreSunatBase ?? "",
-      base?.tipoOrganizacionBase ?? "",
-      base?.sociosVarones ?? "",
-      base?.sociasMujeres ?? "",
-      base?.hectareasTotales ?? "",
-      base?.certificacionOrganica ?? "",
-      base?.certificacionComercioJusto ?? "",
-      base?.otrasCertificaciones ?? "",
-      base?.correoBase ?? "",
-      base?.celularBase ?? "",
-      base?.paginaWebBase ?? "",
     ]);
   }
 
@@ -380,14 +176,10 @@ export async function exportFichaRucXlsx(
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const outPath = process.argv[2] ?? "cooperativas-ficha-ruc.xlsx";
 
-  Promise.all([
-    import("./cooperativas-ruc-seed.json", { with: { type: "json" } }),
-    import("./cooperativas-base-extra.json", { with: { type: "json" } }),
-  ])
-    .then(async ([seedMod, extraMod]) => {
+  import("./cooperativas-ruc-seed.json", { with: { type: "json" } })
+    .then(async (seedMod) => {
       const seed = seedMod.default as { ruc: string; razonSocial: string }[];
-      const baseExtra = extraMod.default as BaseExtraRow[];
-      const count = await exportFichaRucXlsx(seed, outPath, baseExtra);
+      const count = await exportFichaRucXlsx(seed, outPath);
       console.log(`Exportadas ${count} filas a ${outPath}`);
       await pool.end();
     })
