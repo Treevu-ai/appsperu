@@ -302,6 +302,32 @@ Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distrito
 | **Cobertura real ingerida** | Universo nacional completo (no acotado por departamento en el origen) — 2,339,313 filas aceptadas, 0 rechazadas en la corrida verificada. |
 | **Detalle completo** | [`docs/data-contracts/sunat-padron-ruc.md`](data-contracts/sunat-padron-ruc.md) |
 
+### `ficha-ruc-import.ts` — Ficha individual de RUC (SUNAT)
+
+| | |
+|---|---|
+| **Descripción** | Trae la ficha completa de un RUC (tipo de contribuyente, nombre comercial, fechas de inscripción/inicio de actividades, actividad económica CIIU principal y secundarias, si es exportador, representantes legales vigentes, comprobantes/emisión electrónica, padrones) — reemplaza al Directorio Nacional de Cooperativas de PRODUCE, que quedó desactualizado (representante legal obsoleto confirmado en vivo). |
+| **Qué hace** | Parsea el texto de la ficha (y de la sub-página "Representante(s) Legal(es)") ya extraído por navegador, y hace upsert en `ficha_ruc` + `ficha_ruc_actividades` + `ficha_ruc_representantes`. `GET /api/ficha-ruc` (con `?cultivo=`, `?exportador=true`) y `GET /api/ficha-ruc/:ruc` (ficha completa con actividades y representantes). |
+| **Cómo lo hace** | **No es un conector `fetch()` automático** — es el único caso del catálogo. El endpoint de búsqueda (`e-consultaruc.sunat.gob.pe`) exige un token de reCAPTCHA v3 validado en servidor: confirmado en vivo con un POST sin token (error de servidor) y, acto seguido, el IP de origen quedó bloqueado (`net::ERR_CONNECTION_RESET`) específicamente contra ese subdominio — probado también con Playwright (Chromium headless) desde el mismo entorno, mismo bloqueo. La carga es manual: se consulta por navegador real (sesión de usuario, canal no afectado por el bloqueo) y se importa con `npm run import:ficha-ruc -- <archivo.json>`. |
+| **Frecuencia** | Manual, por RUC — sin universo completo cargado todavía. |
+| **Fuente de datos** | `e-consultaruc.sunat.gob.pe/cl-ti-itmrconsruc/` — Consulta RUC, SUNAT. |
+| **Cobertura real ingerida** | 1 RUC importado en la corrida verificada (`20129156083`), de un universo semilla de 139 (extraído del directorio de PRODUCE antes de eliminarlo, ver `src/ingest/cooperativas-ruc-seed.json`) — cargar el resto requiere repetir la consulta por navegador RUC por RUC. |
+| **Anomalía conocida** | `nombre`/`cargo` de representante legal se separan por una lista cerrada de cargos societarios conocidos (no hay delimitador de columna en el texto plano de la tabla fuente) — si el cargo no está en la lista, se conserva sin partir. Ver data contract para las sub-secciones de la ficha aún no investigadas (Deuda Coactiva, Establecimientos Anexos, etc.). |
+| **Detalle completo** | [`docs/data-contracts/sunat-ficha-ruc.md`](data-contracts/sunat-ficha-ruc.md) |
+
+### `ruc-consulta-masiva-import.ts` — Consulta Múltiple de RUC (SUNAT)
+
+| | |
+|---|---|
+| **Descripción** | Tercera fuente de SUNAT, encontrada como alternativa a la ficha individual bloqueada por reCAPTCHA — trae 23 campos por RUC (tipo contribuyente, fechas, ubicación, CIIU principal/secundarios, actividad comercio exterior, Buen Contribuyente, Agentes de Retención/Percepción IGV) sin reCAPTCHA. |
+| **Qué hace** | Parsea el .txt delimitado por "\|" que descarga el servicio (hasta 100 RUC por archivo) y hace upsert en `ruc_consulta_masiva`. Tabla separada de `ficha_ruc` (fuentes distintas, columnas parcialmente solapadas). |
+| **Cómo lo hace** | **Tampoco es un conector `fetch()` automático todavía** — se confirmó en vivo que este entorno de desarrollo está bloqueado a nivel de todo el dominio `e-consultaruc.sunat.gob.pe` (no solo el endpoint de la ficha individual), así que no se pudo probar si un `fetch()` puro funcionaría desde un origen sin ese bloqueo. Funciona sin problema vía navegador real (sin reCAPTCHA, solo un token CSRF oculto en el formulario). Se importa con `npm run import:ruc-masivo -- <archivo.txt>`. |
+| **Frecuencia** | Manual — hasta 10 RUC por ingreso manual en el formulario, hasta 100 por archivo (variante de archivo aún no probada en vivo). |
+| **Fuente de datos** | `e-consultaruc.sunat.gob.pe/cl-ti-itmrconsmulruc/jrmS00Alias` — Consulta Múltiple de RUC, SUNAT (enlazada desde `gob.pe/13397`). |
+| **Cobertura real ingerida** | 2 RUC importados en la corrida verificada (ACOPAGRO, Chancamayo), 0 rechazados. |
+| **Anomalía conocida** | CIIU viene como descripción en texto, no como código — no cruza por código exacto contra `ficha_ruc_actividades`. No se determinó si tiene límite de consultas por sesión (solo se probó con 2 RUC). |
+| **Detalle completo** | [`docs/data-contracts/sunat-consulta-multiple-ruc.md`](data-contracts/sunat-consulta-multiple-ruc.md) |
+
 ---
 
 <a id="proveedores-sancionados"></a>

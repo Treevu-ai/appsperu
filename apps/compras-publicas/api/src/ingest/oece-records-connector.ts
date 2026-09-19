@@ -254,13 +254,15 @@ export async function ingestAwards(options: IngestAwardsOptions = {}): Promise<I
     await client.query("COMMIT");
 
     if (wantedDepartamentos.size > 0) {
-      const isCompleteSnapshot = !hasNext && startPage === 1 && Object.keys(params).length === 0;
+      // CT-21 (2026-09-09): mismo fix que oece-connector.ts — la exhaustividad de la paginación es
+      // lo que importa, no si se pasaron parámetros de fecha/categoría.
+      const isCompleteSnapshot = !hasNext && startPage === 1;
       await recordTerritorialCoverage({
         departamentos: [...wantedDepartamentos], records: allRecords, awards: allRows, rejectedAwards: rejected,
         bidderRecords, bidders: biddersRows, batchId, isCompleteSnapshot,
         restriction: isCompleteSnapshot
-          ? "Recorrido hasta la página terminal del endpoint público /records sin filtros."
-          : "Cobertura parcial: página inicial, paginación o parámetros de consulta acotan el recorrido de /records.",
+          ? "Recorrido hasta la página terminal del endpoint público /records; el rango de fechas u otros parámetros de consulta, si los hubo, definen el universo cubierto, no una cobertura parcial."
+          : "Cobertura parcial: página inicial o paginación no llegaron a la página terminal del recorrido de /records.",
       });
     }
 
