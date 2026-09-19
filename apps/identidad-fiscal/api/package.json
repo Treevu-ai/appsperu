@@ -8,6 +8,7 @@
     "migrate": "tsx src/db/migrate.ts",
     "ingest:padron": "tsx src/ingest/padron-connector.ts",
     "import:ficha-ruc": "tsx src/ingest/ficha-ruc-import.ts",
+    "export:ficha-ruc-xlsx": "tsx src/ingest/ficha-ruc-export-xlsx.ts",
     "coverage:identidad-fiscal": "tsx src/ingest/materialize-coverage.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
@@ -17,6 +18,7 @@
     "@appsperu/shared-identity": "*",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
+    "exceljs": "^4.4.0",
     "express": "^4.19.2",
     "express-rate-limit": "^8.6.2",
     "helmet": "^8.3.0",
