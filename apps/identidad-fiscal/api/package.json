@@ -11,6 +11,7 @@
     "import:ruc-masivo": "tsx src/ingest/ruc-consulta-masiva-import.ts",
     "export:ficha-ruc-xlsx": "tsx src/ingest/ficha-ruc-export-xlsx.ts",
     "export:ruc-masivo-xlsx": "tsx src/ingest/ruc-consulta-masiva-export-xlsx.ts",
+    "ingest:exportaciones": "tsx src/ingest/exportaciones-fob-connector.ts",
     "coverage:identidad-fiscal": "tsx src/ingest/materialize-coverage.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
@@ -18,6 +19,7 @@
   "dependencies": {
     "@appsperu/entity-matcher": "*",
     "@appsperu/shared-identity": "*",
+    "cheerio": "^1.2.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "exceljs": "^4.4.0",
