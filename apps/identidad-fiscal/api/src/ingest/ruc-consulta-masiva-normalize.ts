@@ -2,8 +2,11 @@
  * Parser del .txt delimitado por "|" que descarga la "Consulta Múltiple de
  * RUC" de SUNAT (e-consultaruc.sunat.gob.pe/cl-ti-itmrconsmulruc/jrmS00Alias).
  * Columnas confirmadas en vivo el 2026-09-18 contra 2 RUC reales (ACOPAGRO,
- * Chancamayo) — encoding Latin-1 (confirmado: "Ñ"/"°" llegan como "�" bajo
- * lectura UTF-8 ingenua), igual que el padrón reducido.
+ * Chancamayo) vía ingreso manual — esa variante llega en Latin-1. La
+ * variante de archivo (hasta 100 RUC por carga), confirmada en vivo el
+ * 2026-09-19 con los mismos 2 RUC, llega en **UTF-8** — encoding distinto
+ * según la variante usada. Este parser recibe el texto ya decodificado por
+ * el import script; no asume un encoding específico él mismo.
  */
 
 const COL = {
@@ -81,7 +84,7 @@ function parseFechaDDMMYYYY(value: string | undefined): string | null {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-/** `line` es una fila ya separada por "|" del .txt (previamente decodificado como latin1). */
+/** `line` es una fila ya separada por "|" del .txt (previamente decodificado — ver nota de encoding arriba). */
 export function normalizeRucMasivoRow(fields: string[]): NormalizedRucMasivo | RejectedRow {
   if (fields.length < MIN_COLUMNS) {
     return { raw: fields, reason: `fila con ${fields.length} columnas, se esperaban al menos ${MIN_COLUMNS}` };
@@ -129,7 +132,7 @@ export function isRejected(row: NormalizedRucMasivo | RejectedRow): row is Rejec
   return "reason" in row;
 }
 
-/** Parsea el archivo .txt completo (ya leído como string latin1), saltando el encabezado. */
+/** Parsea el archivo .txt completo (ya leído como string decodificado), saltando el encabezado. */
 export function parseRucMasivoFile(text: string): (NormalizedRucMasivo | RejectedRow)[] {
   const lines = text.split("\n").map((l) => l.replace(/\r$/, "")).filter((l) => l.trim() !== "");
   const dataLines = lines[0]?.startsWith(HEADER_PREFIX) ? lines.slice(1) : lines;

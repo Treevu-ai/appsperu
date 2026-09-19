@@ -1301,6 +1301,36 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: { departamento: z.string().min(1).optional() },
   },
   {
+    name: "identidad_fiscal_ficha_ruc",
+    app: "identidad-fiscal",
+    description:
+      "Busca en la ficha individual de SUNAT (`ficha_ruc`) por razón social, cultivo (texto libre sobre razón " +
+      "social) o si exporta. Cobertura MUY PARCIAL: esta ficha se consulta una por una vía navegador, bloqueada " +
+      "por reCAPTCHA v3 para automatización — solo tiene datos para el puñado de RUC ya consultados manualmente, " +
+      "no el universo completo. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/ficha-ruc",
+    pathParams: [],
+    querySchema: {
+      razonSocial: z.string().min(1).optional(),
+      cultivo: z.string().min(1).optional().describe("Búsqueda de texto libre sobre razón social, no una clasificación real por cultivo."),
+      exportador: z.enum(["true", "false"]).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "identidad_fiscal_ficha_ruc_by_ruc",
+    app: "identidad-fiscal",
+    description:
+      "Detalle completo de la ficha individual de SUNAT para un RUC específico (razón social, fechas, domicilio, " +
+      "actividades CIIU, comprobantes electrónicos, representantes legales) — solo si ese RUC ya fue consultado " +
+      "manualmente (ver `identidad_fiscal_ficha_ruc`). 404 si no está en la ficha individual todavía.",
+    pathTemplate: "/api/ficha-ruc/{ruc}",
+    pathParams: ["ruc"],
+    querySchema: {},
+  },
+  {
     name: "ceplan_geo_patrimonio_predios",
     app: "ceplan-geo",
     description:

@@ -497,6 +497,20 @@ duplicar lógica entre los tres.
 | **Cruces** | `GET /api/crossref` cruza `ipress` (agregado por UBIGEO, total y `ESTADO='ACTIVO'`) contra `investments` de [radar-inversiones](#radar-inversiones), pool directo (`INVERSIONES_DATABASE_URL`), filtrado por `FUNCION IN ('SALUD', 'SALUD Y SANEAMIENTO')` — ambos valores confirmados en vivo el 2026-09-05 (740 + 26 filas; `SANEAMIENTO` a secas, 1,109 filas, se excluye a propósito). UBIGEO exacto, sin matcher difuso. Declara en la propia respuesta el alcance territorial real de `investments` (hoy 100% LA LIBERTAD, consultado en vivo, no hardcodeado). |
 | **Detalle completo** | [`docs/data-contracts/renipress-susalud.md`](data-contracts/renipress-susalud.md) |
 
+### `cenares-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Trae el seguimiento de distribución de medicamentos e insumos del CENARES (Centro Nacional de Abastecimiento de Recursos Estratégicos, MINSA) hacia establecimientos de salud — qué ítem, cuánta cantidad, a qué destino, y en qué estado de despacho. Cierra parcialmente el hueco de "disponibilidad de medicamentos" (no es lo mismo que el indicador DME del Observatorio SISMED, que quedó descartado por no ser automatizable — ver `docs/data-contracts/sismed-observatorio-disponibilidad.md`). |
+| **Qué hace** | Resuelve el único recurso CSV del dataset vía `package_show` de CKAN (mismo cliente compartido que RENIPRESS), lo descarga e inserta completo en `cenares_distribucion`. Sin upsert: no hay clave natural confiable (`NRO_CD` se repite entre ítems de un mismo cuadro de distribución) — cada ingesta es un snapshot completo, deduplicado a nivel de lote por `checksum` del contenido en `raw_cenares_batches` (si el archivo no cambió desde la última corrida, no vuelve a insertar). |
+| **Cómo lo hace** | Descarga HTTP directa (59,039 filas, ~12 MB — no requiere streaming), mismo `User-Agent` de navegador obligatorio que RENIPRESS/INFOMIDIS (WAF de `datosabiertos.gob.pe`). CSV delimitado por `;`, **encoding Latin-1** (a diferencia de RENIPRESS, que es UTF-8 con BOM) — confirmado en vivo, tildes/Ñ corrompen bajo lectura UTF-8 ingenua. `relax_column_count` en el parser: al menos una fila real trae texto libre en `OBSERVACION` con `;` embebidos que rompen el conteo estricto de columnas si se parsea a mano (confirmado comparando un `awk` naive contra `csv-parse` real: 120 filas quedaban mal clasificadas por `SITUACION` con el split naive). |
+| **Frecuencia** | Manual (`npm run ingest:cenares` en `apps/servicios-salud/api`). El dataset es un corte de 2024 sin indicios de actualización periódica (a diferencia de RENIPRESS, mensual) — `metadata_modified` en CKAN cambió más recientemente que los datos mismos, no asumir que "se tocó" significa "hay filas nuevas". |
+| **Fuente de datos** | `datosabiertos.gob.pe` (PNDA), dataset `seguimiento-de-distribución-de-medicamentos-del-centro-nacional-de-abastecimiento-en-0` — CENARES/MINSA. |
+| **Cobertura real ingerida** | Nacional, 59,039 filas confirmadas en la corrida verificada (2026-09-19), 0 rechazadas. 2,883 filas mencionan "LA LIBERTAD"/"TRUJILLO" en `destino` (texto libre, no UBIGEO estructurado). |
+| **Anomalía real encontrada** | **85% de las filas (50,404) están en `SITUACION = 'ELABORANDO PECOSA'`** (orden de despacho en preparación) — solo 335 llegaron a `ENVIADO A ALMACEN`. El dataset documenta el flujo interno de gestión de CENARES, no necesariamente la entrega confirmada al establecimiento; no asumir que una fila = medicamento ya recibido. |
+| **Cruces** | Ninguno implementado — candidato natural: por texto de `destino` contra `ipress.nombre` (sin ubigeo estructurado en CENARES, sería fuzzy, no exacto). |
+| **Detalle completo** | [`docs/data-contracts/cenares-distribucion.md`](data-contracts/cenares-distribucion.md) |
+
 ---
 
 <a id="programas-sociales"></a>
