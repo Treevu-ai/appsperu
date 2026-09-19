@@ -113,8 +113,32 @@ primer caso documentado donde el campo da `true` en una corrida real.
    de esta investigación — confirma que el cruce venía corriendo, pero nadie
    había filtrado específicamente por `inhabilitadoEnFechaAdjudicacion` para
    aislar estos 2 de los 494 con inhabilitación vigente en general.
-4. **Buscar si hay más solapes en `minor_contracts`** (contratos menores) —
-   esta corrida nacional los incluyó (`departamento=TODOS` trae awards +
-   minor_contracts) y no aparecieron, pero vale la pena una segunda mirada
-   específica dado que `minor_contracts` tiene cobertura territorial más
-   limitada que `awards`.
+4. **`minor_contracts` (contratos menores) — auditado a fondo, sin overlap,
+   pero con un hueco de dato real detrás.** La corrida nacional
+   (`departamento=TODOS`) ya incluye `minor_contracts` y no arrojó ningún
+   caso, pero eso por sí solo no bastaba como respuesta: **`award_date` y
+   `contract_date` están vacías en el 100% de las 59,372 filas de
+   `minor_contracts`** — el cruce por fecha simplemente no se puede calcular
+   ahí con esos campos, no es que se haya calculado y haya dado "sin
+   solape".
+   - Se extrajeron los proveedores de `minor_contracts` con inhabilitación
+     vigente: **30 RUC distintos** (grupo separado de los 72 de `awards`,
+     sin superposición).
+   - Se probaron los únicos campos de fecha realmente poblados como proxy —
+     `publication_date` y `quotation_end_date` (100% pobladas) — contra las
+     129 filas de esos 30 proveedores: **ninguna cae dentro de su período de
+     inhabilitación**, todas son anteriores al inicio de la sanción
+     correspondiente.
+   - Se descartaron otras posibles fuentes de fecha real: `source_timestamp`
+     (100% poblada, pero es la fecha en que corrió el conector de ingesta —
+     2026-09-09 en el 100% de las filas — no la fecha del contrato, habría
+     sido engañoso usarla), `order_number`/`contract_number` (0% poblados),
+     `status` (un solo valor, "AWARDED", en toda la tabla), y un cruce por
+     `ocid` contra `awards` buscando una fecha real prestada de ahí (0
+     coincidencias — son universos de datos completamente separados).
+   - **Conclusión honesta**: con el mejor proxy disponible, no hay evidencia
+     de solape en `minor_contracts` — pero esto es distinto a "confirmado
+     que no hay ningún caso". Cerrar esto de verdad requiere que la fuente
+     (SEACE/OECE) o el conector de `minor_contracts` capture la fecha real
+     de adjudicación/firma, que hoy no se ingiere. Pendiente de mejora de
+     dato, no de análisis.
