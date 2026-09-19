@@ -36,6 +36,11 @@ const HEADERS = [
   "Padrones",
   "Representante(s) Legal(es)",
   "Fecha de Consulta SUNAT",
+  // Padrón Reducido RUC (bulk, ya ingerido — `contribuyentes`, 2.3M filas).
+  // A diferencia de la ficha individual de arriba, esto no requiere
+  // navegador: cruce directo, disponible para el 100% del universo.
+  "Estado Contribuyente (Padrón)",
+  "Condición Domicilio (Padrón)",
   // A partir de acá: NO viene de SUNAT — extraído de los archivos base
   // provistos por el usuario (directorio base.xlsx, PAC MIDAGRI/coops san
   // martín), cruzado por RUC. Ver `cooperativas-base-extra.json`.
@@ -140,12 +145,18 @@ interface RepresentanteRow {
   fecha_desde: Date | null;
 }
 
+interface PadronRow {
+  ruc: string;
+  estado_contribuyente: string | null;
+  condicion_domicilio: string | null;
+}
+
 function fmtDate(d: Date | null): string {
   if (!d) return "";
   return d.toISOString().slice(0, 10);
 }
 
-async function loadData() {
+async function loadData(seedRucs: string[]) {
   const { rows: fichas } = await pool.query<FichaRow>(`SELECT * FROM ficha_ruc`);
   const { rows: actividades } = await pool.query<ActividadRow>(
     `SELECT ruc, tipo, codigo_ciiu, descripcion FROM ficha_ruc_actividades ORDER BY ruc, orden`
@@ -153,6 +164,11 @@ async function loadData() {
   const { rows: representantes } = await pool.query<RepresentanteRow>(
     `SELECT ruc, nombre, cargo, numero_documento, fecha_desde FROM ficha_ruc_representantes ORDER BY ruc, fecha_desde DESC NULLS LAST`
   );
+  const { rows: padron } = await pool.query<PadronRow>(
+    `SELECT ruc, estado_contribuyente, condicion_domicilio FROM contribuyentes WHERE ruc = ANY($1)`,
+    [seedRucs]
+  );
+  const padronByRuc = new Map(padron.map((p) => [p.ruc, p]));
 
   const fichasByRuc = new Map(fichas.map((f) => [f.ruc, f]));
 
@@ -178,7 +194,7 @@ async function loadData() {
     );
   }
 
-  return { fichasByRuc, actividadesByRuc, representantesByRuc };
+  return { fichasByRuc, actividadesByRuc, representantesByRuc, padronByRuc };
 }
 
 export async function exportFichaRucXlsx(
@@ -186,7 +202,9 @@ export async function exportFichaRucXlsx(
   outPath: string,
   baseExtra: BaseExtraRow[] = []
 ): Promise<number> {
-  const { fichasByRuc, actividadesByRuc, representantesByRuc } = await loadData();
+  const { fichasByRuc, actividadesByRuc, representantesByRuc, padronByRuc } = await loadData(
+    seed.map((s) => s.ruc)
+  );
   const baseExtraByRuc = new Map(baseExtra.map((b) => [b.ruc, b]));
 
   const workbook = new ExcelJS.Workbook();
@@ -201,6 +219,7 @@ export async function exportFichaRucXlsx(
     const act = actividadesByRuc.get(seedRow.ruc);
     const reps = representantesByRuc.get(seedRow.ruc) ?? "";
     const base = baseExtraByRuc.get(seedRow.ruc);
+    const padron = padronByRuc.get(seedRow.ruc);
 
     sheet.addRow([
       seedRow.razonSocial,
@@ -225,6 +244,8 @@ export async function exportFichaRucXlsx(
       (ficha?.padrones ?? []).join(" | "),
       reps,
       fmtDate(ficha?.fecha_consulta ?? null),
+      padron?.estado_contribuyente ?? "",
+      padron?.condicion_domicilio ?? "",
       base?.fechaInicioActividadesBase ?? "",
       base?.activoHabidoSunatBase ?? "",
       base?.exportaSiNo ?? "",
