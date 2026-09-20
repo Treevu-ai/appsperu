@@ -32,6 +32,7 @@ export const APP_KEYS = [
   "residuos-solidos",
   "infraestructura-mtc",
   "riesgo-fiscal-isds",
+  "candidatos-erm",
 ] as const;
 
 export type AppKey = (typeof APP_KEYS)[number];
@@ -65,6 +66,12 @@ const DEFAULT_PORTS: Record<AppKey, number> = {
   "residuos-solidos": 4025,
   "infraestructura-mtc": 4026,
   "riesgo-fiscal-isds": 4027,
+  // NOTA: apps/candidatos-erm/api/.env.example también declara PORT=4027 —
+  // colisiona con riesgo-fiscal-isds en sus .env.example reales (no es un
+  // error de este archivo, ambas apps quedaron configuradas con el mismo
+  // puerto). No se corrige acá; si ambas apps corren localmente a la vez,
+  // hay que sobreescribir una vía CANDIDATOS_ERM_API_URL o PORT en el .env.
+  "candidatos-erm": 4027,
 };
 
 function envVarFor(app: AppKey): string {
