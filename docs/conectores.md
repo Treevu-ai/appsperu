@@ -326,6 +326,7 @@ Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distrito
 | **Fuente de datos** | `e-consultaruc.sunat.gob.pe/cl-ti-itmrconsmulruc/jrmS00Alias` — Consulta Múltiple de RUC, SUNAT (enlazada desde `gob.pe/13397`). |
 | **Cobertura real ingerida** | 2 RUC importados en la corrida verificada (ACOPAGRO, Chancamayo), 0 rechazados. |
 | **Anomalía conocida** | CIIU viene como descripción en texto, no como código — no cruza por código exacto contra `ficha_ruc_actividades`. No se determinó si tiene límite de consultas por sesión (solo se probó con 2 RUC). |
+| **API expuesta (2026-09-20)** | `GET /api/ruc-consulta-masiva` (filtros: `razonSocial`, `estado`, `departamento`, `provincia`, `distrito`, `buenContribuyente`, paginado) y `GET /api/ruc-consulta-masiva/{ruc}` (detalle, 404 si no fue consultado). Registrada como tools MCP `identidad_fiscal_ruc_consulta_masiva`/`_by_ruc`. |
 | **Detalle completo** | [`docs/data-contracts/sunat-consulta-multiple-ruc.md`](data-contracts/sunat-consulta-multiple-ruc.md) |
 
 ### `exportaciones-fob-connector.ts` — Exportaciones FOB por RUC (Aduanas-SUNAT)
@@ -339,6 +340,7 @@ Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distrito
 | **Fuente de datos** | `aduanet.gob.pe/cl-ad-itconsultadwh/ieITS01Alias` — Consulta por Importador/Exportador, Aduanas-SUNAT. |
 | **Cobertura real ingerida** | 596 RUC consultados (2025 + 2026 parcial), 63 con exportaciones registradas, 680 filas, 0 errores. US$ 208.8M FOB total en 2025. |
 | **Anomalía conocida** | El parámetro `CG_Ano` del formulario no es el año calendario — hay que restarle 1992 (`CG_Ano = añoReal - 1992`, confirmado probando contra resultados conocidos). No trae kilos/peso, solo FOB USD. No se investigó paginación para exportadores de mucho mayor volumen que los de este seed. |
+| **API expuesta (2026-09-20)** | `GET /api/exportaciones-fob` (filas a nivel de embarque, filtros `ruc`/`anio`/`mes`/`paisCodigo`, paginado) y `GET /api/exportaciones-fob/resumen/{ruc}` (FOB total y N° de embarques agregado por año, 404 si el RUC no tiene exportaciones). Registrada como tools MCP `identidad_fiscal_exportaciones_fob`/`_resumen`. |
 | **Detalle completo** | [`docs/data-contracts/aduanet-exportaciones-fob.md`](data-contracts/aduanet-exportaciones-fob.md) |
 
 ### `padron-ppa-connector.ts` — Padrón de Productores Agrarios (MIDAGRI)

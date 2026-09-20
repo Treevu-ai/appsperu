@@ -3,6 +3,8 @@ import { contribuyentesRouter } from "./routes/contribuyentes.js";
 import { fichaRucRouter } from "./routes/ficha-ruc.js";
 import { crossrefRouter } from "./routes/crossref.js";
 import { oeceFichaRouter } from "./routes/oece-ficha.js";
+import { rucConsultaMasivaRouter } from "./routes/ruc-consulta-masiva.js";
+import { exportacionesFobRouter } from "./routes/exportaciones-fob.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 import { pool } from "./db/pool.js";
 
@@ -25,6 +27,8 @@ export function createApp() {
   app.use("/api/ficha-ruc", fichaRucRouter);
   app.use("/api/crossref", crossrefRouter);
   app.use("/api/oece-ficha", oeceFichaRouter);
+  app.use("/api/ruc-consulta-masiva", rucConsultaMasivaRouter);
+  app.use("/api/exportaciones-fob", exportacionesFobRouter);
 
   // Debe ir al final: sin esto, un rechazo dentro de un handler async se
   // vuelve un unhandled rejection que tumba el proceso entero.
