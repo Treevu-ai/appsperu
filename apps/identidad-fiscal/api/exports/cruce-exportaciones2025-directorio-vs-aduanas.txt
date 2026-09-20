@@ -1,0 +1,70 @@
+CRUCE: Exportaciones 2025 declaradas (directorio base.xlsx) vs FOB real (Aduanas - ruc_exportaciones_fob)
+Generado: 2026-09-20T02:45:03.082Z
+
+RUC          NOMBRE                                                           DECLARADO 2025 (US$)  FOB ADUANAS 2025 (US$)  DIF %     CATEGORIA
+------------------------------------------------------------------------------------------------------------------------------------------------------
+20542289024  CUENCAS DEL HUALLAGA ASOCIACION DE PRODUCTORES AGROPECUARIOS     80,810,222.02         22,972,812.62           -71.6%    AMBAS_FUENTES
+20486973219  COOPERATIVA AGRARIA SONOMORO DEL VRAEM LTDA                      18,961,611.63         18,675,677.33           -1.5%     AMBAS_FUENTES
+20542209951  COOPERATIVA AGRARIA VALLE GRANDE                                 38,924,310.93         12,852,633.42           -67%      AMBAS_FUENTES
+20600390911  COOPERATIVA AGRARIA DE CACAO AROMATICO COLPA DE LOROS            1,464,838.82          12,445,020.82           749.6%    AMBAS_FUENTES
+20486255090  COOPERATIVA AGRARIA SANGARENI                                    9,860,568.49          7,990,596.31            -19%      AMBAS_FUENTES
+20611935243  COOPERATIVA AGRARIA ECOLÓGICA CANIARI AMAZÓNICA CAECAM           14,483,443.02         7,723,335.03            -46.7%    AMBAS_FUENTES
+20602650643  ASOCIACIÓN AGROEXPORTADORA DE LA REGIÓN SAN MARTÍN               25,644,583.32         6,702,452.96            -73.9%    AMBAS_FUENTES
+20568194951  ASOCIACION DE PRODUCTORES AGROSOSTENIBLES VILLA ECOLOGICA PERU   2,206,901.5           5,121,640.53            132.1%    AMBAS_FUENTES
+20600263286  ASOCIACIÓN DE PRODUCTORES SELVA NORORIENTAL                      16,241,144.01         4,154,567.79            -74.4%    AMBAS_FUENTES
+20479595276  COOPERATIVA AGRARIA CAFETALERA CASIL LTD                         2,396,608.56          3,256,065.76            35.9%     AMBAS_FUENTES
+20526179367  COOPERATIVA AGRARIA DE USUARIOS ASPRAOSRA LTDA                   781,855.2             2,930,274               274.8%    AMBAS_FUENTES
+20136201213  CENTRAL DE COOPERATIVAS AGRARIAS CAFETALERAS COCLA LTDA. NRO 28  8,390,056.49          2,833,351.37            -66.2%    AMBAS_FUENTES
+20542257416  EMPRESA INDUSTRIAL ORO VERDE SOCIEDAD ANONIMA CERRADA            9,762,818.5           2,558,050               -73.8%    AMBAS_FUENTES
+20143692010  COOPERATIVA AGRARIA CAFETALERA EL QUINACHO LTDA N° 78            3,073,770.66          2,269,169.85            -26.2%    AMBAS_FUENTES
+20525955843  COOPERATIVA AGRARIA ECOLOGICA Y SOLIDARIA PIURA                  5,507,436.75          2,262,055.06            -58.9%    AMBAS_FUENTES
+20118578415  CENTRAL DE COOPERATIVAS AGRARIAS CAFETERAS DE VALLE DE SANDIA L  7,693,699.16          2,104,743.62            -72.6%    AMBAS_FUENTES
+20487242994  COOPERATIVA AGRARIA ECOLÓGICA CACAOTERA VALLE RIO ENE - COOPAVR  968,974.04            1,270,981.12            31.2%     AMBAS_FUENTES
+20542264544  COOPERATIVA AGRARIA VALLE DEL BIAVO LTDA                         3,866,609.34          1,034,237.6             -73.3%    AMBAS_FUENTES
+20603820691  COOPERATIVA AGRARIA DE SERVICIOS MÚLTIPLES CORDILLERA AZUL       2,127,055.09          896,994.95              -57.8%    AMBAS_FUENTES
+20606451122  ASOCIACIÓN DE PRODUCTORES CERRO BLANCO                           2,688,149.21          864,647.85              -67.8%    AMBAS_FUENTES
+20602054480  COOPERATIVA ECOLOGICA DE MUJERES CAFETALERAS VILLA RICA          2,405,109.49          826,100.75              -65.7%    AMBAS_FUENTES
+20448277781  COOPERATIVA AGRARIA INDUSTRIALIZADA CABANA LTDA                  818,676.45            479,288.16              -41.5%    AMBAS_FUENTES
+20484163902  COOPERATIVA AGRARIA APPROCAP LTDA                                1,068,430             447,400                 -58.1%    AMBAS_FUENTES
+20612331821  ASOCIACIÓN DE MUJERES LAS 0S DE LUYA                             1,032,801.77          300,233.07              -70.9%    AMBAS_FUENTES
+20611198923  COOPERATIVA AGRARIA LAND PERU                                    240,752               254,896.29              5.9%      AMBAS_FUENTES
+20605500430  COOPERATIVA AGRARIA DE PRODUCTORES ECOLOGICOS LOS CHANKAS VALLE  609,874.95            147,669.48              -75.8%    AMBAS_FUENTES
+20611254068  COOPERATIVA AGRARIA WARMI TARPUY                                 242,788.49            68,584.32               -71.8%    AMBAS_FUENTES
+20608478311  COOPERATIVA AGRARIA YAKATHEO DEL AMAZONAS COOPAYAKAT             41,662.35             19,111.5                -54.1%    AMBAS_FUENTES
+20609846314  COOPERATIVA AGRARIA DE FAMILIAS CAMPESINAS EMPRENDEDORAS Y RESI  7,436,346.41          -                       -         SOLO_DIRECTORIO
+20140292657  COOPERATIVA AGRARIA CAFETALERA CCOCHAPAMPA LTDA.                 1,773,460             -                       -         SOLO_DIRECTORIO
+20404057805                                                                   -                     18,616,318.71           -         SOLO_ADUANAS
+20542380455                                                                   -                     10,148,849.9            -         SOLO_ADUANAS
+20601958911                                                                   -                     9,537,122.65            -         SOLO_ADUANAS
+20129529530                                                                   -                     6,815,862.08            -         SOLO_ADUANAS
+20170142773                                                                   -                     6,139,390.53            -         SOLO_ADUANAS
+20570706927                                                                   -                     5,687,019.69            -         SOLO_ADUANAS
+20527565376                                                                   -                     5,685,065.81            -         SOLO_ADUANAS
+20600682386                                                                   -                     3,374,686.97            -         SOLO_ADUANAS
+20140181405                                                                   -                     2,877,331.57            -         SOLO_ADUANAS
+20572190251                                                                   -                     2,037,198.35            -         SOLO_ADUANAS
+20607536016                                                                   -                     1,979,570.69            -         SOLO_ADUANAS
+20600796721                                                                   -                     1,425,238.61            -         SOLO_ADUANAS
+20609555395                                                                   -                     1,265,261.9             -         SOLO_ADUANAS
+20402648504                                                                   -                     1,244,035.81            -         SOLO_ADUANAS
+20452774705                                                                   -                     1,102,151.22            -         SOLO_ADUANAS
+20480458550                                                                   -                     1,053,705.22            -         SOLO_ADUANAS
+20132509795                                                                   -                     1,039,099.41            -         SOLO_ADUANAS
+20603957033                                                                   -                     783,296.67              -         SOLO_ADUANAS
+20450105113                                                                   -                     710,052.2               -         SOLO_ADUANAS
+20136201132                                                                   -                     561,223.8               -         SOLO_ADUANAS
+20132509876                                                                   -                     406,699.75              -         SOLO_ADUANAS
+20479917141                                                                   -                     377,881.98              -         SOLO_ADUANAS
+20603907176                                                                   -                     343,700                 -         SOLO_ADUANAS
+20574602450                                                                   -                     307,832.78              -         SOLO_ADUANAS
+20600785541                                                                   -                     284,507.06              -         SOLO_ADUANAS
+20604151954                                                                   -                     273,432.8               -         SOLO_ADUANAS
+20527491232                                                                   -                     248,500                 -         SOLO_ADUANAS
+20600717902                                                                   -                     240,990.99              -         SOLO_ADUANAS
+20568071281                                                                   -                     166,038.25              -         SOLO_ADUANAS
+20603320621                                                                   -                     161,000                 -         SOLO_ADUANAS
+20603862369                                                                   -                     151,198.32              -         SOLO_ADUANAS
+20603557825                                                                   -                     124,585.29              -         SOLO_ADUANAS
+20525969551                                                                   -                     105,840                 -         SOLO_ADUANAS
+20568190450                                                                   -                     65,701.7                -         SOLO_ADUANAS
+20604309728                                                                   -                     7,275.18                -         SOLO_ADUANAS

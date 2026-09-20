@@ -340,6 +340,7 @@ Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distrito
 | **Fuente de datos** | `aduanet.gob.pe/cl-ad-itconsultadwh/ieITS01Alias` — Consulta por Importador/Exportador, Aduanas-SUNAT. |
 | **Cobertura real ingerida** | 596 RUC consultados (2025 + 2026 parcial), 63 con exportaciones registradas, 680 filas, 0 errores. US$ 208.8M FOB total en 2025. |
 | **Anomalía conocida** | El parámetro `CG_Ano` del formulario no es el año calendario — hay que restarle 1992 (`CG_Ano = añoReal - 1992`, confirmado probando contra resultados conocidos). No trae kilos/peso, solo FOB USD. No se investigó paginación para exportadores de mucho mayor volumen que los de este seed. |
+| **API expuesta (2026-09-20)** | `GET /api/exportaciones-fob` (filas a nivel de embarque, filtros `ruc`/`anio`/`mes`/`paisCodigo`, paginado) y `GET /api/exportaciones-fob/resumen/{ruc}` (FOB total y N° de embarques agregado por año, 404 si el RUC no tiene exportaciones). Registrada como tools MCP `identidad_fiscal_exportaciones_fob`/`_resumen`. |
 | **Detalle completo** | [`docs/data-contracts/aduanet-exportaciones-fob.md`](data-contracts/aduanet-exportaciones-fob.md) |
 
 ### `padron-ppa-connector.ts` — Padrón de Productores Agrarios (MIDAGRI)
