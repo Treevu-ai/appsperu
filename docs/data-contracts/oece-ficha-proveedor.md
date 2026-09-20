@@ -25,15 +25,29 @@ secretario, vocales) con DNI de cada persona, más un snapshot fresco de datos S
 - **GET plano, sin captcha, sin sesión, dominio no bloqueado para este entorno** — confirmado
   en vivo con `curl` simple.
 
-## Cobertura por tipo de RUC — solo proveedores registrados en el RNP
+## Cobertura por tipo de RUC — `datosSunat` responde para cualquier RUC, la conformación NO
 
-Esta fuente **solo tiene datos para RUC inscritos en el Registro Nacional de Proveedores**
-(empresas/organizaciones que están habilitadas o han contratado con el Estado). No es un
-registro universal de todas las personas jurídicas del Perú (para eso está SUNAT). Confirmado
-en vivo: 596/596 cooperativas del seed SÍ están en el RNP y devolvieron ficha — sugiere que el
-registro es prácticamente universal para este universo (cooperativas agroexportadoras
-frecuentemente venden a programas estatales), pero no hay garantía de que un RUC nuevo,
-arbitrario, esté cubierto.
+**Corrección real sobre una lectura inicial equivocada de este mismo contrato**: la respuesta de
+`resumen` trae dos partes independientes con cobertura muy distinta:
+
+- `datosSunat` — responde para **cualquier RUC válido**, esté o no inscrito en el RNP. Es un eco
+  de SUNAT, no una confirmación de registro. El conector marca `rucsEncontrados` en base a este
+  campo — **eso mide "SUNAT reconoce el RUC", no "está en el RNP"**, y la primera versión de este
+  contrato interpretó mal esa métrica (decía "596/596 SÍ están en el RNP", que es falso).
+- `conformacion.proveedor.codigoRegistro` — **solo viene poblado si el RUC está realmente
+  inscrito en el Registro Nacional de Proveedores**. Si es `null`, ese RUC nunca se registró como
+  proveedor del Estado y por lo tanto tampoco tiene `representantes`/`organosAdm`/`socios`
+  (vienen `[]`, no un error).
+
+**Cifra real verificada en vivo (2026-09-20) contra las 597 filas de `ruc_oece_ficha`**: solo
+**155 (26%) tienen `codigo_registro` no nulo** (sí están en el RNP). De esas 155, **139 tienen
+al menos 1 persona** en `ruc_oece_personas` — las 16 restantes están inscritas en el RNP pero
+nunca llenaron la sección de conformación societaria/directiva (aparentemente opcional al
+registrarse).
+
+**Conclusión práctica**: si se usa `ruc_oece_ficha` para inferir "¿esta cooperativa vendió/podría
+vender al Estado?", filtrar por `codigo_registro IS NOT NULL`, no por la sola presencia de la
+fila (todas las 596-597 tienen fila, casi todas con `codigo_registro` nulo).
 
 ## Schema real confirmado — `ficha-proveedor-cns/1.0/ficha/{ruc}/resumen`
 
@@ -88,7 +102,9 @@ en el resultado.
   Vicepresidente, Secretario, 3 Vocales/Otros), teléfono y email de contacto.
 - Chancamayo (20132489824): ficha encontrada, 0 personas (representantes/organosAdm vacíos para
   este RUC — resultado válido, no error).
-- Corrida completa: 596/596 RUC con ficha encontrada, 808 personas en total, 0 errores.
+- Corrida completa: 596/596 RUC responden `datosSunat` (no implica RNP), **155/596 (26%) están
+  realmente inscritos en el RNP** (`codigo_registro` no nulo), **139/596 tienen al menos 1
+  persona registrada**, 815 filas en `ruc_oece_personas` en total, 0 errores.
 
 ## Pendiente / fuera de alcance de este contrato
 
