@@ -1301,6 +1301,168 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: { departamento: z.string().min(1).optional() },
   },
   {
+    name: "identidad_fiscal_ficha_ruc",
+    app: "identidad-fiscal",
+    description:
+      "Busca en la ficha individual de SUNAT (`ficha_ruc`) por razón social, cultivo (texto libre sobre razón " +
+      "social) o si exporta. Cobertura MUY PARCIAL: esta ficha se consulta una por una vía navegador, bloqueada " +
+      "por reCAPTCHA v3 para automatización — solo tiene datos para el puñado de RUC ya consultados manualmente, " +
+      "no el universo completo. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/ficha-ruc",
+    pathParams: [],
+    querySchema: {
+      razonSocial: z.string().min(1).optional(),
+      cultivo: z.string().min(1).optional().describe("Búsqueda de texto libre sobre razón social, no una clasificación real por cultivo."),
+      exportador: z.enum(["true", "false"]).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "identidad_fiscal_ficha_ruc_by_ruc",
+    app: "identidad-fiscal",
+    description:
+      "Detalle completo de la ficha individual de SUNAT para un RUC específico (razón social, fechas, domicilio, " +
+      "actividades CIIU, comprobantes electrónicos, representantes legales) — solo si ese RUC ya fue consultado " +
+      "manualmente (ver `identidad_fiscal_ficha_ruc`). 404 si no está en la ficha individual todavía.",
+    pathTemplate: "/api/ficha-ruc/{ruc}",
+    pathParams: ["ruc"],
+    querySchema: {},
+  },
+  {
+    name: "identidad_fiscal_padron_ppa",
+    app: "identidad-fiscal",
+    description:
+      "Confirma si un RUC está registrado en el Padrón de Productores Agrarios de MIDAGRI — dato de formalidad " +
+      "agraria, no tributario ni comercial. Solo el booleano `registrado` + nombre en el padrón es real: el " +
+      "endpoint de MIDAGRI que prometía cultivo/hectáreas/ubicación nunca responde datos, incluso para RUC " +
+      "confirmados como registrados (ver docs/data-contracts/midagri-padron-ppa.md). Cobertura PARCIAL: solo " +
+      "RUC ya consultados, no el universo completo del padrón. Paginación real: usa `limit`/`offset`; la " +
+      "respuesta trae `total` y `hasMore`. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/padron-ppa",
+    pathParams: [],
+    querySchema: {
+      registrado: z.enum(["true", "false"]).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "identidad_fiscal_padron_ppa_by_ruc",
+    app: "identidad-fiscal",
+    description:
+      "Estado de un RUC específico en el Padrón de Productores Agrarios (ver `identidad_fiscal_padron_ppa`). " +
+      "404 si ese RUC no fue consultado todavía contra MIDAGRI — distinto de `registrado: false`, que significa " +
+      "'se consultó y NO está inscrito'.",
+    pathTemplate: "/api/padron-ppa/{ruc}",
+    pathParams: ["ruc"],
+    querySchema: {},
+  },
+  {
+    name: "identidad_fiscal_oece_ficha",
+    app: "identidad-fiscal",
+    description:
+      "Ficha de Proveedor del Estado (OECE, ex-OSCE) por RUC — snapshot fresco de datos SUNAT + contacto " +
+      "(teléfono/email) + si está realmente inscrito en el RNP. `datosSunat` responde para CUALQUIER RUC válido " +
+      "esté o no en el RNP — usa `inscritoRnp`/`codigoRegistro` (no nulo) para saber si de verdad puede " +
+      "contratar con el Estado, nunca la sola presencia de una fila. Cobertura PARCIAL: solo RUC ya " +
+      "consultados. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/oece-ficha",
+    pathParams: [],
+    querySchema: {
+      razonSocial: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      departamento: z.string().min(1).optional(),
+      inscritoRnp: z.enum(["true", "false"]).optional().describe("true = codigo_registro no nulo (inscrito realmente en el RNP)."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "identidad_fiscal_oece_ficha_by_ruc",
+    app: "identidad-fiscal",
+    description:
+      "Ficha OECE completa de un RUC, incluida su conformación societaria/directiva (`personas`: " +
+      "representantes legales, Consejo de Administración, socios — con DNI, cargo y fecha de ingreso de cada " +
+      "persona). `personas` viene vacío si el RUC no está inscrito en el RNP o nunca llenó esa sección " +
+      "(inscripción sin conformación declarada, caso real observado). 404 si el RUC no fue consultado todavía.",
+    pathTemplate: "/api/oece-ficha/{ruc}",
+    pathParams: ["ruc"],
+    querySchema: {},
+  },
+  {
+    name: "identidad_fiscal_ruc_consulta_masiva",
+    app: "identidad-fiscal",
+    description:
+      "Tercera fuente de SUNAT (`ruc_consulta_masiva`) — hasta 100 RUC por corrida vía el formulario de " +
+      "'Consulta Múltiple' (e-consultaruc.sunat.gob.pe), SIN reCAPTCHA a diferencia de la ficha individual. " +
+      "23 campos por RUC (CIIU principal/secundarios, actividad de comercio exterior, Buen Contribuyente, " +
+      "Agentes de Retención/Percepción IGV) que `identidad_fiscal_ficha_ruc` no tiene — tabla separada e " +
+      "independiente, no reemplaza esa ficha. Cobertura PARCIAL: solo los RUC ya consultados manualmente por " +
+      "lote, no el universo completo del padrón. Paginación real: usa `limit`/`offset`; la respuesta trae " +
+      "`total` y `hasMore`. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/ruc-consulta-masiva",
+    pathParams: [],
+    querySchema: {
+      razonSocial: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      estado: z.string().min(1).optional().describe("estado_contribuyente (ej. ACTIVO, BAJA)."),
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+      buenContribuyente: z.enum(["true", "false"]).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "identidad_fiscal_ruc_consulta_masiva_by_ruc",
+    app: "identidad-fiscal",
+    description:
+      "Detalle completo de un RUC en `ruc_consulta_masiva` (ver `identidad_fiscal_ruc_consulta_masiva`). 404 si " +
+      "ese RUC no fue consultado todavía por esta vía.",
+    pathTemplate: "/api/ruc-consulta-masiva/{ruc}",
+    pathParams: ["ruc"],
+    querySchema: {},
+  },
+  {
+    name: "identidad_fiscal_exportaciones_fob",
+    app: "identidad-fiscal",
+    description:
+      "Valor FOB USD exportado por RUC, agregado por mes/aduana/agente de aduana/país de destino — fuente " +
+      "Aduanas-SUNAT (`aduanet.gob.pe`), sin captcha, ingesta automatizada. NO trae kilos ni peso, solo FOB " +
+      "USD; esa granularidad exige el detalle de cada DUA, no público. Filas a nivel de embarque individual " +
+      "(un RUC puede tener muchas filas por año) — para un total por año usa " +
+      "`identidad_fiscal_exportaciones_fob_resumen`. Paginación real: usa `limit`/`offset`; la respuesta trae " +
+      "`total` y `hasMore`. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/exportaciones-fob",
+    pathParams: [],
+    querySchema: {
+      ruc: z.string().regex(/^\d{11}$/).optional(),
+      anio: z.coerce.number().int().min(2000).max(2100).optional(),
+      mes: z.coerce.number().int().min(1).max(12).optional(),
+      paisCodigo: z.string().min(1).optional().describe("Código de país de destino (ej. US, CN)."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "identidad_fiscal_exportaciones_fob_resumen",
+    app: "identidad-fiscal",
+    description:
+      "FOB total y número de embarques por año para un RUC específico (agregado sobre " +
+      "`identidad_fiscal_exportaciones_fob`) — la forma correcta de responder '¿cuánto exportó este RUC en " +
+      "20XX?' sin sumar filas a mano. 404 si el RUC no tiene exportaciones registradas en el periodo pedido.",
+    pathTemplate: "/api/exportaciones-fob/resumen/{ruc}",
+    pathParams: ["ruc"],
+    querySchema: {
+      anio: z.coerce.number().int().min(2000).max(2100).optional().describe("Si se omite, devuelve todos los años disponibles."),
+    },
+  },
+  {
     name: "ceplan_geo_patrimonio_predios",
     app: "ceplan-geo",
     description:
@@ -1964,6 +2126,41 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: {
       ubigeo: z.string().regex(/^\d{6}$/),
       anio: z.coerce.number().int().min(2000).max(2100).optional(),
+    },
+  },
+
+  // ---- candidatos-erm (Elecciones Regionales y Municipales 2026, vía Datapol) ----
+  {
+    name: "candidatos_erm_candidatos",
+    app: "candidatos-erm",
+    description:
+      "Candidatos inscritos a Gobernador/Vicegobernador Regional, Consejero Regional, Alcalde y Regidor " +
+      "Provincial/Distrital — Elecciones Regionales y Municipales de octubre 2026. Fuente NO oficial: JNE no " +
+      "publica un dataset abierto de candidatos (sus dos plataformas interactivas están protegidas contra " +
+      "automatización); se usa una republicación de terceros (Datapol) derivada de las mismas hojas de vida que " +
+      "el JNE hace públicas. `sentenciasDeclaradas` es la autodeclaración del candidato ante el JNE (sentencias " +
+      "judiciales) — NO equivale a una sanción del Tribunal de Contrataciones (OSCE); son fuentes y regímenes " +
+      "distintos (ver `proveedores_sancionados_candidatos_sancionados` para ese cruce). El DNI se enmascara " +
+      "siempre en la respuesta (`dniEnmascarado`, últimos 3 dígitos visibles) — el almacenamiento interno lo " +
+      "conserva completo porque el propio JNE lo publica sin enmascarar en la ficha pública de cada candidato, " +
+      "pero esta API nunca lo expone completo. Cobertura nacional completa (101,948 candidatos, snapshot único, " +
+      "sin histórico de altas/bajas). Paginación real: usa `limit`/`offset`; la respuesta trae `total` y " +
+      "`hasMore`. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/candidatos",
+    pathParams: [],
+    querySchema: {
+      dni: z.string().regex(/^\d{8}$/).optional().describe("DNI exacto (8 dígitos), sin enmascarar en el filtro aunque la respuesta lo enmascare."),
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+      ubigeo: z.string().regex(/^\d{6}$/).optional(),
+      cargo: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE), ej. ALCALDE, REGIDOR, GOBERNADOR REGIONAL."),
+      organizacionPolitica: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      tipoEleccion: z.enum(["REGIONAL", "MUNICIPAL PROVINCIAL", "MUNICIPAL DISTRITAL"]).optional(),
+      estado: z.string().min(1).optional().describe("Ej. INSCRITO, RENUNCIA, EXCLUSION, IMPROCEDENTE, RETIRO."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
 
