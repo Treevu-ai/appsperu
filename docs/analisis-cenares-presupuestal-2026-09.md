@@ -25,18 +25,18 @@ FROM cenares_distribucion WHERE estrategia LIKE ';%'` devuelve 2,623 filas con e
 línea cruda pegado en esa columna.
 
 **Tratamiento en este análisis**: todas las cifras de abajo excluyen las filas con `CANTIDAD`
-nulo (quedan 54,443 filas válidas, 535.4M unidades brutas → las 54,443 filas limpias sí suman
+nulo (quedan 54,443 filas válidas, 535.5M unidades brutas → las 54,443 filas limpias sí suman
 correctamente). Esto es un hallazgo de calidad de dato real, no una suposición — no se intentó
 "arreglar" el desalineamiento re-parseando (sería adivinar dónde termina cada campo corrido sin
 un ejemplo de la estructura original).
 
-**Pendiente si se retoma esto**: escribir un pre-procesamiento que detecte comillas sin cerrar en
+**Pendiente si se retoma esto**: escribir un preprocesamiento que detecte comillas sin cerrar en
 `OBSERVACION` antes del parseo CSV, o reportar el problema a CENARES/datosabiertos.gob.pe como
 error de exportación del dataset fuente.
 
 ## 1. Qué mide realmente el dataset: trámite interno, no entrega confirmada
 
-De las 54,443 filas con cantidad válida (535.4M unidades en total):
+De las 54,443 filas con cantidad válida (535.5M unidades en total):
 
 | Situación | Filas | % filas | Unidades |
 |---|---|---|---|
@@ -52,8 +52,8 @@ unidades está en "ELABORANDO PECOSA", que es un estado de trámite (preparació
 Comprobante de Salida), no una entrega. **La estrategia de distribución de CENARES, medida por
 este dataset, opera mayormente en fase de preparación documentaria, no de despacho efectivo** —
 o el dataset público solo captura ese tramo del proceso y el despacho real se registra en otro
-sistema no público (SISMED interno, ver `sismed-observatorio-disponibilidad.md` — fuente
-descartada por requerir login).
+sistema no público (SISMED interno, ver `docs/data-contracts/sismed-observatorio-disponibilidad.md`
+— fuente descartada por requerir login).
 
 No se puede distinguir con este dataset si el cuello de botella es operativo (falta de
 transporte, personal) o si es un artefacto de cómo CENARES reporta a datosabiertos.gob.pe
