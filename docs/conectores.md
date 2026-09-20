@@ -354,6 +354,7 @@ Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distrito
 | **Fuente de datos** | `gateway.midagri.gob.pe/sisppa/api/services/app/Consulta/GetNombreConsulta` — Padrón de Productores Agrarios, MIDAGRI. |
 | **Cobertura real ingerida** | 596/596 RUC del seed consultados y registrados, 0 errores. |
 | **Anomalía conocida** | El endpoint `GetDatosProductor` (que prometía cultivo/hectáreas/ubicación) devuelve siempre `null`, incluso para RUC/DNI confirmados como registrados, y ningún componente de la UI del frontend lo invoca — no se pudo determinar la forma correcta de usarlo, si la tiene. |
+| **API expuesta (2026-09-20)** | `GET /api/padron-ppa` (filtro `registrado`, paginado) y `GET /api/padron-ppa/{ruc}` (detalle; 404 si nunca se consultó ese RUC, distinto de `registrado: false`). Registrada como tools MCP `identidad_fiscal_padron_ppa`/`_by_ruc`. |
 | **Detalle completo** | [`docs/data-contracts/midagri-padron-ppa.md`](data-contracts/midagri-padron-ppa.md) |
 
 ### `oece-ficha-connector.ts` — Ficha Única del Proveedor (OECE, ex-OSCE)

@@ -1331,6 +1331,36 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: {},
   },
   {
+    name: "identidad_fiscal_padron_ppa",
+    app: "identidad-fiscal",
+    description:
+      "Confirma si un RUC está registrado en el Padrón de Productores Agrarios de MIDAGRI — dato de formalidad " +
+      "agraria, no tributario ni comercial. Solo el booleano `registrado` + nombre en el padrón es real: el " +
+      "endpoint de MIDAGRI que prometía cultivo/hectáreas/ubicación nunca responde datos, incluso para RUC " +
+      "confirmados como registrados (ver docs/data-contracts/midagri-padron-ppa.md). Cobertura PARCIAL: solo " +
+      "RUC ya consultados, no el universo completo del padrón. Paginación real: usa `limit`/`offset`; la " +
+      "respuesta trae `total` y `hasMore`. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/padron-ppa",
+    pathParams: [],
+    querySchema: {
+      registrado: z.enum(["true", "false"]).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "identidad_fiscal_padron_ppa_by_ruc",
+    app: "identidad-fiscal",
+    description:
+      "Estado de un RUC específico en el Padrón de Productores Agrarios (ver `identidad_fiscal_padron_ppa`). " +
+      "404 si ese RUC no fue consultado todavía contra MIDAGRI — distinto de `registrado: false`, que significa " +
+      "'se consultó y NO está inscrito'.",
+    pathTemplate: "/api/padron-ppa/{ruc}",
+    pathParams: ["ruc"],
+    querySchema: {},
+  },
+  {
     name: "identidad_fiscal_oece_ficha",
     app: "identidad-fiscal",
     description:
