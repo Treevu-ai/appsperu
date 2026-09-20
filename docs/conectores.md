@@ -879,6 +879,26 @@ beneficio real.
 
 ---
 
+<a id="poder-judicial"></a>
+## poder-judicial — Estadística jurisdiccional de procesos judiciales (Poder Judicial)
+
+### `procesos-judiciales-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Estadística agregada de procesos judiciales (pendientes/ingresados/resueltos) por año, mes y órgano jurisdiccional a nivel nacional — sin expedientes individuales ni nombres de partes, sin PII. |
+| **Qué hace** | Descarga el CSV completo, parsea con `csv-parse` y hace upsert por `(anio, mes, codigo_dependencia, tipo_organo, espec_exp, espec_dep, condicion)` en `procesos_judiciales_jurisdiccional`. Filas desalineadas o con un conteo no numérico se rechazan y cuentan en `poder_judicial_rejected`, no se insertan con columnas corridas en silencio. |
+| **Cómo lo hace** | Descarga HTTP directa (GET simple, sin sesión) de un CSV estático publicado en `datosabiertos.gob.pe/sites/default/files/` — **investigado y descartado como candidato a bulk-query**: el sistema interactivo del Poder Judicial (CEJ, consulta de expedientes) está protegido con Radware y desde 2026 exige N° de expediente exacto, así que no sirve para esto; este dataset SÍ es agregado/público y no tiene esa restricción. Mismo WAF (CloudWAF) que el resto de `datosabiertos.gob.pe`, requiere User-Agent de navegador. Este dataset en particular no se resuelve vía CKAN `package_show` (a diferencia del resto del catálogo) — el enlace de descarga es estático, no un recurso indexado por la API de este portal DKAN. |
+| **Frecuencia** | Manual (`npm run ingest:procesos-judiciales`). Snapshot completo del CSV en cada corrida (no incremental) — el propio dataset se reemplaza, no acumula, según su fecha de "última modificación". |
+| **Fuente de datos** | `datosabiertos.gob.pe/sites/default/files/dataset_jurisdiccional_a-partir-del-2024.csv` — dataset "Procesos judiciales principales a nivel nacional, a partir del 2023", publicador Poder Judicial - PJ. |
+| **Cobertura real ingerida** | Verificado en vivo 2026-09-20: **58,568/58,568 filas insertadas, 0 rechazadas**. Cubre 2024 en adelante (el dataset mismo declara "a partir del 2023" pero el CSV real solo trae 2024+), las 25 jurisdicciones/distritos judiciales del país. |
+| **Anomalía conocida** | Sin diccionario de variables publicado — los nombres de las 47 columnas de conteo (`PENDIENTET`, `INGRESOT_SIN`, `RDEV_ANULADA`, etc.) se preservan tal cual el CSV fuente, sin reinterpretar su significado exacto (ver detalle en el data contract). Encoding Latin-1, no UTF-8. |
+| **API expuesta (2026-09-20)** | `GET /api/procesos-judiciales` (filtros `anio`/`mes`/`distritoJudicial`/`provincia`/`distrito`/`tipoOrgano`/`especExp`/`condicion`/`estado`, paginado) y `GET /api/procesos-judiciales/resumen?groupBy=` (agregado SUM de las columnas titulares — `pendiente`, `resuelto`, `ingreso_sin`, `ingreso_con`, `sentencia`, `conciliado` — por `distritoJudicial`/`tipoOrgano`/`especExp`/`anio`/`mes`/`estado`/`condicion`). Registrada como tools MCP `poder_judicial_procesos`/`poder_judicial_procesos_resumen`. |
+| **Cruces** | Ninguno implementado — candidato natural: `distrito_judicial` contra el catálogo territorial de `ceplan-geo`, o `anio`/departamento contra `budget_execution` de `radar-ejecucion` para contexto de carga procesal vs. presupuesto del sector Justicia. |
+| **Detalle completo** | [`docs/data-contracts/poder-judicial-procesos-jurisdiccionales.md`](data-contracts/poder-judicial-procesos-jurisdiccionales.md) |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada
@@ -967,4 +987,5 @@ OCDS); esos resultados devuelven `valorMoneda: null` en vez de asumir soles.
 | `pvd-connector.ts` | red-vial-subnacional | MTC/Provías Descentralizado (datosabiertos.gob.pe) | Descarga CSV directo (Latin-1), hash de contenido como clave | Manual | Completa (nacional, 12,536 filas; La Libertad 461/12 provincias) |
 | `residuos-connector.ts` | residuos-solidos | MINAM/SIGERSOL (datosabiertos.gob.pe) | Descarga CSV directo, clave natural (ubigeo, anio) | Manual | Completa (nacional, 11,310 filas, serie 2019-2024; La Libertad 500/12 provincias) |
 | `pdf-connector.ts` | riesgo-fiscal-isds | MEF, Marco Macroeconómico Multianual / IAPM (PDF, descarga con navegador real — `curl`/`WebFetch` bloqueados) | Parseo de texto tabulado con `pdf-parse`, mismo motor que bcrp-la-libertad; 2 años cargados a mano por formato de tabla no soportado | Manual (archivo local) | Serie 2020-2025 completa (24 filas) |
+| `procesos-judiciales-connector.ts` | poder-judicial | Poder Judicial (datosabiertos.gob.pe, CSV estático fuera de CKAN) | Descarga CSV directo (Latin-1), maneja WAF | Manual | Completa (nacional, 58,568 filas, desde 2024) |
 
