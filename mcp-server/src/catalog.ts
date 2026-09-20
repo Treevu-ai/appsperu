@@ -1331,6 +1331,38 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: {},
   },
   {
+    name: "identidad_fiscal_oece_ficha",
+    app: "identidad-fiscal",
+    description:
+      "Ficha de Proveedor del Estado (OECE, ex-OSCE) por RUC — snapshot fresco de datos SUNAT + contacto " +
+      "(teléfono/email) + si está realmente inscrito en el RNP. `datosSunat` responde para CUALQUIER RUC válido " +
+      "esté o no en el RNP — usa `inscritoRnp`/`codigoRegistro` (no nulo) para saber si de verdad puede " +
+      "contratar con el Estado, nunca la sola presencia de una fila. Cobertura PARCIAL: solo RUC ya " +
+      "consultados. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/oece-ficha",
+    pathParams: [],
+    querySchema: {
+      razonSocial: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      departamento: z.string().min(1).optional(),
+      inscritoRnp: z.enum(["true", "false"]).optional().describe("true = codigo_registro no nulo (inscrito realmente en el RNP)."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "identidad_fiscal_oece_ficha_by_ruc",
+    app: "identidad-fiscal",
+    description:
+      "Ficha OECE completa de un RUC, incluida su conformación societaria/directiva (`personas`: " +
+      "representantes legales, Consejo de Administración, socios — con DNI, cargo y fecha de ingreso de cada " +
+      "persona). `personas` viene vacío si el RUC no está inscrito en el RNP o nunca llenó esa sección " +
+      "(inscripción sin conformación declarada, caso real observado). 404 si el RUC no fue consultado todavía.",
+    pathTemplate: "/api/oece-ficha/{ruc}",
+    pathParams: ["ruc"],
+    querySchema: {},
+  },
+  {
     name: "ceplan_geo_patrimonio_predios",
     app: "ceplan-geo",
     description:
