@@ -1,0 +1,52 @@
+NOTA DE ANALISIS -- Cruce exportaciones 2025: directorio base.xlsx vs Aduanas (conector propio)
+Generado: 2026-09-20
+
+1. FUENTES COMPARADAS
+   - Declarado = columna 'V. EJEC EXPORTACION 2025' del archivo directorio base.xlsx (dato
+     autoreportado por la propia cooperativa/organizacion al llenar el directorio).
+   - FOB Aduanas = suma de fob_usd en la tabla ruc_exportaciones_fob (conector propio sobre
+     datos reales de Aduanas/SUNAT), filtrado a anio = 2025.
+   - Universo: 30 RUC con exportacion declarada > 0 en el directorio (de 32 organizaciones
+     totales que declararon exportar en 2025; 2 sin RUC valido de 11 digitos quedaron fuera
+     de este cruce), cruzados contra 63 RUC con exportacion real registrada en Aduanas 2025.
+
+2. RESULTADO DEL CRUCE
+   - Coinciden en ambas fuentes: 28
+   - Solo en Directorio (declararon, sin registro en Aduanas 2025): 2
+   - Solo en Aduanas (exportacion real confirmada, sin monto declarado en el directorio): 35
+
+3. CALIDAD DEL DATO AUTODECLARADO
+   - De las 28 coincidencias, 22 sobreestiman el FOB real y 6 lo
+     subestiman frente al dato real de Aduanas.
+   - Patron dominante: sobreestimacion. La mayoria de casos con diferencia grande declaran
+     40%-75% por encima del FOB real registrado en Aduanas para el mismo RUC y anio.
+     Posibles explicaciones no verificadas: el campo del directorio podria incluir ventas
+     'para exportacion' contratadas pero no embarcadas aun, ventas a intermediarios locales
+     que luego exportan (no atribuibles al RUC de la cooperativa en la DUA), o estimaciones
+     internas de la organizacion no conciliadas con el dato aduanero.
+   - Caso invertido notable: COOPERATIVA AGRARIA DE CACAO AROMATICO COLPA DE LOROS
+     (20600390911) declara US$ 1.46M pero Aduanas registra US$ 12.45M (+750%) -- posible RUC
+     con actividad exportadora adicional no reflejada en el reporte de la cooperativa, o
+     error de captura en el directorio. Verificar antes de usar en contenido publico.
+   - Suma total declarada (30 RUC con RUC valido): US$ 271,524,558.651.
+   - Suma total FOB real Aduanas (63 RUC, anio 2025): US$ 208,810,257.45.
+     Estas dos sumas NO son comparables 1:1 porque cubren universos distintos (30 vs 63 RUC);
+     se incluyen solo como referencia de magnitud.
+
+4. LECTURA PRACTICA
+   - El directorio base.xlsx es razonablemente util para identificar QUIEN exporta: 28 de 30
+     declarantes con RUC valido (93%) tienen exportacion real confirmada en Aduanas 2025.
+   - No es confiable para el MONTO exacto: las diferencias son sistematicas y en varios casos
+     superan el 70%. Para cifras de exportacion en analisis o contenido publico, usar siempre
+     ruc_exportaciones_fob (fuente primaria Aduanas), no la columna autodeclarada del
+     directorio.
+   - Las 35 organizaciones 'solo en Aduanas' son cooperativas con exportacion real 2025 que
+     no reportaron el dato en el directorio (o el archivo no las tiene en esa columna) --
+     candidatas a revisar si se quiere completar el panorama real de exportadores del sector.
+   - Las 2 'solo en Directorio' (CAFCER y CCOCHAPAMPA) no tienen registro en Aduanas 2025
+     bajo ese RUC -- verificar RUC y fecha de corte antes de citarlas como exportadoras.
+
+5. LIMITACIONES
+   - No se verifico si el corte temporal del directorio base.xlsx coincide exactamente con
+     el periodo cubierto por ruc_exportaciones_fob (anio calendario 2025 completo vs parcial).
+   - No se contrasto producto/partida arancelaria; el cruce es solo por RUC y monto anual.
