@@ -1,0 +1,21 @@
+name: poder-judicial
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: poder_judicial
+      POSTGRES_PASSWORD: poder_judicial
+      POSTGRES_DB: poder_judicial
+    ports:
+      - "127.0.0.1:5436:5432"
+    volumes:
+      - poder_judicial_pgdata:/var/lib/postgresql/data
+
+volumes:
+  poder_judicial_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true

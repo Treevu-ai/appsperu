@@ -33,6 +33,7 @@ export const APP_KEYS = [
   "infraestructura-mtc",
   "riesgo-fiscal-isds",
   "candidatos-erm",
+  "poder-judicial",
 ] as const;
 
 export type AppKey = (typeof APP_KEYS)[number];
@@ -72,6 +73,7 @@ const DEFAULT_PORTS: Record<AppKey, number> = {
   // puerto). No se corrige acá; si ambas apps corren localmente a la vez,
   // hay que sobreescribir una vía CANDIDATOS_ERM_API_URL o PORT en el .env.
   "candidatos-erm": 4027,
+  "poder-judicial": 4028,
 };
 
 function envVarFor(app: AppKey): string {

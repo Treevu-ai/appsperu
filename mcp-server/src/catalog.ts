@@ -2434,4 +2434,55 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: [],
     querySchema: {},
   },
+
+  // ---- poder-judicial (estadística jurisdiccional, Poder Judicial) ----
+  {
+    name: "poder_judicial_procesos",
+    app: "poder-judicial",
+    description:
+      "Estadística agregada de procesos judiciales (pendientes/ingresados/resueltos) por año, mes y " +
+      "órgano jurisdiccional a nivel nacional — SIN expedientes individuales ni nombres de partes, sin " +
+      "PII. Investigado como alternativa a CEJ (consulta de expedientes del Poder Judicial): CEJ está " +
+      "protegido con Radware y desde 2026 exige N° de expediente exacto (medida de protección de datos " +
+      "personales), no es enumerable por nombre/DNI — este dataset agregado sí es bulk-queryable. Sin " +
+      "diccionario de variables oficial: los nombres de columnas (`pendientet`, `ingresot_sin`, " +
+      "`rdev_anulada`, etc., dentro de `conteos`) se preservan tal cual el CSV fuente, no se " +
+      "reinterpretan (ver docs/data-contracts/poder-judicial-procesos-jurisdiccionales.md). Cobertura " +
+      "nacional completa desde 2024 (58,568 filas verificadas en vivo). Paginación real: usa " +
+      "`limit`/`offset`; la respuesta trae `total` y `hasMore`. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/procesos-judiciales",
+    pathParams: [],
+    querySchema: {
+      anio: z.coerce.number().int().min(2000).max(2100).optional(),
+      mes: z.string().min(1).optional().describe("Nombre de mes en español (ej. Enero, Setiembre)."),
+      distritoJudicial: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+      tipoOrgano: z.string().min(1).optional().describe("Ej. Juzgado de Paz Letrado, Juzgado Especializado o Mixto, Sala Superior."),
+      especExp: z.string().min(1).optional().describe("Ej. Civil, Familia, Laboral, Penal, Extinción de Dominio."),
+      condicion: z.string().min(1).optional().describe("Permanente o Transitorio."),
+      estado: z.string().min(1).optional().describe("Ej. En Funcionamiento, Convertido, Desactivado."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "poder_judicial_procesos_resumen",
+    app: "poder-judicial",
+    description:
+      "Agrega (SUM) las columnas titulares de `poder_judicial_procesos` (`pendiente`, `resuelto`, " +
+      "`ingreso_sin`, `ingreso_con`, `sentencia`, `conciliado`) por `distritoJudicial`/`tipoOrgano`/" +
+      "`especExp`/`anio`/`mes`/`estado`/`condicion` — la forma correcta de responder 'carga procesal por " +
+      "distrito judicial' sin sumar filas a mano. `pendiente`/`resuelto` ya son el total trámite+ejecución " +
+      "en la fuente (ver el data contract), no hace falta sumarlos con sus variantes `_t`/`_e`.",
+    pathTemplate: "/api/procesos-judiciales/resumen",
+    pathParams: [],
+    querySchema: {
+      groupBy: z.enum(["distritoJudicial", "tipoOrgano", "especExp", "anio", "mes", "estado", "condicion"]),
+      anio: z.coerce.number().int().min(2000).max(2100).optional(),
+      mes: z.string().min(1).optional(),
+      distritoJudicial: z.string().min(1).optional(),
+    },
+  },
 ];
