@@ -29,10 +29,43 @@ export function buildQuery(tool: ToolSpec, args: Record<string, unknown>): Recor
     // Varios querySchema usan z.coerce.number()/z.coerce.boolean() (ej. "anio", "mes") — el
     // cliente MCP envía el tipo declarado (number/boolean), no un string. Antes esto se
     // descartaba en silencio (typeof value === "string" fallaba), así que el filtro nunca
-    // llegaba a la API real sin ningún error visible para el agente.
+    // llegaba a la API real sin ningún error visible para el agente. Defensa en profundidad:
+    // en el flujo real `invokeTool` ya pasa por `validateArgs` primero, así que `value` llega
+    // acá ya coaccionado/validado por zod.
     query[key] = typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? String(value) : undefined;
   }
   return query;
+}
+
+export interface ArgsValidationError {
+  campo: string;
+  mensaje: string;
+}
+
+/**
+ * Valida `args` contra el `querySchema` (Zod) del tool antes de construir la URL real. Sin esto,
+ * `buildQuery` solo hacía `String(value)` de lo que llegara del cliente MCP: un `limit` fuera de
+ * rango, un enum inválido o un campo requerido faltante (ej. `ruc` en
+ * `proveedores_sancionados_sanciones`) se descartaba en silencio o pasaba tal cual — el filtro
+ * que el propio catálogo declara nunca se hacía cumplir en este servidor, solo (a veces) en la
+ * API Express downstream. Devuelve los valores ya coaccionados (z.coerce.number()/
+ * z.coerce.boolean()) para que `buildQuery` no tenga que adivinar el tipo.
+ */
+export function validateArgs(
+  tool: ToolSpec,
+  args: Record<string, unknown>
+): { ok: true; data: Record<string, unknown> } | { ok: false; errors: ArgsValidationError[] } {
+  const result = z.object(tool.querySchema).safeParse(args);
+  if (!result.success) {
+    return {
+      ok: false,
+      errors: result.error.issues.map((issue) => ({
+        campo: issue.path.join(".") || "(raíz)",
+        mensaje: issue.message,
+      })),
+    };
+  }
+  return { ok: true, data: result.data };
 }
 
 export function findTool(name: string): ToolSpec | undefined {
@@ -43,7 +76,21 @@ export function findTool(name: string): ToolSpec | undefined {
 export async function invokeTool(tool: ToolSpec, args: Record<string, unknown>) {
   try {
     const path = buildPath(tool, args);
-    const query = buildQuery(tool, args);
+
+    const validated = validateArgs(tool, args);
+    if (!validated.ok) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify({ error: "Argumentos inválidos para este tool.", detalles: validated.errors }, null, 2),
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const query = buildQuery(tool, validated.data);
     const url = buildUrl(baseUrlFor(tool.app), path, query);
     const { status, body } = await callApi(url);
     return {

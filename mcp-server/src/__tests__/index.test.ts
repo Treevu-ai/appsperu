@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildPath, buildQuery, findTool, invokeTool, runRastroLlamar } from "../index.js";
+import { buildPath, buildQuery, findTool, invokeTool, runRastroLlamar, validateArgs } from "../index.js";
 import { TOOL_CATALOG, type ToolSpec } from "../catalog.js";
 import { z } from "zod";
 
@@ -38,6 +38,46 @@ describe("buildQuery", () => {
   it("omits a filter that was not provided", () => {
     const tool = makeTool({ querySchema: { anio: z.coerce.number().optional() } });
     expect(buildQuery(tool, {})).toEqual({ anio: undefined });
+  });
+});
+
+describe("validateArgs", () => {
+  it("rejects a value outside an enum instead of silently dropping it", () => {
+    const tool = makeTool({ querySchema: { estado: z.enum(["PENDING", "REVIEWED"]).optional() } });
+    const result = validateArgs(tool, { estado: "NO_EXISTE" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toEqual([expect.objectContaining({ campo: "estado" })]);
+    }
+  });
+
+  it("rejects a limit above its declared .max()", () => {
+    const tool = makeTool({ querySchema: { limit: z.coerce.number().int().min(1).max(500).optional() } });
+    const result = validateArgs(tool, { limit: 999999 });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors[0].campo).toBe("limit");
+    }
+  });
+
+  it("rejects a missing required query field", () => {
+    const tool = makeTool({ querySchema: { ruc: z.string().regex(/^\d{8,11}$/) } });
+    const result = validateArgs(tool, {});
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors[0].campo).toBe("ruc");
+    }
+  });
+
+  it("accepts and coerces a valid value", () => {
+    const tool = makeTool({ querySchema: { anio: z.coerce.number().int().optional() } });
+    const result = validateArgs(tool, { anio: 2025 });
+    expect(result).toEqual({ ok: true, data: { anio: 2025 } });
+  });
+
+  it("accepts an empty args object when the tool has no query fields", () => {
+    const tool = makeTool({ querySchema: {} });
+    expect(validateArgs(tool, {})).toEqual({ ok: true, data: {} });
   });
 });
 
@@ -104,6 +144,28 @@ describe("invokeTool", () => {
     const result = await invokeTool(tool, {});
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toMatch(/entityCode/);
+  });
+
+  it("reports an invalid query arg as isError instead of forwarding it to the API", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    const tool = makeTool({ querySchema: { limit: z.coerce.number().int().max(500).optional() } });
+    const result = await invokeTool(tool, { limit: 999999 });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/limit/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("reports a missing required query arg as isError instead of forwarding without it", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    const tool = makeTool({ querySchema: { ruc: z.string().regex(/^\d{8,11}$/) } });
+    const result = await invokeTool(tool, {});
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/ruc/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 });
 
