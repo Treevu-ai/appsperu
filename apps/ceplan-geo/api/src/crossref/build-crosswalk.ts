@@ -87,7 +87,22 @@ export type BuildPoderJudicialCrosswalkSummary = {
   confirmadas: number;
   candidatas: number;
   sinMatch: number;
+  /** Tríadas de `territorios` sin provincia NI distrito -- no se pudieron
+   * clasificar ni insertar. `confirmadas + candidatas + sinMatch + skipped`
+   * siempre debe sumar `triples` (hallazgo de CodeRabbit en PR #172: antes
+   * `triples` no dejaba rastro de estas filas, así que el resumen podía no
+   * cuadrar sin explicación). */
+  skipped: number;
 };
+
+/** Clave fija para `pg_advisory_xact_lock` -- serializa corridas concurrentes
+ * de este builder (mismo hallazgo de Copilot en PR #172: a diferencia de
+ * `buildTerritoryCrosswalk`, que upsertea atómico vía `ON CONFLICT`, este
+ * builder hace DELETE+INSERT por fila -- ver el comentario de esa parte más
+ * abajo sobre por qué no puede usar ON CONFLICT -- así que dos corridas en
+ * paralelo podrían pisarse. El lock se libera solo al hacer COMMIT/ROLLBACK
+ * de la transacción, así que basta un `SELECT` al inicio de la misma. */
+const ADVISORY_LOCK_KEY = "hashtext('territory_name_crosswalk:poder-judicial:build')";
 
 /**
  * Igual que `buildTerritoryCrosswalk`, pero para `poder-judicial`: esa fuente
@@ -104,14 +119,19 @@ export async function buildTerritoryCrosswalkPoderJudicial(): Promise<BuildPoder
   let confirmadas = 0;
   let candidatas = 0;
   let sinMatch = 0;
+  let skipped = 0;
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    await client.query(`SELECT pg_advisory_xact_lock(${ADVISORY_LOCK_KEY})`);
     for (const { provincia, distrito } of territorios) {
       const prov = normalizeTerritoryToken(provincia);
       const dist = normalizeTerritoryToken(distrito);
-      if (!prov && !dist) continue;
+      if (!prov && !dist) {
+        skipped += 1;
+        continue;
+      }
 
       const { territory, matchStatus } = await lookupTerritoryByProvinciaDistrito(prov, dist);
 
@@ -151,7 +171,7 @@ export async function buildTerritoryCrosswalkPoderJudicial(): Promise<BuildPoder
     client.release();
   }
 
-  return { triples: territorios.length, confirmadas, candidatas, sinMatch };
+  return { triples: territorios.length, confirmadas, candidatas, sinMatch, skipped };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
@@ -161,7 +181,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     source === "poder-judicial"
       ? buildTerritoryCrosswalkPoderJudicial().then((summary) => {
           console.log(
-            `poder-judicial: ${summary.triples} tríadas, ${summary.confirmadas} confirmadas, ${summary.candidatas} candidatas, ${summary.sinMatch} sin match`
+            `poder-judicial: ${summary.triples} tríadas, ${summary.confirmadas} confirmadas, ${summary.candidatas} candidatas, ${summary.sinMatch} sin match, ${summary.skipped} sin provincia/distrito (saltadas)`
           );
         })
       : buildTerritoryCrosswalk(process.env.CEPLAN_GEO_DEPARTAMENTO ?? "LA LIBERTAD").then((summary) => {

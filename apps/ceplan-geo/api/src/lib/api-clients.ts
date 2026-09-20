@@ -1,7 +1,8 @@
 import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
 
 function baseUrl(envVar: string, fallback: string): string {
-  return (process.env[envVar] ?? fallback).replace(/\/+$/, "");
+  const configured = process.env[envVar]?.trim();
+  return (configured || fallback).replace(/\/+$/, "");
 }
 
 export type DependencyStatus = {

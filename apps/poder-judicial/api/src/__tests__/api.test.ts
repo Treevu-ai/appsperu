@@ -198,6 +198,19 @@ describe("GET /api/procesos-judiciales — enriquecimiento con ubigeo (territory
     expect(res.body.resultados[0].ubigeo).toBeNull();
   });
 
+  it("degrada a ubigeo:null (no 500) cuando ceplan-geo falla al responder", async () => {
+    // Hallazgo real de CodeRabbit/Copilot en PR #172: el enriquecimiento es
+    // opcional -- si la dependencia externa falla, no debe tumbar el
+    // endpoint principal (que ya tiene el dato real de procesos judiciales).
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "1" }] }).mockResolvedValueOnce({ rows: [FILA_DB] });
+    ceplanGeoQueryMock.mockRejectedValueOnce(new Error("connection refused"));
+
+    const res = await request(createApp()).get("/api/procesos-judiciales");
+
+    expect(res.status).toBe(200);
+    expect(res.body.resultados[0].ubigeo).toBeNull();
+  });
+
 });
 
 describe("GET /api/procesos-judiciales/territorios", () => {

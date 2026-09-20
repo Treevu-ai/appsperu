@@ -61,15 +61,24 @@ function normalizeToken(value: string | null | undefined): string {
  * (nombre ambiguo a nivel nacional) o `sin_match` se exponen como
  * `ubigeo: null`, nunca se adivina cuál territorio es. Sin
  * `CEPLAN_GEO_DATABASE_URL` configurada, todas las filas quedan con
- * `ubigeo: null` sin romper el endpoint.
+ * `ubigeo: null` sin romper el endpoint. Mismo criterio si la query a
+ * ceplan-geo falla (DB caída, timeout, etc.): es un enriquecimiento
+ * opcional, no debe tumbar con 500 el endpoint principal solo porque una
+ * dependencia externa no respondió -- se loguea y se degrada a sin ubigeo,
+ * igual que el caso "no configurado".
  */
 async function fetchUbigeoByProvinciaDistrito(): Promise<Map<string, string>> {
   if (!ceplanGeoPool) return new Map();
-  const { rows } = await ceplanGeoPool.query<{ provincia: string | null; distrito: string | null; ubigeo: string }>(
-    `SELECT provincia, distrito, ubigeo FROM territory_name_crosswalk
-     WHERE source = 'poder-judicial' AND match_status = 'confirmada' AND ubigeo IS NOT NULL`
-  );
-  return new Map(rows.map((r) => [`${r.provincia ?? ""}|${r.distrito ?? ""}`, r.ubigeo]));
+  try {
+    const { rows } = await ceplanGeoPool.query<{ provincia: string | null; distrito: string | null; ubigeo: string }>(
+      `SELECT provincia, distrito, ubigeo FROM territory_name_crosswalk
+       WHERE source = 'poder-judicial' AND match_status = 'confirmada' AND ubigeo IS NOT NULL`
+    );
+    return new Map(rows.map((r) => [`${r.provincia ?? ""}|${r.distrito ?? ""}`, r.ubigeo]));
+  } catch (err) {
+    console.error("No se pudo enriquecer con ubigeo (ceplan-geo no disponible):", err instanceof Error ? err.message : err);
+    return new Map();
+  }
 }
 
 const SearchQuerySchema = z.object({

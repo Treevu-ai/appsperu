@@ -42,7 +42,7 @@ describe("buildTerritoryCrosswalkPoderJudicial", () => {
 
     const summary = await buildTerritoryCrosswalkPoderJudicial();
 
-    expect(summary).toEqual({ triples: 1, confirmadas: 1, candidatas: 0, sinMatch: 0 });
+    expect(summary).toEqual({ triples: 1, confirmadas: 1, candidatas: 0, sinMatch: 0, skipped: 0 });
     const insertCall = clientQueryMock.mock.calls.find(([sql]) => typeof sql === "string" && sql.includes("INSERT INTO territory_name_crosswalk"));
     expect(insertCall?.[1]).toEqual(["LA LIBERTAD", "TRUJILLO", "TRUJILLO", "130101", "confirmada"]);
   });
@@ -81,7 +81,7 @@ describe("buildTerritoryCrosswalkPoderJudicial", () => {
 
     const summary = await buildTerritoryCrosswalkPoderJudicial();
 
-    expect(summary).toEqual({ triples: 1, confirmadas: 0, candidatas: 0, sinMatch: 1 });
+    expect(summary).toEqual({ triples: 1, confirmadas: 0, candidatas: 0, sinMatch: 1, skipped: 0 });
     const insertCall = clientQueryMock.mock.calls.find(([sql]) => typeof sql === "string" && sql.includes("INSERT INTO territory_name_crosswalk"));
     expect(insertCall?.[1]).toEqual([SIN_MATCH_DEPARTAMENTO, "NO EXISTE", "NO EXISTE", null, "sin_match"]);
   });
@@ -99,7 +99,7 @@ describe("buildTerritoryCrosswalkPoderJudicial", () => {
 
     const summary = await buildTerritoryCrosswalkPoderJudicial();
 
-    expect(summary).toEqual({ triples: 1, confirmadas: 0, candidatas: 1, sinMatch: 0 });
+    expect(summary).toEqual({ triples: 1, confirmadas: 0, candidatas: 1, sinMatch: 0, skipped: 0 });
     const insertCall = clientQueryMock.mock.calls.find(([sql]) => typeof sql === "string" && sql.includes("INSERT INTO territory_name_crosswalk"));
     expect(insertCall?.[1]).toEqual(["ANCASH", "SANTA", "SANTA", "021801", "candidata"]);
   });
@@ -114,6 +114,23 @@ describe("buildTerritoryCrosswalkPoderJudicial", () => {
     expect(clientQueryMock).toHaveBeenCalledWith("ROLLBACK");
   });
 
+  it("toma un advisory lock transaccional antes de tocar la tabla (regresión de corridas concurrentes, hallazgo de Copilot en PR #172)", async () => {
+    fetchPoderJudicialTerritoriosMock.mockResolvedValue({
+      territorios: [{ provincia: "TRUJILLO", distrito: "TRUJILLO", filas: 1 }],
+    });
+    poolQueryMock.mockResolvedValueOnce({ rows: [] });
+
+    await buildTerritoryCrosswalkPoderJudicial();
+
+    const calls = clientQueryMock.mock.calls.map(([sql]) => sql);
+    const beginIndex = calls.indexOf("BEGIN");
+    const lockIndex = calls.findIndex((sql) => typeof sql === "string" && sql.includes("pg_advisory_xact_lock"));
+    const deleteIndex = calls.findIndex((sql) => typeof sql === "string" && sql.includes("DELETE FROM territory_name_crosswalk"));
+    expect(beginIndex).toBe(0);
+    expect(lockIndex).toBeGreaterThan(beginIndex);
+    expect(lockIndex).toBeLessThan(deleteIndex);
+  });
+
   it("no llama a la base para una triada sin provincia ni distrito", async () => {
     fetchPoderJudicialTerritoriosMock.mockResolvedValue({
       territorios: [{ provincia: null, distrito: null, filas: 3 }],
@@ -121,7 +138,7 @@ describe("buildTerritoryCrosswalkPoderJudicial", () => {
 
     const summary = await buildTerritoryCrosswalkPoderJudicial();
 
-    expect(summary).toEqual({ triples: 1, confirmadas: 0, candidatas: 0, sinMatch: 0 });
+    expect(summary).toEqual({ triples: 1, confirmadas: 0, candidatas: 0, sinMatch: 0, skipped: 1 });
     expect(poolQueryMock).not.toHaveBeenCalled();
     expect(clientQueryMock.mock.calls.some(([sql]) => typeof sql === "string" && sql.includes("INSERT"))).toBe(false);
   });
