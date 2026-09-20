@@ -85,6 +85,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
   mindef: ["mindef_offset_agreements", "mindef_peace_missions", "mindef_training_abroad"],
   mimp: ["mimp_cem_casos", "mimp_chat100_consultas"],
   renamu: ["renamu_municipalidades", "renamu_equipamiento"],
+  "candidatos-erm": ["candidatos_erm_candidatos"],
   "autoridades-electas": ["autoridades_electas_autoridades"],
   "instituciones-educativas": ["instituciones_educativas_instituciones", "instituciones_educativas_resumen"],
   "infracciones-ambientales": ["infracciones_ambientales_infracciones"],
