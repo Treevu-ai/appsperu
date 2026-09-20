@@ -354,6 +354,19 @@ Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distrito
 | **Anomalía conocida** | El endpoint `GetDatosProductor` (que prometía cultivo/hectáreas/ubicación) devuelve siempre `null`, incluso para RUC/DNI confirmados como registrados, y ningún componente de la UI del frontend lo invoca — no se pudo determinar la forma correcta de usarlo, si la tiene. |
 | **Detalle completo** | [`docs/data-contracts/midagri-padron-ppa.md`](data-contracts/midagri-padron-ppa.md) |
 
+### `oece-ficha-connector.ts` — Ficha Única del Proveedor (OECE, ex-OSCE)
+
+| | |
+|---|---|
+| **Descripción** | Conformación societaria/directiva completa (representantes legales y Consejo de Administración, con DNI y cargo de cada persona) más un snapshot fresco de datos SUNAT y contacto (teléfono/email) — para RUC inscritos en el Registro Nacional de Proveedores del Estado. |
+| **Qué hace** | Consulta `ficha-proveedor-cns/1.0/ficha/{ruc}/resumen` (ficha + conformación) y `perfilprov-bus/1.0/ficha/{ruc}` (contacto), hace upsert en `ruc_oece_ficha` y `ruc_oece_personas` (una fila por persona, `rol` distingue REPRESENTANTE/ORGANO_ADMINISTRACION/SOCIO). `npm run ingest:oece-ficha` recorre el seed de cooperativas. |
+| **Cómo lo hace** | GET directo a `eap.oece.gob.pe` — encontrado inspeccionando las llamadas de red del frontend público (`apps.oece.gob.pe/perfilprov-ui`). Sin captcha, sin sesión, dominio no bloqueado para este entorno. |
+| **Frecuencia** | Manual (`npm run ingest:oece-ficha`). ~300ms de espera entre requests (precaución propia). |
+| **Fuente de datos** | `eap.oece.gob.pe/ficha-proveedor-cns` y `eap.oece.gob.pe/perfilprov-bus` — Buscador de Proveedores del Estado, OECE. |
+| **Cobertura real ingerida** | 596/596 RUC del seed con ficha encontrada, 808 personas en total (representantes + Consejo de Administración), 0 errores. |
+| **Anomalía conocida** | Esta fuente solo cubre RUC inscritos en el RNP (no es un registro universal de personas jurídicas) — para este seed la cobertura fue 100%, pero no hay garantía para un RUC arbitrario. `socios` viene siempre vacío para cooperativas (modelo pensado para S.A.C./S.R.L.) — el parser lo soporta por simetría con `representantes`/`organosAdm`, pero ese shape nunca se confirmó en vivo con datos reales. `antecedentes` (sanciones/inhabilitaciones) no se ingiere a propósito — ya cubierto por [`proveedores-sancionados`](#proveedores-sancionados). |
+| **Detalle completo** | [`docs/data-contracts/oece-ficha-proveedor.md`](data-contracts/oece-ficha-proveedor.md) |
+
 ---
 
 <a id="proveedores-sancionados"></a>
