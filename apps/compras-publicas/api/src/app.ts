@@ -3,7 +3,7 @@ import { procurementRouter } from "./routes/procurement.js";
 import { unsuccessfulTendersRouter } from "./routes/unsuccessful-tenders.js";
 import { crossrefRouter } from "./routes/crossref.js";
 import { suppliersRouter } from "./routes/suppliers.js";
-import biddersRouter from "./routes/bidders.js";
+import { biddersRouter } from "./routes/bidders.js";
 import { observatoryRouter } from "./routes/observatory.js";
 import { entityProfilesRouter } from "./routes/entity-profiles.js";
 import { identitiesRouter } from "./routes/identities.js";

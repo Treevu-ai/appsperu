@@ -131,7 +131,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: {
       anio: z.string().regex(/^\d{4}$/).optional(),
       departamento: z.string().min(1).optional(),
-      limit: z.string().regex(/^\d+$/).optional(),
+      limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 100, máximo 500."),
     },
   },
   {
@@ -393,7 +393,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: [],
     querySchema: {
       estado: z.enum(["PENDING", "REVIEWED", "DISMISSED", "NEEDS_EVIDENCE"]).optional(),
-      limit: z.string().regex(/^\d+$/).optional(),
+      limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 100, máximo 500."),
     },
   },
   {
@@ -1078,7 +1078,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: ["id"],
     querySchema: {
       bbox: z.string().min(1).optional().describe("minx,miny,maxx,maxy en EPSG:4326."),
-      limit: z.string().regex(/^\d+$/).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 100, máximo 1000."),
     },
   },
   {
