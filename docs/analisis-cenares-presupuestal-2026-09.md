@@ -47,8 +47,8 @@ De las 54,443 filas con cantidad válida (535.4M unidades en total):
 | ELABORANDO CUADRO | 20 | 0.0% | 12,530 |
 
 **Solo 1.04% de las unidades (5.59M de 535.5M) llegó al estado "ENVIADO A ALMACEN"** — el único
-estado que certifica que el producto salió del almacén central hacia el destino. El 92.6%
-restante está en "ELABORANDO PECOSA", que es un estado de trámite (preparación del Pedido
+estado que certifica que el producto salió del almacén central hacia el destino. El 92.2% de las
+unidades está en "ELABORANDO PECOSA", que es un estado de trámite (preparación del Pedido
 Comprobante de Salida), no una entrega. **La estrategia de distribución de CENARES, medida por
 este dataset, opera mayormente en fase de preparación documentaria, no de despacho efectivo** —
 o el dataset público solo captura ese tramo del proceso y el despacho real se registra en otro
@@ -63,7 +63,7 @@ transporte, personal) o si es un artefacto de cómo CENARES reporta a datosabier
 
 | Estrategia | Filas | Unidades | % del total |
 |---|---|---|---|
-| SIS (Seguro Integral de Salud) | 43,525 | 424,196,018 | 79.3% |
+| SIS (Seguro Integral de Salud) | 43,525 | 424,196,018 | 79.2% |
 | Salud Sexual y Reproductiva | 1,673 | 25,659,394 | 4.8% |
 | Nutrición | 193 | 24,051,558 | 4.5% |
 | ITS - VIH/SIDA | 997 | 19,172,900 | 3.6% |
@@ -73,7 +73,7 @@ transporte, personal) o si es un artefacto de cómo CENARES reporta a datosabier
 | Prevención y Control del Cáncer | 2,309 | 2,182,069 | 0.4% |
 | Metaxénicas y OTV | 627 | 1,325,753 | 0.2% |
 | Zoonosis | 477 | 853,011 | 0.2% |
-| Otros (11 programas) | — | ~1,900,000 | 0.4% |
+| Otros (11 programas) | — | 1,744,922 | 0.3% |
 
 **El programa SIS por sí solo mueve casi 4 de cada 5 unidades distribuidas por CENARES** — es
 más una función de reabastecimiento del régimen de aseguramiento público que un reparto
@@ -82,8 +82,7 @@ juntas suman menos del 15%).
 
 ## 3. Qué medicamentos concentran el volumen
 
-Top 5 ítems por unidades (todos son insumos de alta rotación / bajo costo unitario esperado, no
-medicamentos de alto costo):
+Top 5 ítems por unidades:
 
 1. Paracetamol 500 mg tab — 35.97M unidades
 2. Ácido fólico + sulfato ferroso — 32.06M unidades
@@ -91,9 +90,9 @@ medicamentos de alto costo):
 4. Metformina clorhidrato 850 mg — 15.47M unidades
 5. Multivitamínicos (polvo) — 15.43M unidades
 
-Consistente con una estrategia de atención primaria de alto volumen (crónicos — diabetes,
-hipertensión —, suplementación prenatal, analgesia básica), no con medicamentos especializados
-de alto costo (esos, si existen, se mueven en volúmenes mucho menores y no aparecen en el top).
+El dataset no trae costo unitario, así que no se puede afirmar si estos son insumos de bajo o
+alto costo, ni caracterizar la estrategia de CENARES como "atención primaria" a partir de solo
+5 ítems — son una observación de qué productos concentran más unidades distribuidas, nada más.
 
 ## 4. Tendencia mensual — pico en marzo 2024, sin dato posterior a mayo 2024
 
@@ -124,11 +123,13 @@ señalado en la ficha técnica del conector).
 | Otuzco, Ascope, Gran Chimú, Virú, Chepén, Santiago de Chuco, Julcán, Pataz | 0.5-1.2M c/u | 0-3.1% |
 
 La Libertad en conjunto recibió **28.24M unidades (5.3% del total nacional)**, con una tasa de
-"enviado a almacén" de **0.93%** — prácticamente igual al promedio nacional (1.04%). **No hay
-evidencia en este dataset de que La Libertad esté peor o mejor servida que el resto del país**;
-comparte el mismo patrón estructural (mayoría en trámite, no en despacho confirmado). Pacasmayo
-destaca con 8.8% "enviado", muy por encima del resto de provincias de la región — sin dato
-adicional para explicar por qué, sería especulación atribuirlo a una causa específica.
+"enviado a almacén" de **0.93%** frente al 1.04% nacional — una diferencia de 0.11 puntos
+porcentuales, descriptiva, no una brecha significativa. El dataset no trae la composición de
+destinos ni un umbral de incertidumbre/comparación, así que **no permite determinar si La
+Libertad recibe un nivel de servicio relativo distinto al resto del país** — solo que comparte el
+mismo patrón estructural (mayoría en trámite, no en despacho confirmado). Pacasmayo destaca con
+8.8% "enviado", muy por encima del resto de provincias de la región — sin dato adicional para
+explicar por qué, sería especulación atribuirlo a una causa específica.
 
 ## Qué falta para que esto sea accionable
 
@@ -139,8 +140,13 @@ adicional para explicar por qué, sería especulación atribuirlo a una causa es
 3. **Sin definición de qué es "normal"** — no hay un benchmark público de cuánto tiempo debería
    tardar una PECOSA en resolverse; sin eso, "92.6% en trámite" es una señal de posible cuello de
    botella, no una prueba concluyente de mala gestión.
-4. **El 7.8% de filas corruptas (hallazgo 0)** reduce ligeramente la muestra pero no cambia las
-   proporciones relativas (situación, estrategia) porque el desalineamiento es aleatorio respecto
-   al contenido, no sesgado hacia un programa o destino en particular — no verificado
-   estadísticamente, es una inferencia razonable dado que el patrón de corrupción viene de texto
-   libre en `OBSERVACION`, no correlacionado con `ESTRATEGIA`/`DESTINO`.
+4. **El 7.8% de filas corruptas (hallazgo 0) no es una muestra aleatoria** — verificado en vivo:
+   el 100% de las 4,596 filas con `CANTIDAD` nulo tiene `SITUACION` vacío (vs. 0% de nulos en
+   cualquier `SITUACION` con valor real), y la mayoría también tiene `DESTINO` vacío o
+   contaminado con el propio valor de `SITUACION` desplazado por el corrimiento de columnas. Esto
+   significa que las filas excluidas ya eran inclasificables por `SITUACION` *antes* de excluirlas
+   — la Sección 1 (distribución por situación) no queda sesgada por la exclusión, porque esas
+   filas no aportaban una situación válida de todos modos. Pero como `ESTRATEGIA` y `DESTINO`
+   también están corrompidos en estas filas, **no se puede descartar sesgo por programa o destino
+   en las Secciones 2 y 5** — no hay forma de saber, con el campo corrupto, a qué estrategia o
+   destino real pertenecían esas 4,596 filas.
