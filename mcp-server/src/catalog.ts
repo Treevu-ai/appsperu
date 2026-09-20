@@ -1331,6 +1331,41 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: {},
   },
   {
+    name: "identidad_fiscal_ruc_consulta_masiva",
+    app: "identidad-fiscal",
+    description:
+      "Tercera fuente de SUNAT (`ruc_consulta_masiva`) — hasta 100 RUC por corrida vía el formulario de " +
+      "'Consulta Múltiple' (e-consultaruc.sunat.gob.pe), SIN reCAPTCHA a diferencia de la ficha individual. " +
+      "23 campos por RUC (CIIU principal/secundarios, actividad de comercio exterior, Buen Contribuyente, " +
+      "Agentes de Retención/Percepción IGV) que `identidad_fiscal_ficha_ruc` no tiene — tabla separada e " +
+      "independiente, no reemplaza esa ficha. Cobertura PARCIAL: solo los RUC ya consultados manualmente por " +
+      "lote, no el universo completo del padrón. Paginación real: usa `limit`/`offset`; la respuesta trae " +
+      "`total` y `hasMore`. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/ruc-consulta-masiva",
+    pathParams: [],
+    querySchema: {
+      razonSocial: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      estado: z.string().min(1).optional().describe("estado_contribuyente (ej. ACTIVO, BAJA)."),
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+      buenContribuyente: z.enum(["true", "false"]).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "identidad_fiscal_ruc_consulta_masiva_by_ruc",
+    app: "identidad-fiscal",
+    description:
+      "Detalle completo de un RUC en `ruc_consulta_masiva` (ver `identidad_fiscal_ruc_consulta_masiva`). 404 si " +
+      "ese RUC no fue consultado todavía por esta vía.",
+    pathTemplate: "/api/ruc-consulta-masiva/{ruc}",
+    pathParams: ["ruc"],
+    querySchema: {},
+  },
+  {
     name: "ceplan_geo_patrimonio_predios",
     app: "ceplan-geo",
     description:

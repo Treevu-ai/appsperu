@@ -326,6 +326,7 @@ Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distrito
 | **Fuente de datos** | `e-consultaruc.sunat.gob.pe/cl-ti-itmrconsmulruc/jrmS00Alias` — Consulta Múltiple de RUC, SUNAT (enlazada desde `gob.pe/13397`). |
 | **Cobertura real ingerida** | 2 RUC importados en la corrida verificada (ACOPAGRO, Chancamayo), 0 rechazados. |
 | **Anomalía conocida** | CIIU viene como descripción en texto, no como código — no cruza por código exacto contra `ficha_ruc_actividades`. No se determinó si tiene límite de consultas por sesión (solo se probó con 2 RUC). |
+| **API expuesta (2026-09-20)** | `GET /api/ruc-consulta-masiva` (filtros: `razonSocial`, `estado`, `departamento`, `provincia`, `distrito`, `buenContribuyente`, paginado) y `GET /api/ruc-consulta-masiva/{ruc}` (detalle, 404 si no fue consultado). Registrada como tools MCP `identidad_fiscal_ruc_consulta_masiva`/`_by_ruc`. |
 | **Detalle completo** | [`docs/data-contracts/sunat-consulta-multiple-ruc.md`](data-contracts/sunat-consulta-multiple-ruc.md) |
 
 ### `exportaciones-fob-connector.ts` — Exportaciones FOB por RUC (Aduanas-SUNAT)
