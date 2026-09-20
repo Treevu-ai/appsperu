@@ -2,15 +2,26 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import request from "supertest";
 
 const queryMock = vi.fn();
+const ceplanGeoQueryMock = vi.fn();
 
 vi.mock("../db/pool.js", () => ({
   pool: { query: queryMock },
+}));
+
+// `ceplanGeoPool` es `null` por default en este mock (mismo comportamiento
+// que sin `CEPLAN_GEO_DATABASE_URL` configurada) -- los tests que sí quieren
+// probar el enriquecimiento con ubigeo reasignan `ceplanGeoPool.query` en el
+// propio test (ver describe "enriquecimiento con ubigeo").
+vi.mock("../db/external-pools.js", () => ({
+  ceplanGeoPool: { query: ceplanGeoQueryMock },
 }));
 
 const { createApp } = await import("../app.js");
 
 beforeEach(() => {
   queryMock.mockReset();
+  ceplanGeoQueryMock.mockReset();
+  ceplanGeoQueryMock.mockResolvedValue({ rows: [] });
 });
 
 describe("GET /health", () => {
@@ -159,5 +170,67 @@ describe("GET /api/procesos-judiciales/resumen", () => {
     const res = await request(createApp()).get("/api/procesos-judiciales/resumen").query({ groupBy: "razon_social" });
     expect(res.status).toBe(400);
     expect(queryMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/procesos-judiciales — enriquecimiento con ubigeo (territory_name_crosswalk de ceplan-geo)", () => {
+  it("agrega ubigeo cuando hay un match confirmada, normalizando tildes/Ñ antes de buscar", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "1" }] })
+      .mockResolvedValueOnce({ rows: [{ ...FILA_DB, provincia: "FERREÑAFE", distrito: "FERREÑAFE" }] });
+    ceplanGeoQueryMock.mockResolvedValueOnce({
+      rows: [{ provincia: "FERRENAFE", distrito: "FERRENAFE", ubigeo: "140401" }],
+    });
+
+    const res = await request(createApp()).get("/api/procesos-judiciales");
+
+    expect(res.status).toBe(200);
+    expect(res.body.resultados[0].ubigeo).toBe("140401");
+  });
+
+  it("deja ubigeo en null cuando no hay match en el crosswalk, sin romper la respuesta", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "1" }] }).mockResolvedValueOnce({ rows: [FILA_DB] });
+    ceplanGeoQueryMock.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(createApp()).get("/api/procesos-judiciales");
+
+    expect(res.status).toBe(200);
+    expect(res.body.resultados[0].ubigeo).toBeNull();
+  });
+
+  it("degrada a ubigeo:null (no 500) cuando ceplan-geo falla al responder", async () => {
+    // Hallazgo real de CodeRabbit/Copilot en PR #172: el enriquecimiento es
+    // opcional -- si la dependencia externa falla, no debe tumbar el
+    // endpoint principal (que ya tiene el dato real de procesos judiciales).
+    queryMock.mockResolvedValueOnce({ rows: [{ total: "1" }] }).mockResolvedValueOnce({ rows: [FILA_DB] });
+    ceplanGeoQueryMock.mockRejectedValueOnce(new Error("connection refused"));
+
+    const res = await request(createApp()).get("/api/procesos-judiciales");
+
+    expect(res.status).toBe(200);
+    expect(res.body.resultados[0].ubigeo).toBeNull();
+  });
+
+});
+
+describe("GET /api/procesos-judiciales/territorios", () => {
+  it("devuelve triadas provincia/distrito distintas, sin distrito_judicial", async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        { provincia: "CHACHAPOYAS", distrito: "CHACHAPOYAS", filas: "12" },
+        { provincia: "TRUJILLO", distrito: "TRUJILLO", filas: "340" },
+      ],
+    });
+
+    const res = await request(createApp()).get("/api/procesos-judiciales/territorios");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      total: 2,
+      territorios: [
+        { provincia: "CHACHAPOYAS", distrito: "CHACHAPOYAS", filas: 12 },
+        { provincia: "TRUJILLO", distrito: "TRUJILLO", filas: 340 },
+      ],
+    });
   });
 });

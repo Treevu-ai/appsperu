@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db/pool.js";
+import { ceplanGeoPool } from "../db/external-pools.js";
 import { asyncHandler } from "../lib/async-handler.js";
 import { parseQuery } from "../lib/validate-query.js";
 import { NUMERIC_COLUMNS } from "../ingest/procesos-judiciales-normalize.js";
@@ -14,7 +15,7 @@ const NUMERIC_COLS_LOWER = NUMERIC_COLUMNS.map((c) => c.toLowerCase());
 const COLUMNS = `anio, mes, distrito_judicial, provincia, distrito, codigo_dependencia, dependencia,
        estado, tipo_organo, espec_exp, espec_dep, condicion, ${NUMERIC_COLS_LOWER.join(", ")}`;
 
-function toResultado(r: Record<string, unknown>) {
+function toResultado(r: Record<string, unknown>, ubigeo: string | null) {
   const conteos: Record<string, number> = {};
   for (const col of NUMERIC_COLS_LOWER) conteos[col] = Number(r[col]);
   return {
@@ -23,6 +24,7 @@ function toResultado(r: Record<string, unknown>) {
     distritoJudicial: r.distrito_judicial,
     provincia: r.provincia,
     distrito: r.distrito,
+    ubigeo,
     codigoDependencia: r.codigo_dependencia,
     dependencia: r.dependencia,
     estado: r.estado,
@@ -32,6 +34,51 @@ function toResultado(r: Record<string, unknown>) {
     condicion: r.condicion,
     conteos,
   };
+}
+
+// Mismo mapeo que `normalizeTerritoryToken` de ceplan-geo (duplicado a
+// propósito: apps independientes, sin import cruzado de src/). `territory_name_crosswalk`
+// guarda provincia/distrito ya normalizados así -- acá hace falta igualar la
+// convención para que el lookup por texto calce (esta base sí tiene "CAÑETE"/
+// "MARAÑON" con tilde/Ñ tal cual el CSV fuente, sin normalizar en la ingesta).
+const ACCENT_MAP: Record<string, string> = { Á: "A", É: "E", Í: "I", Ó: "O", Ú: "U", Ñ: "N", Ü: "U" };
+function normalizeToken(value: string | null | undefined): string {
+  if (!value) return "";
+  return value
+    .trim()
+    .toUpperCase()
+    .replace(/[ÁÉÍÓÚÑÜ]/g, (ch) => ACCENT_MAP[ch] ?? ch)
+    .replace(/\s+/g, " ");
+}
+
+/**
+ * `ubigeo` no vive en esta base -- se resuelve vía `territory_name_crosswalk`
+ * de ceplan-geo (fuente `poder-judicial`, ver
+ * `ceplan-geo/api/src/crossref/build-crosswalk.ts`), cruzando por
+ * provincia+distrito (esta app no tiene columna `departamento`, ver el
+ * comentario de `GET /territorios` sobre por qué `distrito_judicial` no
+ * sirve como proxy). Solo se usan matches `confirmada` -- un `candidata`
+ * (nombre ambiguo a nivel nacional) o `sin_match` se exponen como
+ * `ubigeo: null`, nunca se adivina cuál territorio es. Sin
+ * `CEPLAN_GEO_DATABASE_URL` configurada, todas las filas quedan con
+ * `ubigeo: null` sin romper el endpoint. Mismo criterio si la query a
+ * ceplan-geo falla (DB caída, timeout, etc.): es un enriquecimiento
+ * opcional, no debe tumbar con 500 el endpoint principal solo porque una
+ * dependencia externa no respondió -- se loguea y se degrada a sin ubigeo,
+ * igual que el caso "no configurado".
+ */
+async function fetchUbigeoByProvinciaDistrito(): Promise<Map<string, string>> {
+  if (!ceplanGeoPool) return new Map();
+  try {
+    const { rows } = await ceplanGeoPool.query<{ provincia: string | null; distrito: string | null; ubigeo: string }>(
+      `SELECT provincia, distrito, ubigeo FROM territory_name_crosswalk
+       WHERE source = 'poder-judicial' AND match_status = 'confirmada' AND ubigeo IS NOT NULL`
+    );
+    return new Map(rows.map((r) => [`${r.provincia ?? ""}|${r.distrito ?? ""}`, r.ubigeo]));
+  } catch (err) {
+    console.error("No se pudo enriquecer con ubigeo (ceplan-geo no disponible):", err instanceof Error ? err.message : err);
+    return new Map();
+  }
 }
 
 const SearchQuerySchema = z.object({
@@ -111,12 +158,16 @@ procesosJudicialesRouter.get(
       [...params, limit, offset]
     );
 
+    const ubigeoByProvinciaDistrito = await fetchUbigeoByProvinciaDistrito();
+
     res.json({
       total,
       limit,
       offset,
       hasMore: offset + rows.length < total,
-      resultados: rows.map(toResultado),
+      resultados: rows.map((r) =>
+        toResultado(r, ubigeoByProvinciaDistrito.get(`${normalizeToken(r.provincia as string | null)}|${normalizeToken(r.distrito as string | null)}`) ?? null)
+      ),
     });
   })
 );
@@ -183,6 +234,35 @@ procesosJudicialesRouter.get(
         filas: Number(r.filas),
         ...Object.fromEntries(RESUMEN_COLUMNS.map((c) => [c, Number(r[c])])),
       })),
+    });
+  })
+);
+
+/**
+ * GET /api/procesos-judiciales/territorios
+ *
+ * Triadas (provincia, distrito) distintas presentes en el dataset, con el
+ * conteo de filas de cada una — pensado para que otro sistema (ej.
+ * ceplan-geo, catálogo territorial UBIGEO) construya un cruce de nombres,
+ * no para consumo analítico directo. NO trae `distrito_judicial`: esa
+ * columna es una circunscripción judicial, no un territorio administrativo
+ * (ej. "Lima Norte"/"Lima Este"/"Lima Sur" son 3 distritos judiciales
+ * distintos dentro del mismo departamento Lima; "Puente Piedra-Ventanilla"
+ * cruza Lima y Callao) — no sirve como proxy de departamento.
+ */
+procesosJudicialesRouter.get(
+  "/territorios",
+  asyncHandler(async (_req, res) => {
+    const { rows } = await pool.query(
+      `SELECT provincia, distrito, COUNT(*)::bigint AS filas
+       FROM procesos_judiciales_jurisdiccional
+       GROUP BY provincia, distrito
+       ORDER BY provincia, distrito`
+    );
+
+    res.json({
+      total: rows.length,
+      territorios: rows.map((r) => ({ provincia: r.provincia, distrito: r.distrito, filas: Number(r.filas) })),
     });
   })
 );

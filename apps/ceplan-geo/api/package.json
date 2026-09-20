@@ -15,6 +15,7 @@
     "ingest:projects-sectorial": "tsx src/ingest/run-projects-sectorial.ts",
     "ingest:extended-infrastructure": "npm run ingest:hydro-principal && npm run ingest:projects-sectorial",
     "crossref:build": "tsx src/crossref/build-crosswalk.ts",
+    "crossref:build:poder-judicial": "CROSSWALK_SOURCE=poder-judicial tsx src/crossref/build-crosswalk.ts",
     "cobertura:geoserver": "tsx src/cli/cobertura-geoserver.ts",
     "spike:layers": "tsx src/cli/spike-layers.ts",
     "test": "vitest run",
