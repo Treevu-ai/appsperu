@@ -108,6 +108,8 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "identidad_fiscal_crossref_proveedores",
     "identidad_fiscal_ficha_ruc",
     "identidad_fiscal_ficha_ruc_by_ruc",
+    "identidad_fiscal_exportaciones_fob",
+    "identidad_fiscal_exportaciones_fob_resumen",
   ],
   infobras: [
     "infobras_crossref",

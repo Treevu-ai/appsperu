@@ -1331,6 +1331,41 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: {},
   },
   {
+    name: "identidad_fiscal_exportaciones_fob",
+    app: "identidad-fiscal",
+    description:
+      "Valor FOB USD exportado por RUC, agregado por mes/aduana/agente de aduana/país de destino — fuente " +
+      "Aduanas-SUNAT (`aduanet.gob.pe`), sin captcha, ingesta automatizada. NO trae kilos ni peso, solo FOB " +
+      "USD; esa granularidad exige el detalle de cada DUA, no público. Filas a nivel de embarque individual " +
+      "(un RUC puede tener muchas filas por año) — para un total por año usa " +
+      "`identidad_fiscal_exportaciones_fob_resumen`. Paginación real: usa `limit`/`offset`; la respuesta trae " +
+      "`total` y `hasMore`. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/exportaciones-fob",
+    pathParams: [],
+    querySchema: {
+      ruc: z.string().regex(/^\d{11}$/).optional(),
+      anio: z.coerce.number().int().min(2000).max(2100).optional(),
+      mes: z.coerce.number().int().min(1).max(12).optional(),
+      paisCodigo: z.string().min(1).optional().describe("Código de país de destino (ej. US, CN)."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "identidad_fiscal_exportaciones_fob_resumen",
+    app: "identidad-fiscal",
+    description:
+      "FOB total y número de embarques por año para un RUC específico (agregado sobre " +
+      "`identidad_fiscal_exportaciones_fob`) — la forma correcta de responder '¿cuánto exportó este RUC en " +
+      "20XX?' sin sumar filas a mano. 404 si el RUC no tiene exportaciones registradas en el periodo pedido.",
+    pathTemplate: "/api/exportaciones-fob/resumen/{ruc}",
+    pathParams: ["ruc"],
+    querySchema: {
+      anio: z.coerce.number().int().min(2000).max(2100).optional().describe("Si se omite, devuelve todos los años disponibles."),
+    },
+  },
+  {
     name: "ceplan_geo_patrimonio_predios",
     app: "ceplan-geo",
     description:
