@@ -148,6 +148,22 @@ export async function fetchEjecucionByUbigeo(
   return { filasSede, filasNacionalDirigido, dependency };
 }
 
+export type PoderJudicialTerritorio = {
+  provincia: string | null;
+  distrito: string | null;
+  filas: number;
+};
+
+export async function fetchPoderJudicialTerritorios(): Promise<{
+  territorios: PoderJudicialTerritorio[];
+  dependency: DependencyStatus;
+}> {
+  const url = `${baseUrl("PODER_JUDICIAL_API_URL", "http://localhost:4028")}/api/procesos-judiciales/territorios`;
+  const { data, dependency } = await fetchJson<{ territorios: PoderJudicialTerritorio[] }>(url);
+  dependency.app = "poder-judicial";
+  return { territorios: data.territorios ?? [], dependency };
+}
+
 export async function fetchDenunciasByProvincia(
   departamento: string,
   provincia: string,

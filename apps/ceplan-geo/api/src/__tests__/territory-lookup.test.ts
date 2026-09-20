@@ -6,7 +6,7 @@ vi.mock("../db/pool.js", () => ({
   pool: { query: queryMock },
 }));
 
-const { lookupTerritoryByNames, canonicalizarProvinciaFuente, candidatosConNRestaurada } = await import("../crossref/territory-lookup.js");
+const { lookupTerritoryByNames, lookupTerritoryByProvinciaDistrito, canonicalizarProvinciaFuente, candidatosConNRestaurada } = await import("../crossref/territory-lookup.js");
 
 function territoryRow(overrides: Record<string, unknown> = {}) {
   return {
@@ -34,6 +34,12 @@ describe("canonicalizarProvinciaFuente (hallazgo 2026-09-13, 7/7 obras de Callao
   it("deja cualquier otra provincia sin cambios, incluyendo null", () => {
     expect(canonicalizarProvinciaFuente("TRUJILLO")).toBe("TRUJILLO");
     expect(canonicalizarProvinciaFuente(null)).toBeNull();
+  });
+});
+
+describe("canonicalizarProvinciaFuente (hallazgo 2026-09-20, crosswalk poder-judicial)", () => {
+  it("canonicaliza NAZCA (grafía del Poder Judicial) a NASCA (grafía oficial en territories)", () => {
+    expect(canonicalizarProvinciaFuente("NAZCA")).toBe("NASCA");
   });
 });
 
@@ -154,5 +160,35 @@ describe("lookupTerritoryByNames — recuperación de Ñ cuando el match exacto 
 
     // Solo la consulta exacta original — ninguna consulta adicional de recuperación.
     expect(queryMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("lookupTerritoryByProvinciaDistrito (fuentes sin departamento, ej. poder-judicial)", () => {
+  it("confirma un match único sin filtrar por departamento", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [territoryRow({ departamento: "LA LIBERTAD", provincia: "TRUJILLO", distrito: "TRUJILLO" })] });
+
+    const { territory, matchStatus } = await lookupTerritoryByProvinciaDistrito("TRUJILLO", "TRUJILLO");
+
+    expect(matchStatus).toBe("confirmada");
+    expect(territory?.departamento).toBe("LA LIBERTAD");
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).not.toMatch(/WHERE.*departamento/is);
+    expect(params).toEqual(["TRUJILLO", "TRUJILLO"]);
+  });
+
+  it("marca candidata cuando el nombre de distrito no es único a nivel nacional", async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [territoryRow({ departamento: "LA LIBERTAD" }), territoryRow({ departamento: "OTRO_DEPTO" })],
+    });
+
+    const { matchStatus } = await lookupTerritoryByProvinciaDistrito("SANTA", "SANTA");
+
+    expect(matchStatus).toBe("candidata");
+  });
+
+  it("sin_match cuando no hay provincia o distrito", async () => {
+    const result = await lookupTerritoryByProvinciaDistrito(null, "TRUJILLO");
+    expect(result).toEqual({ territory: null, matchStatus: "sin_match" });
+    expect(queryMock).not.toHaveBeenCalled();
   });
 });

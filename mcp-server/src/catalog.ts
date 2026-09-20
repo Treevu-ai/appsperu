@@ -2449,7 +2449,9 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "`rdev_anulada`, etc., dentro de `conteos`) se preservan tal cual el CSV fuente, no se " +
       "reinterpretan (ver docs/data-contracts/poder-judicial-procesos-jurisdiccionales.md). Cobertura " +
       "nacional completa desde 2024 (58,568 filas verificadas en vivo). Paginación real: usa " +
-      "`limit`/`offset`; la respuesta trae `total` y `hasMore`. " +
+      "`limit`/`offset`; la respuesta trae `total` y `hasMore`. Cada fila trae `ubigeo` (2026-09-20, " +
+      "cruce con el catálogo territorial de ceplan-geo vía provincia+distrito) — `null` cuando el nombre " +
+      "no matcheó (no se adivina; ver `poder_judicial_territorios` para auditar cobertura del cruce). " +
       SIN_SCHEDULER,
     pathTemplate: "/api/procesos-judiciales",
     pathParams: [],
@@ -2484,5 +2486,19 @@ export const TOOL_CATALOG: ToolSpec[] = [
       mes: z.string().min(1).optional(),
       distritoJudicial: z.string().min(1).optional(),
     },
+  },
+  {
+    name: "poder_judicial_territorios",
+    app: "poder-judicial",
+    description:
+      "Triadas (provincia, distrito) distintas presentes en `poder_judicial_procesos`, con conteo de " +
+      "filas — pensado para auditar la cobertura del cruce territorial (390 triadas, 388 confirmadas " +
+      "contra el catálogo UBIGEO de ceplan-geo al 2026-09-20), no para análisis directo de carga " +
+      "procesal. NO trae `distritoJudicial`: esa columna es una circunscripción judicial, no un " +
+      "territorio administrativo (ej. 'Lima Norte'/'Lima Este'/'Lima Sur' son 3 distritos judiciales " +
+      "dentro del mismo departamento Lima; 'Puente Piedra-Ventanilla' cruza Lima y Callao).",
+    pathTemplate: "/api/procesos-judiciales/territorios",
+    pathParams: [],
+    querySchema: {},
   },
 ];

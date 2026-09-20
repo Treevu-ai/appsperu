@@ -21,6 +21,10 @@ export type TerritoryMatchStatus = "confirmada" | "candidata" | "sin_match";
  */
 const PROVINCIA_ALIASES: Record<string, string> = {
   "PROV CONST DEL CALLAO": "CALLAO",
+  // "NAZCA" (grafia del Poder Judicial) -> "NASCA" (grafia oficial CEPLAN/INEI
+  // en `territories`), agregado 2026-09-20 al construir el crosswalk de
+  // poder-judicial. Confirmado en vivo: territories solo tiene "NASCA".
+  NAZCA: "NASCA",
 };
 
 export function canonicalizarProvinciaFuente(provincia: string | null): string | null {
@@ -187,6 +191,41 @@ export async function getTerritoryByUbigeo(ubigeo: string): Promise<TerritoryRec
     distrito: row.distrito,
     geometryGeojson: row.geometry_geojson,
   };
+}
+
+async function queryTerritoriesByProvinciaDistritoExact(prov: string, dist: string): Promise<TerritoryQueryRow[]> {
+  const { rows } = await pool.query<TerritoryQueryRow>(
+    `SELECT ubigeo, departamento, provincia, distrito, ST_AsGeoJSON(geometry) AS geometry_geojson
+     FROM territories
+     WHERE UPPER(COALESCE(provincia, '')) = $1 AND UPPER(COALESCE(distrito, '')) = $2`,
+    [prov, dist]
+  );
+  return rows;
+}
+
+/**
+ * Variante de `lookupTerritoryByNames` para fuentes que NO traen departamento
+ * (ej. `poder-judicial`: su `distrito_judicial` es una circunscripción
+ * judicial, no un territorio administrativo — "Lima Norte"/"Lima Este"/"Lima
+ * Sur" son 3 distritos judiciales dentro del mismo departamento Lima, y
+ * "Puente Piedra-Ventanilla" cruza Lima y Callao, así que no sirve como
+ * proxy). Busca por provincia+distrito a nivel NACIONAL — si el nombre de
+ * distrito no es único en el país (mismo caso que `lookupTerritoryByNames`
+ * con departamento), se marca `candidata`, nunca se adivina cuál es el
+ * departamento real.
+ */
+export async function lookupTerritoryByProvinciaDistrito(
+  provincia: string | null | undefined,
+  distrito: string | null | undefined
+): Promise<{ territory: TerritoryRecord | null; matchStatus: TerritoryMatchStatus }> {
+  const prov = canonicalizarProvinciaFuente(normalizeTerritoryToken(provincia));
+  const dist = normalizeTerritoryToken(distrito);
+  if (!prov || !dist) return { territory: null, matchStatus: "sin_match" };
+
+  const rows = await queryTerritoriesByProvinciaDistritoExact(prov, dist);
+  if (rows.length === 0) return { territory: null, matchStatus: "sin_match" };
+  if (rows.length > 1) return { territory: mapTerritoryRow(rows[0]), matchStatus: "candidata" };
+  return { territory: mapTerritoryRow(rows[0]), matchStatus: "confirmada" };
 }
 
 export async function lookupTerritoryByNames(
