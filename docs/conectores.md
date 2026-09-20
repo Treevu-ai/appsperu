@@ -341,6 +341,19 @@ Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distrito
 | **Anomalía conocida** | El parámetro `CG_Ano` del formulario no es el año calendario — hay que restarle 1992 (`CG_Ano = añoReal - 1992`, confirmado probando contra resultados conocidos). No trae kilos/peso, solo FOB USD. No se investigó paginación para exportadores de mucho mayor volumen que los de este seed. |
 | **Detalle completo** | [`docs/data-contracts/aduanet-exportaciones-fob.md`](data-contracts/aduanet-exportaciones-fob.md) |
 
+### `padron-ppa-connector.ts` — Padrón de Productores Agrarios (MIDAGRI)
+
+| | |
+|---|---|
+| **Descripción** | Confirma si un RUC (o DNI) está registrado formalmente en el Padrón de Productores Agrarios de MIDAGRI — dato de formalidad agraria, no tributario ni comercial. |
+| **Qué hace** | Consulta `Consulta/GetNombreConsulta` y hace upsert en `ruc_padron_ppa` (`ruc`, `registrado`, `nombre_ppa`). `npm run ingest:padron-ppa` recorre el seed de cooperativas. |
+| **Cómo lo hace** | GET directo a `gateway.midagri.gob.pe/sisppa` (API ABP Framework) — encontrado por ingeniería inversa del bundle Angular del frontend público (`consultapadron.midagri.gob.pe`). Sin captcha, sin sesión, sin bloqueo de dominio para este entorno. No hay campo booleano explícito: se infiere `registrado` comparando el nombre devuelto contra el sentinel `"-"` (mismo patrón que SUNAT). |
+| **Frecuencia** | Manual (`npm run ingest:padron-ppa`). ~300ms de espera entre requests (precaución propia). |
+| **Fuente de datos** | `gateway.midagri.gob.pe/sisppa/api/services/app/Consulta/GetNombreConsulta` — Padrón de Productores Agrarios, MIDAGRI. |
+| **Cobertura real ingerida** | 596/596 RUC del seed consultados y registrados, 0 errores. |
+| **Anomalía conocida** | El endpoint `GetDatosProductor` (que prometía cultivo/hectáreas/ubicación) devuelve siempre `null`, incluso para RUC/DNI confirmados como registrados, y ningún componente de la UI del frontend lo invoca — no se pudo determinar la forma correcta de usarlo, si la tiene. |
+| **Detalle completo** | [`docs/data-contracts/midagri-padron-ppa.md`](data-contracts/midagri-padron-ppa.md) |
+
 ---
 
 <a id="proveedores-sancionados"></a>

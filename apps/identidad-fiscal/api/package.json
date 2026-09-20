@@ -12,6 +12,7 @@
     "export:ficha-ruc-xlsx": "tsx src/ingest/ficha-ruc-export-xlsx.ts",
     "export:ruc-masivo-xlsx": "tsx src/ingest/ruc-consulta-masiva-export-xlsx.ts",
     "ingest:exportaciones": "tsx src/ingest/exportaciones-fob-connector.ts",
+    "ingest:padron-ppa": "tsx src/ingest/padron-ppa-connector.ts",
     "coverage:identidad-fiscal": "tsx src/ingest/materialize-coverage.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
