@@ -1997,6 +1997,41 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
 
+  // ---- candidatos-erm (Elecciones Regionales y Municipales 2026, vía Datapol) ----
+  {
+    name: "candidatos_erm_candidatos",
+    app: "candidatos-erm",
+    description:
+      "Candidatos inscritos a Gobernador/Vicegobernador Regional, Consejero Regional, Alcalde y Regidor " +
+      "Provincial/Distrital — Elecciones Regionales y Municipales de octubre 2026. Fuente NO oficial: JNE no " +
+      "publica un dataset abierto de candidatos (sus dos plataformas interactivas están protegidas contra " +
+      "automatización); se usa una republicación de terceros (Datapol) derivada de las mismas hojas de vida que " +
+      "el JNE hace públicas. `sentenciasDeclaradas` es la autodeclaración del candidato ante el JNE (sentencias " +
+      "judiciales) — NO equivale a una sanción del Tribunal de Contrataciones (OSCE); son fuentes y regímenes " +
+      "distintos (ver `proveedores_sancionados_candidatos_sancionados` para ese cruce). El DNI se enmascara " +
+      "siempre en la respuesta (`dniEnmascarado`, últimos 3 dígitos visibles) — el almacenamiento interno lo " +
+      "conserva completo porque el propio JNE lo publica sin enmascarar en la ficha pública de cada candidato, " +
+      "pero esta API nunca lo expone completo. Cobertura nacional completa (101,948 candidatos, snapshot único, " +
+      "sin histórico de altas/bajas). Paginación real: usa `limit`/`offset`; la respuesta trae `total` y " +
+      "`hasMore`. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/candidatos",
+    pathParams: [],
+    querySchema: {
+      dni: z.string().regex(/^\d{8}$/).optional().describe("DNI exacto (8 dígitos), sin enmascarar en el filtro aunque la respuesta lo enmascare."),
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+      ubigeo: z.string().regex(/^\d{6}$/).optional(),
+      cargo: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE), ej. ALCALDE, REGIDOR, GOBERNADOR REGIONAL."),
+      organizacionPolitica: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      tipoEleccion: z.enum(["REGIONAL", "MUNICIPAL PROVINCIAL", "MUNICIPAL DISTRITAL"]).optional(),
+      estado: z.string().min(1).optional().describe("Ej. INSCRITO, RENUNCIA, EXCLUSION, IMPROCEDENTE, RETIRO."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+
   // ---- autoridades-electas (JNE, datos abiertos) ----
   {
     name: "autoridades_electas_autoridades",
