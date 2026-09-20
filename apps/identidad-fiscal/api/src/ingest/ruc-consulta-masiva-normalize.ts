@@ -81,6 +81,16 @@ function parseFechaDDMMYYYY(value: string | undefined): string | null {
   const match = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (!match) return null;
   const [, dd, mm, yyyy] = match;
+  const day = Number(dd);
+  const month = Number(mm);
+  const year = Number(yyyy);
+  // Valida que sea una fecha calendario real (ej. rechaza 31/02/2024) — Date
+  // normaliza silenciosamente días fuera de rango en vez de lanzar, así que
+  // se verifica con un round-trip contra los componentes originales.
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    return null;
+  }
   return `${yyyy}-${mm}-${dd}`;
 }
 

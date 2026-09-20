@@ -27,6 +27,15 @@ cruce a nivel nacional (`GET /api/crossref?departamento=TODOS&soloInhabilitados=
 494 pares RUC+contrato con inhabilitación vigente en todo el país), **son los
 únicos 2 casos en los 494** donde `inhabilitadoEnFechaAdjudicacion === true`.
 
+> **Verificación de la cifra "494" (2026-09-20, en respuesta a revisión de código):**
+> `GET /api/crossref` no aplica `DISTINCT` a nivel de API sobre `(ruc, contrato)` —
+> `resultados` es un `.map()` directo sobre `contractRows`, así que si esa lista trajera
+> más de una fila para el mismo contrato, la cifra se inflaría. Se reprodujo la llamada
+> real en vivo contra las 3 bases (`compras-publicas`, `proveedores-sancionados`,
+> `identidad-fiscal`) y se comparó el total de filas contra las claves únicas
+> `(origen, ocid, awardId, supplierId)`: **494 filas, 494 claves únicas, 0 duplicados**
+> (184 empresas distintas entre esas 494 adjudicaciones). La cifra no está inflada.
+
 ## 2. Caso 1 — Estación de Servicios San José S.A.C. (RUC 20175642341)
 
 **Doble inhabilitación vigente simultánea**, ambas por presentar

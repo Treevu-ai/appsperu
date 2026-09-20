@@ -49,6 +49,24 @@ describe("normalizeRucMasivoRow", () => {
     if (!isRejected(result)) throw new Error("debería rechazarse");
     expect(result.reason).toMatch(/RUC inválido/);
   });
+
+  it("trata una fecha calendario imposible como nula en vez de aceptarla tal cual", () => {
+    const fields = REAL_FILE.split("\n")[1].split("|");
+    fields[7] = "31/02/2024"; // febrero nunca tiene 31 días
+    const result = normalizeRucMasivoRow(fields);
+    expect(isRejected(result)).toBe(false);
+    if (isRejected(result)) throw new Error("no debería rechazarse por la fecha, solo esa columna queda null");
+    expect(result.fechaInscripcion).toBeNull();
+  });
+
+  it("acepta fechas límite reales (29/02 en año bisiesto)", () => {
+    const fields = REAL_FILE.split("\n")[1].split("|");
+    fields[7] = "29/02/2024"; // 2024 sí es bisiesto
+    const result = normalizeRucMasivoRow(fields);
+    expect(isRejected(result)).toBe(false);
+    if (isRejected(result)) throw new Error("no debería rechazarse");
+    expect(result.fechaInscripcion).toBe("2024-02-29");
+  });
 });
 
 describe("parseRucMasivoFile", () => {

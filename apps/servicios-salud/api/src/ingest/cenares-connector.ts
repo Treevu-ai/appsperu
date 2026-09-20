@@ -60,6 +60,7 @@ export interface CenaresIngestSummary {
   yaIngerido: boolean;
   filasOrigen: number;
   filasInsertadas: number;
+  filasRechazadas: number;
 }
 
 export async function ingestCenares(): Promise<CenaresIngestSummary> {
@@ -81,10 +82,20 @@ export async function ingestCenares(): Promise<CenaresIngestSummary> {
       [checksum]
     );
     if (existing.rows.length > 0) {
-      return { resourceUrl: resource.url, batchId: existing.rows[0].id, yaIngerido: true, filasOrigen: 0, filasInsertadas: 0 };
+      return {
+        resourceUrl: resource.url,
+        batchId: existing.rows[0].id,
+        yaIngerido: true,
+        filasOrigen: 0,
+        filasInsertadas: 0,
+        filasRechazadas: 0,
+      };
     }
 
-    const rows = parseCenaresCsv(csvText);
+    const { rows, rejected } = parseCenaresCsv(csvText);
+    if (rejected.length > 0) {
+      console.warn(`CENARES: ${rejected.length} fila(s) desalineada(s) descartada(s) (ver reason por fila).`);
+    }
 
     await client.query("BEGIN");
 
@@ -141,7 +152,14 @@ export async function ingestCenares(): Promise<CenaresIngestSummary> {
     await flush();
 
     await client.query("COMMIT");
-    return { resourceUrl: resource.url, batchId, yaIngerido: false, filasOrigen: rows.length, filasInsertadas: inserted };
+    return {
+      resourceUrl: resource.url,
+      batchId,
+      yaIngerido: false,
+      filasOrigen: rows.length,
+      filasInsertadas: inserted,
+      filasRechazadas: rejected.length,
+    };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

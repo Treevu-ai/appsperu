@@ -16,17 +16,31 @@ const REAL_CSV = [
 
 describe("parseCenaresCsv", () => {
   it("parsea filas reales, delimitadas por ';'", () => {
-    const rows = parseCenaresCsv(REAL_CSV);
+    const { rows, rejected } = parseCenaresCsv(REAL_CSV);
     expect(rows).toHaveLength(2);
+    expect(rejected).toHaveLength(0);
     expect(rows[0].DESTINO).toBe("INSTITUTO NACIONAL DE ENFERMEDADES NEOPLASICAS");
     expect(rows[0].ITEM).toBe("SODIO CLORURO CIRCUITO CERRADO 500 ML 900 MG/100 ML (0.9 %) INY");
     expect(rows[0].CANTIDAD).toBe("4500");
     expect(rows[0].SITUACION).toBe("ENVIADO A ALMACEN");
   });
 
-  it("tolera filas con columnas de más/menos (relax_column_count)", () => {
-    const messy = REAL_CSV + "\nSIS;468;1235;DESTINO X;1;1;ITEM;1;1;obs con ; punto y coma de más;REF;20/05/2024;OK;No;0";
-    expect(() => parseCenaresCsv(messy)).not.toThrow();
+  it("acepta una fila con un ';' de más dentro de OBSERVACION cuando viene entrecomillado", () => {
+    const withQuotedSemicolon =
+      REAL_CSV +
+      '\nSIS;468;1235;DESTINO X;26367;585100100034;ITEM;1;7719;"obs con ; punto y coma de más";REF;20/05/2024;OK;No;0;;;';
+    const { rows, rejected } = parseCenaresCsv(withQuotedSemicolon);
+    expect(rejected).toHaveLength(0);
+    expect(rows).toHaveLength(3);
+    expect(rows[2].OBSERVACION).toBe("obs con ; punto y coma de más");
+  });
+
+  it("rechaza y cuenta una fila desalineada (con menos separadores que el encabezado) en vez de insertarla con columnas corridas", () => {
+    const messy = REAL_CSV + "\nSIS;468;1235;DESTINO X;1;1;ITEM;1;1;obs sin comillas con ; de más;REF;20/05/2024;OK;No;0";
+    const { rows, rejected } = parseCenaresCsv(messy);
+    expect(rows).toHaveLength(2); // solo las 2 filas reales bien formadas
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].reason).toMatch(/desalineada/);
   });
 });
 

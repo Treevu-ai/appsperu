@@ -24,8 +24,9 @@ Retención/Percepción IGV).
 - Formulario: `https://e-consultaruc.sunat.gob.pe/cl-ti-itmrconsmulruc/jrmS00Alias`
 - Hasta **10 RUC por ingreso manual** (un campo de texto + botón "Añadir", repetido) o **hasta
   100 RUC por archivo .txt subido** (un RUC por línea, comprimido en .zip según la página de
-  `gob.pe`, aunque en la prueba real el .txt plano sin comprimir también fue aceptado por la
-  variante de ingreso manual — la variante de archivo no se probó todavía, ver pendientes).
+  `gob.pe`, aunque en la prueba real el .txt plano sin comprimir también fue aceptado). Ambas
+  variantes están confirmadas en vivo — la de archivo con lotes de hasta 100 RUC, ver
+  "Variante de archivo" más abajo.
 - Al enviar, genera un **.zip descargable** (nombre tipo `RM<timestamp>.zip`) con un único .txt
   delimitado por `|`. **El encoding NO es consistente entre descargas** — confirmado en vivo el
   2026-09-19: dos .zip descargados el mismo día con la misma variante de archivo (100 RUC)
