@@ -1,0 +1,21 @@
+name: violencia-escolar
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: violencia_escolar
+      POSTGRES_PASSWORD: violencia_escolar
+      POSTGRES_DB: violencia_escolar
+    ports:
+      - "127.0.0.1:5460:5432"
+    volumes:
+      - violencia_escolar_pgdata:/var/lib/postgresql/data
+
+volumes:
+  violencia_escolar_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true

@@ -34,6 +34,7 @@ export const APP_KEYS = [
   "riesgo-fiscal-isds",
   "candidatos-erm",
   "poder-judicial",
+  "violencia-escolar",
 ] as const;
 
 export type AppKey = (typeof APP_KEYS)[number];
@@ -74,6 +75,7 @@ const DEFAULT_PORTS: Record<AppKey, number> = {
   // hay que sobreescribir una vía CANDIDATOS_ERM_API_URL o PORT en el .env.
   "candidatos-erm": 4027,
   "poder-judicial": 4028,
+  "violencia-escolar": 4029,
 };
 
 function envVarFor(app: AppKey): string {

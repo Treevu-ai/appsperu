@@ -87,6 +87,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
   renamu: ["renamu_crossref", "renamu_equipamiento", "renamu_municipalidades"],
   "candidatos-erm": ["candidatos_erm_candidatos"],
   "poder-judicial": ["poder_judicial_procesos", "poder_judicial_procesos_resumen", "poder_judicial_territorios"],
+  "violencia-escolar": ["violencia_escolar_casos", "violencia_escolar_resumen"],
   "autoridades-electas": ["autoridades_electas_autoridades"],
   "instituciones-educativas": [
     "instituciones_educativas_instituciones",
