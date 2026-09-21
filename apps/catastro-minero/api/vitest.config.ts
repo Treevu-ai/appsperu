@@ -15,7 +15,6 @@ export default defineConfig({
         "src/index.ts",
         "src/db/migrate.ts",
         "src/db/pool.ts",
-        "src/ingest/ingemmet-connector.ts",
         "vitest.config.ts",
       ],
     },

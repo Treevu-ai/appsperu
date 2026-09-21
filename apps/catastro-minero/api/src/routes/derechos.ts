@@ -69,6 +69,8 @@ derechosRouter.get(
 
     res.json({
       total,
+      limit,
+      offset,
       hasMore: offset + rows.length < total,
       resultados: rows.map((r) => ({
         codigou: r.codigou,

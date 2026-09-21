@@ -87,6 +87,8 @@ describe("GET /api/derechos", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.total).toBe(5);
+    expect(res.body.limit).toBe(1);
+    expect(res.body.offset).toBe(0);
     expect(res.body.hasMore).toBe(true);
     expect(res.body.resultados[0]).toMatchObject({ codigou: "010033716", departamento: "LA LIBERTAD" });
   });

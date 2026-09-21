@@ -77,7 +77,23 @@ const UPSERT_COLUMNS = [
   "fecha_actualizacion", "source_batch_id",
 ] as const;
 
-async function upsertBatch(client: PoolClient, batchId: number, rows: readonly CanonicalDerecho[]): Promise<void> {
+/**
+ * `ON CONFLICT DO UPDATE` no tolera que dos filas del mismo `INSERT` compartan la clave --
+ * Postgres aborta con "ON CONFLICT DO UPDATE command cannot affect row a second time" (mismo
+ * hallazgo real de Copilot ya corregido en `legislativo-congreso`). No se ha visto un `codigou`
+ * duplicado real en la fuente (verificado: 66,823 filas, 66,823 claves únicas), pero el conector
+ * no debe asumirlo -- se deduplica antes de armar el `INSERT`, quedándose con la última aparición.
+ */
+function dedupeByCodigo(rows: readonly CanonicalDerecho[]): CanonicalDerecho[] {
+  const byKey = new Map<string, CanonicalDerecho>();
+  for (const row of rows) {
+    byKey.set(row.codigou, row);
+  }
+  return [...byKey.values()];
+}
+
+async function upsertBatch(client: PoolClient, batchId: number, rowsIn: readonly CanonicalDerecho[]): Promise<void> {
+  const rows = dedupeByCodigo(rowsIn);
   if (rows.length === 0) return;
 
   const values: unknown[] = [];
@@ -145,6 +161,17 @@ export async function ingestIngemmet(): Promise<IngestSummary> {
     for (let i = 0; i < rejected.length; i += INSERT_BATCH_SIZE) {
       await insertRejectedBatch(client, batchId, rejected.slice(i, i + INSERT_BATCH_SIZE));
     }
+
+    /**
+     * Cada corrida trae el catastro completo vigente -- un derecho que ya no aparece (extinguido
+     * y removido del servicio, o cualquier otra razón) debe desaparecer de la tabla, no quedarse
+     * "vigente" indefinidamente solo porque su fila no fue tocada en esta corrida (mismo
+     * hallazgo real de Copilot ya corregido en `legislativo-congreso`). Cualquier fila cuyo
+     * `source_batch_id` no sea el de esta corrida no fue re-confirmada -- se elimina, en la
+     * misma transacción.
+     */
+    await client.query("DELETE FROM catastro_minero_derechos WHERE source_batch_id <> $1", [batchId]);
+
     await client.query("UPDATE raw_ingemmet_batches SET record_count = $1 WHERE id = $2", [rows.length, batchId]);
 
     await client.query("COMMIT");
