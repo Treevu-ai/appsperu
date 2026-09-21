@@ -11,6 +11,18 @@ RUN npm ci
 COPY tsconfig.json ./
 COPY src ./src
 RUN npm run build
+# `migrate.ts` busca las migraciones en un directorio "migrations" hermano de
+# su propio archivo compilado (dist/db/migrations) -- tsc solo compila .ts,
+# nunca copia los .sql. Sin este paso el contenedor crashloopea en producción
+# (ENOENT en dist/db/migrations, confirmado en vivo 2026-09-20 en el primer
+# intento de deploy real). Mismo fix ya aplicado en infra/fly/Dockerfile.api
+# para las otras 27 apps del monorepo. El loop con `[ -e "$f" ]` (en vez de
+# `cp *.sql dest/` directo) evita que el build falle si el glob no matchea
+# nada -- sh expande un glob sin coincidencias al literal sin expandir, y
+# `cp` sobre un archivo que no existe rompe el build (hallazgo de Copilot,
+# PR #174).
+RUN mkdir -p dist/db/migrations && \
+    for f in src/db/migrations/*.sql; do [ -e "$f" ] && cp "$f" dist/db/migrations/; done; true
 
 FROM node:22-alpine
 WORKDIR /app
