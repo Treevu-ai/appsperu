@@ -186,6 +186,8 @@ Nueve entidades con hallazgo débil o inexistente (ver tabla de origen en §9). 
 
 #### ADS-15 — Congreso de la República: confirmar contrato de `spley-portal-service`
 
+**Estado: CERRADO — Épica A confirmada, 2026-09-21.** Ver `docs/data-contracts/congreso-spley-portal-service.md` para el contrato completo con evidencia. Resumen: `POST /spley-portal-service/proyecto-ley/lista-con-filtro` es `(a) automatizable vía curl/fetch directo`, sin cookies ni sesión de navegador — verificado con `curl` puro devolviendo `HTTP 200` real (14,864 proyectos para `perParId=2021`, 4 para `perParId=2026`). `FiltroProyecLeyDto` solo exige `perParId` (entero); confirmado con `HTTP 400` real al omitirlo. Catálogo de periodos válidos descubierto en `GET /periodo-parlamentario`: **solo existen `perParId` 2021 y 2026** — los periodos históricos que el repo de terceros asume (2016/2011/2006) no están en este servicio y devuelven `200` con lista vacía (no error, "sin resultados"). Catálogo completo de filtros (`comisionId`, `estadoId`, `grupParId`, `tipoFirmanteId`, `perLegId`) descubierto en `GET /periodo-parlamentario/{perParId}/filtros`. LEG-01 (`docs/PRD_Inteligencia_Legislativa_Congreso_v1.md`) puede proceder.
+
 **Prioridad:** P1 · **Esfuerzo:** S · **Dependencias:** ninguna
 
 **Corrección de un hallazgo anterior (2026-09-21, misma sesión)**: el intento inicial de `curl` contra la raíz `api.congreso.gob.pe/spley-portal-service` (sin path, sin body) devolvía un 302 a un hostname interno con DNS roto (`svr-appserver4.congreso.net`, resolviendo a IPs de WP Engine) — eso se documentó como "bloqueado". **Verificado en vivo después**: el endpoint real sí funciona cuando se invoca con su path y body completos — `POST /spley-portal-service/proyecto-ley/lista-con-filtro` responde con errores de validación reales de un backend Spring vivo (`400` por campo `perParId` faltante, `500` al enviar un valor de prueba), no con el 302 roto. Confirmado además por un proyecto de terceros (`unimauro/congreso-abierto-peru`, repo real en GitHub) cuyo scraper apunta exactamente a esta misma ruta.
@@ -194,9 +196,9 @@ Este ticket determina el contrato real completo (todos los campos que `FiltroPro
 
 **Criterios de aceptación**
 
-- Una consulta real que devuelva `200` con datos de proyectos de ley, documentada en el PR con el body exacto usado.
-- Contrato completo de `FiltroProyecLeyDto` documentado (campos requeridos y opcionales, valores válidos conocidos de `perParId`).
-- Se evalúa si existen rutas equivalentes para votaciones/asistencia/comisiones bajo el mismo host (`api.congreso.gob.pe/...`), sin asumir que solo existe la de proyectos de ley.
+- [x] Una consulta real que devuelva `200` con datos de proyectos de ley, documentada en el PR con el body exacto usado.
+- [x] Contrato completo de `FiltroProyecLeyDto` documentado (campos requeridos y opcionales, valores válidos conocidos de `perParId`).
+- [ ] Se evalúa si existen rutas equivalentes para votaciones/asistencia/comisiones bajo el mismo host (`api.congreso.gob.pe/...`), sin asumir que solo existe la de proyectos de ley — **no investigado en esta pasada**, queda registrado como pendiente en `docs/data-contracts/congreso-spley-portal-service.md` (sección final) para no bloquear LEG-01, que no depende de esto.
 
 #### ADS-16 — Evaluar `gestionpublicaperu.com.pe` como fuente de validación cruzada de MEF
 
