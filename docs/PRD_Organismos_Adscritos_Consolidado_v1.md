@@ -8,7 +8,7 @@
 
 ## 1. Decisión de producto
 
-Esta sesión ya construyó dos PRD de conectores nuevos (`PRD_Energia_Ambiente_Financiero_Nuevos_Conectores_v1.md`, `PRD_Deuda_Publica_MEF_v1.md`) a partir de investigar ministerios completos. En paralelo, el usuario pidió una pasada distinta: para **cada entidad que Rastro ya tiene conectada**, identificar qué **organismos adscritos** le faltan. Eso encontró ~18 entidades candidatas nuevas, de calidad muy despareja — desde una API REST documentada y verificada en vivo (SENACE) hasta un hallazgo negativo honesto (SBS, Congreso).
+Esta sesión ya construyó dos PRD de conectores nuevos (`PRD_Energia_Ambiente_Financiero_Nuevos_Conectores_v1.md`, `PRD_Deuda_Publica_MEF_v1.md`) a partir de investigar ministerios completos. En paralelo, el usuario pidió una pasada distinta: para **cada entidad que Rastro ya tiene conectada**, identificar qué **organismos adscritos** le faltan. Eso encontró ~18 entidades candidatas nuevas, de calidad muy despareja — desde una API REST documentada y verificada en vivo (SENACE) hasta un hallazgo negativo honesto (SBS).
 
 Este PRD no trata las 18 entidades como iguales. Las agrupa en tres franjas según cuánta evidencia real respalda cada una (§5: Épica A = verificado en vivo con éxito; Épica B = dataset real confirmado por búsqueda, sin `curl` propio todavía; Épica C = sin verificar o descartado, registrado para no perder el hallazgo) — y exige que cualquier ticket de Épica B se mueva a "verificado" antes de comprometer esfuerzo de ingesta, mismo principio que el resto de PRDs de esta sesión.
 
@@ -16,7 +16,7 @@ Este PRD no trata las 18 entidades como iguales. Las agrupa en tres franjas seg�
 
 1. **El catálogo de Rastro está organizado por ministerio matriz, no por el árbol completo del Estado.** Cada app nueva investiga su fuente, pero nadie había preguntado sistemáticamente "¿qué le falta a MIDAGRI/MTC/MTPE/MINEDU/MINSA/MIMP además de lo que ya tiene?" hasta esta sesión.
 2. **Dos hallazgos tienen valor desproporcionado frente al resto**: SUNARP (representantes legales y transferencias de propiedad — la pieza que falta para saber quién controla realmente una empresa) y SERFOR/GEOSERFOR (catastro forestal — la fuente que el propio trabajo EUDR del usuario necesita, y que este PRD todavía no deja lista para construir por falta de una URL de servicio confirmada).
-3. **Dos hallazgos son negativos y vale la pena dejarlos escritos** para no reinvestigarlos: SBS (0 datasets reales) y el backend del portal de Proyectos de Ley del Congreso (DNS roto, apunta a un host ajeno).
+3. **Un hallazgo es negativo y vale la pena dejarlo escrito** para no reinvestigarlo: SBS (0 datasets reales). Un cuarto hallazgo, el backend del portal de Proyectos de Ley del Congreso, se creyó inicialmente un DNS roto sin solución — **corregido dentro de esta misma sesión** (ver ADS-15): el endpoint real sí responde cuando se le pasa el path y los parámetros correctos, confirmado con un backend Spring vivo devolviendo errores de validación reales.
 
 ## 3. Objetivo, no objetivos y métricas de éxito
 
@@ -27,8 +27,8 @@ Cerrar la brecha entre "evidencia encontrada por búsqueda" y "evidencia verific
 ### No objetivos
 
 - No se construyen las 18 entidades en este PRD — solo las que superan verificación en vivo real (Épica A) se comprometen a ingesta; el resto queda como investigación pendiente con su propio ticket de verificación (Épica B) o registrado como descartado (Épica C).
-- No se resuelve el DNS roto del backend del Congreso (`api.congreso.gob.pe/spley-portal-service` → `svr-appserver4.congreso.net` → WP Engine) — es un problema de la fuente, no de Rastro; se reintenta en una sesión futura, no se fuerza un workaround.
-- No se investiga el riesgo de PII de "Puestos de trabajo registrados en el sector formal asalariado privado" (MTPE) más allá de lo que exige ADS-14 — si el ticket de verificación encuentra un identificador de persona, el dataset se descarta sin excepción, mismo criterio que ya aplica el proyecto a Pensión 65/RENIEC.
+- ADS-15 confirma el contrato de `spley-portal-service`, pero **no construye el conector de ingesta del Congreso en este PRD** — eso queda como ticket separado, una vez el contrato esté confirmado.
+- No se investiga el riesgo de PII de "Puestos de trabajo registrados en el sector formal asalariado privado" (MTPE) más allá de lo que exige ADS-10 — si el ticket de verificación encuentra un identificador de persona, el dataset se descarta sin excepción, mismo criterio que ya aplica el proyecto a Pensión 65/RENIEC.
 - No se cruzan estas fuentes nuevas contra las existentes en este PRD — cada conector nace solo, los cruces son un PRD posterior una vez existan al menos dos piezas para cruzar.
 - No se implementa scheduler.
 
@@ -179,15 +179,25 @@ Nueve entidades con hallazgo débil o inexistente (ver tabla de origen en §9). 
 - Tabla de conclusión por las 9 entidades, cada una con: hallazgo real o "sin hallazgo" + razón, URL si existe.
 - Ninguna de las 9 queda en este PRD como "pendiente" indefinido después de este ticket — o se promueve a un PRD de ingesta, o se documenta como descartada.
 
+#### ADS-15 — Congreso de la República: confirmar contrato de `spley-portal-service`
+
+**Prioridad:** P1 · **Esfuerzo:** S · **Dependencias:** ninguna
+
+**Corrección de un hallazgo anterior (2026-09-21, misma sesión)**: el intento inicial de `curl` contra la raíz `api.congreso.gob.pe/spley-portal-service` (sin path, sin body) devolvía un 302 a un hostname interno con DNS roto (`svr-appserver4.congreso.net`, resolviendo a IPs de WP Engine) — eso se documentó como "bloqueado". **Verificado en vivo después**: el endpoint real sí funciona cuando se invoca con su path y body completos — `POST /spley-portal-service/proyecto-ley/lista-con-filtro` responde con errores de validación reales de un backend Spring vivo (`400` por campo `perParId` faltante, `500` al enviar un valor de prueba), no con el 302 roto. Confirmado además por un proyecto de terceros (`unimauro/congreso-abierto-peru`, repo real en GitHub) cuyo scraper apunta exactamente a esta misma ruta.
+
+Este ticket determina el contrato real completo (todos los campos que `FiltroProyecLeyDto` exige, valores válidos de `perParId` por período parlamentario) para poder construir un conector real — no es una API pública documentada, así que el contrato hay que inferirlo de las respuestas de error y, si hace falta, del bundle JS del frontend (`wb2server.congreso.gob.pe/spley-portal/`, mismo método ya usado para encontrar la URL del backend).
+
+**Criterios de aceptación**
+
+- Una consulta real que devuelva `200` con datos de proyectos de ley, documentada en el PR con el body exacto usado.
+- Contrato completo de `FiltroProyecLeyDto` documentado (campos requeridos y opcionales, valores válidos conocidos de `perParId`).
+- Se evalúa si existen rutas equivalentes para votaciones/asistencia/comisiones bajo el mismo host (`api.congreso.gob.pe/...`), sin asumir que solo existe la de proyectos de ley.
+
 ### Épica C — Descartado o bloqueado, registrado para no reinvestigar
 
 #### ADS-12 — SBS: sin acción (0 datasets confirmados)
 
 Grupo propio en `datosabiertos.gob.pe` **verificado en vivo con 0 resultados** ("No datasets were found"). Su portal de "Estadísticas" propio parece ser boletines PDF/Excel agregados, no una API. El "Reporte de Deudas" individual **requiere login con DNI — dato personal protegido, descartado por diseño**, no solo por fricción. No se reinvestiga sin una señal nueva concreta (ej. SBS anuncia un portal de datos abiertos nuevo).
-
-#### ADS-13 — Congreso (spley-portal-service): bloqueado por DNS roto de la fuente
-
-`api.congreso.gob.pe/spley-portal-service` redirige (302) a `svr-appserver4.congreso.net`, que hoy resuelve a IPs de WP Engine (hosting de WordPress ajeno) — configuración rota del lado del Congreso, no un bloqueo intencional ni un problema de Rastro. Asistencia/votaciones del Pleno existen como páginas HTML, sin API JSON confirmada detrás. Reintentar en una sesión futura (el DNS podría corregirse) — no se fuerza scraping de HTML como alternativa en este PRD.
 
 #### ADS-14 — Palacio de Gobierno / "Casa Oficial del Gobierno": sin hallazgo
 
@@ -198,15 +208,15 @@ Investigado explícitamente a pedido del usuario — son oficinas de protocolo/p
 | Fase | Entregables | Resultado que desbloquea |
 |---|---|---|
 | **Ahora** | ADS-01, ADS-03, ADS-05 | Desbloquea SERFOR (mayor relevancia EUDR); SUNARP e INDECI ya listos para ingesta directa sin más investigación. |
-| **Siguiente** | ADS-02, ADS-04 | SERFOR construido (una vez ADS-01 lo desbloquee); SENACE construido (API ya confirmada). |
+| **Siguiente** | ADS-02, ADS-04, ADS-15 | SERFOR construido (una vez ADS-01 lo desbloquee); SENACE construido (API ya confirmada); contrato real de la API del Congreso confirmado. |
 | **Triage en paralelo, no bloqueante** | ADS-06 a ADS-11 | Cada una resuelve su propia entidad a Épica A o C — no bloquean las fases anteriores. |
-| **Sin acción** | ADS-12, ADS-13, ADS-14 | Documentadas, no se reinvestigan sin señal nueva. |
+| **Sin acción** | ADS-12, ADS-14 | Documentadas, no se reinvestigan sin señal nueva. |
 
 ## 7. Requisitos no funcionales
 
 - **Ninguna entidad de Épica B se ingiere sin pasar primero por su ticket de verificación en vivo propio** — la investigación de esta sesión fue por búsqueda, no reemplaza la verificación que el resto del catálogo exige.
 - **PII se verifica explícitamente, columna por columna, antes de cualquier decisión de ingesta** — especialmente ADS-10 (MTPE puestos de trabajo) y cualquier hallazgo futuro de SUNARP (personas naturales trae poderes/sucesiones, con riesgo de nombres — ADS-03 se limita a personas jurídicas a propósito, no se expande a personas naturales sin una evaluación de PII separada).
-- **Hallazgos negativos se documentan igual de rigurosamente que los positivos** (ADS-12 a ADS-14) — evita reinvestigar lo mismo en una sesión futura.
+- **Hallazgos negativos se documentan igual de rigurosamente que los positivos** (ADS-12, ADS-14) — evita reinvestigar lo mismo en una sesión futura. Igual de importante: **un hallazgo negativo se corrige en cuanto aparece evidencia nueva** (ver ADS-15) — no queda "descartado" por inercia documental una vez se demuestra falso.
 - **Sin scheduler.**
 
 ## 8. Riesgos y mitigaciones
@@ -216,12 +226,11 @@ Investigado explícitamente a pedido del usuario — son oficinas de protocolo/p
 | ADS-01 no logra encontrar una URL de servicio real para GEOSERFOR | Se reclasifica SERFOR a Épica C con la evidencia del intento — no se fuerza scraping del visor web como alternativa sin evaluar el esfuerzo real que eso tomaría. |
 | SUNARP personas jurídicas resulta tener cobertura parcial o desactualizada (dataset de descarga puntual, no un registro vivo) | ADS-03 declara la fecha de corte real y la cobertura real en el data contract — no se asume "registro completo y actualizado" sin verificarlo. |
 | El triage de ADS-11 (9 entidades) subestima el esfuerzo y termina siendo superficial | Esfuerzo declarado como M explícitamente por ser 9 investigaciones, no una — si el triage real toma más de una sesión, se reporta parcial en vez de forzar una conclusión débil sobre las que falten. |
-| El DNS del Congreso (ADS-13) se corrige entre esta sesión y una revisión futura, y nadie lo nota porque quedó marcado "descartado" | ADS-13 queda en Épica C con la razón técnica exacta (no "sin API"), para que una revisión futura sepa exactamente qué volver a probar. |
+| El contrato real de `spley-portal-service` (ADS-15) resulta más complejo de inferir de lo esperado (más campos ocultos, autenticación por sesión no evidente en los errores 400/500 vistos) | Si tras un esfuerzo razonable no se logra un `200` real, se reclasifica a Épica C con la evidencia exacta de los intentos — no se fuerza scraping de HTML como alternativa sin evaluarlo aparte. |
 
 ## 9. Fuera de este PRD
 
 - Cualquier cruce entre estas fuentes nuevas y las existentes — PRD de cruces posterior.
-- Resolver el DNS roto del Congreso — problema de la fuente, no de Rastro.
 - SENAMHI, IIAP, Facilito (OSINERGMIN) — ya descartados en `docs/BACKLOG_Energia_Ambiente_Financiero_Nuevos_Conectores_v1.md`, no se repiten aquí.
 - Cambios en `apps/rastro-web` o `rastro.fyi`.
 - Scheduler/automatización.

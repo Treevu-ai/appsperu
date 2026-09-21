@@ -10,7 +10,7 @@
 | Fase | Objetivo | Tickets comprometibles | Criterio de corte |
 |---|---|---|---|
 | 0 | Desbloquear SERFOR; construir SUNARP e INDECI (ya listos). | ADS-01, ADS-03, ADS-05 | ADS-01 concluye con URL real o reclasifica SERFOR a Épica C. |
-| 1 | Construir SERFOR (si desbloqueado) y SENACE. | ADS-02, ADS-04 | Ambos con verificación en vivo documentada en el PR. |
+| 1 | Construir SERFOR (si desbloqueado), SENACE, y confirmar contrato de la API del Congreso. | ADS-02, ADS-04, ADS-15 | Ambos con verificación en vivo documentada en el PR. |
 | 2 (paralelo, no bloqueante) | Triage de Épica B — resolver cada entidad a Épica A o C. | ADS-06 a ADS-11 | Ninguna entidad queda sin conclusión explícita. |
 
 ## Tickets
@@ -28,6 +28,7 @@
 | ADS-09 | Triage | Verificar contenido real del grupo SUNAFIL. | Datasets reales documentados; evalúa relevancia para perfil de riesgo por RUC si hay sanciones laborales por empleador. | Ninguna. | P2 | S | 2 |
 | ADS-10 | Triage + PII | Verificar riesgo de PII en "Puestos de trabajo" (MTPE) antes de decidir ingesta. | Verificación explícita de columna con posible identificador de persona; descarte automático si hay PII. | Ninguna. | P2 | S | 2 |
 | ADS-11 | Triage | Verificar SUNEDU, RENIEC, ANA, SENASA, SUTRAN, INS, INABIF, CENEPRED, SERVIR (9 entidades). | Tabla de conclusión por las 9, cada una con hallazgo real o "sin hallazgo" + razón. | Ninguna. | P2 | M | 2 |
+| ADS-15 | Ingesta (contrato) | Confirmar contrato completo de `api.congreso.gob.pe/spley-portal-service` (proyectos de ley, y evaluar votaciones/asistencia/comisiones bajo el mismo host). | Una consulta real con `200` y datos, body exacto documentado en el PR; contrato de `FiltroProyecLeyDto` documentado (campos y valores válidos de `perParId`). | Ninguna. | P1 | S | 1 |
 
 ## Definition of Done por ticket
 
@@ -42,8 +43,9 @@
 | Entidad | Razón de descarte |
 |---|---|
 | SBS | Grupo propio en `datosabiertos.gob.pe` verificado en vivo con 0 datasets. Su "Reporte de Deudas" individual requiere login con DNI — PII, descartado por diseño, no solo por fricción. |
-| Congreso (`spley-portal-service`) | La API real (`api.congreso.gob.pe/spley-portal-service`) redirige a un hostname interno (`svr-appserver4.congreso.net`) que hoy resuelve a IPs de WP Engine — DNS roto del lado del Congreso, verificado en vivo. Reintentar en sesión futura por si se corrige. |
 | Palacio de Gobierno / Casa Oficial del Gobierno | Oficinas de protocolo/prensa, no entidades estadísticas. Sin dataset ni API encontrado. |
+
+**Corrección (2026-09-21, misma sesión)**: el Congreso (`spley-portal-service`) se había registrado aquí como descartado por un supuesto DNS roto — **era un falso negativo**. El endpoint real responde con errores de validación de un backend Spring vivo cuando se le pasa el path y los parámetros correctos (confirmado con `curl` y con un proyecto de terceros real en GitHub que scrapea la misma ruta). Movido a ADS-15 en la tabla de tickets arriba.
 
 ## Nota de remisión
 
