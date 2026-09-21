@@ -1,0 +1,21 @@
+name: areas-protegidas
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: areas_protegidas
+      POSTGRES_PASSWORD: areas_protegidas
+      POSTGRES_DB: areas_protegidas
+    ports:
+      - "127.0.0.1:5463:5432"
+    volumes:
+      - areas_protegidas_pgdata:/var/lib/postgresql/data
+
+volumes:
+  areas_protegidas_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true

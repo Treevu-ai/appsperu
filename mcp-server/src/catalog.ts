@@ -2750,4 +2750,44 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: ["codigou"],
     querySchema: {},
   },
+
+  // ---- areas-protegidas (SERNANP, geoservicios) ----
+  {
+    name: "areas_protegidas_areas",
+    app: "areas-protegidas",
+    description:
+      "Áreas naturales protegidas y afines de SERNANP — 5 capas: `anp_nacional_definitiva` (Parques/" +
+      "Reservas/Santuarios Nacionales, con `categoria`), `zona_reservada`, `area_conservacion_regional`, " +
+      "`area_conservacion_privada` y `sitios_prioritarios` (sin `nombre`, la fuente no lo trae). Filtra por " +
+      "`capa`, `nombre`/`ubicacion` (ILIKE) o `categoria` (solo aplica a `anp_nacional_definitiva`). El " +
+      "código de área (`codigo`, ej. 'PN05') NO es una clave única — un área con geometría multi-parte " +
+      "(islas, polígonos disjuntos) puede aparecer en varias filas con el mismo código (verificado: capa " +
+      "`anp_nacional_definitiva` trae 104 filas pero solo 95 códigos únicos). Cada capa es un snapshot " +
+      "completo reemplazado en cada ingesta, sin upsert incremental por esa misma razón. Verificado en vivo " +
+      "2026-09-21: 4 áreas protegidas nacionales en La Libertad (Bosque de Protección Puquio Santa Rosa, " +
+      "Coto de Caza Sunchubamba, Reserva Nacional y Santuario Nacional de Calipuy). " + SIN_SCHEDULER,
+    pathTemplate: "/api/areas",
+    pathParams: [],
+    querySchema: {
+      capa: z
+        .enum(["anp_nacional_definitiva", "zona_reservada", "area_conservacion_regional", "area_conservacion_privada", "sitios_prioritarios"])
+        .optional(),
+      nombre: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      ubicacion: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      categoria: z.string().min(1).optional().describe("Solo aplica a la capa anp_nacional_definitiva."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "areas_protegidas_area_detalle",
+    app: "areas-protegidas",
+    description:
+      "Detalle de un área específica por `capa` + `objectid` (ID interno de ArcGIS, único dentro de cada " +
+      "capa) — no por el código de área (`codigo`), que puede repetirse en features multi-parte. Responde " +
+      "404 si no existe. " + SIN_SCHEDULER,
+    pathTemplate: "/api/areas/{capa}/{objectid}",
+    pathParams: ["capa", "objectid"],
+    querySchema: {},
+  },
 ];
