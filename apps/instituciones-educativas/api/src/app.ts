@@ -1,6 +1,7 @@
 import express, { type ErrorRequestHandler } from "express";
 import { institucionesRouter } from "./routes/instituciones.js";
 import { resumenRouter } from "./routes/resumen.js";
+import { trayectoriaRouter } from "./routes/trayectoria.js";
 import { pool } from "./db/pool.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 
@@ -28,6 +29,7 @@ export function createApp() {
   app.use("/api", apiRateLimit);
   app.use("/api/instituciones", institucionesRouter);
   app.use("/api/resumen", resumenRouter);
+  app.use("/api/trayectoria", trayectoriaRouter);
 
   app.use(errorHandler);
 
