@@ -186,6 +186,10 @@ Nueve entidades con hallazgo débil o inexistente (ver tabla de origen en §9). 
 
 #### ADS-15 — Congreso de la República: confirmar contrato de `spley-portal-service`
 
+**Estado: CERRADO, alcance recortado formalmente a proyectos de ley — 2026-09-21.** Ver `docs/data-contracts/congreso-spley-portal-service.md` para el contrato completo con evidencia. Resumen: `POST /spley-portal-service/proyecto-ley/lista-con-filtro` es `(a) automatizable vía curl/fetch directo`, sin cookies ni sesión de navegador — verificado con `curl` puro devolviendo `HTTP 200` real (14,864 proyectos para `perParId=2021`, 4 para `perParId=2026`). `FiltroProyecLeyDto` solo exige `perParId` (entero); confirmado con `HTTP 400` real al omitirlo. Catálogo de periodos válidos descubierto en `GET /periodo-parlamentario`: **solo existen `perParId` 2021 y 2026** — los periodos históricos que el repo de terceros asume (2016/2011/2006) no están en este servicio y devuelven `200` con lista vacía (no error, "sin resultados"). Catálogo completo de filtros (`comisionId`, `estadoId`, `grupParId`, `tipoFirmanteId`, `perLegId`) descubierto en `GET /periodo-parlamentario/{perParId}/filtros`. LEG-01 (`docs/PRD_Inteligencia_Legislativa_Congreso_v1.md`) puede proceder.
+
+**Recorte de alcance explícito (hallazgo real de Copilot, corregido aquí)**: el tercer criterio original de ADS-15 (votaciones/asistencia/comisiones bajo el mismo host) **no se investigó en esta pasada** — probé rutas conocidas (`wb2server.congreso.gob.pe/votaciones-portal/`, `/asistencia-portal/`, `/comisiones-portal/`, servicios `api.congreso.gob.pe/votacion-portal-service`, etc., todas `404`) y la homepage de `congreso.gob.pe` sin encontrar el patrón. No cierro ADS-15 fingiendo que ese criterio se cumplió: **se retira formalmente de ADS-15** (que queda acotado a `proyecto-ley` únicamente, con los 2 criterios restantes ahora reales) **y se registra como ticket nuevo, ADS-20**, en `docs/BACKLOG_Organismos_Adscritos_Consolidado_v1.md`.
+
 **Prioridad:** P1 · **Esfuerzo:** S · **Dependencias:** ninguna
 
 **Corrección de un hallazgo anterior (2026-09-21, misma sesión)**: el intento inicial de `curl` contra la raíz `api.congreso.gob.pe/spley-portal-service` (sin path, sin body) devolvía un 302 a un hostname interno con DNS roto (`svr-appserver4.congreso.net`, resolviendo a IPs de WP Engine) — eso se documentó como "bloqueado". **Verificado en vivo después**: el endpoint real sí funciona cuando se invoca con su path y body completos — `POST /spley-portal-service/proyecto-ley/lista-con-filtro` responde con errores de validación reales de un backend Spring vivo (`400` por campo `perParId` faltante, `500` al enviar un valor de prueba), no con el 302 roto. Confirmado además por un proyecto de terceros (`unimauro/congreso-abierto-peru`, repo real en GitHub) cuyo scraper apunta exactamente a esta misma ruta.
@@ -194,9 +198,9 @@ Este ticket determina el contrato real completo (todos los campos que `FiltroPro
 
 **Criterios de aceptación**
 
-- Una consulta real que devuelva `200` con datos de proyectos de ley, documentada en el PR con el body exacto usado.
-- Contrato completo de `FiltroProyecLeyDto` documentado (campos requeridos y opcionales, valores válidos conocidos de `perParId`).
-- Se evalúa si existen rutas equivalentes para votaciones/asistencia/comisiones bajo el mismo host (`api.congreso.gob.pe/...`), sin asumir que solo existe la de proyectos de ley.
+- [x] Una consulta real que devuelva `200` con datos de proyectos de ley, documentada en el PR con el body exacto usado.
+- [x] Contrato completo de `FiltroProyecLeyDto` documentado (campos requeridos y opcionales, valores válidos conocidos de `perParId`).
+- ~~Se evalúa si existen rutas equivalentes para votaciones/asistencia/comisiones bajo el mismo host~~ — **retirado de este ticket, ver ADS-20** (`docs/BACKLOG_Organismos_Adscritos_Consolidado_v1.md`).
 
 #### ADS-16 — Evaluar `gestionpublicaperu.com.pe` como fuente de validación cruzada de MEF
 
