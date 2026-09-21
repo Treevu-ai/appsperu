@@ -11,7 +11,7 @@
 |---|---|---|---|
 | 0 | Desbloquear SERFOR (investigación); verificar en vivo y luego construir SUNARP e INDECI (fuente ya confirmada, schema por verificar). | ADS-01, ADS-03, ADS-05 | ADS-01 concluye con URL real o reclasifica SERFOR a Épica C; ADS-03/ADS-05 no fijan schema antes de su propia verificación en vivo. |
 | 1 | Construir SERFOR (si desbloqueado), SENACE, y confirmar contrato de la API del Congreso. | ADS-02, ADS-04, ADS-15 | Ambos con verificación en vivo documentada en el PR. |
-| 2 (paralelo, no bloqueante) | Triage de Épica B — resolver cada entidad a Épica A o C. | ADS-06 a ADS-11 | Ninguna entidad queda sin conclusión explícita. |
+| 2 (paralelo, no bloqueante) | Triage de Épica B — resolver cada entidad/fuente a Épica A o C. | ADS-06 a ADS-11, ADS-16 a ADS-19 | Ninguna entidad queda sin conclusión explícita. |
 
 ## Tickets
 
@@ -29,6 +29,10 @@
 | ADS-10 | Triage + PII | Verificar riesgo de PII en "Puestos de trabajo" (MTPE) antes de decidir ingesta. | Verificación explícita de columna con posible identificador de persona; descarte automático si hay PII. | Ninguna. | P2 | S | 2 |
 | ADS-11 | Triage | Verificar SUNEDU, RENIEC, ANA, SENASA, SUTRAN, INS, INABIF, CENEPRED, SERVIR (9 entidades). | Tabla de conclusión por las 9, cada una con hallazgo real o "sin hallazgo" + razón. | Ninguna. | P2 | M | 2 |
 | ADS-15 | Ingesta (contrato) | Confirmar contrato completo de `api.congreso.gob.pe/spley-portal-service` (proyectos de ley, y evaluar votaciones/asistencia/comisiones bajo el mismo host). | Una consulta real con `200` y datos, body exacto documentado en el PR; contrato de `FiltroProyecLeyDto` documentado (campos y valores válidos de `perParId`). | Ninguna. | P1 | S | 1 |
+| ADS-16 | Triage | Evaluar `gestionpublicaperu.com.pe` (agregador privado, no oficial) como validación cruzada de `budget_execution`. | Rate limit y estabilidad confirmados; conclusión documentada (se usa o no) sin crear dependencia operativa de un tercero no oficial. | Ninguna. | P2 | S | 2 |
+| ADS-17 | Triage | Verificar Portal de Estadística SUNARP (agregados por año, distinto de ADS-03). | Formato/columnas/granularidad reales confirmados; evalúa solapamiento con ADS-03 antes de decidir ingesta separada. | Ninguna. | P2 | S | 2 |
+| ADS-18 | Triage | Verificar GeoServer WFS de red vial del MTC (geometría real). | Capacidades/capas del servicio WFS confirmadas en vivo; evalúa valor agregado frente a `infraestructura-mtc`/`red-vial-subnacional` tabular. | Ninguna. | P2 | M | 2 |
+| ADS-19 | Triage | Verificar Provías Nacional (carreteras nacionales, separado de Provías Descentralizado). | Confirma si hay dataset/API real recurrente, no solo un PDF puntual; reclasifica a Épica C si no la hay. | Ninguna. | P2 | S | 2 |
 
 ## Definition of Done por ticket
 

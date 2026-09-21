@@ -198,6 +198,53 @@ Este ticket determina el contrato real completo (todos los campos que `FiltroPro
 - Contrato completo de `FiltroProyecLeyDto` documentado (campos requeridos y opcionales, valores válidos conocidos de `perParId`).
 - Se evalúa si existen rutas equivalentes para votaciones/asistencia/comisiones bajo el mismo host (`api.congreso.gob.pe/...`), sin asumir que solo existe la de proyectos de ley.
 
+#### ADS-16 — Evaluar `gestionpublicaperu.com.pe` como fuente de validación cruzada de MEF
+
+**Prioridad:** P2 · **Esfuerzo:** S · **Dependencias:** ninguna
+
+**No es una entidad del Estado — es un agregador privado**, distinto de todo lo demás en este PRD. Se deja registrado aparte porque **verificado en vivo 2026-09-21**: `https://app.gestionpublicaperu.com.pe/api/insights/schema` responde `HTTP 200`, sin auth, con una tabla `mef_historico` real de **32,364,402 filas, 137 columnas, 2013-2026** — el histórico crudo de SIAF (incluye `PLIEGO`, `SECTOR`, `UNIDAD_EJECUTORA`, departamento/provincia/distrito ejecutora). Se usó en esta misma sesión para resolver una discrepancia real entre el `entity_code` interno de `radar-ejecucion` (477 para Congreso) y el pliego SIAF oficial (028) — confirmando que son dos esquemas de codificación distintos.
+
+**Decisión a evaluar, no asumir**: esto podría servir como (a) fuente de validación cruzada de los números que `radar-ejecucion` ya ingiere directamente de MEF (comparar `devengado`/`PIM` por pliego/año), o (b) fuente alternativa más simple para ampliar cobertura histórica sin repetir el `HTTP Range` + parseo manual que usa `mef-connector.ts`. Al ser un tercero (no la fuente primaria oficial), cualquier uso debe quedar documentado como tal — no reemplaza la fuente oficial, la complementa.
+
+**Criterios de aceptación**
+
+- Se confirma en vivo el rate limit real (30 req/min según lo observado) y estabilidad del servicio antes de depender de él para cualquier validación recurrente.
+- Se documenta explícitamente que es una fuente de terceros (no oficial) en cualquier ficha que la mencione — mismo criterio de transparencia que el resto del catálogo aplica a fuentes no primarias.
+- Se evalúa (y se documenta la conclusión, aunque sea "no se usa") si vale la pena como validación cruzada puntual de `budget_execution`, sin comprometerse a una dependencia operativa de un tercero no oficial.
+
+#### ADS-17 — Portal de Estadística SUNARP (agregados por año, distinto de ADS-03)
+
+**Prioridad:** P2 · **Esfuerzo:** S · **Dependencias:** ninguna
+
+`sunarp.gob.pe/estadisticas/` — XLSX por año con inmatriculaciones, transferencias, hipotecas, declaratoria de fábrica, independización. **Distinto de ADS-03** (que es el dataset de personas jurídicas a nivel de registro individual, en `datosabiertos.gob.pe`): esto es agregado nacional/regional por tipo de trámite, sin verificar en vivo todavía.
+
+**Criterios de aceptación**
+
+- Verificación en vivo del formato real (XLSX confirmado, columnas exactas, granularidad — ¿nacional, por oficina registral, por departamento?).
+- Se evalúa si complementa o duplica sustancialmente ADS-03 antes de decidir ingesta separada, mismo criterio que AMB-02 de `PRD_Energia_Ambiente_Financiero_Nuevos_Conectores_v1.md` para datasets potencialmente solapados.
+
+#### ADS-18 — MTC: GeoServer WFS de red vial (geometría real)
+
+**Prioridad:** P2 · **Esfuerzo:** M · **Dependencias:** ninguna
+
+`portal.mtc.gob.pe/estadisticas/descarga.html` — servicio WFS (estándar OGC) con shapefiles de carreteras nacionales, departamentales y vecinales. Complementaría `infraestructura-mtc`/`red-vial-subnacional` (que hoy no tienen geometría real, solo atributos tabulares) con los trazados reales de las vías — relevante para cruces geoespaciales futuros (ej. contra catastro minero de ADS-02, si una vía cruza una concesión).
+
+**Criterios de aceptación**
+
+- Verificación en vivo del servicio WFS real (capacidades, capas disponibles, formato de descarga) — mismo estándar que GEO-01/GEO-02 de `PRD_Energia_Ambiente_Financiero_Nuevos_Conectores_v1.md`.
+- Se evalúa si el valor agregado (geometría real) justifica el esfuerzo de un conector geoespacial nuevo frente a lo que ya cubren `infraestructura-mtc`/`red-vial-subnacional` en forma tabular.
+
+#### ADS-19 — Provías Nacional (carreteras nacionales, separado de Provías Descentralizado)
+
+**Prioridad:** P2 · **Esfuerzo:** S (investigación) · **Dependencias:** ninguna
+
+`proviasnacional.gob.pe` — inversión y mantenimiento de la red vial **nacional**, distinta de Provías Descentralizado (que ya cubre `red-vial-subnacional`, redes viales subnacionales). Sin verificar en vivo si expone datos estructurados descargables o solo información institucional.
+
+**Criterios de aceptación**
+
+- Verificación en vivo de si existe un dataset/API real (no solo el PDF de inversión referenciado en `mef.gob.pe/contenidos/inv_privada/app/IMIAPP_MTC_2025.pdf`, que es un documento puntual, no una fuente recurrente).
+- Si no hay fuente estructurada real, se reclasifica a Épica C con la evidencia del intento, mismo criterio que el resto de tickets de triage de este PRD.
+
 ### Épica C — Descartado o bloqueado, registrado para no reinvestigar
 
 #### ADS-12 — SBS: sin acción (0 datasets confirmados)
@@ -214,7 +261,7 @@ Investigado explícitamente a pedido del usuario — son oficinas de protocolo/p
 |---|---|---|
 | **Ahora** | ADS-01, ADS-03, ADS-05 | Desbloquea SERFOR (mayor relevancia EUDR); SUNARP e INDECI ya listos para ingesta directa sin más investigación. |
 | **Siguiente** | ADS-02, ADS-04, ADS-15 | SERFOR construido (una vez ADS-01 lo desbloquee); SENACE construido (API ya confirmada); contrato real de la API del Congreso confirmado. |
-| **Triage en paralelo, no bloqueante** | ADS-06 a ADS-11 | Cada una resuelve su propia entidad a Épica A o C — no bloquean las fases anteriores. |
+| **Triage en paralelo, no bloqueante** | ADS-06 a ADS-11, ADS-16 a ADS-19 | Cada una resuelve su propia entidad/fuente a Épica A o C — no bloquean las fases anteriores. |
 | **Sin acción** | ADS-12, ADS-14 | Documentadas, no se reinvestigan sin señal nueva. |
 
 ## 7. Requisitos no funcionales
