@@ -32,9 +32,16 @@ como columna informativa — contiene `/` y no se usa como clave ni como segment
 1. `GET /periodo-parlamentario` — descubre en vivo qué `perParId` son válidos hoy (no se
    hardcodea; un repo de terceros que sí lo hace asume periodos 2016/2011/2006 que no existen en
    este servicio).
-2. Por cada `perParId` descubierto: `POST /proyecto-ley/lista-con-filtro` con el body completo de
-   `FiltroProyecLeyDto` (solo `perParId` distinto de `null`).
-3. Transacción por periodo: inserta un `raw_congreso_batches`, normaliza (`normalize-congreso.ts`),
+2. Por cada `perParId` descubierto: adquiere `pg_advisory_xact_lock(hashtext('legislativo_congreso_proyectos_ingest'), perParId)`
+   al abrir la transacción — serializa corridas manuales solapadas del mismo periodo (hallazgo
+   real de Copilot: sin esto, una corrida con datos más viejos podía confirmar DESPUÉS de una más
+   nueva y dejar el snapshot desactualizado). Se libera solo al hacer COMMIT/ROLLBACK.
+3. `POST /proyecto-ley/lista-con-filtro` con el body completo de `FiltroProyecLeyDto` (solo
+   `perParId` distinto de `null`). Exige explícitamente que `data.proyectos` sea un array real —
+   una respuesta `HTTP 200` con schema inesperado lanza error en vez de tratarse como "periodo sin
+   proyectos" (hallazgo real de Copilot: el snapshot completo de abajo habría borrado todos los
+   proyectos reales de ese periodo sin darse cuenta).
+4. Transacción por periodo: inserta un `raw_congreso_batches`, normaliza (`normalize-congreso.ts`),
    hace `ON CONFLICT (per_par_id, pley_num) DO UPDATE` por lote de 1000 filas, guarda rechazados si
    los hay, actualiza `record_count`, commit. Si un periodo falla, los demás se intentan igual — los
    errores se acumulan y se lanzan al final (no queda un fallo parcial en silencio).
