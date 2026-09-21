@@ -1612,8 +1612,10 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "(`proveedores_sancionados_inhabilitaciones_judiciales`) simultáneamente? Bases legales distintas — la coincidencia " +
       "es una señal más fuerte que cualquiera de las dos solas, pero sigue siendo solo eso, nunca se fusiona en una sola " +
       "conclusión. `ambasVigentesHoy` calcula vigencia real con `vigenteEnFecha` (rango [desde,hasta]), no solo el campo " +
-      "`estado` de la fuente. Verificado en vivo: 0 coincidencias contra el universo judicial actual (14 filas, corte " +
-      "2026-09-01) — 0 resultados es una respuesta esperada, el universo judicial es chico, no un error del cruce.",
+      "`estado` de la fuente. `dniComunEnmascarado` trae solo los últimos 3 dígitos (mismo criterio que " +
+      "`proveedores_sancionados_personas`), nunca el DNI completo. Verificado en vivo: 0 coincidencias contra el " +
+      "universo judicial actual (14 filas, corte 2026-09-01) — 0 resultados es una respuesta esperada, el universo " +
+      "judicial es chico, no un error del cruce.",
     pathTemplate: "/api/crossref/doble-inhabilitacion",
     pathParams: [],
     querySchema: {

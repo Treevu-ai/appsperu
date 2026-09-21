@@ -25,6 +25,18 @@ const QuerySchema = z.object({
  * formato RUC completo). Nunca se cruza por nombre — mismo criterio que el
  * resto del catálogo, no se adivina identidad por similitud de texto.
  *
+ * Vigencia ("vigente hoy") de AMBOS lados se calcula con `vigenteEnFecha`
+ * sobre el rango real `[desde,hasta]` de cada fila -- no se confía solo en
+ * el campo `estado` del lado administrativo (ese es la etiqueta que traía
+ * la fuente al momento de la extracción, puede no reflejar un `desde`
+ * futuro o un `hasta` ya pasado). `vigente` en la respuesta es un
+ * `EstadoTemporal` (`true`/`false`/`"NO_VERIFICABLE"` si falta la fecha),
+ * nunca se fuerza a boolean por ausencia de dato.
+ *
+ * `dniComunEnmascarado` expone solo los últimos 3 dígitos -- es un
+ * identificador de cruce interno, mismo criterio que
+ * `personas-sancionadas.ts`/`conformacion.ts`.
+ *
  * Verificado en vivo 2026-09-21: 0 coincidencias contra las 14 filas
  * judiciales del corte 2026-09-01 (universo judicial es pequeño; el
  * endpoint reporta 0 correctamente en vez de fallar o inventar un caso).
@@ -40,7 +52,11 @@ dobleInhabilitacionRouter.get(
     const params: unknown[] = [];
     if (ruc) {
       params.push(ruc);
-      conditions.push(`(i.ruc = $${params.length} OR ij.ruc_dni = $${params.length})`);
+      // El parámetro acepta RUC completo O DNI de 8 dígitos (documentado en
+      // el querySchema) -- filtrar solo por ruc/ruc_dni descartaba un DNI
+      // válido, porque el DNI de 8 dígitos nunca calza esas columnas
+      // completas, solo las generadas `dni` (hallazgo de Copilot, PR #175).
+      conditions.push(`(i.ruc = $${params.length} OR ij.ruc_dni = $${params.length} OR i.dni = $${params.length} OR ij.dni = $${params.length})`);
     }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
@@ -71,10 +87,20 @@ dobleInhabilitacionRouter.get(
     res.json({
       total: rows.length,
       resultados: rows.map((r) => {
-        const administrativaVigente = (r.admin_estado ?? "").toUpperCase() === "VIGENTE";
+        // `estado` es la etiqueta que trae la fuente al momento de la
+        // extracción -- no verifica el rango real [desde,hasta]. Una fila
+        // con estado="VIGENTE" pero desde futuro o hasta ya pasado quedaría
+        // marcada como vigente igual si solo se mirara `estado` (hallazgo de
+        // Copilot, PR #175). `vigenteEnFecha` es la fuente de verdad para
+        // "vigente hoy" en ambos lados, igual que ya hace `judicial`.
+        const administrativaVigente = vigenteEnFecha(hoy, r.admin_desde, r.admin_hasta);
         const judicialVigente = vigenteEnFecha(hoy, r.judicial_desde, r.judicial_hasta);
         return {
-          dniComun: r.dni_comun,
+          // DNI enmascarado a los últimos 3 dígitos -- mismo criterio que
+          // personas-sancionadas.ts/conformacion.ts: es un identificador de
+          // cruce interno, nunca se expone completo en una respuesta pública
+          // (hallazgo de Copilot, PR #175).
+          dniComunEnmascarado: typeof r.dni_comun === "string" && r.dni_comun.length >= 3 ? `***${r.dni_comun.slice(-3)}` : null,
           administrativa: {
             ruc: r.ruc_administrativo,
             razonSocial: r.razon_social,
@@ -92,7 +118,7 @@ dobleInhabilitacionRouter.get(
             hasta: r.judicial_hasta,
             vigente: judicialVigente,
           },
-          ambasVigentesHoy: administrativaVigente && judicialVigente === true,
+          ambasVigentesHoy: administrativaVigente === true && judicialVigente === true,
         };
       }),
       limitation:
