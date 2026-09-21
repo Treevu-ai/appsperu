@@ -15,6 +15,7 @@ const { createApp } = await import("../app.js");
 
 beforeEach(() => {
   queryMock.mockReset();
+  inversionesQueryMock.mockReset();
 });
 
 describe("GET /health", () => {
@@ -28,8 +29,9 @@ describe("GET /health", () => {
 });
 
 describe("GET /readyz", () => {
-  it("confirms the database dependency before declaring the service ready", async () => {
+  it("confirms both database dependencies before declaring the service ready", async () => {
     queryMock.mockResolvedValueOnce({ rows: [{ "?column?": 1 }] });
+    inversionesQueryMock.mockResolvedValueOnce({ rows: [{ "?column?": 1 }] });
     const res = await request(createApp()).get("/readyz");
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: "ready", database: "ok" });
@@ -37,6 +39,13 @@ describe("GET /readyz", () => {
 
   it("does not expose an internal error when the database is unavailable", async () => {
     queryMock.mockRejectedValueOnce(new Error("connection refused"));
+    const res = await request(createApp()).get("/readyz");
+    expect(res.status).toBe(503);
+  });
+
+  it("reports not_ready when inversionesPool is down even if the primary pool is fine (GET /api/crossref needs both)", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [{ "?column?": 1 }] });
+    inversionesQueryMock.mockRejectedValueOnce(new Error("connection refused"));
     const res = await request(createApp()).get("/readyz");
     expect(res.status).toBe(503);
   });
