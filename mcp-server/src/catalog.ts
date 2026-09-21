@@ -1581,6 +1581,28 @@ export const TOOL_CATALOG: ToolSpec[] = [
       soloSancionados: z.enum(["true", "false"]).optional(),
     },
   },
+  {
+    name: "proveedores_sancionados_inhabilitaciones_judiciales",
+    app: "proveedores-sancionados",
+    description:
+      "Inhabilitaciones por mandato judicial vigentes [OECE] (investigado y construido 2026-09-20) — base legal " +
+      "DISTINTA a `proveedores_sancionados_sanciones` (esa es sanción administrativa del Tribunal de " +
+      "Contrataciones; esto es inhabilitación dictada por el Poder Judicial, solo comunicada a OSCE/OECE para " +
+      "registro en el RNP). Sin cruce automático entre ambas fuentes todavía. Cobertura nacional completa " +
+      "verificada en vivo: 14/15 filas del corte 2026-09-01 (1 rechazada por fecha_inicio posterior a " +
+      "fecha_fin en la fuente — anomalía real, no se adivina cuál fecha es correcta). Incluye tanto personas " +
+      "naturales (DNI/RUC-10) como al menos una empresa (RUC-20), pese a que la ficha del dataset dice 'personas " +
+      "naturales'. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/inhabilitaciones-judiciales",
+    pathParams: [],
+    querySchema: {
+      rucDni: z.string().min(1).optional().describe("RUC (10 u 11 dígitos) o DNI, tal cual viene en la fuente."),
+      dni: z.string().regex(/^\d{8}$/).optional().describe("Solo el DNI de 8 dígitos, derivado del RUC-10 cuando aplica."),
+      limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 200, máximo 500."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
 
   // ---- salud-institucional (agregador, sin base propia) ----
   {
