@@ -1,6 +1,7 @@
 import express, { type ErrorRequestHandler } from "express";
 import { sancionesRouter } from "./routes/sanciones.js";
 import { inhabilitacionesJudicialesRouter } from "./routes/inhabilitaciones-judiciales.js";
+import { dobleInhabilitacionRouter } from "./routes/doble-inhabilitacion.js";
 import { crossrefRouter } from "./routes/crossref.js";
 import { redesProveedoresRouter } from "./routes/redes-proveedores.js";
 import { personasSancionadasRouter } from "./routes/personas-sancionadas.js";
@@ -26,6 +27,7 @@ export function createApp() {
   app.use("/api", apiRateLimit);
   app.use("/api/sanciones", sancionesRouter);
   app.use("/api/inhabilitaciones-judiciales", inhabilitacionesJudicialesRouter);
+  app.use("/api/crossref/doble-inhabilitacion", dobleInhabilitacionRouter);
   app.use("/api/crossref", crossrefRouter);
   app.use("/api/crossref/redes-proveedores", redesProveedoresRouter);
   app.use("/api/crossref/personas-sancionadas", personasSancionadasRouter);
