@@ -142,7 +142,7 @@ Dataset oficial de monitoreo de cobertura forestal amazónica por distrito. Veri
 
 #### AMB-02 — Uso y cambio de uso de la tierra a nivel distrital (MINAM)
 
-**Prioridad:** P1 · **Esfuerzo:** M · **Dependencias:** ninguna
+**Prioridad:** P1 · **Esfuerzo:** M · **Dependencias:** AMB-01 (la comparación campo por campo exige que AMB-01 ya esté ingerido)
 
 Complementario a AMB-01. Verificar en vivo si se solapa significativamente con AMB-01 o si aporta señal distinta (cambio de uso de suelo no siempre implica pérdida de bosque, y viceversa) antes de decidir si se ingiere como conector separado o se evalúa fusionar con AMB-01.
 
@@ -226,7 +226,7 @@ No es un conector nuevo — es agregar códigos de serie al `NATIONAL_TRADE_SERI
 ## 10. Definition of Done
 
 - GEO-01 y AMB-01 (los dos P0) mergeados con PR, revisión, pruebas automatizadas, y verificación en vivo documentada en el PR.
-- Cada conector nuevo tiene ficha en `docs/conectores.md` y data contract en `docs/data-contracts/`.
+- Cada conector nuevo tiene ficha en `docs/conectores.md`, data contract en `docs/data-contracts/`, **y su tool correspondiente registrada en `mcp-server/src/catalog.ts`, probada con al menos una invocación real** — ningún conector de este PRD se declara "completo" sin su tool MCP funcionando, mismo estándar que el resto del catálogo (todo conector existente en Rastro tiene su tool MCP).
 - Ningún conector se declara "completo" basado solo en la investigación de búsqueda de este PRD — cada ticket repite su propia verificación en vivo como parte del trabajo.
 - `scripts/check-connectors-documented.sh` pasa sin cambios de script tras cada merge.
 - No existe ningún conector nuevo con clave de upsert inventada sin confirmar contra una respuesta real de la fuente.

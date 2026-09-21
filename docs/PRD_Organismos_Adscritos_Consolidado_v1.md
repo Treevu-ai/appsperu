@@ -291,6 +291,7 @@ Investigado explícitamente a pedido del usuario — son oficinas de protocolo/p
 
 - ADS-01, ADS-03 y ADS-05 (los tres desbloqueantes/listos de Épica A) resueltos — ADS-01 con conclusión explícita, ADS-03 y ADS-05 mergeados con PR, revisión y pruebas.
 - ADS-02 y ADS-04 mergeados si ADS-01 desbloquea SERFOR (ADS-02 queda condicional, no se fuerza si ADS-01 concluye que no hay servicio público).
+- Cada conector de Épica A tiene su tool correspondiente registrada en `mcp-server/src/catalog.ts` y verificada con al menos una invocación funcional real — ningún ticket de ingesta de este PRD se declara "completo" sin su tool MCP funcionando, mismo estándar que el resto del catálogo. El mismo requisito aplica a cualquier ticket de ingesta real que surja de `docs/BACKLOG_Organismos_Adscritos_Consolidado_v1.md`.
 - Las 9 entidades de ADS-11 tienen conclusión explícita (Épica A o C), ninguna queda indefinida.
 - `docs/BACKLOG_Deuda_Publica_MEF_v1.md` y `docs/BACKLOG_Energia_Ambiente_Financiero_Nuevos_Conectores_v1.md` actualizados con la nota de remisión a este documento.
 - Ningún dataset con riesgo de PII no evaluado se ingiere — ADS-10 y cualquier expansión futura de SUNARP a personas naturales quedan bloqueados sin esa evaluación explícita.

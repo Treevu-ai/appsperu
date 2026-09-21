@@ -28,7 +28,7 @@
 | ADS-09 | Triage | Verificar contenido real del grupo SUNAFIL. | Datasets reales documentados; evalúa relevancia para perfil de riesgo por RUC si hay sanciones laborales por empleador. | Ninguna. | P2 | S | 2 |
 | ADS-10 | Triage + PII | Verificar riesgo de PII en "Puestos de trabajo" (MTPE) antes de decidir ingesta. | Verificación explícita de columna con posible identificador de persona; descarte automático si hay PII. | Ninguna. | P2 | S | 2 |
 | ADS-11 | Triage | Verificar SUNEDU, RENIEC, ANA, SENASA, SUTRAN, INS, INABIF, CENEPRED, SERVIR (9 entidades). | Tabla de conclusión por las 9, cada una con hallazgo real o "sin hallazgo" + razón. | Ninguna. | P2 | M | 2 |
-| ADS-15 | Ingesta (contrato) | Confirmar contrato completo de `api.congreso.gob.pe/spley-portal-service` (proyectos de ley, y evaluar votaciones/asistencia/comisiones bajo el mismo host). | Una consulta real con `200` y datos, body exacto documentado en el PR; contrato de `FiltroProyecLeyDto` documentado (campos y valores válidos de `perParId`). | Ninguna. | P1 | S | 1 |
+| ADS-15 | Ingesta (contrato) | Confirmar contrato completo de `api.congreso.gob.pe/spley-portal-service` (proyectos de ley, y evaluar votaciones/asistencia/comisiones bajo el mismo host). | Una consulta real con `200` y datos, body exacto documentado en el PR; contrato de `FiltroProyecLeyDto` documentado (campos y valores válidos de `perParId`). Si tras un esfuerzo razonable no se logra un `200` real, el ticket se reclasifica a Épica C documentando la evidencia de los intentos (mismo criterio que ADS-01/SERFOR). | Ninguna. | P1 | S | 1 |
 | ADS-16 | Triage | Evaluar `gestionpublicaperu.com.pe` (agregador privado, no oficial) como validación cruzada de `budget_execution`. | Rate limit y estabilidad confirmados; conclusión documentada (se usa o no) sin crear dependencia operativa de un tercero no oficial. | Ninguna. | P2 | S | 2 |
 | ADS-17 | Triage | Verificar Portal de Estadística SUNARP (agregados por año, distinto de ADS-03). | Formato/columnas/granularidad reales confirmados; evalúa solapamiento con ADS-03 antes de decidir ingesta separada. | Ninguna. | P2 | S | 2 |
 | ADS-18 | Triage | Verificar GeoServer WFS de red vial del MTC (geometría real). | Capacidades/capas del servicio WFS confirmadas en vivo; evalúa valor agregado frente a `infraestructura-mtc`/`red-vial-subnacional` tabular. | Ninguna. | P2 | M | 2 |
@@ -37,9 +37,9 @@
 ## Definition of Done por ticket
 
 - Verificación en vivo propia documentada en el PR (evidencia real, no snippet de búsqueda).
-- Si el ticket es de triage (ADS-06 a ADS-11), termina en una conclusión explícita por entidad — Épica A (pasa a ticket de ingesta) o Épica C (se descarta con razón).
+- Todo ticket de Épica B (ADS-06 a ADS-11, ADS-15 a ADS-19) termina en una conclusión explícita por entidad/fuente — Épica A (pasa a ticket de ingesta) o Épica C (se descarta con razón documentada). Ninguno queda indefinido.
 - Ningún dataset con riesgo de PII no evaluado se ingiere.
-- Ficha en `docs/conectores.md` y data contract en `docs/data-contracts/` para cualquier ticket que llegue a ingesta real.
+- Cualquier ticket que llegue a ingesta real registra su tool en `mcp-server/src/catalog.ts` y la verifica con al menos una invocación funcional real, además de la ficha en `docs/conectores.md` y el data contract en `docs/data-contracts/`.
 - Sin UI, sin scheduler.
 
 ## Registrado y sin acción (Épica C — no reinvestigar sin señal nueva)
