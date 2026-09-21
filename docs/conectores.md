@@ -989,6 +989,32 @@ conector — ver `docs/data-contracts/congreso-spley-portal-service.md` para la 
 
 ---
 
+<a id="catastro-minero"></a>
+## catastro-minero — Derechos mineros (INGEMMET)
+
+Investigado y construido 2026-09-21 (ticket GEO-01, `docs/PRD_Energia_Ambiente_Financiero_Nuevos_Conectores_v1.md`),
+a partir de la investigación de endpoints de Energía/Minería/Ambiente de la misma sesión — fuente ya
+verificada en vivo antes de construir.
+
+### `ingemmet-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Derechos mineros del Catastro Minero de INGEMMET — concesión, titular, estado, hectáreas, sustancia, ubicación territorial (departamento/provincia/distrito). |
+| **Fuente pública sin auth** | `GET .../SERV_CATASTRO_MINERO/MapServer/0/query` (ArcGIS REST, capa "Catastro Minero") — confirmado con `curl` directo, sin autenticación. |
+| **Sin paginación estándar (hallazgo real)** | El servicio declara `supportsPagination: false` y rechaza `resultRecordCount`/`resultOffset` con `HTTP 400 "Pagination is not supported."`. Se pagina por rango de `OBJECTID` (`WHERE OBJECTID > último_id ORDER BY OBJECTID ASC`, sin `resultRecordCount`), iterando mientras la respuesta declare `exceededTransferLimit: true` — `maxRecordCount=1000` por respuesta, confirmado en vivo. |
+| **Clave real verificada** | `CODIGOU` (código único del derecho minero) — confirmado contra el schema real de la capa y verificado único sobre las 66,823 filas de la ingesta nacional completa (0 duplicados). |
+| **TLS: requiere `--use-system-ca` (hallazgo real de esta sesión)** | Node.js (CA bundle propio) rechaza el certificado de `geocatmin.ingemmet.gob.pe` con `UNABLE_TO_VERIFY_LEAF_SIGNATURE`, aunque `curl` (CA store del sistema) sí confía en él. El script `ingest:ingemmet` corre con `tsx --use-system-ca` — no es un bypass de verificación TLS, usa el almacén de confianza del sistema operativo en vez del bundle reducido de Node. |
+| **Upsert, no append** | `ON CONFLICT (codigou) DO UPDATE` — cada ingesta refleja el catastro vigente, no acumula duplicados entre corridas. |
+| **Titular puede ser persona natural (nota, no PII a excluir)** | En minería artesanal/pequeña, `TIT_CONCES` puede ser el nombre de una persona natural — mismo tipo de dato público que un registro de propiedad (SUNARP), no se enmascara. |
+| **Frecuencia** | Manual (`npm run ingest:ingemmet` en `apps/catastro-minero/api`). La fuente se actualiza diario según su propia descripción; el conector no tiene scheduler. |
+| **Fuente de datos** | `geocatmin.ingemmet.gob.pe` (INGEMMET). |
+| **Cobertura real ingerida** | Verificado en vivo 2026-09-21: **66,823/66,823 filas insertadas, 0 rechazadas** (cobertura nacional completa, no acotada). La Libertad: 4,787 derechos mineros. |
+| **API expuesta** | `GET /api/derechos` (filtros `departamento`/`provincia`/`distrito`/`estado`/`sustancia`/`concesion`/`titular`, paginado con `total`/`hasMore`) y `GET /api/derechos/{codigou}` (detalle, 404 si no existe). Registrada como tools MCP `catastro_minero_derechos`/`catastro_minero_derecho_detalle`. |
+| **Cruces** | Ninguno implementado todavía — candidato natural: cruce futuro por UBIGEO/RUC contra `identidad-fiscal`/`infracciones-ambientales` para perfiles de riesgo minero-ambiental, o contra el trabajo EUDR del usuario. |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada

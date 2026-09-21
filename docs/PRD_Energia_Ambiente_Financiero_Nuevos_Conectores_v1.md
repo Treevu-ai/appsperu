@@ -1,6 +1,6 @@
 # PRD — Nuevos conectores: Energía/Minería, Ambiente y Sistema Financiero Público
 
-**Estado:** Propuesto — investigación de fuentes completa (verificación en vivo parcial), ningún conector iniciado.
+**Estado:** GEO-01 IMPLEMENTADO (2026-09-21) — `apps/catastro-minero/api`, 66,823 derechos mineros ingeridos a nivel nacional, verificado en vivo contra Postgres. Ver `docs/data-contracts/ingemmet-catastro-minero.md`. Resto de tickets propuestos, sin iniciar.
 **Fecha:** 2026-09-21
 **Ámbito:** apps nuevas por definir (ver §5), `mcp-server/src/catalog.ts`, `docs/conectores.md`, `docs/data-contracts/`
 **Horizonte:** sin fecha comprometida — este PRD es un inventario priorizado, no un sprint.

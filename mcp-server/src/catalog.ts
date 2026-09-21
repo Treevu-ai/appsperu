@@ -2712,4 +2712,42 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: [],
     querySchema: {},
   },
+
+  // ---- catastro-minero (INGEMMET, derechos mineros) ----
+  {
+    name: "catastro_minero_derechos",
+    app: "catastro-minero",
+    description:
+      "Derechos mineros del catastro de INGEMMET — filtra por departamento/provincia/distrito (ej. " +
+      "'LA LIBERTAD'), estado (código tal cual la fuente, ej. 'T'=Titulado, 'P'=En trámite — ver " +
+      "`estadoDescripcion` para el texto legible, no se normalizó a un enum binario), sustancia, concesión o " +
+      "titular (ambos búsqueda parcial ILIKE). Clave real verificada: `codigou` — 66,823 filas, 0 duplicados " +
+      "en la ingesta nacional completa verificada 2026-09-21 (4,787 en La Libertad). Carácter referencial, " +
+      "solo de consulta (aviso de la propia fuente INGEMMET). `titular` puede ser una empresa o, en minería " +
+      "artesanal/pequeña, una persona natural — mismo tipo de dato público que un registro de propiedad " +
+      "(SUNARP), no enmascarado. " + SIN_SCHEDULER,
+    pathTemplate: "/api/derechos",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("DEPA exacto, ej. 'LA LIBERTAD'."),
+      provincia: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+      estado: z.string().min(1).optional().describe("Código de ESTADO tal cual la fuente (ej. 'T'), no normalizado."),
+      sustancia: z.string().min(1).optional(),
+      concesion: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      titular: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "catastro_minero_derecho_detalle",
+    app: "catastro-minero",
+    description:
+      "Detalle de un derecho minero específico por `codigou` (código único de INGEMMET, ej. '010033716'). " +
+      "Responde 404 si no existe. " + SIN_SCHEDULER,
+    pathTemplate: "/api/derechos/{codigou}",
+    pathParams: ["codigou"],
+    querySchema: {},
+  },
 ];

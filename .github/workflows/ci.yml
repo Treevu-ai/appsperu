@@ -17,6 +17,7 @@ jobs:
           - apps/actividad-empresarial/api
           - apps/autoridades-electas/api
           - apps/bcrp-comercio-exterior/api
+          - apps/catastro-minero/api
           - apps/ceplan-estrategico/api
           - apps/ceplan-geo/api
           - apps/compras-publicas/api

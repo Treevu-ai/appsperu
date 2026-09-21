@@ -18,7 +18,7 @@
 
 | ID | Épica | Objetivo | Criterios de aceptación | Dependencias | Prioridad | Esfuerzo | Fase |
 |---|---|---|---|---|---|---|---|
-| GEO-01 | Geoespacial | App/conector de catastro minero (INGEMMET, ArcGIS REST). | Respuesta real de `?f=json` y de `/query` incluida en el PR; clave de upsert confirmada contra campos reales; `estado` sin normalizar a enum sin ver todos los valores. | Ninguna. | P0 | M | 0 |
+| GEO-01 | **IMPLEMENTADO** (Geoespacial) | App/conector de catastro minero (INGEMMET, ArcGIS REST). Verificado en vivo 2026-09-21: 66,823/66,823 derechos mineros ingeridos a nivel nacional, 0 rechazados (4,787 en La Libertad). Paginación por rango de `OBJECTID` (el servicio no soporta `resultRecordCount`/`resultOffset`). | Respuesta real de `?f=json` y de `/query` incluida en el PR ✅; clave de upsert (`CODIGOU`) confirmada contra campos reales y verificada única sobre las 66,823 filas ✅; `estado` expuesto tal cual la fuente, sin normalizar a enum ✅. | Ninguna. | P0 | M | 0 |
 | AMB-01 | Ambiente | Ingerir Bosque/No Bosque - Pérdida de Bosque Húmedo Amazónico a nivel distrital (MINAM). | Formato/columnas/granularidad confirmados en vivo antes del parser; evaluación documentada de cruce futuro con `identidad-fiscal` por UBIGEO (sin implementarlo). | Ninguna. | P0 | M | 0 |
 | GEO-02 | Geoespacial | App/conector de áreas naturales protegidas (SERNANP, ArcGIS REST). | Respuesta real de `?f=json` y `/query` de las 5 capas en el PR; si no hay ID único estable, la limitación queda documentada explícitamente. | Ninguna. | P1 | M | 1 |
 | ENE-01 | Energía | Ingerir precios de combustibles diarios (OSINERGMIN). | Verificación en vivo de formato/columnas/fecha de corte real; resuelve el recurso más reciente dinámicamente. | Ninguna. | P1 | S | 1 |
