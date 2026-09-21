@@ -1,0 +1,21 @@
+name: catastro-minero
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: catastro_minero
+      POSTGRES_PASSWORD: catastro_minero
+      POSTGRES_DB: catastro_minero
+    ports:
+      - "127.0.0.1:5462:5432"
+    volumes:
+      - catastro_minero_pgdata:/var/lib/postgresql/data
+
+volumes:
+  catastro_minero_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true
