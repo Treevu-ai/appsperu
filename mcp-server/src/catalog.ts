@@ -1603,6 +1603,25 @@ export const TOOL_CATALOG: ToolSpec[] = [
       offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
+  {
+    name: "proveedores_sancionados_doble_inhabilitacion",
+    app: "proveedores-sancionados",
+    description:
+      "Cruce dentro de esta misma app (2026-09-21, no un crosswalk fuzzy — JOIN real por RUC/DNI): ¿qué proveedor/persona " +
+      "tiene sanción ADMINISTRATIVA (Tribunal de Contrataciones, `proveedores_sancionados_sanciones`) Y orden JUDICIAL " +
+      "(`proveedores_sancionados_inhabilitaciones_judiciales`) simultáneamente? Bases legales distintas — la coincidencia " +
+      "es una señal más fuerte que cualquiera de las dos solas, pero sigue siendo solo eso, nunca se fusiona en una sola " +
+      "conclusión. `ambasVigentesHoy` calcula vigencia real con `vigenteEnFecha` (rango [desde,hasta]), no solo el campo " +
+      "`estado` de la fuente. `dniComunEnmascarado` trae solo los últimos 3 dígitos (mismo criterio que " +
+      "`proveedores_sancionados_personas`), nunca el DNI completo. Verificado en vivo: 0 coincidencias contra el " +
+      "universo judicial actual (14 filas, corte 2026-09-01) — 0 resultados es una respuesta esperada, el universo " +
+      "judicial es chico, no un error del cruce.",
+    pathTemplate: "/api/crossref/doble-inhabilitacion",
+    pathParams: [],
+    querySchema: {
+      ruc: z.string().min(1).optional().describe("Filtra a un RUC/DNI específico (busca en ambos lados del JOIN)."),
+    },
+  },
 
   // ---- salud-institucional (agregador, sin base propia) ----
   {
