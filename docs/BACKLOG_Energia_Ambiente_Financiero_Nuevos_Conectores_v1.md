@@ -47,4 +47,4 @@
 
 ## Pendiente de integración (hallazgos de la misma sesión, fuera de este backlog)
 
-Ver `docs/BACKLOG_Deuda_Publica_MEF_v1.md`, sección "Pendiente de integración" — ahí quedaron registrados SERFOR/GEOSERFOR, ONPE, SENACE (con API REST real confirmada, sube su prioridad frente a lo estimado en este documento), OSITRAN, SUNAFIL, SUNEDU, RENIEC, y los pendientes de verificar (ANA, SENASA, SUTRAN, INS, INABIF).
+Ver `docs/BACKLOG_Organismos_Adscritos_Consolidado_v1.md` (el backlog consolidado vigente, no la sección histórica de `BACKLOG_Deuda_Publica_MEF_v1.md`) — ahí quedan registrados SERFOR/GEOSERFOR, ONPE, SENACE (con API REST real confirmada, sube su prioridad frente a lo estimado en este documento), OSITRAN, SUNAFIL, SUNEDU, RENIEC, el Congreso de la República (API confirmada funcional, ADS-15), y los pendientes de verificar (ANA, SENASA, SUTRAN, INS, INABIF).

@@ -43,7 +43,7 @@ Cuatro cruces nuevos, cada uno con su propio endpoint `GET /api/crossref*`, regi
 | Cruce violencia × trayectoria | `GET /api/crossref` en `violencia-escolar` responde por UGEL con ambos indicadores, verificado en vivo contra La Libertad (15 UGEL). |
 | Cruce SIAGIE × presupuesto | `GET /api/crossref` en `instituciones-educativas` sigue el mismo contrato de respuesta que `servicios_salud_crossref`/`programas_sociales_crossref` (declara cobertura territorial real de `investments`, no asume nacional). |
 | Cruce violencia × presupuesto | Responde por departamento, con la ambigüedad de "menor reporte ≠ menor violencia" declarada explícitamente en la respuesta (campo `nota` o equivalente), no solo en la documentación. |
-| Perfil de riesgo por RUC | `GET /api/crossref/riesgo-exportador?ruc=` en `identidad-fiscal` (o el pool cruzado que corresponda) reproduce exactamente los 3+1+64 hallazgos ya verificados a mano para el seed EUDR, para cualquier RUC individual pasado por parámetro. |
+| Perfil de riesgo por RUC | `GET /api/crossref/riesgo-exportador?ruc=` en `identidad-fiscal` (o el pool cruzado que corresponda) responde correctamente para un RUC individual — verificado con al menos 3 RUC del seed EUDR usados como fixtures (uno con infracción ambiental, uno con inhabilitación, uno limpio con solo exportaciones), no con el agregado de 3+1+64 del seed completo, que es un conteo de otra naturaleza (cuántos RUC del seed cayeron en cada categoría, no una respuesta por RUC). |
 | Documentación viva | Los 4 cruces tienen ficha en `docs/conectores.md` (sección "Cruces" de la app correspondiente) y aparecen en el "Mapa de cruces entre apps". `scripts/check-connectors-documented.sh` sigue pasando sin cambios de script. |
 
 ## 4. Usuarios y casos de uso
@@ -63,44 +63,51 @@ Cuatro cruces nuevos, cada uno con su propio endpoint `GET /api/crossref*`, regi
 
 **Prioridad:** P0 · **Esfuerzo:** M · **Dependencias:** ninguna (ambas fuentes ya ingeridas)
 
-`GET /api/crossref` en `violencia-escolar`: agrega `violencia_escolar_casos` del snapshot más reciente (`MAX(id)` de `raw_siseve_batches`, mismo criterio que `GET /api/casos`) por UGEL (conteo total y por `tipo_violencia`), y lo cruza contra `siagie_trayectoria` agregado a UGEL — vía pool cruzado a la base de `instituciones-educativas` (`INSTITUCIONES_EDUCATIVAS_DATABASE_URL`, mismo patrón `servicios-salud/db/inversiones-pool.ts`), uniendo `siagie_trayectoria.cod_mod`→`instituciones_educativas.cod_mod` para obtener `ugel`, luego agregando por ese `ugel`.
+`GET /api/crossref` en `violencia-escolar`: agrega `violencia_escolar_casos` del snapshot más reciente (`MAX(id)` de `raw_siseve_batches`, mismo criterio que `GET /api/casos`) por UGEL (conteo total y por `tipo_violencia`), y lo cruza contra `siagie_trayectoria` agregado a UGEL — vía pool cruzado a la base de `instituciones-educativas` (`INSTITUCIONES_EDUCATIVAS_DATABASE_URL`, mismo patrón `servicios-salud/db/inversiones-pool.ts`), uniendo `siagie_trayectoria.cod_mod`+`anexo`→`instituciones_educativas.cod_mod`+`anexo` (**la clave completa de escuela, no solo `cod_mod`** — el propio endpoint `GET /api/trayectoria` ya existente usa ambas columnas, `apps/instituciones-educativas/api/src/routes/trayectoria.ts`; unir solo por `cod_mod` puede duplicar filas o asignar la UGEL de un anexo incorrecto cuando una escuela tiene más de un anexo) para obtener `ugel`, luego agregando por ese `ugel`.
 
 **Gotcha real, confirmado en vivo 2026-09-21**: los nombres de UGEL difieren en mayúsculas/tildes entre ambas fuentes (`"UGEL CHEPÉN"` en el padrón vs. `"UGEL Chepén"` en SíseVe) — normalizar con `UPPER(unaccent(...))` o equivalente antes de unir, **no** asumir coincidencia exacta case-sensitive. Verificar en vivo que la normalización no genera colisiones falsas (dos UGEL distintas que normalizan igual) antes de dar el join por bueno.
 
 **Criterios de aceptación**
 
-- El join usa el `ugel` del padrón (`instituciones_educativas.ugel`), no un crosswalk nuevo ni matcher difuso más allá de la normalización de mayúsculas/tildes.
-- La respuesta expone, por UGEL: total de casos de violencia (y desglose por tipo), matrícula total SIAGIE, tasa de atraso/retiro agregada, y una tasa de violencia normalizada por matrícula (no solo el conteo crudo, que favorecería a las UGEL más grandes).
+- El join usa `cod_mod`+`anexo` (clave completa de escuela) para obtener el `ugel` del padrón (`instituciones_educativas.ugel`), no un crosswalk nuevo ni matcher difuso más allá de la normalización de mayúsculas/tildes.
+- **Períodos temporales alineados, no mezclados (hallazgo real de Copilot)**: `violencia_escolar_casos` es un snapshot acumulado desde 01/01/2024 hasta la fecha de la última ingesta (no un año específico), mientras `siagie_trayectoria` es multi-año (2021-2024) y por defecto selecciona solo el año más reciente. Dividir casos acumulados de SíseVe entre la matrícula de un único año de SIAGIE produce una tasa sin interpretación temporal real. La respuesta debe (a) declarar explícitamente el rango de fechas real de SíseVe y el año real de SIAGIE usados, y (b) exponer la tasa marcada como "acumulada, no anualizada" — no se presenta como una tasa anual comparable entre UGEL sin esa advertencia.
+- La respuesta expone, por UGEL: total de casos de violencia (y desglose por tipo), matrícula total SIAGIE del año usado, tasa de atraso/retiro agregada, y una tasa de violencia normalizada por matrícula (no solo el conteo crudo, que favorecería a las UGEL más grandes) — con la advertencia de período del punto anterior.
 - UGEL presentes en una fuente pero no en la otra aparecen con el campo faltante en `null`, nunca en `0` — mismo principio de honestidad de datos que `identidad-fiscal/crossref.ts`.
-- Tests: UGEL con match en ambas fuentes, UGEL solo en violencia, UGEL solo en trayectoria, normalización de tildes/mayúsculas verificada con un caso real (`"UGEL Chepén"`/`"UGEL CHEPÉN"`).
+- Tests: UGEL con match en ambas fuentes, UGEL solo en violencia, UGEL solo en trayectoria, normalización de tildes/mayúsculas verificada con un caso real (`"UGEL Chepén"`/`"UGEL CHEPÉN"`), y un test que verifica que la respuesta declara el rango de fechas/año real usado.
 - Verificado en vivo contra La Libertad (15 UGEL) antes de mergear.
 
 #### EDU-02 — Crossref `instituciones-educativas` (SIAGIE trayectoria) × `radar-ejecucion`
 
 **Prioridad:** P1 · **Esfuerzo:** M · **Dependencias:** ninguna
 
-`GET /api/crossref` en `instituciones-educativas`: agrega `siagie_trayectoria` por UBIGEO (vía el padrón, `cod_mod`→`ubigeo`) y lo cruza contra `budget_execution` de `radar-ejecucion` (pool cruzado, `EJECUCION_DATABASE_URL`) filtrado por el valor real de `FUNCION = 'EDUCACIÓN'` — **confirmar el valor exacto con una consulta `DISTINCT` documentada en el PR antes de fijarlo en código**, mismo criterio ya exigido en `PRD_Servicios_Salud_Programas_Sociales_v1.md` para `actividad-agraria`/`seguridad-ciudadana`.
+`GET /api/crossref` en `instituciones-educativas`: agrega `siagie_trayectoria` por UBIGEO (vía el padrón, `cod_mod`+`anexo`→`ubigeo`) y lo cruza contra `budget_execution` de `radar-ejecucion` (pool cruzado, `EJECUCION_DATABASE_URL`) filtrado por el valor real de `FUNCION = 'EDUCACIÓN'` — **confirmar el valor exacto con una consulta `DISTINCT` documentada en el PR antes de fijarlo en código**, mismo criterio ya exigido en `PRD_Servicios_Salud_Programas_Sociales_v1.md` para `actividad-agraria`/`seguridad-ciudadana`.
+
+**Corrección real (Copilot, PR #180)**: `budget_execution` **no tiene columna `ubigeo`** — solo `entity_code` (FK a `entities`) y `funcion`; el UBIGEO vive en `entities`/`territories` (ver `apps/radar-ejecucion/api/src/routes/execution.ts`). El cruce tal como estaba redactado no podía producir resultados por UBIGEO. El ticket debe unir `budget_execution.entity_code`→`entities.entity_code`→`entities.ubigeo` (o `territories` si `entities.ubigeo` no basta) — y definir explícitamente qué hacer con `meta_departamento` (columna nullable de `budget_execution` que puede traer un departamento distinto al de la sede de la entidad, ej. gasto nacional con `meta_departamento` regional) antes de decidir si el cruce es por sede de entidad, por `meta_departamento`, o ambos por separado.
 
 **Criterios de aceptación**
 
 - Consulta `SELECT DISTINCT funcion FROM budget_execution` (o equivalente) documentada en el PR, confirmando el valor usado para filtrar.
+- El join real hasta `ubigeo` (vía `entities`, y `meta_departamento` si aplica) está documentado y probado — no se asume que `budget_execution` trae `ubigeo` directamente.
 - La respuesta declara el alcance territorial real de `budget_execution` en el momento de la consulta (no un valor fijo en código).
 - Ningún distrito sin match en `budget_execution` se presenta como si tuviera ejecución cero — se distingue "sin dato ingerido" de "ejecución cero real".
 - Tests equivalentes a SS-02/PS-03 de `PRD_Servicios_Salud_Programas_Sociales_v1.md` (distrito con ambos datos, con solo uno, con ninguno).
 
-#### EDU-03 — Crossref `violencia-escolar` × `radar-ejecucion`, por departamento
+#### EDU-03 — Crossref `violencia-escolar` × `radar-ejecucion`, por DRE/departamento (contrato territorial a definir)
 
 **Prioridad:** P2 · **Esfuerzo:** S · **Dependencias:** ninguna
 
-`GET /api/resumen` extendido (o un nuevo `GET /api/crossref`) en `violencia-escolar`: agrega casos por DRE/departamento y lo cruza contra ejecución presupuestal educativa departamental de `radar-ejecucion`.
+`GET /api/resumen` extendido (o un nuevo `GET /api/crossref`) en `violencia-escolar`: agrega casos por DRE y lo cruza contra ejecución presupuestal educativa de `radar-ejecucion`.
+
+**Corrección real (Copilot, PR #180) — el contrato territorial exacto queda por definir, no asumir "departamento"**: `violencia_escolar_casos` solo tiene columnas `dre`/`ugel`, no `departamento` — y `GET /api/resumen` ya existente agrupa por DRE (sin filtro) o por UGEL (con `dre=`), ver `apps/violencia-escolar/api/src/routes/resumen.ts`. "DRE" y "departamento" suelen coincidir 1:1 en Perú (una DRE por departamento, con la excepción real de "DRE Lima Metropolitana" vs. "DRE Lima Provincias", que no son departamentos separados), pero este ticket debe fijar explícitamente el mapeo antes de prometer un resultado "por departamento": o (a) se limita el contrato a DRE (más simple, coincide con la fuente tal cual), o (b) se construye el mapeo DRE→departamento (incluyendo el caso Lima Metropolitana/Lima Provincias) para poder cruzar contra `budget_execution`, que si agrupa por departamento real vía `entities`/`meta_departamento`.
 
 **Advertencia que debe quedar explícita en la respuesta, no solo en la documentación**: una correlación entre baja ejecución presupuestal y bajo reporte de violencia puede reflejar menor acceso al sistema de reporte SíseVe, no menos violencia real (mismo principio ya aplicado al hallazgo de Lima Metropolitana concentrando el mayor volumen de casos — reflejaba densidad poblacional y acceso, no necesariamente más violencia per cápita). La respuesta debe incluir un campo de advertencia textual sobre esta ambigüedad, no dejarlo implícito.
 
 **Criterios de aceptación**
 
+- La decisión (a)/(b) sobre el contrato territorial (solo DRE, o mapeo DRE→departamento) queda documentada explícitamente antes de implementar.
 - La respuesta incluye explícitamente la advertencia de causalidad/acceso descrita arriba (no solo en `docs/conectores.md`).
-- Mismo criterio de verificación en vivo del valor de `FUNCION` que EDU-02.
-- Tests: departamento con alta ejecución y alta violencia, alta ejecución y baja violencia, y los cruces inversos — sin asumir una dirección de causalidad en ningún assert.
+- Mismo criterio de verificación en vivo del valor de `FUNCION` y del join hasta `ubigeo`/departamento que EDU-02.
+- Tests: DRE (o departamento, según la decisión tomada) con alta ejecución y alta violencia, alta ejecución y baja violencia, y los cruces inversos — sin asumir una dirección de causalidad en ningún assert. Si se implementa el mapeo DRE→departamento, un test cubre el caso real "DRE Lima Metropolitana"/"DRE Lima Provincias" (ambas del mismo departamento).
 
 ### Épica B — Perfil de riesgo por RUC (productizar EUDR ad-hoc)
 
@@ -112,10 +119,13 @@ Decidir en qué app vive el endpoint (candidato natural: `identidad-fiscal`, que
 
 **Decisión explícita a tomar y documentar, no asumir**: si se agrega un score/semáforo de riesgo, o si el endpoint solo expone los hechos crudos de las 3 fuentes y deja la interpretación al consumidor — dado el patrón de honestidad de datos del proyecto, la opción por defecto debería ser exponer los hechos, no inventar una ponderación de riesgo sin metodología validada.
 
+**Hallazgo real de PII (Copilot, PR #180) — bloqueante para el diseño**: `inhabilitaciones_judiciales` (`proveedores-sancionados`) **no es solo de empresas** — su columna `ruc_dni` acepta tanto RUC (11 dígitos) como DNI (8 dígitos, de persona natural), y `nombre` trae el nombre de esa persona cuando es DNI (ver `apps/proveedores-sancionados/api/src/db/migrations/004_inhabilitaciones_judiciales.sql`). Un endpoint público por RUC que devuelva esta sección sin distinguir el caso DNI expondría nombre y documento de una persona natural. VI-01 debe fijar explícitamente una de dos salidas antes de que VI-02 empiece: (a) el endpoint solo acepta/expone RUC de 11 dígitos y filtra `WHERE dni IS NULL` en esta tabla (la columna generada `dni` ya existe en el schema para esto), o (b) si se permite consultar por DNI, el `nombre` se enmascara con el mismo criterio que ya usa `proveedores_sancionados_doble_inhabilitacion` (últimos 3 dígitos visibles del documento, nunca el nombre completo sin enmascarar).
+
 **Criterios de aceptación**
 
 - Documento corto de diseño (puede ser la sección 5 de este PRD ampliada, o un ADR) que fija: app dueña del endpoint, forma de la respuesta, y la decisión sobre score vs. hechos crudos.
 - El diseño reproduce exactamente los 3 cruces ya verificados a mano (exportaciones FOB, infracciones ambientales, inhabilitaciones administrativas + judiciales) — no agrega una cuarta fuente sin verificarla en vivo primero.
+- El diseño fija explícitamente el tratamiento de PII de `inhabilitaciones_judiciales` descrito arriba — (a) o (b), no ambigüedad ni default implícito.
 
 #### VI-02 — Implementación del endpoint
 
@@ -127,6 +137,7 @@ Decidir en qué app vive el endpoint (candidato natural: `identidad-fiscal`, que
 
 - Un RUC sin match en ninguna de las 3 fuentes responde `200` con las 3 secciones vacías (`[]`), no `404` — la ausencia de sanción/exportación es información válida, no un error.
 - Reproduce exactamente los resultados ya verificados a mano para al menos 3 RUC del seed EUDR (20140181405 con infracción + exportación, 20119208026 con inhabilitación, un RUC limpio con solo exportación) — usados como fixtures de test.
+- Aplica la decisión de PII de VI-01 sobre `inhabilitaciones_judiciales`: si la decisión fue (a), la query filtra `WHERE dni IS NULL` explícitamente; si fue (b), el nombre viene enmascarado en la respuesta. Test específico que verifica que una fila con DNI nunca sale con el nombre completo sin enmascarar.
 - Tests: RUC con las 3 señales, RUC con ninguna, RUC con solo una.
 - No se valida el formato de RUC más allá de lo que ya validan los otros endpoints de `identidad-fiscal` (11 dígitos) — reutilizar el schema Zod existente si hay uno, no duplicar la regex.
 

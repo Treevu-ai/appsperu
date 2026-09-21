@@ -34,9 +34,9 @@
 - Ningún dato de deuda se presenta con cobertura nacional/regional asumida sin verificarla contra la respuesta real de la fuente.
 - Sin UI, sin scheduler.
 
-## Pendiente de integración (fuera de este backlog, por instrucción explícita del usuario)
+## Registro histórico (ver nota de remisión arriba — ya no es el estado actual)
 
-Hallazgos de órganos adscritos investigados en paralelo esta misma sesión, todavía sin PRD/backlog propio:
+Hallazgos de órganos adscritos investigados en paralelo esta misma sesión. **Ya tienen PRD/backlog propio** (`docs/PRD_Organismos_Adscritos_Consolidado_v1.md` / `docs/BACKLOG_Organismos_Adscritos_Consolidado_v1.md`) — esta tabla queda como registro de cuándo y con qué evidencia se encontró cada uno, no como pendiente activo:
 
 | Entidad | Adscrita a | Hallazgo |
 |---|---|---|

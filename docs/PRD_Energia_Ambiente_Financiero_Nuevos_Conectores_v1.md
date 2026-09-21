@@ -27,7 +27,7 @@ Priorizar y ejecutar, en el orden que fija §6, los conectores nuevos con mejor 
 
 ### No objetivos
 
-- No se construyen los ~100 datasets inventariados — este PRD prioriza un subconjunto, el resto queda registrado en el backlog de continuidad (§9 del backlog asociado) para revisitar más adelante.
+- No se construyen los ~100 datasets inventariados — este PRD prioriza un subconjunto (§5). El resto de datasets de MINEM/OSINERGMIN/MINAM no listados aquí no tiene inventario individual — solo los agrupados y explícitamente descartados en la sección "Fuentes investigadas y descartadas" de `docs/BACKLOG_Energia_Ambiente_Financiero_Nuevos_Conectores_v1.md` (SENAMHI, IIAP, Facilito) tienen seguimiento; el resto queda fuera de alcance sin un ticket de triage propio — si se decide revisitarlos, requiere una investigación nueva, no hay un "§9" o inventario ya armado esperando.
 - No se construye ningún conector para SENAMHI ni IIAP en esta primera pasada — SENAMHI tiene solo 1 dataset de descarga directa confirmado (el resto requiere solicitud formal); IIAP no tiene ningún dataset/API confirmado tras la investigación (ver `docs/BACKLOG_Energia_Ambiente_Financiero_Nuevos_Conectores_v1.md`, sección de fuentes descartadas).
 - No se construye scraping del app "Facilito" de OSINERGMIN (stock de grifos en tiempo real) — el dataset diario ya público en `datosabiertos.gob.pe` cubre el caso de uso de precios; el stock en tiempo real es un caso de uso distinto (más frágil, no investigado en vivo) que queda fuera.
 - No se construyen vistas nuevas en `rastro.fyi`/`rastro-web`.

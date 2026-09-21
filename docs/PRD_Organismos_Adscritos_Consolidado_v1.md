@@ -53,7 +53,9 @@ Cerrar la brecha entre "evidencia encontrada por búsqueda" y "evidencia verific
 
 ## 5. Alcance funcional
 
-### Épica A — Verificado en vivo, listo para comprometer esfuerzo de ingesta
+### Épica A — Fuente real confirmada, esfuerzo de ingesta justificado (verificación de esquema sigue siendo parte de cada ticket)
+
+**Corrección de etiqueta (Copilot, PR #180)**: "Épica A" no significa que el schema ya esté confirmado — significa que la *existencia* de la fuente (el endpoint/dataset responde, sin depender de más investigación de descubrimiento) ya está verificada, y por eso el esfuerzo de ingesta está justificado. ADS-01 sigue siendo un ticket de descubrimiento (todavía no hay URL confirmada). ADS-03 y ADS-05 sí tienen fuente confirmada, pero **su verificación en vivo de formato/columnas/granularidad exacta sigue siendo un criterio de aceptación obligatorio de cada ticket**, no un paso ya completado — ningún ticket de esta épica fija un schema antes de esa verificación.
 
 #### ADS-01 — SERFOR / GEOSERFOR: confirmar URL real del servicio geoespacial
 
@@ -85,11 +87,14 @@ Ingerir concesiones forestales, bosques de producción permanente y/o zonificaci
 
 De las 8 categorías de dataset de SUNARP en `datosabiertos.gob.pe`, esta es la de mayor valor inmediato: constitución de empresas y representantes legales/poderes — la pieza que falta para saber quién controla una empresa más allá de su RUC. Verificar en vivo el recurso real (formato, columnas, si incluye persona jurídica + representante en la misma fila o en tablas separadas) antes de fijar el schema.
 
+**Hallazgo real de PII (Copilot, PR #180) — este ticket no queda limitado a "solo empresas" por defecto**: "Registro de Personas Jurídicas" **incluye representantes legales y apoderados**, que son personas naturales potencialmente identificables (nombre, y posiblemente documento de identidad, según lo que confirme la verificación en vivo). La regla general de PII de este PRD (§7) solo cubre expansiones futuras a datasets de "Personas Naturales" — **no cubre automáticamente los representantes que ya vienen dentro de este dataset de personas jurídicas**. Antes de ingerir cualquier columna de representante, este ticket exige una evaluación explícita: qué campos de persona natural trae realmente la fuente, y si se ingieren con el mismo criterio de minimización/enmascarado que ya usa el catálogo para conformación societaria (`perfilprov-conformacion-connector.ts`, OSCE) — nombre completo puede quedar, documento de identidad se enmascara o se excluye, mismo patrón que el resto del proyecto.
+
 **Criterios de aceptación**
 
 - Verificación en vivo del recurso real documentada en el PR (no solo la descripción de búsqueda).
 - Schema distingue explícitamente "empresa" de "representante/apoderado" si la fuente los separa — no se colapsan en una sola entidad sin confirmar que es seguro hacerlo.
-- `docs/data-contracts/sunarp-personas-juridicas.md` documenta columnas reales y cobertura (nacional vs. parcial).
+- Evaluación de PII de los campos de representante/apoderado documentada explícitamente (qué campos trae la fuente, qué se ingiere y qué se enmascara/excluye) — no se asume "es solo un registro de empresas" sin haber revisado esto.
+- `docs/data-contracts/sunarp-personas-juridicas.md` documenta columnas reales, cobertura (nacional vs. parcial), y la decisión de tratamiento de PII de representantes.
 
 #### ADS-04 — Conector SENACE
 

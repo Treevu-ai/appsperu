@@ -9,7 +9,7 @@
 
 | Fase | Objetivo | Tickets comprometibles | Criterio de corte |
 |---|---|---|---|
-| 0 | Desbloquear SERFOR; construir SUNARP e INDECI (ya listos). | ADS-01, ADS-03, ADS-05 | ADS-01 concluye con URL real o reclasifica SERFOR a Épica C. |
+| 0 | Desbloquear SERFOR (investigación); verificar en vivo y luego construir SUNARP e INDECI (fuente ya confirmada, schema por verificar). | ADS-01, ADS-03, ADS-05 | ADS-01 concluye con URL real o reclasifica SERFOR a Épica C; ADS-03/ADS-05 no fijan schema antes de su propia verificación en vivo. |
 | 1 | Construir SERFOR (si desbloqueado), SENACE, y confirmar contrato de la API del Congreso. | ADS-02, ADS-04, ADS-15 | Ambos con verificación en vivo documentada en el PR. |
 | 2 (paralelo, no bloqueante) | Triage de Épica B — resolver cada entidad a Épica A o C. | ADS-06 a ADS-11 | Ninguna entidad queda sin conclusión explícita. |
 
