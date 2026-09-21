@@ -97,16 +97,49 @@ velocidadSancionContratoRouter.get(
     const wantedDepartamento = parsed.departamento?.toUpperCase().trim() ?? null;
     const { ventanaDiasPostSancion } = parsed;
 
+    /**
+     * Hallazgo real de CodeRabbit: consultar TODOS los `awards`+`minor_contracts` (108K+ filas a
+     * nivel nacional: 48,761 + 59,372, verificado en vivo) y recién después mirar cuáles RUC
+     * tienen sanción hace que el costo del request sea proporcional a todo el corpus de
+     * contratos, no a las ~7,114 RUC con inhabilitación real. Se invierte el orden: primero se
+     * trae el universo (chico) de RUC sancionados, y se filtran `awards`/`minor_contracts` por
+     * ese universo con `= ANY($1)` — mismas condiciones de `departamento` que antes, sin agregar
+     * `LIMIT` ni paginar `alertas` (el endpoint sigue siendo un radar nacional completo).
+     */
+    const { rows: inhabRows } = await pool.query(
+      "SELECT ruc, resolucion, desde, hasta, estado FROM inhabilitaciones WHERE desde IS NOT NULL"
+    );
+    const inhabilitacionesByRuc = new Map<string, InhabilitacionRow[]>();
+    for (const r of inhabRows) {
+      if (!inhabilitacionesByRuc.has(r.ruc)) inhabilitacionesByRuc.set(r.ruc, []);
+      inhabilitacionesByRuc.get(r.ruc)!.push({ resolucion: r.resolucion, desde: r.desde, hasta: r.hasta, estado: r.estado });
+    }
+    const rucsSancionados = [...inhabilitacionesByRuc.keys()];
+
+    if (rucsSancionados.length === 0) {
+      res.json({
+        departamento: wantedDepartamento ?? "TODOS",
+        ventanaDiasPostSancion,
+        totalAlertas: 0,
+        alertas: [],
+        nota: "Sin inhabilitaciones registradas con fecha `desde` -- no hay universo de RUC sancionados contra el cual cruzar.",
+      });
+      return;
+    }
+    const awardsSupplierIds = rucsSancionados.map((ruc) => `PE-RUC-${ruc}`);
+    const minorContractsSupplierIds = rucsSancionados.map((ruc) => `seace:ruc:${ruc}`);
+
     const [{ rows: awardRows }, { rows: minorContractRows }] = await Promise.all([
       wantedDepartamento
         ? comprasPool.query(
             `SELECT ocid, award_id, supplier_id, supplier_name, buyer_name, valor_monto, valor_moneda, fecha
-             FROM awards WHERE departamento = $1`,
-            [wantedDepartamento]
+             FROM awards WHERE departamento = $1 AND supplier_id = ANY($2)`,
+            [wantedDepartamento, awardsSupplierIds]
           )
         : comprasPool.query(
             `SELECT ocid, award_id, supplier_id, supplier_name, buyer_name, valor_monto, valor_moneda, fecha
-             FROM awards`
+             FROM awards WHERE supplier_id = ANY($1)`,
+            [awardsSupplierIds]
           ),
       wantedDepartamento
         ? comprasPool.query(
@@ -116,8 +149,8 @@ velocidadSancionContratoRouter.get(
              FROM minor_contracts c
              LEFT JOIN supplier_profiles s ON s.supplier_id = c.winning_supplier_id
              LEFT JOIN municipalities m ON m.municipality_id = c.municipality_id
-             WHERE c.winning_supplier_id IS NOT NULL AND (m.department = $1 OR c.execution_department = $1)`,
-            [wantedDepartamento]
+             WHERE c.winning_supplier_id = ANY($2) AND (m.department = $1 OR c.execution_department = $1)`,
+            [wantedDepartamento, minorContractsSupplierIds]
           )
         : comprasPool.query(
             `SELECT c.contracting_id, c.ocid, c.award_id, c.winning_supplier_id AS supplier_id,
@@ -126,7 +159,8 @@ velocidadSancionContratoRouter.get(
              FROM minor_contracts c
              LEFT JOIN supplier_profiles s ON s.supplier_id = c.winning_supplier_id
              LEFT JOIN municipalities m ON m.municipality_id = c.municipality_id
-             WHERE c.winning_supplier_id IS NOT NULL`
+             WHERE c.winning_supplier_id = ANY($1)`,
+            [minorContractsSupplierIds]
           ),
     ]);
 
@@ -155,24 +189,13 @@ velocidadSancionContratoRouter.get(
       })),
     ];
 
+    // Los contratos ya vienen pre-filtrados por RUC sancionado (`= ANY(...)` arriba) -- solo
+    // hace falta mapear cada `supplierId` de vuelta a su RUC para buscar en `inhabilitacionesByRuc`.
     const rucBySupplierId = new Map<string, string>();
     for (const row of contractRows) {
       if (!row.supplierId) continue;
       const ruc = extractRuc(row.supplierId);
       if (ruc) rucBySupplierId.set(row.supplierId, ruc);
-    }
-    const rucs = [...new Set(rucBySupplierId.values())];
-
-    const inhabilitacionesByRuc = new Map<string, InhabilitacionRow[]>();
-    if (rucs.length > 0) {
-      const { rows: inhabRows } = await pool.query(
-        `SELECT ruc, resolucion, desde, hasta, estado FROM inhabilitaciones WHERE ruc = ANY($1) AND desde IS NOT NULL`,
-        [rucs]
-      );
-      for (const r of inhabRows) {
-        if (!inhabilitacionesByRuc.has(r.ruc)) inhabilitacionesByRuc.set(r.ruc, []);
-        inhabilitacionesByRuc.get(r.ruc)!.push({ resolucion: r.resolucion, desde: r.desde, hasta: r.hasta, estado: r.estado });
-      }
     }
 
     const alertas = contractRows

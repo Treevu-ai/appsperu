@@ -41,6 +41,11 @@ const INHABILITACION_VIGENTE = {
   estado: "VIGENTE",
 };
 
+/**
+ * Hallazgo real de CodeRabbit (orden de queries invertido): el endpoint ahora consulta
+ * `inhabilitaciones` PRIMERO (universo chico de RUC sancionados) y recién después filtra
+ * `awards`/`minor_contracts` por ese universo con `= ANY(...)`. El mock refleja ese orden real.
+ */
 function mockQueries({
   awards = [] as unknown[],
   minorContracts = [] as unknown[],
@@ -48,8 +53,8 @@ function mockQueries({
 } = {}) {
   comprasQueryMock.mockReset();
   sancionadosQueryMock.mockReset();
-  comprasQueryMock.mockResolvedValueOnce({ rows: awards }).mockResolvedValueOnce({ rows: minorContracts });
   sancionadosQueryMock.mockResolvedValueOnce({ rows: inhabilitaciones });
+  comprasQueryMock.mockResolvedValueOnce({ rows: awards }).mockResolvedValueOnce({ rows: minorContracts });
 }
 
 beforeEach(() => {
@@ -74,8 +79,35 @@ describe("GET /api/crossref/velocidad-sancion-contrato", () => {
     });
   });
 
+  it("consulta primero el universo de RUC sancionados, y filtra awards/minor_contracts por ese universo (hallazgo real de CodeRabbit)", async () => {
+    mockQueries({ awards: [AWARD_DURANTE_SANCION], inhabilitaciones: [INHABILITACION_VIGENTE] });
+
+    await request(createApp()).get("/api/crossref/velocidad-sancion-contrato");
+
+    const [inhabSql] = sancionadosQueryMock.mock.calls[0];
+    expect(inhabSql).toMatch(/SELECT ruc, resolucion, desde, hasta, estado FROM inhabilitaciones/);
+
+    const [awardsSql, awardsParams] = comprasQueryMock.mock.calls[0];
+    expect(awardsSql).toMatch(/supplier_id = ANY\(\$1\)/);
+    expect(awardsParams).toEqual([["PE-RUC-20417180134"]]);
+
+    const [minorSql, minorParams] = comprasQueryMock.mock.calls[1];
+    expect(minorSql).toMatch(/winning_supplier_id = ANY\(\$1\)/);
+    expect(minorParams).toEqual([["seace:ruc:20417180134"]]);
+  });
+
+  it("responde 0 alertas sin consultar compras-publicas si no hay ningún RUC sancionado", async () => {
+    mockQueries({ inhabilitaciones: [] });
+
+    const res = await request(createApp()).get("/api/crossref/velocidad-sancion-contrato");
+
+    expect(res.status).toBe(200);
+    expect(res.body.totalAlertas).toBe(0);
+    expect(comprasQueryMock).not.toHaveBeenCalled();
+  });
+
   it("es nacional por defecto -- no filtra por departamento a menos que se pida explícitamente", async () => {
-    mockQueries({ awards: [], inhabilitaciones: [] });
+    mockQueries({ awards: [AWARD_DURANTE_SANCION], inhabilitaciones: [INHABILITACION_VIGENTE] });
 
     const app = createApp();
     const res = await request(app).get("/api/crossref/velocidad-sancion-contrato");
@@ -84,7 +116,7 @@ describe("GET /api/crossref/velocidad-sancion-contrato", () => {
     expect(res.body.departamento).toBe("TODOS");
     const [awardsSql, awardsParams] = comprasQueryMock.mock.calls[0];
     expect(awardsSql).not.toMatch(/WHERE departamento/);
-    expect(awardsParams).toBeUndefined();
+    expect(awardsParams).toEqual([["PE-RUC-20417180134"]]);
   });
 
   it("detecta un contrato adjudicado poco después de que la sanción terminó, dentro de la ventana", async () => {
@@ -155,7 +187,7 @@ describe("GET /api/crossref/velocidad-sancion-contrato", () => {
   });
 
   it("acepta el filtro departamento igual que crossref", async () => {
-    mockQueries({ awards: [], inhabilitaciones: [] });
+    mockQueries({ awards: [AWARD_DURANTE_SANCION], inhabilitaciones: [INHABILITACION_VIGENTE] });
 
     const app = createApp();
     const res = await request(app).get("/api/crossref/velocidad-sancion-contrato").query({ departamento: "LA LIBERTAD" });
@@ -163,7 +195,7 @@ describe("GET /api/crossref/velocidad-sancion-contrato", () => {
     expect(res.status).toBe(200);
     expect(res.body.departamento).toBe("LA LIBERTAD");
     const [awardsSql, awardsParams] = comprasQueryMock.mock.calls[0];
-    expect(awardsSql).toMatch(/WHERE departamento = \$1/);
-    expect(awardsParams).toEqual(["LA LIBERTAD"]);
+    expect(awardsSql).toMatch(/WHERE departamento = \$1 AND supplier_id = ANY\(\$2\)/);
+    expect(awardsParams).toEqual(["LA LIBERTAD", ["PE-RUC-20417180134"]]);
   });
 });
