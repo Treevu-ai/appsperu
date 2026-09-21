@@ -44,10 +44,11 @@ Content-Type: application/json
 curl -s -X POST "https://api.congreso.gob.pe/spley-portal-service/proyecto-ley/lista-con-filtro?pageSize=100000&page=1&rowStart=0" \
   -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36" \
   -H "Content-Type: application/json" \
-  -d '{"perParId":2021,"perLegId":null,"comisionId":null,"estadoId":null,"grupParId":null,"tipoFirmanteId":null,"congresistaId":null,"texto":null,"fechaPresentacion":null,"numeroProyecto":null}'
+  -d '{"perParId":2021,"perLegId":null,"comisionId":null,"estadoId":null,"grupParId":null,"tipoFirmanteId":null,"congresistaId":null,"texto":null,"fechaPresentacion":null,"numeroProyecto":null}' \
+  -o proyectos_2021.json -w "HTTP_STATUS:%{http_code} SIZE:%{size_download}\n"
 ```
 
-`HTTP 200`, `Content-Length: 8786237` bytes. `data.proyectos.length` = **14,864** — coincide exactamente con el conteo citado por el informe de investigación competitiva y es cercano al del repo de terceros `unimauro/congreso-abierto-peru` (que reportó 14,704 en una fecha anterior, diferencia consistente con nuevas presentaciones desde entonces). Primeros 2 registros reales de la respuesta (de 14,864):
+Salida real de `-w`: `HTTP_STATUS:200 SIZE:8786237`. `data.proyectos.length` = **14,864** — coincide exactamente con el conteo citado por el informe de investigación competitiva y es cercano al del repo de terceros `unimauro/congreso-abierto-peru` (que reportó 14,704 en una fecha anterior, diferencia consistente con nuevas presentaciones desde entonces). Primeros 2 registros reales de la respuesta (de 14,864):
 
 ```json
 [
@@ -80,7 +81,17 @@ curl -s -X POST "https://api.congreso.gob.pe/spley-portal-service/proyecto-ley/l
 ]
 ```
 
-**Hallazgo adicional sobre `pageSize`**: se probó el mismo cuerpo con `pageSize=2` en la URL y la respuesta trajo igualmente los 14,864 registros completos — **el parámetro `pageSize` no está siendo respetado por el backend en las pruebas realizadas** (o requiere un mecanismo de paginación distinto no descubierto en esta pasada). LEG-01 debe verificar esto de nuevo antes de asumir paginación real; por ahora, la única evidencia es que una sola llamada trae el dataset completo del periodo.
+**Hallazgo adicional sobre `pageSize` (con comando y conteo comparable, hallazgo real de CodeRabbit)**:
+
+```bash
+curl -s -X POST "https://api.congreso.gob.pe/spley-portal-service/proyecto-ley/lista-con-filtro?pageSize=2&page=1&rowStart=0" \
+  -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36" \
+  -H "Content-Type: application/json" \
+  -d '{"perParId":2021,"perLegId":null,"comisionId":null,"estadoId":null,"grupParId":null,"tipoFirmanteId":null,"congresistaId":null,"texto":null,"fechaPresentacion":null,"numeroProyecto":null}' \
+  -o proyectos_2021_pageSize2.json -w "HTTP_STATUS:%{http_code} SIZE:%{size_download}\n"
+```
+
+Salida real: `HTTP_STATUS:200 SIZE:8786237` — **exactamente el mismo tamaño de respuesta** que con `pageSize=100000` (Caso 1 arriba). `data.proyectos.length` con `pageSize=2` = **14,864**, idéntico al de `pageSize=100000`. **El parámetro `pageSize` no está siendo respetado por el backend en las pruebas realizadas** (o requiere un mecanismo de paginación distinto no descubierto en esta pasada, ej. otro nombre de parámetro o un header). LEG-01 debe verificar esto de nuevo antes de asumir paginación real; por ahora, la única evidencia es que una sola llamada trae el dataset completo del periodo, independientemente de `pageSize`.
 
 **Caso 2 — `perParId=2026` (periodo 2026-2031, recién iniciado)**
 
@@ -88,10 +99,11 @@ curl -s -X POST "https://api.congreso.gob.pe/spley-portal-service/proyecto-ley/l
 curl -s -X POST "https://api.congreso.gob.pe/spley-portal-service/proyecto-ley/lista-con-filtro?pageSize=5&page=1&rowStart=0" \
   -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36" \
   -H "Content-Type: application/json" \
-  -d '{"perParId":2026,"perLegId":null,"comisionId":null,"estadoId":null,"grupParId":null,"tipoFirmanteId":null,"congresistaId":null,"texto":null,"fechaPresentacion":null,"numeroProyecto":null}'
+  -d '{"perParId":2026,"perLegId":null,"comisionId":null,"estadoId":null,"grupParId":null,"tipoFirmanteId":null,"congresistaId":null,"texto":null,"fechaPresentacion":null,"numeroProyecto":null}' \
+  -w "\nHTTP_STATUS:%{http_code}\n"
 ```
 
-`HTTP 200`, `data.proyectos.length` = **4** — el periodo está activo y ya tiene datos, aunque mínimos por ser nuevo.
+Salida real: `HTTP_STATUS:200`, `data.proyectos.length` = **4** — el periodo está activo y ya tiene datos, aunque mínimos por ser nuevo.
 
 **Caso 3 — `perParId` faltante (`{}`)**
 
@@ -99,10 +111,11 @@ curl -s -X POST "https://api.congreso.gob.pe/spley-portal-service/proyecto-ley/l
 curl -s -X POST "https://api.congreso.gob.pe/spley-portal-service/proyecto-ley/lista-con-filtro?pageSize=5&page=1&rowStart=0" \
   -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36" \
   -H "Content-Type: application/json" \
-  -d '{}'
+  -d '{}' \
+  -w "\nHTTP_STATUS:%{http_code}\n"
 ```
 
-`HTTP 400`, respuesta real (truncada, campo `errors` es lo relevante):
+Salida real: `HTTP_STATUS:400`, respuesta real (truncada, campo `errors` es lo relevante):
 
 ```json
 {
@@ -125,10 +138,11 @@ Probado con `99999`, y con los años `2016`/`2011`/`2006` y los enteros `1`-`7` 
 curl -s -X POST "https://api.congreso.gob.pe/spley-portal-service/proyecto-ley/lista-con-filtro?pageSize=3&page=1&rowStart=0" \
   -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36" \
   -H "Content-Type: application/json" \
-  -d '{"perParId":2021,"perLegId":null,"comisionId":null,"estadoId":10,"grupParId":null,"tipoFirmanteId":null,"congresistaId":null,"texto":null,"fechaPresentacion":null,"numeroProyecto":null}'
+  -d '{"perParId":2021,"perLegId":null,"comisionId":null,"estadoId":10,"grupParId":null,"tipoFirmanteId":null,"congresistaId":null,"texto":null,"fechaPresentacion":null,"numeroProyecto":null}' \
+  -w "\nHTTP_STATUS:%{http_code}\n"
 ```
 
-`HTTP 200`, respuesta real:
+Salida real: `HTTP_STATUS:200`, respuesta real:
 
 ```json
 {"code":200,"status":"success","data":{"proyectos":[{"perParId":2021,"pleyNum":12120,"proyectoLey":"12120/2025-PE","desEstado":"APROBADO","fecPresentacion":"2025-08-15T00:00:00.000-05:00","titulo":"PROYECTO DE LEY DE LA CUENTA GENERAL DE LA REPÚBLICA 2024.","desProponente":"PODER EJECUTIVO","autores":"","codTipoParl":"C","codTipoParlActual":"C","rowsTotal":0}],"rowsTotal":0},"timestamp":"2026-09-21T11:58:04.790-05:00"}
@@ -141,10 +155,11 @@ Filtro aplicado correctamente — `desEstado` de todos los registros devueltos e
 ```bash
 curl -s "https://api.congreso.gob.pe/spley-portal-service/periodo-parlamentario" \
   -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36" \
-  -H "Accept: application/json, text/plain, */*"
+  -H "Accept: application/json, text/plain, */*" \
+  -w "\nHTTP_STATUS:%{http_code} SIZE:%{size_download}\n"
 ```
 
-`HTTP 200`, `Content-Length: 1444` bytes, respuesta real completa:
+Salida real: `HTTP_STATUS:200 SIZE:1444`, respuesta completa:
 
 ```json
 {"code":200,"status":"success","data":[{"perParId":2026,"desPerPar":"Periodo Parlamentario 2026 - 2031","desPerParAbrev":"2026-2031","fecIni":"2026-07-27 00:00:00.0","fecFin":"2031-07-26 00:00:00.0","activo":true,"periodosLegislativos":[{"perParId":2026,"perLegId":2026,"desPerLeg":"2026 - 2027","desPerLegAbrev":"2026","fecIni":"2026-07-27T00:00:00","fecFin":"2027-07-26T00:00:00","activo":true}]},{"perParId":2021,"desPerPar":"Periodo Parlamentario 2021 - 2026","desPerParAbrev":"2021-2026","fecIni":"2021-07-22 00:00:00.0","fecFin":"2026-07-26 00:00:00.0","activo":true,"periodosLegislativos":[{"perParId":2021,"perLegId":2021,"desPerLeg":"2021 - 2022","desPerLegAbrev":"2021","fecIni":"2021-07-27T00:00:00","fecFin":"2022-07-26T00:00:00","activo":true},{"perParId":2021,"perLegId":2022,"desPerLeg":"2022 - 2023","desPerLegAbrev":"2022","fecIni":"2022-07-27T00:00:00","fecFin":"2023-07-26T00:00:00","activo":true},{"perParId":2021,"perLegId":2023,"desPerLeg":"2023 - 2024","desPerLegAbrev":"2023","fecIni":"2023-07-27T00:00:00","fecFin":"2024-07-26T00:00:00","activo":true},{"perParId":2021,"perLegId":2024,"desPerLeg":"2024 - 2025","desPerLegAbrev":"2024","fecIni":"2024-07-27T00:00:00","fecFin":"2025-07-26T00:00:00","activo":true},{"perParId":2021,"perLegId":2025,"desPerLeg":"2025 - 2026","desPerLegAbrev":"2025","fecIni":"2025-07-27T00:00:00","fecFin":"2026-07-26T00:00:00","activo":true}]}],"timestamp":"2026-09-21T11:56:38.547-05:00"}
@@ -158,10 +173,11 @@ Cada entrada del catálogo trae también `periodosLegislativos` (sub-periodos an
 
 ```bash
 curl -s "https://api.congreso.gob.pe/spley-portal-service/periodo-parlamentario/2021/filtros?codTipoParl=C" \
-  -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+  -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36" \
+  -w "\nHTTP_STATUS:%{http_code}\n"
 ```
 
-`HTTP 200`. Primeras entradas reales de `data.comisiones` (26 en total para el periodo 2021):
+Salida real: `HTTP_STATUS:200`. Primeras entradas reales de `data.comisiones` (26 en total para el periodo 2021):
 
 ```json
 {
@@ -237,7 +253,11 @@ Devuelve los catálogos completos de valores válidos para cada filtro de `Filtr
 
 **Cautela real**: tanto `data.rowsTotal` como `data.proyectos[].rowsTotal` vienen siempre en `0` en las respuestas verificadas — **no son un total real de paginación**, son un campo del DTO que el backend no está poblando (o solo se puebla bajo otra combinación de parámetros no probada todavía). El conteo real de resultados es `data.proyectos.length` — con `pageSize` suficientemente grande (probado con `100000` para el periodo 2021, trajo los 14,864 completos en una sola respuesta) no hace falta paginar de verdad, pero LEG-01 debe verificar si existe un límite real de `pageSize` antes de asumir que siempre trae todo en una sola llamada.
 
-**Clave real para upsert** (confirmar contra la respuesta, no asumir el código compuesto): `perParId` + `pleyNum` (entero) identifican un proyecto de forma única — `proyectoLey` (ej. `"14864/2025-CR"`) es el código legible derivado de esos dos campos, pero contiene `/` y no debe usarse como segmento de ruta sin codificar (ver `docs/PRD_Inteligencia_Legislativa_Congreso_v1.md`, LEG-02).
+**Clave real para upsert, verificada — no asumida (hallazgo real de CodeRabbit)**: `perParId` + `pleyNum` (entero) identifican un proyecto de forma única.
+
+- **Unicidad**: sobre el dataset completo descargado (`perParId=2021`, 14,864 registros), se calculó la clave compuesta `perParId|pleyNum` para cada registro con un `Set` — **14,864 claves únicas, 0 duplicados**. La clave es única en la práctica sobre el conjunto real, no solo en teoría.
+- **Estabilidad entre ejecuciones**: se comparó el primer registro (`pleyNum=14864`, `proyectoLey="14864/2025-CR"`) entre dos llamadas HTTP separadas (Caso 1 con `pageSize=100000` y la prueba de `pageSize=2` de la sección anterior) — **el objeto es idéntico byte a byte entre ambas ejecuciones**, y el conteo total (14,864) también coincide en ambas. No hay evidencia de que el orden o el contenido cambien entre llamadas consecutivas en un lapso corto.
+- `proyectoLey` (ej. `"14864/2025-CR"`) es el código legible derivado de esos dos campos, pero contiene `/` y no debe usarse como segmento de ruta sin codificar (ver `docs/PRD_Inteligencia_Legislativa_Congreso_v1.md`, LEG-02).
 
 `autores` viene como un solo string con nombres separados por `;` — congresistas (funcionarios públicos), no hay PII de ciudadanos particulares en este endpoint.
 
