@@ -2299,6 +2299,33 @@ export const TOOL_CATALOG: ToolSpec[] = [
       departamento: z.string().min(1).optional().describe("Por defecto LA LIBERTAD."),
     },
   },
+  {
+    name: "instituciones_educativas_trayectoria",
+    app: "instituciones-educativas",
+    description:
+      "Matriculación y trayectoria estudiantil por servicio educativo (SIAGIE/MINEDU, Unidad de Estadística), " +
+      "2021-2024 — agregado por código modular, con LEFT JOIN al padrón de IIEE para ubigeo/nombre/territorio. " +
+      "Nada parecido existía antes en el catálogo: todo lo demás mide presupuesto/obras/compras, esto mide " +
+      "trayectoria educativa real (matriculados, aprobados, retirados, atraso escolar) por escuela y año. Sin " +
+      "dato de alumno individual — sin PII de estudiantes. `desaprobado`/`promocionGuiada` vienen NULL según el " +
+      "año de origen: la fuente cambió de terminología entre 2021-2022 (`PromocionGuiada`) y 2023-2024 " +
+      "(`Desaprobado`) — desvío de esquema real, no error de ingesta. Sin `anio`, filtra al año más reciente " +
+      "ingerido por defecto (mismo criterio DQ-16 que otros conectores multi-año del catálogo). Devuelve " +
+      "`tasaAtraso`/`tasaRetiro` calculadas (null si `totalEstudiantes` es 0, evita división por cero). " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/trayectoria",
+    pathParams: [],
+    querySchema: {
+      codMod: z.string().min(1).optional(),
+      anio: z.coerce.number().int().min(2000).max(2100).optional().describe("Default: el año más reciente ingerido (2021-2024 disponibles)."),
+      departamento: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE), requiere match con el padrón de IIEE."),
+      provincia: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+      ubigeo: z.string().regex(/^\d{6}$/).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
 
   // ---- infracciones-ambientales (OEFA, RUIAS) ----
   {

@@ -9,11 +9,13 @@
     "start": "node dist/index.js",
     "migrate": "tsx src/db/migrate.ts",
     "ingest:padron": "tsx src/ingest/padron-connector.ts",
+    "ingest:siagie": "tsx src/ingest/siagie-connector.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "cors": "^2.8.6",
+    "csv-parse": "^5.5.6",
     "dbffile": "^1.13.0",
     "dotenv": "^17.4.2",
     "express": "^4.19.2",
