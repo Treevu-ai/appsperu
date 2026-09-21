@@ -962,6 +962,33 @@ resultó ser una fuente real, pública y sin autenticación, con más detalle qu
 
 ---
 
+<a id="legislativo-congreso"></a>
+## legislativo-congreso — Proyectos de ley del Congreso de la República
+
+Investigado y construido 2026-09-21 (ticket ADS-15, `docs/PRD_Organismos_Adscritos_Consolidado_v1.md`,
+y `docs/PRD_Inteligencia_Legislativa_Congreso_v1.md`), a partir de una investigación competitiva sobre
+plataformas de legislative intelligence en LatAm (Parlamento.ai, Legislat.ai). El endpoint real del
+Congreso se descubrió en la misma sesión, y se verificó en vivo con `curl` puro antes de construir el
+conector — ver `docs/data-contracts/congreso-spley-portal-service.md` para la evidencia completa.
+
+### `congreso-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Proyectos de ley del Congreso — número, código legible, estado, fecha de presentación, título, proponente, autores. |
+| **Fuente pública sin auth ni sesión de navegador** | `POST https://api.congreso.gob.pe/spley-portal-service/proyecto-ley/lista-con-filtro`, verificado con `curl` puro (sin cookies, sin tokens JS) devolviendo `HTTP 200` real — a diferencia de `mef.gob.pe` (Incapsula WAF, ver `docs/PRD_Deuda_Publica_MEF_v1.md`), este dominio del Congreso corre detrás de un gateway Kong sin protección anti-bot activa. |
+| **Periodos válidos descubiertos en vivo, no hardcodeados** | `GET /periodo-parlamentario` — el conector consulta este catálogo en cada corrida en vez de asumir años históricos. Un repo de terceros (`unimauro/congreso-abierto-peru`) asume periodos 2016/2011/2006 que **no existen** en este servicio (devuelven `200` con lista vacía, no error) — el conector de Rastro no repite ese error. |
+| **Clave real verificada, no asumida** | `per_par_id` + `pley_num` — verificada única sobre las 14,864 filas del periodo 2021 (0 duplicados) y estable entre dos ejecuciones HTTP separadas. `proyecto_ley` (código legible, ej. `"14864/2025-CR"`) contiene `/` y no se usa como clave ni como segmento de ruta. |
+| **Upsert, no append** | Cada ingesta es el snapshot vigente de cada periodo (`pageSize` no tiene efecto verificado — siempre trae el dataset completo); el conector hace `ON CONFLICT (per_par_id, pley_num) DO UPDATE`, no inserta duplicados entre corridas. |
+| **Sin PII** | `proponente`/`autores` son congresistas y entidades públicas (funcionarios públicos) — no hay dato personal de ciudadanos particulares en esta fuente. |
+| **Frecuencia** | Manual (`npm run ingest:congreso` en `apps/legislativo-congreso/api`). Sin scheduler. |
+| **Fuente de datos** | `api.congreso.gob.pe/spley-portal-service` (Congreso de la República del Perú). |
+| **Cobertura real ingerida** | Verificado en vivo 2026-09-21: **14,868/14,868 filas insertadas, 0 rechazadas** (14,864 del periodo 2021-2026 + 4 del periodo 2026-2031, recién iniciado). |
+| **API expuesta** | `GET /api/proyectos` (filtros `periodo`/`estado`/`autor`/`texto`, paginado con `total`/`hasMore`), `GET /api/proyectos/{periodo}/{numero}` (detalle por clave real, 404 si no existe) y `GET /api/proyectos/periodos` (qué periodos están disponibles, para distinguir "sin match" de "nunca ingerido"). Registrada como tools MCP `legislativo_congreso_proyectos`/`legislativo_congreso_proyecto_detalle`/`legislativo_congreso_periodos`. |
+| **Cruces** | Ninguno implementado todavía — fuera de alcance de LEG-01/02/03 por decisión explícita (`docs/PRD_Inteligencia_Legislativa_Congreso_v1.md`, §9). Candidato natural documentado ahí: cruce futuro contra INFOBRAS/SEACE/presupuesto regional por mención de tema, una vez esta ingesta base exista y se demuestre útil. |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada

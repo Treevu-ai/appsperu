@@ -2663,4 +2663,53 @@ export const TOOL_CATALOG: ToolSpec[] = [
       dre: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE). Sin filtro: agrega por DRE a nivel nacional."),
     },
   },
+
+  // ---- legislativo-congreso (Congreso de la República, proyectos de ley) ----
+  {
+    name: "legislativo_congreso_proyectos",
+    app: "legislativo-congreso",
+    description:
+      "Proyectos de ley del Congreso de la República — filtra por periodo parlamentario (`perParId`), estado " +
+      "(texto exacto, ej. 'APROBADO', 'EN COMISIÓN'), autor (búsqueda parcial ILIKE) o texto libre sobre el " +
+      "título (búsqueda parcial ILIKE). Clave real verificada: `perParId`+`pleyNum` (14,868 filas, 0 " +
+      "duplicados en la ingesta verificada 2026-09-21) — cada ingesta hace upsert por esa clave, no acumula " +
+      "duplicados entre corridas. Fuente pública sin auth ni sesión de navegador (ADS-15). Un resultado vacío " +
+      "para un periodo no listado en `legislativo_congreso_periodos` significa 'nunca ingerido', no 'cero " +
+      "proyectos confirmados' — usar esa tool para distinguir ambos casos. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/proyectos",
+    pathParams: [],
+    querySchema: {
+      periodo: z.coerce.number().int().optional().describe("perParId exacto (ej. 2021, 2026)."),
+      estado: z.string().min(1).optional().describe("desEstado exacto, ej. 'APROBADO', 'EN COMISIÓN', 'PRESENTADO'."),
+      autor: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE) sobre autores."),
+      texto: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE) sobre el título."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "legislativo_congreso_proyecto_detalle",
+    app: "legislativo-congreso",
+    description:
+      "Detalle de un proyecto de ley específico por `periodo` (perParId) + `numero` (pleyNum) — no por el " +
+      "código legible (ej. '14864/2025-CR'), que contiene '/' y no es válido como segmento de ruta sin " +
+      "codificar. Responde 404 si el proyecto no existe. " + SIN_SCHEDULER,
+    pathTemplate: "/api/proyectos/{periodo}/{numero}",
+    pathParams: ["periodo", "numero"],
+    querySchema: {},
+  },
+  {
+    name: "legislativo_congreso_periodos",
+    app: "legislativo-congreso",
+    description:
+      "Lista qué periodos parlamentarios (`perParId`) están disponibles — es decir, se han ingerido con éxito " +
+      "al menos una vez — con la fecha de la última ingesta y el conteo de proyectos en esa corrida. Un " +
+      "`perParId` que no aparece aquí es 'no disponible' (nunca ingerido), distinto de un periodo disponible " +
+      "sin proyectos que coincidan con un filtro específico de `legislativo_congreso_proyectos`. Ausencia de " +
+      "dato ≠ cero. " + SIN_SCHEDULER,
+    pathTemplate: "/api/proyectos/periodos",
+    pathParams: [],
+    querySchema: {},
+  },
 ];
