@@ -2,7 +2,7 @@
 # (rastro-api-gw) — por eso puede dormir (min_machines_running=0) sin el
 # problema de resolución `.internal` que fuerza min_machines_running=1 en
 # las apps que sí están sobre la red privada 6PN del gateway (ver
-# docs/FLY_DEPLOY_MCP.md). Cambiá "app" si "rastro-mcp" ya está tomado
+# docs/FLY_DEPLOY_MCP.md). Cambiá "app" si "treevu-rastro-mcp" ya está tomado
 # (mismo comentario que docs/FLY_DEPLOY.md sobre FLY_APP_PREFIX).
 app = "treevu-rastro-mcp"
 primary_region = "gru"
