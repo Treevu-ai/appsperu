@@ -36,31 +36,163 @@ Content-Type: application/json
 }
 ```
 
-**Verificado en vivo 2026-09-21** con `curl` puro (sin cookies, sin sesión de navegador):
+**Verificado en vivo 2026-09-21** con `curl` puro (sin cookies, sin sesión de navegador). Comando exacto usado para cada caso, con la respuesta real capturada:
 
-- `perParId=2021` (periodo 2021-2026), `pageSize=100000`: `HTTP 200`, **14,864 proyectos** reales — coincide exactamente con el conteo citado por el informe de investigación competitiva y por el repo de terceros `unimauro/congreso-abierto-peru` (que reportó 14,704 en una fecha anterior, diferencia consistente con nuevas presentaciones).
-- `perParId=2026` (periodo 2026-2031, recién iniciado): `HTTP 200`, **4 proyectos** — el periodo está activo y ya tiene datos, aunque mínimos por ser nuevo.
-- `perParId` sin body (`{}`): `HTTP 400`, error de validación real de Spring — `NotNull.perParId`, mensaje `"Ingrese el periodo"`. Confirma que `perParId` es el único campo obligatorio de `FiltroProyecLeyDto`.
-- `perParId` con valor inexistente (ej. `99999`, o los años `2016`/`2011`/`2006`/`1`-`7` que el repo de terceros asume como periodos históricos): `HTTP 200` con `proyectos: []` — **no hay validación contra un catálogo de periodos conocidos; un `perParId` inválido no es un error, es simplemente "sin resultados"**. Esto significa que **no se puede asumir que `perParId` = año de inicio del periodo funciona para periodos anteriores a 2021** solo por analogía — hay que confirmarlo contra el catálogo real (ver abajo).
-- Filtro `estadoId=10` ("APROBADO"): `HTTP 200`, filtro aplicado correctamente (verificado con una consulta real que devolvió solo proyectos en estado `APROBADO`).
+**Caso 1 — `perParId=2021` (periodo 2021-2026)**
+
+```bash
+curl -s -X POST "https://api.congreso.gob.pe/spley-portal-service/proyecto-ley/lista-con-filtro?pageSize=100000&page=1&rowStart=0" \
+  -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36" \
+  -H "Content-Type: application/json" \
+  -d '{"perParId":2021,"perLegId":null,"comisionId":null,"estadoId":null,"grupParId":null,"tipoFirmanteId":null,"congresistaId":null,"texto":null,"fechaPresentacion":null,"numeroProyecto":null}'
+```
+
+`HTTP 200`, `Content-Length: 8786237` bytes. `data.proyectos.length` = **14,864** — coincide exactamente con el conteo citado por el informe de investigación competitiva y es cercano al del repo de terceros `unimauro/congreso-abierto-peru` (que reportó 14,704 en una fecha anterior, diferencia consistente con nuevas presentaciones desde entonces). Primeros 2 registros reales de la respuesta (de 14,864):
+
+```json
+[
+  {
+    "perParId": 2021,
+    "pleyNum": 14864,
+    "proyectoLey": "14864/2025-CR",
+    "desEstado": "PRESENTADO",
+    "fecPresentacion": "2026-07-22T00:00:00.000-05:00",
+    "titulo": "PROYECTO DE LEY QUE RESTITUYE LA COMPETENCIA DE LA JURISDICCIÓN ORDINARIA SOBRE LOS PROCESOS PENALES SEGUIDOS CONTRA MILITARES Y POLICÍAS",
+    "desProponente": "Congreso",
+    "autores": "Luque Ibarra, Ruth; Bazán Narro, Sigrid Tesoro; Paredes Piqué, Susel Ana María",
+    "codTipoParl": "C",
+    "codTipoParlActual": "C",
+    "rowsTotal": 0
+  },
+  {
+    "perParId": 2021,
+    "pleyNum": 14863,
+    "proyectoLey": "14863/2025-PE",
+    "desEstado": "PRESENTADO",
+    "fecPresentacion": "2026-07-20T00:00:00.000-05:00",
+    "titulo": "PROYECTO DE LEY QUE MODIFICA LA LEY N.° 27943, LEY DEL SISTEMA PORTUARIO NACIONAL, A FIN DE OTORGAR LA FACULTAD DE EJECUCIÓN COACTIVA A LA AUTORIDAD PORTUARIA NACIONAL",
+    "desProponente": "PODER EJECUTIVO",
+    "autores": "",
+    "codTipoParl": "C",
+    "codTipoParlActual": "C",
+    "rowsTotal": 0
+  }
+]
+```
+
+**Hallazgo adicional sobre `pageSize`**: se probó el mismo cuerpo con `pageSize=2` en la URL y la respuesta trajo igualmente los 14,864 registros completos — **el parámetro `pageSize` no está siendo respetado por el backend en las pruebas realizadas** (o requiere un mecanismo de paginación distinto no descubierto en esta pasada). LEG-01 debe verificar esto de nuevo antes de asumir paginación real; por ahora, la única evidencia es que una sola llamada trae el dataset completo del periodo.
+
+**Caso 2 — `perParId=2026` (periodo 2026-2031, recién iniciado)**
+
+```bash
+curl -s -X POST "https://api.congreso.gob.pe/spley-portal-service/proyecto-ley/lista-con-filtro?pageSize=5&page=1&rowStart=0" \
+  -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36" \
+  -H "Content-Type: application/json" \
+  -d '{"perParId":2026,"perLegId":null,"comisionId":null,"estadoId":null,"grupParId":null,"tipoFirmanteId":null,"congresistaId":null,"texto":null,"fechaPresentacion":null,"numeroProyecto":null}'
+```
+
+`HTTP 200`, `data.proyectos.length` = **4** — el periodo está activo y ya tiene datos, aunque mínimos por ser nuevo.
+
+**Caso 3 — `perParId` faltante (`{}`)**
+
+```bash
+curl -s -X POST "https://api.congreso.gob.pe/spley-portal-service/proyecto-ley/lista-con-filtro?pageSize=5&page=1&rowStart=0" \
+  -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+`HTTP 400`, respuesta real (truncada, campo `errors` es lo relevante):
+
+```json
+{
+  "code": 400,
+  "status": "Validation failed for argument [0] in public pe.gob.congreso.core.librarycommon.global.models.Respuesta pe.gob.congreso.app.spleyportalservice.endpoints.expediente.controller.ProyectoLeyController.getListWithFilters(...): [Field error in object 'filtroProyecLeyDto' on field 'perParId': rejected value [null]; ... default message [Ingrese el periodo]] ",
+  "errors": [{"field": "perParId", "message": "Ingrese el periodo"}],
+  "timestamp": "2026-09-21T11:57:05.428-05:00"
+}
+```
+
+Confirma que `perParId` es el único campo obligatorio de `FiltroProyecLeyDto` — el resto acepta `null` sin error.
+
+**Caso 4 — `perParId` con valor inexistente**
+
+Probado con `99999`, y con los años `2016`/`2011`/`2006` y los enteros `1`-`7` (hipótesis de que `perParId` fuera un ID secuencial en vez de un año) — mismo comando que el Caso 1/2 cambiando solo `perParId`. **Todos** devuelven `HTTP 200` con `{"data":{"proyectos":[],"rowsTotal":0}}` — **no hay validación contra un catálogo de periodos conocidos; un `perParId` inválido no es un error, es simplemente "sin resultados"**. Esto significa que **no se puede asumir que `perParId` = año de inicio del periodo funciona para periodos anteriores a 2021** solo por analogía — hay que confirmarlo contra el catálogo real (ver abajo).
+
+**Caso 5 — Filtro `estadoId=10` ("APROBADO")**
+
+```bash
+curl -s -X POST "https://api.congreso.gob.pe/spley-portal-service/proyecto-ley/lista-con-filtro?pageSize=3&page=1&rowStart=0" \
+  -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36" \
+  -H "Content-Type: application/json" \
+  -d '{"perParId":2021,"perLegId":null,"comisionId":null,"estadoId":10,"grupParId":null,"tipoFirmanteId":null,"congresistaId":null,"texto":null,"fechaPresentacion":null,"numeroProyecto":null}'
+```
+
+`HTTP 200`, respuesta real:
+
+```json
+{"code":200,"status":"success","data":{"proyectos":[{"perParId":2021,"pleyNum":12120,"proyectoLey":"12120/2025-PE","desEstado":"APROBADO","fecPresentacion":"2025-08-15T00:00:00.000-05:00","titulo":"PROYECTO DE LEY DE LA CUENTA GENERAL DE LA REPÚBLICA 2024.","desProponente":"PODER EJECUTIVO","autores":"","codTipoParl":"C","codTipoParlActual":"C","rowsTotal":0}],"rowsTotal":0},"timestamp":"2026-09-21T11:58:04.790-05:00"}
+```
+
+Filtro aplicado correctamente — `desEstado` de todos los registros devueltos es `"APROBADO"`.
 
 ### Endpoint de catálogo de periodos parlamentarios (hallazgo nuevo, no estaba en ADS-15 original)
 
-```
-GET https://api.congreso.gob.pe/spley-portal-service/periodo-parlamentario
+```bash
+curl -s "https://api.congreso.gob.pe/spley-portal-service/periodo-parlamentario" \
+  -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36" \
+  -H "Accept: application/json, text/plain, */*"
 ```
 
-**Verificado en vivo**: `HTTP 200`, devuelve únicamente **dos periodos**: `2026` (2026-2031, activo, recién iniciado) y `2021` (2021-2026, activo). **No lista 2016, 2011 ni 2006** — esto explica por qué esos `perParId` devuelven `proyectos: []`: no es que el endpoint esté mal, es que **este servicio (`spley-portal-service`) no tiene datos de periodos parlamentarios anteriores a 2021**. Los periodos históricos (si existen en algún sistema del Congreso) están fuera del alcance de este endpoint — no se puede asumir que un scraping por año histórico va a traer datos.
+`HTTP 200`, `Content-Length: 1444` bytes, respuesta real completa:
+
+```json
+{"code":200,"status":"success","data":[{"perParId":2026,"desPerPar":"Periodo Parlamentario 2026 - 2031","desPerParAbrev":"2026-2031","fecIni":"2026-07-27 00:00:00.0","fecFin":"2031-07-26 00:00:00.0","activo":true,"periodosLegislativos":[{"perParId":2026,"perLegId":2026,"desPerLeg":"2026 - 2027","desPerLegAbrev":"2026","fecIni":"2026-07-27T00:00:00","fecFin":"2027-07-26T00:00:00","activo":true}]},{"perParId":2021,"desPerPar":"Periodo Parlamentario 2021 - 2026","desPerParAbrev":"2021-2026","fecIni":"2021-07-22 00:00:00.0","fecFin":"2026-07-26 00:00:00.0","activo":true,"periodosLegislativos":[{"perParId":2021,"perLegId":2021,"desPerLeg":"2021 - 2022","desPerLegAbrev":"2021","fecIni":"2021-07-27T00:00:00","fecFin":"2022-07-26T00:00:00","activo":true},{"perParId":2021,"perLegId":2022,"desPerLeg":"2022 - 2023","desPerLegAbrev":"2022","fecIni":"2022-07-27T00:00:00","fecFin":"2023-07-26T00:00:00","activo":true},{"perParId":2021,"perLegId":2023,"desPerLeg":"2023 - 2024","desPerLegAbrev":"2023","fecIni":"2023-07-27T00:00:00","fecFin":"2024-07-26T00:00:00","activo":true},{"perParId":2021,"perLegId":2024,"desPerLeg":"2024 - 2025","desPerLegAbrev":"2024","fecIni":"2024-07-27T00:00:00","fecFin":"2025-07-26T00:00:00","activo":true},{"perParId":2021,"perLegId":2025,"desPerLeg":"2025 - 2026","desPerLegAbrev":"2025","fecIni":"2025-07-27T00:00:00","fecFin":"2026-07-26T00:00:00","activo":true}]}],"timestamp":"2026-09-21T11:56:38.547-05:00"}
+```
+
+Devuelve únicamente **dos periodos**: `2026` (2026-2031, activo, recién iniciado) y `2021` (2021-2026, activo). **No lista 2016, 2011 ni 2006** — esto explica por qué esos `perParId` devuelven `proyectos: []`: no es que el endpoint esté mal, es que **este servicio (`spley-portal-service`) no tiene datos de periodos parlamentarios anteriores a 2021**. Los periodos históricos (si existen en algún sistema del Congreso) están fuera del alcance de este endpoint — no se puede asumir que un scraping por año histórico va a traer datos.
 
 Cada entrada del catálogo trae también `periodosLegislativos` (sub-periodos anuales dentro de cada periodo parlamentario, con su propio `perLegId`) — útil para el filtro opcional `perLegId`.
 
 ### Endpoint de catálogo de filtros (hallazgo nuevo, no estaba en ADS-15 original)
 
-```
-GET https://api.congreso.gob.pe/spley-portal-service/periodo-parlamentario/{perParId}/filtros?codTipoParl=C
+```bash
+curl -s "https://api.congreso.gob.pe/spley-portal-service/periodo-parlamentario/2021/filtros?codTipoParl=C" \
+  -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
 ```
 
-**Verificado en vivo** para `perParId=2021`, `codTipoParl=C`: `HTTP 200`, devuelve los catálogos completos de valores válidos para cada filtro de `FiltroProyecLeyDto`:
+`HTTP 200`. Primeras entradas reales de `data.comisiones` (26 en total para el periodo 2021):
+
+```json
+{
+  "code": 200,
+  "status": "success",
+  "data": {
+    "comisiones": [
+      {"id": 1, "descripcion": "Agraria", "flagPortalDictamen": null},
+      {"id": 2, "descripcion": "Ciencia, Innovación y Tecnología", "flagPortalDictamen": null},
+      {"id": 11, "descripcion": "Energía y Minas", "flagPortalDictamen": null}
+    ],
+    "estados": [
+      {"estadoId": 101, "desEstado": "ACLARACIÓN", "flagPortalDictamen": false},
+      {"estadoId": 10, "desEstado": "APROBADO", "flagPortalDictamen": false}
+    ],
+    "gruposParlamentarios": [
+      {"id": 1, "descripcion": "Acción Popular", "flagPortalDictamen": null},
+      {"id": 2, "descripcion": "Alianza Para el Progreso", "flagPortalDictamen": null}
+    ],
+    "tiposFirmantes": [
+      {"id": 1, "descripcion": "Autor Principal", "flagPortalDictamen": null},
+      {"id": 2, "descripcion": "Coautor", "flagPortalDictamen": null},
+      {"id": 3, "descripcion": "Adherente", "flagPortalDictamen": null}
+    ]
+  }
+}
+```
+
+(respuesta real truncada arriba a modo de muestra — los conteos totales por catálogo están en la tabla siguiente, verificados contra el JSON completo)
+
+Devuelve los catálogos completos de valores válidos para cada filtro de `FiltroProyecLeyDto`:
 
 | Filtro | Campo del catálogo | Cantidad (periodo 2021) | Ejemplo |
 |---|---|---|---|
