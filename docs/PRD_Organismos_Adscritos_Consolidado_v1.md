@@ -96,11 +96,21 @@ De las 8 categorías de dataset de SUNARP en `datosabiertos.gob.pe`, esta es la 
 - Evaluación de PII de los campos de representante/apoderado documentada explícitamente (qué campos trae la fuente, qué se ingiere y qué se enmascara/excluye) — no se asume "es solo un registro de empresas" sin haber revisado esto.
 - `docs/data-contracts/sunarp-personas-juridicas.md` documenta columnas reales, cobertura (nacional vs. parcial), y la decisión de tratamiento de PII de representantes.
 
-#### ADS-04 — Conector SENACE
+#### ADS-04 — Conector SENACE (CERRADO — construido 2026-09-21)
 
 **Prioridad:** P1 · **Esfuerzo:** M · **Dependencias:** ninguna
 
-**Fuente verificada en vivo 2026-09-21**: `datosabiertos.senace.gob.pe/Api/Help` — API REST real y documentada (HTTP 200 confirmado), devuelve JSON vía interfaz de catálogo. SENACE es adscrito a MINAM (certificación ambiental de inversiones) — cartera de proyectos aprobados/desaprobados/en evaluación, relevante para rastrear el estado de certificación ambiental de proyectos mineros/energéticos grandes (conecta con `PRD_Energia_Ambiente_Financiero_Nuevos_Conectores_v1.md`).
+**Corrección post-verificación**: la API documentada en `/Api/Help` (HTTP 200 confirmado en la
+investigación inicial) resultó estar gateada por un `auth_key` que no poseemos (`curl` con token
+de prueba → `400 "Token Invalido."`), y además tiene un hallazgo de seguridad real (validación de
+`auth_key` inconsistente entre datastreams — ver `docs/seguridad/senace-reporte-vulnerabilidad-2026-09-21.md`).
+El conector construido usa en su lugar el portal público sin autenticación
+`/home/CatalogoDatos/` (endpoint `JsonCarteraProyecto?q=<estado>`), verificado en vivo con
+`curl` plano. SENACE es adscrito a MINAM (certificación ambiental de inversiones) — cartera de
+proyectos aprobados/desaprobados/en evaluación, relevante para rastrear el estado de
+certificación ambiental de proyectos mineros/energéticos grandes (conecta con
+`PRD_Energia_Ambiente_Financiero_Nuevos_Conectores_v1.md`). Ver
+`docs/data-contracts/senace-cartera-proyectos.md` y `apps/senace-cartera-proyectos/api`.
 
 **Criterios de aceptación**
 

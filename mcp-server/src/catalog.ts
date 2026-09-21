@@ -2812,4 +2812,39 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: ["capa", "objectid"],
     querySchema: {},
   },
+
+  // ---- senace-cartera-proyectos (certificación ambiental, SENACE) ----
+  {
+    name: "senace_cartera_proyectos",
+    app: "senace-cartera-proyectos",
+    description:
+      "Cartera de proyectos de certificación ambiental de SENACE (Clasificación, EIA-d, EIA-sd, MEIA-d, ITS, " +
+      "PPC, TdR y otros instrumentos). Fuente: portal público de datos abiertos de SENACE, sin autenticación " +
+      "(no la API gateada de `/Api/`, que requiere un `auth_key` que no poseemos). Filtra por `estado` " +
+      "('Aprobado', 'Desaprobado' o 'En Evaluación' — con tilde), `actividad` (ILIKE, ej. Minería, " +
+      "Transportes, Hidrocarburos), `ruc` exacto (11 dígitos) o `texto` (ILIKE sobre título/titular). " +
+      "`senaceId` es único globalmente (verificado: 1,870 IDs únicos sobre 1,870 filas). Verificado en vivo " +
+      "2026-09-21: 1,568 aprobados + 176 desaprobados + 126 en evaluación; cobertura confirmada en La " +
+      "Libertad (ej. proyectos viales en Virú, cantera Río Chicama). " + SIN_SCHEDULER,
+    pathTemplate: "/api/proyectos",
+    pathParams: [],
+    querySchema: {
+      estado: z.string().min(1).optional().describe("Exacto: Aprobado, Desaprobado, o 'En Evaluación' (con tilde)."),
+      actividad: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE), ej. Minería, Transportes."),
+      ruc: z.string().regex(/^\d{11}$/).optional(),
+      texto: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE) sobre título y titular."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "senace_cartera_proyecto_detalle",
+    app: "senace-cartera-proyectos",
+    description:
+      "Detalle de un proyecto específico por `senaceId` (ID único de SENACE en este dataset). Responde 404 " +
+      "si no existe. " + SIN_SCHEDULER,
+    pathTemplate: "/api/proyectos/{senaceId}",
+    pathParams: ["senaceId"],
+    querySchema: {},
+  },
 ];
