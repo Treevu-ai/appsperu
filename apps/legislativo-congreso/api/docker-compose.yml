@@ -1,0 +1,21 @@
+name: legislativo-congreso
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: legislativo_congreso
+      POSTGRES_PASSWORD: legislativo_congreso
+      POSTGRES_DB: legislativo_congreso
+    ports:
+      - "127.0.0.1:5461:5432"
+    volumes:
+      - legislativo_congreso_pgdata:/var/lib/postgresql/data
+
+volumes:
+  legislativo_congreso_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true

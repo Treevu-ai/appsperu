@@ -1,6 +1,6 @@
 # PRD — Inteligencia legislativa: Proyectos de Ley del Congreso de la República
 
-**Estado:** Propuesto — verificación en vivo del endpoint y de un scraper de terceros ya realizada; ningún conector construido todavía.
+**Estado:** LEG-01/02/03 IMPLEMENTADOS (2026-09-21) — `apps/legislativo-congreso/api`, verificado en vivo contra Postgres real: 14,868/14,868 filas insertadas, 0 rechazadas. Ver `docs/data-contracts/legislativo-congreso-proyectos.md`.
 **Fecha:** 2026-09-21
 **Ámbito:** app nueva `legislativo-congreso`, `mcp-server/src/catalog.ts`, `mcp-server/src/apps.ts`, `docs/conectores.md`, `docs/data-contracts/`
 **Horizonte:** Fase 1 (ingesta + API) es el único compromiso de este PRD. Fases 2-3 quedan como visión, no como tickets comprometidos — ver §9.

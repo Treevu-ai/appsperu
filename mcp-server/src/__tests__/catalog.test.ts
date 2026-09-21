@@ -88,6 +88,11 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
   "candidatos-erm": ["candidatos_erm_candidatos"],
   "poder-judicial": ["poder_judicial_procesos", "poder_judicial_procesos_resumen", "poder_judicial_territorios"],
   "violencia-escolar": ["violencia_escolar_casos", "violencia_escolar_resumen"],
+  "legislativo-congreso": [
+    "legislativo_congreso_proyectos",
+    "legislativo_congreso_proyecto_detalle",
+    "legislativo_congreso_periodos",
+  ],
   "autoridades-electas": ["autoridades_electas_autoridades"],
   "instituciones-educativas": [
     "instituciones_educativas_instituciones",
