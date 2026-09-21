@@ -49,31 +49,48 @@ trayectoriaRouter.get(
     if (provincia) conditions.push(`i.provincia ILIKE ${addParam(`%${provincia}%`)}`);
     if (distrito) conditions.push(`i.distrito ILIKE ${addParam(`%${distrito}%`)}`);
 
-    const limitParam = addParam(limit);
-    const offsetParam = addParam(offset);
+    const whereSql = conditions.join(" AND ");
+    const joinSql = "FROM siagie_trayectoria t LEFT JOIN instituciones_educativas i ON i.cod_mod = t.cod_mod AND i.anexo = t.anexo";
+    // Params clonados para la query de listado -- LIMIT/OFFSET no deben mutar el array que ya
+    // se le pasó (por referencia) a la query de conteo, corriendo en paralelo en el mismo
+    // Promise.all (mismo criterio que violencia-escolar/src/routes/casos.ts).
+    const listParams = [...params];
+    const limitPlaceholder = `$${listParams.push(limit)}`;
+    const offsetPlaceholder = `$${listParams.push(offset)}`;
 
-    const { rows } = await pool.query(
-      `SELECT t.cod_mod, t.anexo, t.anio,
-              COALESCE(i.nombre, MAX(t.nombre)) AS nombre,
-              i.ubigeo, i.departamento, i.provincia, i.distrito,
-              SUM(t.total_estudiantes)::int AS total_estudiantes,
-              SUM(t.matriculado)::int AS matriculado,
-              SUM(t.aprobado)::int AS aprobado,
-              SUM(t.desaprobado)::int AS desaprobado,
-              SUM(t.promocion_guiada)::int AS promocion_guiada,
-              SUM(t.retirado)::int AS retirado,
-              SUM(t.fallecido)::int AS fallecido,
-              SUM(t.tot_atraso)::int AS tot_atraso
-       FROM siagie_trayectoria t
-       LEFT JOIN instituciones_educativas i ON i.cod_mod = t.cod_mod AND i.anexo = t.anexo
-       WHERE ${conditions.join(" AND ")}
-       GROUP BY t.cod_mod, t.anexo, t.anio, i.nombre, i.ubigeo, i.departamento, i.provincia, i.distrito
-       ORDER BY t.cod_mod, t.anexo
-       LIMIT ${limitParam} OFFSET ${offsetParam}`,
-      params
-    );
+    const [{ rows: countRows }, { rows }] = await Promise.all([
+      pool.query<{ total: string }>(
+        `SELECT COUNT(*) AS total FROM (SELECT 1 ${joinSql} WHERE ${whereSql} GROUP BY t.cod_mod, t.anexo) sub`,
+        params
+      ),
+      pool.query(
+        `SELECT t.cod_mod, t.anexo, t.anio,
+                COALESCE(i.nombre, MAX(t.nombre)) AS nombre,
+                i.ubigeo, i.departamento, i.provincia, i.distrito,
+                SUM(t.total_estudiantes)::int AS total_estudiantes,
+                SUM(t.matriculado)::int AS matriculado,
+                SUM(t.aprobado)::int AS aprobado,
+                SUM(t.desaprobado)::int AS desaprobado,
+                SUM(t.promocion_guiada)::int AS promocion_guiada,
+                SUM(t.retirado)::int AS retirado,
+                SUM(t.fallecido)::int AS fallecido,
+                SUM(t.tot_atraso)::int AS tot_atraso
+         ${joinSql}
+         WHERE ${whereSql}
+         GROUP BY t.cod_mod, t.anexo, t.anio, i.nombre, i.ubigeo, i.departamento, i.provincia, i.distrito
+         ORDER BY t.cod_mod, t.anexo
+         LIMIT ${limitPlaceholder} OFFSET ${offsetPlaceholder}`,
+        listParams
+      ),
+    ]);
+
+    const totalGrupos = Number(countRows[0].total);
 
     res.json({
+      total: totalGrupos,
+      limit,
+      offset,
+      hasMore: offset + rows.length < totalGrupos,
       resultados: rows.map((r) => {
         const total = Number(r.total_estudiantes);
         return {

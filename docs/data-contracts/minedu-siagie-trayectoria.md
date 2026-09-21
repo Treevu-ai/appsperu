@@ -72,11 +72,17 @@ Fallecido, RequiereRecuperacion, Matriculado, PostergaEvaluacion, tot_atraso
 
 | Año | Filas origen | Filas insertadas | Filas rechazadas |
 |---|---|---|---|
-| 2021 | 566,359 | 566,359 | 0 |
+| 2021 | 566,359 | 566,354 | 5 |
 | 2022 | 558,785 | 558,785 | 0 |
 | 2023 | 544,834 | 544,834 | 0 |
-| 2024 | 535,137 | 535,137 | 0 |
-| **Total** | **2,205,115** | **2,205,115** | **0** |
+| 2024 | 535,137 | 535,136 | 1 |
+| **Total** | **2,205,115** | **2,205,109** | **6** |
+
+Las 6 filas rechazadas lo fueron por `Edad ausente o no numérica` — hallazgo real de la revisión de
+CodeRabbit en PR #178: `id_nivel`/`Edad` son parte de la clave natural (ver más abajo) y ahora se
+exigen explícitamente, en vez de persistirse como `NULL` (lo que rompía la detección de
+duplicados del UNIQUE constraint en reingestas). Pérdida insignificante: 6 de 2,205,115 filas
+(0.0003%).
 
 ## Lo que esto habilita
 

@@ -9,11 +9,11 @@ const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
 
 /**
- * URLs directas confirmadas en vivo 2026-09-20/21 -- el dataset CKAN ("Matriculación y
- * Trayectoria Estudiantil 2021-2024") no resuelve por slug simple contra `package_show`, se
- * necesita el id interno o la URL directa del recurso; mismo criterio ya documentado en
- * `infracciones-ambientales/ruias-connector.ts` para otro dataset del mismo portal. Un archivo
- * por año lectivo -- no hay forma de traer los 4 años en una sola descarga.
+ * URLs directas confirmadas en vivo 2026-09-20/21. A diferencia de RUIAS
+ * (`infracciones-ambientales/ruias-connector.ts`), este dataset SÍ resuelve por `package_show`
+ * de CKAN -- el problema real no es el slug, es que el CloudWAF de `datosabiertos.gob.pe`
+ * bloquea requests sin `User-Agent` de navegador (ver `USER_AGENT` arriba y el data contract).
+ * Un archivo por año lectivo -- no hay forma de traer los 4 años en una sola descarga.
  */
 const SOURCE_URLS: Record<number, string> = {
   2021: "https://www.datosabiertos.gob.pe/sites/default/files/Matriculaci%C3%B3n%20y%20Trayectoria%20Estudiantil%202021.csv",
@@ -83,13 +83,17 @@ async function insertBatch(client: PoolClient, batchId: number, rows: readonly C
 }
 
 async function insertRejectedBatch(client: PoolClient, batchId: number, rejected: readonly RejectedRow[]): Promise<void> {
-  for (const bad of rejected) {
-    await client.query(`INSERT INTO siagie_trayectoria_rejected (source_batch_id, raw_row, reason) VALUES ($1, $2, $3)`, [
-      batchId,
-      JSON.stringify(bad.raw),
-      bad.reason,
-    ]);
-  }
+  if (rejected.length === 0) return;
+
+  const values: unknown[] = [];
+  const tuples: string[] = [];
+  rejected.forEach((bad, i) => {
+    const base = i * 3;
+    tuples.push(`($${base + 1},$${base + 2},$${base + 3})`);
+    values.push(batchId, JSON.stringify(bad.raw), bad.reason);
+  });
+
+  await client.query(`INSERT INTO siagie_trayectoria_rejected (source_batch_id, raw_row, reason) VALUES ${tuples.join(",")}`, values);
 }
 
 export interface IngestYearSummary {
@@ -123,6 +127,14 @@ async function ingestYear(anio: number, sourceUrl: string): Promise<IngestYearSu
   try {
     await client.query("BEGIN");
     const batchId = await saveRawBatch(client, anio, sourceUrl, checksumOf(csvText), rawRows.length);
+
+    // `raw_siagie_batches` tiene UNIQUE(anio) -- reingerir el mismo año reutiliza el mismo
+    // batchId. Sin este borrado, una fila que existía en una ingesta anterior pero ya no está
+    // en el CSV nuevo (caso corregido/eliminado en la fuente) quedaría huérfana para siempre --
+    // el UPSERT por clave natural solo actualiza filas que SÍ siguen presentes, nunca limpia
+    // las que dejaron de estarlo. Se borra el snapshot completo del año antes de reinsertar.
+    await client.query("DELETE FROM siagie_trayectoria_rejected WHERE source_batch_id = $1", [batchId]);
+    await client.query("DELETE FROM siagie_trayectoria WHERE source_batch_id = $1", [batchId]);
 
     for (let i = 0; i < rows.length; i += INSERT_BATCH_SIZE) {
       await insertBatch(client, batchId, rows.slice(i, i + INSERT_BATCH_SIZE));

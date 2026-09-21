@@ -88,4 +88,22 @@ describe("normalizeTrayectoria", () => {
     const { rows } = normalizeTrayectoria([row], 2024);
     expect(rows[0].fallecido).toBe(0);
   });
+
+  it("rechaza una fila sin id_nivel (parte de la clave natural, evita NULL en el UNIQUE)", () => {
+    const { rows, rejected } = normalizeTrayectoria([realRow2024({ id_nivel: "" })], 2024);
+    expect(rows).toEqual([]);
+    expect(rejected[0].reason).toMatch(/id_nivel/);
+  });
+
+  it("rechaza una fila sin Edad (parte de la clave natural, evita NULL en el UNIQUE)", () => {
+    const { rows, rejected } = normalizeTrayectoria([realRow2024({ Edad: "" })], 2024);
+    expect(rows).toEqual([]);
+    expect(rejected[0].reason).toMatch(/Edad/);
+  });
+
+  it("rechaza (no persiste como 0) un conteo presente pero no numérico -- ej. 'N/A' en vez de vacío", () => {
+    const { rows, rejected } = normalizeTrayectoria([realRow2024({ TotalEstudiantes: "N/A" })], 2024);
+    expect(rows).toEqual([]);
+    expect(rejected[0].reason).toMatch(/TotalEstudiantes/);
+  });
 });

@@ -10,6 +10,13 @@
 -- para "TEA" a la misma edad). `tipo_disca_integrada` se normaliza a '' (no NULL) cuando la
 -- fuente lo trae vacío, para que el UNIQUE constraint funcione de forma predecible.
 --
+-- `id_nivel`/`edad` son NOT NULL a propósito (hallazgo real de CodeRabbit en PR #178): Postgres
+-- trata NULL como siempre distinto dentro de un UNIQUE constraint, así que si cualquiera de los
+-- dos pudiera ser NULL, dos filas "iguales" con esos campos vacíos no colisionarían -- el UPSERT
+-- de reingestas dejaría de detectar duplicados reales. El normalizador rechaza (no persiste con
+-- NULL) cualquier fila sin `id_nivel`/`Edad` -- solo 1 de 535,137 filas del CSV 2024 real carece
+-- de `Edad`, pérdida insignificante frente a la garantía de integridad.
+--
 -- DESVÍO DE ESQUEMA ENTRE AÑOS (hallazgo real, no se oculta): 2021 y 2022 traen la columna
 -- `PromocionGuiada`; 2023 y 2024 la reemplazan por `Desaprobado` -- terminología/metodología
 -- distinta entre cortes, no un error de ingesta. Se guardan ambas columnas, nullable: cada fila
@@ -32,9 +39,9 @@ CREATE TABLE IF NOT EXISTS siagie_trayectoria (
   anexo                 TEXT NOT NULL,
   nombre                TEXT,
   gestion               TEXT,
-  id_nivel              TEXT,
+  id_nivel              TEXT NOT NULL,
   dsc_nivel             TEXT,
-  edad                  INTEGER,
+  edad                  INTEGER NOT NULL,
   tipo_disca_integrada  TEXT NOT NULL DEFAULT '',
   total_estudiantes     INTEGER NOT NULL DEFAULT 0,
   discapacidad          INTEGER NOT NULL DEFAULT 0,
