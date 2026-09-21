@@ -2299,6 +2299,27 @@ export const TOOL_CATALOG: ToolSpec[] = [
       offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
+  {
+    name: "infracciones_ambientales_crossref",
+    app: "infracciones-ambientales",
+    description:
+      "¿Qué empresas sancionadas por OEFA (RUIAS) siguen contratando activamente con el Estado (compras-publicas)? " +
+      "Solo cruza R.U.C. (empresas) — las infracciones a persona natural (D.N.I.) vienen enmascaradas desde la " +
+      "ingesta y no se pueden cruzar por identificador completo. Una sanción ambiental NO inhabilita legalmente " +
+      "para contratar (a diferencia de una inhabilitación del Tribunal de Contrataciones en " +
+      "`proveedores_sancionados_sanciones`) — es una coincidencia de identidad entre dos registros públicos " +
+      "independientes, no una irregularidad por sí sola. Verificado en vivo 2026-09-21: 293 de 3,246 RUC " +
+      "sancionados (9.0%) tienen al menos una adjudicación u contrato menor real, incluyendo casos de alto " +
+      "perfil (ej. una empresa estatal con 468 infracciones y S/205M en contratos vigentes).",
+    pathTemplate: "/api/crossref",
+    pathParams: [],
+    querySchema: {
+      ruc: z.string().regex(/^\d{11}$/).optional().describe("RUC de 11 dígitos, filtra a una sola empresa."),
+      departamento: z.string().min(1).optional().describe("Filtra las infracciones OEFA por departamento antes de cruzar."),
+      limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 200, máximo 500."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
 
   // ---- red-vial-subnacional (MTC/Provías Descentralizado) ----
   {

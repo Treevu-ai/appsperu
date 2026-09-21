@@ -89,7 +89,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
   "poder-judicial": ["poder_judicial_procesos", "poder_judicial_procesos_resumen", "poder_judicial_territorios"],
   "autoridades-electas": ["autoridades_electas_autoridades"],
   "instituciones-educativas": ["instituciones_educativas_instituciones", "instituciones_educativas_resumen"],
-  "infracciones-ambientales": ["infracciones_ambientales_infracciones"],
+  "infracciones-ambientales": ["infracciones_ambientales_crossref", "infracciones_ambientales_infracciones"],
   "red-vial-subnacional": ["red_vial_subnacional_intervenciones"],
   "residuos-solidos": ["residuos_solidos_residuos"],
   "infraestructura-mtc": [
