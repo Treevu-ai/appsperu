@@ -84,4 +84,41 @@ describe("ingestSernanp", () => {
     await expect(ingestSernanp()).rejects.toThrow(/zona_reservada/);
     expect(releaseMock).toHaveBeenCalled();
   });
+
+  it("rechaza una respuesta HTTP 200 sin 'features' como array -- no la trata como capa vacía (hallazgo real de Copilot)", async () => {
+    let call = 0;
+    fetchMock.mockImplementation(() => {
+      call += 1;
+      if (call === 1) return Promise.resolve(jsonResponse({ code: 200 })); // sin "features"
+      return Promise.resolve(jsonResponse({ features: [anpFeature(1)] }));
+    });
+
+    await expect(ingestSernanp()).rejects.toThrow(/sin "features"/);
+  });
+
+  it("aborta la capa si exceededTransferLimit=true en vez de confirmar un snapshot truncado (hallazgo real de Copilot)", async () => {
+    let call = 0;
+    fetchMock.mockImplementation(() => {
+      call += 1;
+      if (call === 1) return Promise.resolve(jsonResponse({ features: [anpFeature(1)], exceededTransferLimit: true }));
+      return Promise.resolve(jsonResponse({ features: [anpFeature(1)] }));
+    });
+
+    await expect(ingestSernanp()).rejects.toThrow(/exceededTransferLimit/);
+
+    // No debe haber llegado a borrar la tabla de esa capa con datos truncados.
+    const deleteCalls = queryMock.mock.calls.filter(
+      ([sql, params]) => sql.includes("DELETE FROM sernanp_areas") && params?.[0] === "anp_nacional_definitiva"
+    );
+    expect(deleteCalls).toHaveLength(0);
+  });
+
+  it("adquiere un advisory lock por capa antes de tocar la tabla, para serializar corridas concurrentes (hallazgo real de Copilot)", async () => {
+    await ingestSernanp();
+
+    const lockCalls = queryMock.mock.calls.filter(([sql]) => sql.includes("pg_advisory_xact_lock"));
+    expect(lockCalls).toHaveLength(5); // una por capa
+    expect(lockCalls[0][0]).toMatch(/hashtext\('sernanp_areas_ingest'\), hashtext\(\$1\)/);
+    expect(lockCalls[0][1]).toEqual(["anp_nacional_definitiva"]);
+  });
 });

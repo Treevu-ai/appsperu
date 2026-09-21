@@ -99,8 +99,27 @@ describe("normalizeAreas", () => {
     expect(rows[0].fechaModificacion).toBeNull();
   });
 
-  it("no incluye atributosExtra vacío como objeto (queda null)", () => {
-    const { rows } = normalizeAreas([anpFeature()], "anp_nacional_definitiva");
+  it("no incluye atributosExtra vacío como objeto (queda null) cuando ni siquiera anp_gid/anp_id están presentes", () => {
+    const feature = anpFeature();
+    delete (feature.attributes as Record<string, unknown>).anp_gid;
+    delete (feature.attributes as Record<string, unknown>).anp_id;
+    const { rows } = normalizeAreas([feature], "anp_nacional_definitiva");
     expect(rows[0].atributosExtra).toBeNull();
+  });
+
+  it("preserva anp_gid/anp_id en atributosExtra -- no se descartan en silencio (hallazgo real de Copilot)", () => {
+    const { rows } = normalizeAreas([anpFeature()], "anp_nacional_definitiva");
+    expect(rows[0].atributosExtra).toMatchObject({ anp_gid: 379, anp_id: 5 });
+  });
+
+  it("preserva anp_gid/zr_id en atributosExtra para zona_reservada", () => {
+    const zrFeature = {
+      attributes: {
+        objectid: 17256, anp_gid: 105, zr_id: 109, zr_codi: "ZR17", zr_nomb: "Ancón", zr_ubpo: "",
+        anp_suleg: 2193.01, zr_balec: "R.M. N° 275-2011-MINAM", zr_felec: 1322456400000,
+      },
+    };
+    const { rows } = normalizeAreas([zrFeature], "zona_reservada");
+    expect(rows[0].atributosExtra).toMatchObject({ anp_gid: 105, zr_id: 109 });
   });
 });

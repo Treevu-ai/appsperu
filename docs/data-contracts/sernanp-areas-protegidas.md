@@ -72,6 +72,29 @@ tratar cada ingesta como snapshot completo. El conector borra todas las filas de
 las reinserta en la misma transacción (`DELETE FROM sernanp_areas WHERE capa = $1`, sin `UNIQUE`
 ni `ON CONFLICT` en la tabla).
 
+## Correcciones reales de la revisión de Copilot (post-implementación)
+
+- **`exceededTransferLimit` no se verificaba**: el conector asume que las 5 capas caben en una
+  sola respuesta (confirmado en vivo: `maxRecordCount: 200000`, capas de 6 a 233 filas), pero no
+  comprobaba ese supuesto en cada corrida — si una capa creciera más allá del límite, `features`
+  sería solo la primera página y el snapshot (DELETE + INSERT) confirmaría una ingesta truncada
+  sin darse cuenta. Ahora se exige `payload.exceededTransferLimit !== true` y `Array.isArray(payload.features)`
+  antes de aceptar la respuesta — lanza error si cualquiera falla, en vez de asumir "capa vacía"
+  o "capa completa".
+- **Sin serialización entre corridas concurrentes**: dos corridas manuales solapadas de la misma
+  capa podían confirmar la más vieja *después* de la más nueva. Se agregó
+  `pg_advisory_xact_lock(hashtext('sernanp_areas_ingest'), hashtext($1))` (con `$1` = nombre de la
+  capa) al abrir la transacción de cada capa.
+- **`anp_gid`/`anp_id` (y equivalentes por capa: `zr_id`, `acr_id`, `acp_id`) se descartaban en
+  silencio**: el fixture real de ANP Nacional Definitiva los trae, pero el mapeo `FIELD_MAP` de
+  `normalize-sernanp.ts` tenía `extra: []` para esa capa, en contra del propio contrato
+  documentado del conector ("nada se pierde, lo que no es común va a `atributos_extra`"). Ahora
+  se preservan explícitamente. **Verificado en vivo, hallazgo adicional útil**: para el área
+  "RN18" (2 filas, geometría multi-parte), ambas comparten `anp_id: 94` pero difieren en
+  `anp_gid` (383 y 382) — confirma que `anp_gid` identifica la parte del polígono, `anp_id` el
+  área lógica completa. Ninguno de los dos se usa como clave de upsert (ver arriba), pero quedan
+  disponibles en `atributos_extra` para quien los necesite.
+
 ## Paginación: no hace falta (a diferencia de GEO-01)
 
 ```json

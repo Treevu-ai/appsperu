@@ -25,6 +25,7 @@ interface EsriFeature {
 
 interface EsriQueryResponse {
   features?: EsriFeature[];
+  exceededTransferLimit?: boolean;
   error?: { code: number; message: string };
 }
 
@@ -32,9 +33,14 @@ interface EsriQueryResponse {
  * A diferencia de INGEMMET (GEO-01), este servicio sí soporta paginación estándar
  * (`advancedQueryCapabilities.supportsPagination: true`, `maxRecordCount: 200000`, confirmado en
  * vivo) y las 5 capas son pequeñas (6 a 233 filas) -- una sola consulta sin filtro trae el
- * dataset completo de cada capa, no hace falta iterar.
+ * dataset completo de cada capa, así que este conector NO implementa paginación por `OBJECTID`.
+ *
+ * Ese supuesto se verifica en cada corrida, no solo se asume una vez (hallazgo real de Copilot):
+ * si la respuesta trae `exceededTransferLimit: true` (la capa creció más allá de
+ * `maxRecordCount`), se aborta la capa explícitamente en vez de confirmar un snapshot truncado --
+ * mismo criterio que exigir `features` como array real ante un schema inesperado.
  */
-async function fetchLayerFeatures(layerId: number): Promise<EsriFeature[]> {
+async function fetchLayerFeatures(layerId: number, capa: Capa): Promise<EsriFeature[]> {
   const params = new URLSearchParams({ where: "1=1", outFields: "*", returnGeometry: "false", f: "json" });
   const res = await fetch(`${BASE_URL}/${layerId}/query?${params.toString()}`);
   if (!res.ok) {
@@ -44,7 +50,20 @@ async function fetchLayerFeatures(layerId: number): Promise<EsriFeature[]> {
   if (payload.error) {
     throw new Error(`SERNANP devolvió error ${payload.error.code}: ${payload.error.message}`);
   }
-  return payload.features ?? [];
+  if (!Array.isArray(payload.features)) {
+    throw new Error(
+      `SERNANP devolvió una respuesta sin "features" (array) para la capa "${capa}" -- ` +
+        "no se asume capa vacía ante un schema inesperado."
+    );
+  }
+  if (payload.exceededTransferLimit === true) {
+    throw new Error(
+      `SERNANP devolvió exceededTransferLimit=true para la capa "${capa}" -- este conector no pagina ` +
+        "(asume que las 5 capas caben en una sola respuesta); confirmar el volumen real y agregar " +
+        "paginación por OBJECTID antes de reintentar, no confirmar un snapshot truncado."
+    );
+  }
+  return payload.features;
 }
 
 async function saveRawBatch(client: PoolClient, capa: Capa): Promise<number> {
@@ -109,12 +128,17 @@ export interface IngestSummary {
  * CodeRabbit).
  */
 async function ingestCapa(capa: Capa): Promise<CapaIngestSummary> {
-  const features = await fetchLayerFeatures(LAYERS[capa]);
+  const features = await fetchLayerFeatures(LAYERS[capa], capa);
   const { rows, rejected } = normalizeAreas(features, capa);
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    // Hallazgo real de Copilot: dos corridas manuales solapadas de la misma capa podrían
+    // confirmar la más vieja DESPUÉS de la más nueva, dejando el snapshot final desactualizado.
+    // `pg_advisory_xact_lock` serializa por capa (hash del nombre) -- se libera sola al terminar
+    // la transacción.
+    await client.query("SELECT pg_advisory_xact_lock(hashtext('sernanp_areas_ingest'), hashtext($1))", [capa]);
     const batchId = await saveRawBatch(client, capa);
 
     await client.query("DELETE FROM sernanp_areas WHERE capa = $1", [capa]);

@@ -62,14 +62,22 @@ export interface CanonicalArea {
   atributosExtra: Record<string, unknown> | null;
 }
 
-/** Mapeo de campo-fuente -> campo-común por capa. Confirmado contra el schema real de cada capa. */
+/**
+ * Mapeo de campo-fuente -> campo-común por capa. Confirmado contra el schema real de cada capa.
+ *
+ * `extra` debe cubrir TODOS los campos de la fuente que no van a una columna común (hallazgo real
+ * de Copilot: el fixture real de ANP trae `anp_gid`/`anp_id`, pero como `extra` estaba vacío para
+ * esa capa se descartaban en silencio, en contra del propio contrato documentado del conector de
+ * "nada se pierde, lo que no es común va a `atributos_extra`"). `anp_gid`/`_id` confirmados
+ * presentes en las 4 capas ANP/ZR/ACR/ACP (no en Sitios Prioritarios, que no los trae).
+ */
 const FIELD_MAP: Record<Capa, { prefix: string; extra: string[]; categoria?: string }> = {
-  anp_nacional_definitiva: { prefix: "anp", extra: [] },
-  zona_reservada: { prefix: "zr", extra: [] },
-  area_conservacion_regional: { prefix: "acr", extra: [] },
+  anp_nacional_definitiva: { prefix: "anp", extra: ["anp_gid", "anp_id"] },
+  zona_reservada: { prefix: "zr", extra: ["anp_gid", "zr_id"] },
+  area_conservacion_regional: { prefix: "acr", extra: ["anp_gid", "acr_id"] },
   area_conservacion_privada: {
     prefix: "acp",
-    extra: ["acp_fecad", "acp_titu", "acp_tipro", "acp_tirec", "acp_pareg"],
+    extra: ["anp_gid", "acp_id", "acp_fecad", "acp_titu", "acp_tipro", "acp_tirec", "acp_pareg"],
   },
   sitios_prioritarios: { prefix: "sp", extra: ["sp_pri", "sp_cf", "sp_ib", "sp_ci"] },
 };
