@@ -23,7 +23,10 @@ resumenRouter.get(
     const { dre } = parsed;
 
     const groupCol = dre ? "ugel" : "dre";
-    const conditions: string[] = ["source_batch_id = (SELECT MAX(source_batch_id) FROM violencia_escolar_casos)"];
+    // MAX(id) de raw_siseve_batches -- mismo criterio y mismo motivo que GET /api/casos (ver
+    // comentario ahí): evita servir en silencio un batch viejo si el más reciente quedara con 0
+    // filas sobrevivientes.
+    const conditions: string[] = ["source_batch_id = (SELECT MAX(id) FROM raw_siseve_batches)"];
     const params: unknown[] = [];
     if (dre) {
       params.push(`%${dre}%`);

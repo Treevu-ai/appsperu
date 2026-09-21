@@ -73,23 +73,18 @@ function parseRows(buffer: Buffer): Promise<Record<string, unknown>[]> {
   });
 }
 
-async function withClient<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
-  const client = await pool.connect();
-  try {
-    return await fn(client);
-  } finally {
-    client.release();
-  }
-}
-
-async function saveRawBatch(checksum: string): Promise<number> {
-  return withClient(async (client) => {
-    const result = await client.query<{ id: number }>(
-      `INSERT INTO raw_siseve_batches (source_url, checksum, record_count) VALUES ($1, $2, 0) RETURNING id`,
-      [SOURCE_URL, checksum]
-    );
-    return result.rows[0].id;
-  });
+/**
+ * Recibe el `client` de la transacción en curso -- antes abría su propia conexión del pool
+ * (autocommit, fuera del BEGIN/COMMIT de `ingestSiseve`), así que un rollback posterior dejaba
+ * un `raw_siseve_batches` huérfano ya confirmado, con `record_count=0` y sin filas asociadas
+ * (hallazgo real de CodeRabbit en PR #179).
+ */
+async function saveRawBatch(client: PoolClient, checksum: string): Promise<number> {
+  const result = await client.query<{ id: number }>(
+    `INSERT INTO raw_siseve_batches (source_url, checksum, record_count) VALUES ($1, $2, 0) RETURNING id`,
+    [SOURCE_URL, checksum]
+  );
+  return result.rows[0].id;
 }
 
 const INSERT_COLUMNS = [
@@ -140,7 +135,7 @@ export async function ingestSiseve(): Promise<IngestSummary> {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const batchId = await saveRawBatch(checksum);
+    const batchId = await saveRawBatch(client, checksum);
 
     for (let i = 0; i < rows.length; i += INSERT_BATCH_SIZE) {
       await insertBatch(client, batchId, rows.slice(i, i + INSERT_BATCH_SIZE));

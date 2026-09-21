@@ -16,6 +16,22 @@ function toText(value: unknown): string | null {
   return s === "" ? null : s;
 }
 
+/**
+ * Valida que un texto YYYY-MM-DD sea una fecha real, no solo el formato -- `new Date("2024-02-31")`
+ * no lanza error, JS lo normaliza en silencio a 2024-03-02 (hallazgo real de CodeRabbit). Se
+ * reconstruye la fecha en UTC y se compara contra los componentes originales.
+ */
+function isValidIsoDateText(text: string): boolean {
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  const [, y, m, d] = match;
+  const year = Number(y);
+  const month = Number(m);
+  const day = Number(d);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
 /** La fuente trae `FECHA_REPORTE` como fecha nativa de Excel (Date de JS vía exceljs) o texto ISO. */
 function toDateOnly(value: unknown): string | null {
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
@@ -23,8 +39,7 @@ function toDateOnly(value: unknown): string | null {
   }
   const text = toText(value);
   if (!text) return null;
-  const d = new Date(text);
-  return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+  return isValidIsoDateText(text) ? text : null;
 }
 
 export interface CanonicalCaso {

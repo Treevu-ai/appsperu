@@ -69,4 +69,10 @@ describe("normalizeCasos", () => {
     expect(rows[0].nivelEducativo).toBeNull();
     expect(rows[0].subtipoViolencia).toBeNull();
   });
+
+  it("rechaza una FECHA_REPORTE con formato correcto pero fecha inexistente (30 de febrero)", () => {
+    const { rows, rejected } = normalizeCasos([realRow({ FECHA_REPORTE: "2026-02-30" })]);
+    expect(rows).toEqual([]);
+    expect(rejected[0].reason).toMatch(/FECHA_REPORTE/);
+  });
 });

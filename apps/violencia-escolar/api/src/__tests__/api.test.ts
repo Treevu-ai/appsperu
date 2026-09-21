@@ -38,13 +38,13 @@ describe("GET /readyz", () => {
 });
 
 describe("GET /api/casos", () => {
-  it("filtra siempre al snapshot más reciente (MAX(source_batch_id))", async () => {
+  it("filtra siempre al snapshot más reciente por raw_siseve_batches, no violencia_escolar_casos", async () => {
     queryMock.mockResolvedValueOnce({ rows: [{ total: "0" }] }).mockResolvedValueOnce({ rows: [] });
     await request(createApp()).get("/api/casos");
     const [countSql] = queryMock.mock.calls[0];
     const [listSql] = queryMock.mock.calls[1];
-    expect(countSql).toMatch(/source_batch_id = \(SELECT MAX\(source_batch_id\) FROM violencia_escolar_casos\)/);
-    expect(listSql).toMatch(/source_batch_id = \(SELECT MAX\(source_batch_id\) FROM violencia_escolar_casos\)/);
+    expect(countSql).toMatch(/source_batch_id = \(SELECT MAX\(id\) FROM raw_siseve_batches\)/);
+    expect(listSql).toMatch(/source_batch_id = \(SELECT MAX\(id\) FROM raw_siseve_batches\)/);
   });
 
   it("rechaza un tipoViolencia fuera del enum sin consultar la base", async () => {
@@ -86,6 +86,12 @@ describe("GET /api/casos", () => {
     expect(countSql).toMatch(/fecha_reporte >= \$1/);
     expect(countSql).toMatch(/fecha_reporte <= \$2/);
     expect(countParams).toEqual(["2024-01-01", "2024-12-31"]);
+  });
+
+  it("rechaza fechaDesde con formato correcto pero fecha inexistente (30 de febrero)", async () => {
+    const res = await request(createApp()).get("/api/casos").query({ fechaDesde: "2024-02-30" });
+    expect(res.status).toBe(400);
+    expect(queryMock).not.toHaveBeenCalled();
   });
 });
 

@@ -9,6 +9,20 @@ export const casosRouter = Router();
 const DEFAULT_LIMIT = 200;
 const MAX_LIMIT = 1000;
 
+/**
+ * `new Date("2024-02-31")` no lanza error -- JS lo normaliza en silencio a 2024-03-02, así que
+ * un simple regex de formato deja pasar fechas inexistentes como filtro (hallazgo real de
+ * CodeRabbit en PR #179). Se reconstruye en UTC y se compara contra los componentes originales.
+ */
+const IsoDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((text) => {
+    const [y, m, d] = text.split("-").map(Number);
+    const date = new Date(Date.UTC(y, m - 1, d));
+    return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+  }, "Fecha inválida (formato correcto, pero el día/mes no existe).");
+
 const CasosQuerySchema = z.object({
   dre: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
   ugel: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
@@ -17,8 +31,8 @@ const CasosQuerySchema = z.object({
   tipoViolencia: z.enum(["Psicológica", "Física", "Sexual"]).optional(),
   subtipoViolencia: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
   tipoEstadoReporte: z.string().min(1).optional(),
-  fechaDesde: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  fechaHasta: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  fechaDesde: IsoDateSchema.optional(),
+  fechaHasta: IsoDateSchema.optional(),
   limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -36,7 +50,11 @@ casosRouter.get(
     if (!parsed) return;
     const { dre, ugel, nivelEducativo, tipoReporte, tipoViolencia, subtipoViolencia, tipoEstadoReporte, fechaDesde, fechaHasta, limit, offset } = parsed;
 
-    const conditions: string[] = ["source_batch_id = (SELECT MAX(source_batch_id) FROM violencia_escolar_casos)"];
+    // MAX(id) de raw_siseve_batches, NO MAX(source_batch_id) de violencia_escolar_casos: si el
+    // batch más reciente terminara con 0 filas sobrevivientes (hipotético, ej. todas rechazadas),
+    // MAX(source_batch_id) devolvería en silencio el batch anterior -- stale mostrado como
+    // "más reciente" (hallazgo real de CodeRabbit en PR #179).
+    const conditions: string[] = ["source_batch_id = (SELECT MAX(id) FROM raw_siseve_batches)"];
     const params: unknown[] = [];
     const addParam = (value: unknown) => {
       params.push(value);
