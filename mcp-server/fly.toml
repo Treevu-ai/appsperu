@@ -4,7 +4,7 @@
 # las apps que sí están sobre la red privada 6PN del gateway (ver
 # docs/FLY_DEPLOY_MCP.md). Cambiá "app" si "rastro-mcp" ya está tomado
 # (mismo comentario que docs/FLY_DEPLOY.md sobre FLY_APP_PREFIX).
-app = "rastro-mcp"
+app = "treevu-rastro-mcp"
 primary_region = "gru"
 
 [build]
