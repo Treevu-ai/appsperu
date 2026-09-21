@@ -2614,4 +2614,53 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: [],
     querySchema: {},
   },
+
+  // ---- violencia-escolar (SíseVe, MINEDU) ----
+  {
+    name: "violencia_escolar_casos",
+    app: "violencia-escolar",
+    description:
+      "Listado detallado de casos de violencia escolar reportados a SíseVe (MINEDU) — fecha, DRE, UGEL, " +
+      "nivel educativo, tipo de reporte (`Personal IE a Escolares` vs `Entre Escolares`), tipo de violencia " +
+      "(Psicológica/Física/Sexual) y subtipo. Sin PII: la fuente no trae nombre, DNI ni identificador de " +
+      "alumno o IE individual — la granularidad más fina es UGEL. Sin ID de caso en la fuente: filas " +
+      "idénticas pueden representar casos reales distintos, nunca se deduplican por contenido. Decisión " +
+      "explícita del usuario (2026-09-21): se replica el mismo nivel de detalle que MINEDU ya publica sin " +
+      "restricción (UGEL + subtipo completo, incluye violencia sexual) — con 225 UGELs, algunas " +
+      "combinaciones (sobre todo Sexual) tienen conteos de 1-2 casos, tenerlo presente al analizar. Siempre " +
+      "sirve el snapshot más reciente ingerido (cada ingesta es un reemplazo completo del rango " +
+      "01/01/2024-hoy, no acumulativo). Verificado en vivo 2026-09-21: 50,633 casos nacional, 9,407 de " +
+      "violencia sexual (18.6%), de los cuales 4,670 son `Personal IE a Escolares` (perpetrados por personal " +
+      "de la IE) vs 4,737 `Entre Escolares` — casi mitad y mitad, no predominantemente entre pares. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/casos",
+    pathParams: [],
+    querySchema: {
+      dre: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      ugel: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      nivelEducativo: z.string().min(1).optional(),
+      tipoReporte: z.enum(["Personal IE a Escolares", "Entre Escolares"]).optional(),
+      tipoViolencia: z.enum(["Psicológica", "Física", "Sexual"]).optional(),
+      subtipoViolencia: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      tipoEstadoReporte: z.string().min(1).optional(),
+      fechaDesde: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      fechaHasta: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "violencia_escolar_resumen",
+    app: "violencia-escolar",
+    description:
+      "Conteo de casos de violencia escolar por tipo (Psicológica/Física/Sexual), agregado por DRE a nivel " +
+      "nacional (sin filtro) o por UGEL dentro de un DRE específico (con `dre`) — evita paginar miles de " +
+      "filas de `violencia_escolar_casos` cuando lo que se necesita es el conteo por territorio. Mismo " +
+      "snapshot más reciente que `violencia_escolar_casos`. " + SIN_SCHEDULER,
+    pathTemplate: "/api/resumen",
+    pathParams: [],
+    querySchema: {
+      dre: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE). Sin filtro: agrega por DRE a nivel nacional."),
+    },
+  },
 ];

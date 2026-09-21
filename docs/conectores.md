@@ -936,6 +936,32 @@ beneficio real.
 
 ---
 
+<a id="violencia-escolar"></a>
+## violencia-escolar — Casos reportados a SíseVe (MINEDU)
+
+Investigado y construido 2026-09-21, a pedido explícito de mapear los endpoints del dashboard
+público de SíseVe (`siseve.minedu.gob.pe/Web/App/Mapa`). El dashboard AJAX en sí mismo resultó
+ser un callejón sin salida (ver hallazgo de cifrado abajo), pero su botón "Exportar a Excel"
+resultó ser una fuente real, pública y sin autenticación, con más detalle que el propio mapa.
+
+### `siseve-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Listado detallado de casos de violencia escolar reportados a SíseVe — fecha, DRE, UGEL, nivel educativo, tipo de reporte (personal de la IE vs. entre escolares), tipo de violencia (Psicológica/Física/Sexual) y subtipo. |
+| **Hallazgo real — el dashboard AJAX cifra sus respuestas con AES del lado del cliente** | `POST /TableroControl/ListarDatosMapa` (el que alimenta el mapa interactivo) devuelve un string cifrado con AES-128-CBC (CryptoJS), cuya clave se deriva de un token ofuscado embebido en el HTML (`data-url` de un `<div id="divTheme">`, decodificado con una sustitución de dígitos por letras). Se confirmó que ese token es **estático** (idéntico en fetches sin sesión) y se replicó la derivación completa en Node — pero decidimos no seguir por esta vía: dependencia frágil de una clave hardcodeada del lado cliente, sujeta a cambiar en cualquier deploy, para datos que la propia plataforma ya expone sin cifrar por otra vía. |
+| **Vía real usada — exportación pública sin cifrar** | `POST /Web/Inicio/DescargarEXCEL`, sin body, sin cookies, sin sesión — confirmado en vivo que reproduce byte-por-byte el mismo archivo que descarga el botón "Excel" del dashboard público. Parseado con `exceljs` (hoja `BaseCompleta`); la cabecera real no está en una fila fija (hay filas de título/nota antes), se busca dinámicamente la fila que empieza con `FECHA_REPORTE`. |
+| **Sin clave natural (decisión de diseño, no pendiente)** | La fuente no trae número de expediente ni ningún identificador único por caso — filas con los 7 mismos valores pueden ser casos reales distintos. No se deduplica por contenido. Cada ingesta es un snapshot completo (la fuente cubre "01/01/2024 hasta hoy", no incremental) — la API sirve siempre el snapshot más reciente (`MAX(source_batch_id)`), nunca mezcla entre corridas. |
+| **Sin PII** | Sin nombre, DNI, ni identificador de alumno o institución educativa individual — la granularidad más fina de la fuente es UGEL. |
+| **Contenido sensible — decisión explícita del usuario (2026-09-21)** | Se replica el mismo nivel de detalle que MINEDU ya publica sin restricción (UGEL + subtipo de violencia completo, incluyendo violencia sexual) — el argumento fue que MINEDU ya lo publica así, Rastro no agrega un nivel de exposición nuevo. Con 225 UGELs, algunas combinaciones (sobre todo `Sexual`) tienen conteos de 1-2 casos — riesgo de celda chica conocido, documentado, no oculto. |
+| **Frecuencia** | Manual (`npm run ingest:siseve` en `apps/violencia-escolar/api`). Sin patrón de actualización intra-mes observado en la fuente. |
+| **Fuente de datos** | `siseve.minedu.gob.pe/Web/Inicio/DescargarEXCEL` (SíseVe, Ministerio de Educación). |
+| **Cobertura real ingerida** | Verificado en vivo 2026-09-21: **50,633/50,633 filas insertadas, 0 rechazadas**. 9,407 casos de violencia sexual (18.6% del total) — de esos, 4,670 `Personal IE a Escolares` vs. 4,737 `Entre Escolares` (casi mitad y mitad, no predominantemente entre pares). La Libertad: 2,252 casos totales, 408 de violencia sexual, 15 UGELs. |
+| **API expuesta** | `GET /api/casos` (filtros `dre`/`ugel`/`nivelEducativo`/`tipoReporte`/`tipoViolencia`/`subtipoViolencia`/`tipoEstadoReporte`/`fechaDesde`/`fechaHasta`, paginado con `total`/`hasMore`) y `GET /api/resumen` (conteo por DRE a nivel nacional, o por UGEL dentro de un DRE con `dre=`). Registrada como tools MCP `violencia_escolar_casos`/`violencia_escolar_resumen`. |
+| **Cruces** | Ninguno implementado todavía — candidato natural: por DRE/UGEL contra inspecciones de infraestructura educativa (PRONIED, ver hallazgos de la investigación de endpoints MINEDU) o presupuesto educativo (`radar-ejecucion`, `FUNCION = EDUCACIÓN`) para relacionar capacidad de prevención institucional con incidencia real. |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada
@@ -1027,4 +1053,5 @@ OCDS); esos resultados devuelven `valorMoneda: null` en vez de asumir soles.
 | `residuos-connector.ts` | residuos-solidos | MINAM/SIGERSOL (datosabiertos.gob.pe) | Descarga CSV directo, clave natural (ubigeo, anio) | Manual | Completa (nacional, 11,310 filas, serie 2019-2024; La Libertad 500/12 provincias) |
 | `pdf-connector.ts` | riesgo-fiscal-isds | MEF, Marco Macroeconómico Multianual / IAPM (PDF, descarga con navegador real — `curl`/`WebFetch` bloqueados) | Parseo de texto tabulado con `pdf-parse`, mismo motor que bcrp-la-libertad; 2 años cargados a mano por formato de tabla no soportado | Manual (archivo local) | Serie 2020-2025 completa (24 filas) |
 | `procesos-judiciales-connector.ts` | poder-judicial | Poder Judicial (datosabiertos.gob.pe, CSV estático fuera de CKAN) | Descarga CSV directo (Latin-1), maneja WAF | Manual | Completa (nacional, 58,568 filas, desde 2024) |
+| `siseve-connector.ts` | violencia-escolar | SíseVe/MINEDU (`siseve.minedu.gob.pe`, exportación pública Excel) | POST sin sesión, parsea XLSX con `exceljs`, cabecera real ubicada dinámicamente | Manual | Completa (nacional, 50,633 filas, 01/01/2024-hoy) |
 
