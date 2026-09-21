@@ -1015,6 +1015,28 @@ verificada en vivo antes de construir.
 
 ---
 
+<a id="areas-protegidas"></a>
+## areas-protegidas — Áreas naturales protegidas (SERNANP)
+
+Investigado y construido 2026-09-21 (ticket GEO-02, `docs/PRD_Energia_Ambiente_Financiero_Nuevos_Conectores_v1.md`),
+inmediatamente después de GEO-01 (catastro minero) — misma sesión, mismo patrón ArcGIS REST.
+
+### `sernanp-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Áreas naturales protegidas y afines de SERNANP — 5 capas: ANP Nacional Definitiva, Zona Reservada, Área de Conservación Regional, Área de Conservación Privada, Sitios Prioritarios Nivel Nacional. |
+| **Fuente pública sin auth** | `.../sernanp_visor/servicio_descarga/MapServer` (ArcGIS REST) — confirmado con `curl` directo. A diferencia de INGEMMET (GEO-01), este servicio sí soporta paginación estándar (`supportsPagination: true`, `maxRecordCount: 200000`) y las 5 capas son pequeñas (6 a 233 filas), no hace falta paginar por `OBJECTID`. |
+| **Hallazgo real — sin clave estable para upsert incremental** | El código de cada capa (`anp_codi`/`zr_codi`/`acr_codi`/`acp_codi`/`sp_cod`) **no es único** — un área con geometría multi-parte (islas, polígonos disjuntos) aparece en más de una fila con el mismo código. Verificado en vivo: la capa ANP Nacional Definitiva trae 104 filas pero solo 95 códigos únicos (`"RN18"` repetido 4 veces, `"RN05"` 4 veces, `"PN01"` 2 veces, `"RVS03"` 3 veces). `objectid` sí es único por consulta, pero es un ID interno de ArcGIS sin garantía de estabilidad entre reconstrucciones del servicio. **Decisión (ya prevista en el PRD tras un hallazgo de CodeRabbit)**: cada ingesta es un snapshot completo por capa — se borran todas las filas existentes de esa capa y se insertan las nuevas, en la misma transacción; no hay `UNIQUE` ni `ON CONFLICT`. |
+| **Schema con `atributos_extra` (JSONB)** | Cada capa trae un juego de campos algo distinto (ej. `acp_titu`/`acp_tipro`/`acp_tirec`/`acp_pareg` solo en Área de Conservación Privada; `sp_pri`/`sp_cf`/`sp_ib`/`sp_ci` solo en Sitios Prioritarios) — los campos comunes (nombre, código, ubicación, superficie, fechas legales) se normalizan a columnas propias; el resto se guarda en `atributos_extra` sin perderlo ni multiplicar columnas nulas. |
+| **Frecuencia** | Manual (`npm run ingest:sernanp` en `apps/areas-protegidas/api`). Sin scheduler. |
+| **Fuente de datos** | `geoservicios.sernanp.gob.pe` (SERNANP/MINAM). |
+| **Cobertura real ingerida** | Verificado en vivo 2026-09-21: **466/466 filas insertadas, 0 rechazadas** (104 ANP + 6 ZR + 48 ACR + 233 ACP + 75 Sitios Prioritarios). La Libertad: 4 áreas protegidas nacionales (Bosque de Protección Puquio Santa Rosa, Coto de Caza Sunchubamba, Reserva Nacional y Santuario Nacional de Calipuy). |
+| **API expuesta** | `GET /api/areas` (filtros `capa`/`nombre`/`ubicacion`/`categoria`, paginado con `total`/`limit`/`offset`/`hasMore`) y `GET /api/areas/{capa}/{objectid}` (detalle por `objectid`, no por código — 404 si no existe). Registrada como tools MCP `areas_protegidas_areas`/`areas_protegidas_area_detalle`. |
+| **Cruces** | Ninguno implementado todavía — candidato natural: overlay geoespacial futuro contra `catastro-minero` (derechos mineros dentro o cerca de un ANP) o el trabajo EUDR del usuario (deforestación cerca de áreas protegidas). |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada

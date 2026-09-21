@@ -94,6 +94,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "legislativo_congreso_periodos",
   ],
   "catastro-minero": ["catastro_minero_derechos", "catastro_minero_derecho_detalle"],
+  "areas-protegidas": ["areas_protegidas_areas", "areas_protegidas_area_detalle"],
   "autoridades-electas": ["autoridades_electas_autoridades"],
   "instituciones-educativas": [
     "instituciones_educativas_instituciones",
