@@ -16,17 +16,19 @@
 
 | ID | Épica | Objetivo | Criterios de aceptación | Dependencias | Prioridad | Esfuerzo | Fase |
 |---|---|---|---|---|---|---|---|
-| LEG-01 | Ingesta | Conector `legislativo-congreso` — ingesta de proyectos de ley por periodo parlamentario. | Usa el contrato exacto confirmado por ADS-15; clave de upsert verificada contra respuesta real; periodos sin respuesta `200` documentados explícitamente, no omitidos en silencio. | ADS-15. | P0 | M | 1 |
-| LEG-02 | API | `GET /api/proyectos` (filtros: periodo, estado, autor, texto libre simple) y `GET /api/proyectos/:codigo`. | Paginación obligatoria; filtro sin match responde lista vacía; tests con y sin match. | LEG-01. | P0 | S | 1 |
-| LEG-03 | MCP + docs | Registrar tool MCP, ficha en `docs/conectores.md`, data contract. | Tool sigue patrón `SIN_SCHEDULER`; `scripts/check-connectors-documented.sh` pasa sin cambios de script; invocación real documentada. | LEG-02. | P0 | S | 1 |
+| LEG-01 | Ingesta | Conector `legislativo-congreso` — ingesta de proyectos de ley por periodo parlamentario. | Usa el contrato exacto confirmado por ADS-15; clave de upsert `perParId`+`pleyNum` verificada contra respuesta real; periodos sin respuesta `200` documentados explícitamente, no omitidos en silencio; verificación en vivo propia contra Postgres, con prueba automática (mínimo: ingesta con datos reales de al menos un periodo). | ADS-15. | P0 | M | 1 |
+| LEG-02 | API | `GET /api/proyectos` (filtros: periodo, estado, autor, texto libre simple), `GET /api/proyectos/:periodo/:numero`, `GET /api/proyectos/periodos`. | Paginación obligatoria; filtro sin match responde lista vacía, distinguible de un periodo no disponible vía `/periodos`; tests con y sin match, incluido el detalle por `:periodo/:numero`. | LEG-01. | P0 | S | 1 |
+| LEG-03 | MCP + docs | Registrar tool MCP, ficha en `docs/conectores.md`, data contract. | Tool sigue patrón `SIN_SCHEDULER`; `scripts/check-connectors-documented.sh` y `mcp-server/src/__tests__/routes-vs-catalog.test.ts` pasan sin cambios de script; invocación real documentada. | LEG-02. | P0 | S | 1 |
 
 ## Definition of Done por ticket
 
-- Verificación en vivo propia documentada en el PR (evidencia real, no snippet de búsqueda ni cita del repo de terceros).
-- Código con prueba automática proporcional al riesgo (mínimo: caso con match, caso sin match).
-- Ficha en `docs/conectores.md` y data contract en `docs/data-contracts/`.
-- Tool MCP registrada en `mcp-server/src/catalog.ts` y probada con una invocación real.
-- Sin UI, sin scheduler, sin dependencia de código AGPL de terceros.
+Cada ticket (LEG-01, LEG-02, LEG-03) cierra solo con lo que le corresponde a él — los criterios de la tabla de arriba son la fuente de verdad por ticket. Lo siguiente es el estándar del **PR completo** una vez los tres tickets están mergeados, no un criterio individual de LEG-01:
+
+- Verificación en vivo propia documentada en el PR de cada ticket (evidencia real, no snippet de búsqueda ni cita del repo de terceros).
+- Código con prueba automática proporcional al riesgo en cada ticket (mínimo: caso con match, caso sin match, según aplique).
+- Ficha en `docs/conectores.md` y data contract en `docs/data-contracts/` — entregable de LEG-03, no de LEG-01/LEG-02.
+- Tool MCP registrada en `mcp-server/src/catalog.ts` y probada con una invocación real — entregable de LEG-03.
+- Sin UI, sin scheduler, sin dependencia de código AGPL de terceros, en los tres tickets.
 
 ## Visión futura (no comprometida, no crear tickets sin PRD propio)
 

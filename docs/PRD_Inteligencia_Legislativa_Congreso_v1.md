@@ -12,7 +12,7 @@ Esta sesión ya confirmó en vivo (`curl` + errores de validación reales de un 
 
 - Su scraper apunta exactamente a la misma ruta que ya verificamos nosotros (`POST /spley-portal-service/proyecto-ley/lista-con-filtro`, body `{"perParId": <periodo>, ...resto null}`), lo que cruza-valida nuestro propio hallazgo.
 - Reporta 14,704 proyectos de ley del periodo 2021-2026 obtenidos en vivo — cercano a los 14,864 citados en el informe de investigación (probable diferencia de fecha de snapshot).
-- Es AGPL-3.0: si Rastro reutilizara su código (no solo su hallazgo del endpoint), cualquier despliegue como servicio quedaría obligado a liberar el código fuente de Rastro bajo la misma licencia. **Decisión explícita: no se adapta ni se depende de ese repo — se construye un conector propio contra el endpoint directamente**, igual que el resto del catálogo de 22 apps existentes. Solo se usa como fuente de verificación cruzada, no como dependencia de código ni de datos.
+- Es AGPL-3.0: si Rastro reutilizara su código (no solo su hallazgo del endpoint), cualquier despliegue como servicio quedaría obligado a liberar el código fuente de Rastro bajo la misma licencia. **Decisión explícita: no se adapta ni se depende de ese repo — se construye un conector propio contra el endpoint directamente**, igual que el resto del catálogo (31 apps existentes en `mcp-server/src/apps.ts` al momento de escribir este PRD — no fijar este número en criterios de aceptación, verificar contra `APP_KEYS` en el momento de implementar). Solo se usa como fuente de verificación cruzada, no como dependencia de código ni de datos.
 
 **Decisión de alcance**: este PRD compromete únicamente la Fase 1 — ingesta de proyectos de ley con API REST y búsqueda simple, mismo patrón que cualquier otro conector del catálogo (`apps/<nombre>/api`, Postgres propio, sin scheduler, sin UI). Las capacidades de enriquecimiento con IA (clasificación temática, resúmenes, embeddings semánticos), MCP tool conversacional adicional al catálogo estándar, y cruce automático con INFOBRAS/SEACE/Radar Inversiones **no se comprometen en este documento** — son abstracción y complejidad prematura sin que la Fase 1 exista primero y se demuestre útil. Se documentan en §9 como visión futura, no como tickets.
 
@@ -52,7 +52,7 @@ Ingerir el histórico completo de proyectos de ley del Congreso de la República
 |---|---|---|
 | Periodista / analista | "¿Qué proyectos de ley menciona tal congresista o tal tema?" | Endpoint de consulta por autor/periodo/texto. |
 | Gestor público | "¿Hay algún proyecto de ley activo que afecte contrataciones/obras?" | Búsqueda de texto libre simple sobre título/sumilla (sin semántica IA en esta fase). |
-| Agente de IA (MCP) | Responder preguntas sobre proyectos de ley sin salir del catálogo Rastro. | Tool MCP nueva, mismo patrón que las 23 apps existentes. |
+| Agente de IA (MCP) | Responder preguntas sobre proyectos de ley sin salir del catálogo Rastro. | Tool MCP nueva, mismo patrón que el resto de apps existentes (ver nota de §1 sobre no fijar el conteo). |
 
 ## 5. Alcance funcional
 
@@ -62,7 +62,7 @@ Ingerir el histórico completo de proyectos de ley del Congreso de la República
 
 **Prioridad:** P0 · **Esfuerzo:** M · **Dependencias:** ADS-15 (contrato completo de `spley-portal-service` confirmado)
 
-Construir `apps/legislativo-congreso/api` (puerto 4030, siguiente disponible en `mcp-server/src/apps.ts`) con un conector propio (no derivado del código de `unimauro/congreso-abierto-peru`, solo verificado contra el mismo endpoint real) que ingiere `POST /spley-portal-service/proyecto-ley/lista-con-filtro` por cada `perParId` confirmado como válido en ADS-15. Clave de upsert: `proyectoLey` (código real, ej. `"14704/2025-CR"`) + `perParId` — confirmar contra la respuesta real, no asumir.
+Construir `apps/legislativo-congreso/api` (puerto 4030, siguiente disponible en `mcp-server/src/apps.ts`) con un conector propio (no derivado del código de `unimauro/congreso-abierto-peru`, solo verificado contra el mismo endpoint real) que ingiere `POST /spley-portal-service/proyecto-ley/lista-con-filtro` por cada `perParId` confirmado como válido en ADS-15. **Clave de upsert: `perParId` + `pleyNum` (el número entero del proyecto, no el código compuesto `proyectoLey`)** — `proyectoLey` (ej. `"14704/2025-CR"`) contiene un `/`, lo que lo hace inadecuado como segmento de ruta sin codificar; se guarda como columna informativa, no como parte de la clave. Confirmar `perParId`+`pleyNum` como clave real contra la respuesta, no asumir.
 
 **Criterios de aceptación**
 
@@ -75,13 +75,14 @@ Construir `apps/legislativo-congreso/api` (puerto 4030, siguiente disponible en 
 
 **Prioridad:** P0 · **Esfuerzo:** S · **Dependencias:** LEG-01
 
-`GET /api/proyectos` con filtros por periodo, estado, autor (nombre parcial, `ILIKE`), y texto libre simple sobre `titulo` (`ILIKE`, sin ranking semántico). `GET /api/proyectos/:codigo` para el detalle de un proyecto.
+`GET /api/proyectos` con filtros por periodo, estado, autor (nombre parcial, `ILIKE`), y texto libre simple sobre `titulo` (`ILIKE`, sin ranking semántico). `GET /api/proyectos/:periodo/:numero` para el detalle de un proyecto (`periodo` = `perParId`, `numero` = `pleyNum` — la clave real de LEG-01, sin `/` ni caracteres que requieran codificación de URL; **no** `GET /api/proyectos/:codigo` con el código compuesto `"14704/2025-CR"`, que contiene `/` y rompería el ruteo).
 
 **Criterios de aceptación**
 
 - Paginación obligatoria (mismo patrón `parseQuery(schema, req.query, res)` que el resto del catálogo) — sin límite implícito no documentado.
-- Filtro sin match responde lista vacía, no error ni `404` genérico.
-- Tests: filtro por periodo con match, por autor con match parcial, sin match.
+- Filtro sin match responde lista vacía, no error ni `404` genérico — distinto del caso "periodo no disponible" (ver §7, campo de disponibilidad explícito).
+- `GET /api/proyectos/periodos` expone qué periodos están `disponible`/`no_disponible` (según lo que LEG-01 haya logrado ingerir) — necesario para que un filtro sin match sea distinguible de un periodo nunca ingerido (ver §7).
+- Tests: filtro por periodo con match, por autor con match parcial, sin match, detalle por `:periodo/:numero` con y sin match, y `GET /api/proyectos/periodos` reflejando un periodo no disponible.
 
 #### LEG-03 — Registro MCP y documentación
 
@@ -93,6 +94,7 @@ Registrar la tool en `mcp-server/src/catalog.ts`, `mcp-server/src/apps.ts` (puer
 
 - Tool sigue patrón `SIN_SCHEDULER` del resto del catálogo.
 - `scripts/check-connectors-documented.sh` pasa sin cambios de script.
+- **`mcp-server/src/__tests__/routes-vs-catalog.test.ts` pasa sin cambios de script (hallazgo real de Copilot)**: este test compara todos los `GET` montados de cada app contra `TOOL_CATALOG` y se activa automáticamente al agregar `legislativo-congreso` a `APP_KEYS` — cada ruta de LEG-02 (`/api/proyectos`, `/api/proyectos/:periodo/:numero`, `/api/proyectos/periodos`) debe tener su tool correspondiente en el catálogo o el CI falla aquí, no solo en `catalog.test.ts`.
 - Tool probada con al menos una invocación MCP real documentada en el PR.
 
 ## 6. Priorización y secuencia
@@ -106,7 +108,7 @@ Registrar la tool en `mcp-server/src/catalog.ts`, `mcp-server/src/apps.ts` (puer
 
 - **Sin dependencia de código de terceros AGPL** — solo el endpoint público se reutiliza, no el pipeline de `unimauro/congreso-abierto-peru`.
 - **PII**: `autores`/`proponente` son congresistas — funcionarios públicos, nombres ya públicos en el propio expediente legislativo. No se ingiere ningún dato personal de ciudadanos particulares en este PRD.
-- **Ausencia de dato ≠ cero**: un periodo parlamentario sin proyectos ingeridos se marca explícitamente como "no disponible", nunca como "0 proyectos confirmados".
+- **Ausencia de dato ≠ cero, con distinción explícita en la respuesta (hallazgo real de Copilot)**: una lista vacía de `GET /api/proyectos?periodo=X` es ambigua entre "el periodo X existe y no tiene proyectos que matcheen el filtro" y "el periodo X nunca respondió `200` en la ingesta y no está disponible". La API debe exponer un campo/endpoint que declare qué periodos están disponibles (ej. `GET /api/proyectos/periodos` con estado por periodo: `disponible`/`no_disponible`), y la respuesta de `GET /api/proyectos` no debe presentarse como "0 resultados confirmados" para un periodo que nunca se ingirió — debe distinguirse de un filtro real sin match.
 - Sin scheduler, sin UI — igual que el resto del catálogo.
 
 ## 8. Riesgos y mitigaciones
