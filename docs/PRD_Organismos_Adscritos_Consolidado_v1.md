@@ -57,29 +57,60 @@ Cerrar la brecha entre "evidencia encontrada por búsqueda" y "evidencia verific
 
 **Corrección de etiqueta (Copilot, PR #180)**: "Épica A" no significa que el schema ya esté confirmado — significa que la *existencia* de la fuente (el endpoint/dataset responde, sin depender de más investigación de descubrimiento) ya está verificada, y por eso el esfuerzo de ingesta está justificado. ADS-01 sigue siendo un ticket de descubrimiento (todavía no hay URL confirmada). ADS-03 y ADS-05 sí tienen fuente confirmada, pero **su verificación en vivo de formato/columnas/granularidad exacta sigue siendo un criterio de aceptación obligatorio de cada ticket**, no un paso ya completado — ningún ticket de esta épica fija un schema antes de esa verificación.
 
-#### ADS-01 — SERFOR / GEOSERFOR: confirmar URL real del servicio geoespacial
+#### ADS-01 — SERFOR / GEOSERFOR: confirmar URL real del servicio geoespacial (CERRADO — 2026-09-22)
 
 **Prioridad:** P0 · **Esfuerzo:** S (investigación) · **Dependencias:** ninguna
 
-`geo.serfor.gob.pe/geoserfor` responde (HTTP 200 confirmado), pero el intento de `/geoserver/wfs` estándar dio 404 — el portal no sigue la convención GeoServer por defecto, o el path real es distinto. Inspeccionar el portal (con `claude-in-chrome` si `curl` no basta, mismo criterio que `riesgo-fiscal-isds`) para encontrar la URL real del servicio WFS/REST detrás del visor, siguiendo el mismo método que ya funcionó para encontrar `api.congreso.gob.pe/spley-portal-service` esta sesión (inspeccionar las llamadas de red del frontend, o el bundle JS si es una SPA).
+**Confirmado en vivo 2026-09-22**: el portal `geo.serfor.gob.pe/geoserfor` es un sitio Joomla de
+contenido (no la fuente de datos en sí); su página `/index.php/servicio` enlaza los servicios
+reales, que son **ArcGIS Server** (por eso `/geoserver/wfs` daba 404 — no es GeoServer). El REST
+endpoint JSON correcto sigue el patrón estándar `/geoservicios/rest/services/...` (no
+`/geoservicios/services/...`, que da `400`):
 
-**Por qué P0 pese a ser solo investigación**: es el bloqueante real para el hallazgo de mayor relevancia EUDR de todo este PRD — sin la URL confirmada, SERFOR no puede pasar a un ticket de ingesta real.
+```
+https://geo.serfor.gob.pe/geoservicios/rest/services/Servicios_OGC/Modalidad_Acceso/MapServer?f=json
+```
+
+5 servicios confirmados, todos responden JSON real con `curl` plano, sin auth:
+`Modalidad_Acceso` (7 capas, incluye **`Concesiones_Forestales`** — la de mayor relevancia EUDR,
+**1,793 features confirmadas** vía `returnCountOnly=true`), `Ordenamiento_Forestal` (Bosques
+Locales/Protectores/de Producción Permanente), `Zonificacion_Forestal` (San Martín/Ucayali/
+Loreto), `Inventario_Forestal` (Ecosistemas Frágiles/Hábitats Críticos), `Unidad_Monitoreo_
+Satelital` (Focos de Calor/Incendio Forestal). Todos con `supportsPagination: true`,
+`maxRecordCount` alto (10,000 en `Modalidad_Acceso`) — mismo patrón estándar que SERNANP (GEO-02),
+no el patrón manual por `OBJECTID` de INGEMMET (GEO-01).
+
+**Hallazgo real, confirmado y refinado durante ADS-02**: `NOMDEP` (pese al nombre "NOM") es
+siempre un código UBIGEO numérico en las 10 capas usadas (ej. `"22"` = San Martín). `NOMPRO`/
+`NOMDIS` también son códigos UBIGEO en 9 de las 10 capas, pero **en
+`modalidad_autorizacion_cambio_uso_agropecuario` son nombres reales en texto** (ej. `"Puerto
+Inca"`, `"Honoria"`) — inconsistencia real de la fuente entre capas, no un error de este PRD ni
+del conector. Ver `docs/data-contracts/serfor-catastro-forestal.md` para el detalle completo.
 
 **Criterios de aceptación**
 
-- URL real del servicio confirmada con `curl` (respuesta JSON/XML real, no HTML de portal), o conclusión explícita de que no existe un servicio público directo (en cuyo caso se documenta y SERFOR se reclasifica a Épica C).
-- Si se confirma, ADS-02 (ingesta) puede empezar sin más investigación previa.
+- ✅ URL real del servicio confirmada con `curl` (respuesta JSON real, no HTML de portal).
+- ADS-02 (ingesta) puede empezar sin más investigación previa de descubrimiento.
 
-#### ADS-02 — Conector SERFOR: catastro forestal / GEOSERFOR
+#### ADS-02 — Conector SERFOR: catastro forestal / GEOSERFOR (CERRADO — construido 2026-09-22)
 
-**Prioridad:** P0 · **Esfuerzo:** M · **Dependencias:** ADS-01
+**Prioridad:** P0 · **Esfuerzo:** M · **Dependencias:** ADS-01 (desbloqueado)
 
-Ingerir concesiones forestales, bosques de producción permanente y/o zonificación forestal, según lo que ADS-01 confirme disponible. Nota: "Catastro Forestal (Nivel Nacional)" ya está también en `datosabiertos.gob.pe` directamente — evaluar si esa vía (descarga de archivo) es más simple que el servicio geoespacial antes de comprometerse a ArcGIS/WFS, si ambas exponen sustancialmente lo mismo.
+Construido sobre la vía geoespacial ArcGIS que ADS-01 confirmó (no se evaluó la alternativa de
+`datosabiertos.gob.pe` en detalle, dado que la vía geoespacial ya trae schema estructurado y
+paginación estándar). 10 capas ingeridas de 2 servicios: `Modalidad_Acceso` (títulos habilitantes
+— permisos, cesiones, autorizaciones, concesiones forestales) y `Ordenamiento_Forestal`
+(clasificación bosques locales/protectores/de producción permanente). **5,391 filas, 0
+rechazadas**, verificado en vivo contra Postgres. Ver `docs/data-contracts/serfor-catastro-forestal.md`
+y `apps/catastro-forestal/api`.
 
 **Criterios de aceptación**
 
-- Mismo estándar que GEO-01/GEO-02 de `PRD_Energia_Ambiente_Financiero_Nuevos_Conectores_v1.md`: respuesta real de la fuente incluida en el PR, clave de upsert confirmada contra campos reales.
-- `docs/data-contracts/serfor-catastro-forestal.md` documenta la vía elegida (geoespacial vs. archivo de `datosabiertos.gob.pe`) y por qué.
+- ✅ Mismo estándar que GEO-01/GEO-02: respuesta real de la fuente documentada, clave de upsert
+  evaluada (ninguna capa tiene clave estable — snapshot completo por capa, mismo criterio que
+  SERNANP/GEO-02).
+- ✅ `docs/data-contracts/serfor-catastro-forestal.md` documenta la vía elegida y el hallazgo real
+  de inconsistencia de `NOMDEP`/`NOMPRO`/`NOMDIS` entre capas.
 
 #### ADS-03 — Conector SUNARP: Registro de Personas Jurídicas
 

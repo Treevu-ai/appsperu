@@ -1062,6 +1062,31 @@ Investigado y construido 2026-09-21 (ticket ADS-04, `docs/BACKLOG_Organismos_Ads
 
 ---
 
+<a id="catastro-forestal"></a>
+## catastro-forestal — Catastro forestal (SERFOR, Modalidad de Acceso + Ordenamiento Forestal)
+
+Investigado y construido 2026-09-22 (tickets ADS-01 desbloqueo + ADS-02 ingesta,
+`docs/BACKLOG_Organismos_Adscritos_Consolidado_v1.md`) — el hallazgo de mayor relevancia EUDR de
+`docs/PRD_Organismos_Adscritos_Consolidado_v1.md`.
+
+### `serfor-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Títulos habilitantes forestales (permisos, cesiones en uso, concesiones forestales, autorizaciones) y clasificación de ordenamiento (bosques locales/protectores/de producción permanente) de SERFOR — 10 capas de 2 servicios. |
+| **Hallazgo ADS-01: es ArcGIS Server, no GeoServer** | El intento inicial a `/geoserver/wfs` daba 404 porque el path real es ArcGIS REST: `geo.serfor.gob.pe/geoservicios/rest/services/Servicios_OGC/<servicio>/MapServer` (nota el `/rest/` — sin él, `/geoservicios/services/...` da `400`). Confirmado con `curl` directo, sin autenticación. |
+| **Soporta paginación estándar** | A diferencia de INGEMMET (GEO-01), `supportsPagination: true` y `maxRecordCount: 10000` — las 10 capas usadas (2 a 1,793 filas) caben en una sola consulta sin filtro, no hace falta paginar por `OBJECTID`. |
+| **Sin clave estable para upsert incremental (mismo criterio que SERNANP)** | Ninguna de las 10 capas trae una clave de negocio verificada única — cada ingesta es un snapshot completo por capa (`DELETE` + `INSERT`, sin `ON CONFLICT`, con advisory lock por capa). |
+| **Hallazgo real — `NOMDEP`/`NOMPRO`/`NOMDIS` inconsistentes entre capas** | `NOMDEP` es siempre un código UBIGEO numérico en las 10 capas. `NOMPRO`/`NOMDIS` son códigos UBIGEO en 9 de 10 capas, pero en `modalidad_autorizacion_cambio_uso_agropecuario` son **nombres reales en texto** (ej. `"Puerto Inca"`, `"Honoria"`) — inconsistencia real de la fuente, no del conector. Ver `docs/data-contracts/serfor-catastro-forestal.md`. |
+| **Frecuencia** | Manual (`npm run ingest:serfor` en `apps/catastro-forestal/api`). Sin scheduler. |
+| **Fuente de datos** | `geo.serfor.gob.pe` (SERFOR). |
+| **Cobertura real ingerida** | Verificado en vivo 2026-09-22: **5,391/5,391 filas insertadas, 0 rechazadas** (182 permisos + 1,179 cesiones + 265 autorizaciones PFDM + 2 cambio de uso + 23 bosques locales modalidad + 1,674 unidad de aprovechamiento + 1,793 concesiones forestales + 23 bosques locales ordenamiento + 3 bosques protectores + 247 bosques de producción permanente). La Libertad: 1 fila (concesión forestal) — resultado honesto, la actividad forestal real está concentrada en la Amazonía (San Martín, Ucayali, Loreto, Madre de Dios). |
+| **API expuesta** | `GET /api/titulos` (filtros `capa`/`nomDep`/`nomPro`/`nomDis`, paginado con `total`/`hasMore`) y `GET /api/titulos/{capa}/{objectid}` (detalle por capa+objectid, 404 si no existe). Registrada como tools MCP `catastro_forestal_titulos`/`catastro_forestal_titulo_detalle`. |
+| **Cruces** | Ninguno implementado todavía — candidato natural: overlay geoespacial futuro contra `catastro-minero` (derechos mineros superpuestos con concesiones forestales) o `areas-protegidas` (ANP colindantes), o el trabajo EUDR del usuario. |
+| **Fuera de alcance** | `Zonificacion_Forestal`, `Inventario_Forestal` (no investigados en profundidad) y `Unidad_Monitoreo_Satelital` (alertas de incendios casi en tiempo real, dominio distinto) — ver data contract. |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada

@@ -2847,4 +2847,57 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: ["senaceId"],
     querySchema: {},
   },
+
+  // ---- catastro-forestal (SERFOR, catastro forestal ArcGIS) ----
+  {
+    name: "catastro_forestal_titulos",
+    app: "catastro-forestal",
+    description:
+      "Títulos habilitantes y clasificación forestal de SERFOR — 10 capas de 2 servicios ArcGIS: " +
+      "`modalidad_permisos`, `modalidad_cesiones_en_uso`, `modalidad_autorizaciones_pfdm_avnb`, " +
+      "`modalidad_autorizacion_cambio_uso_agropecuario`, `modalidad_bosques_locales`, " +
+      "`modalidad_unidad_aprovechamiento`, `modalidad_concesiones_forestales` (la más relevante para " +
+      "EUDR/deforestación — 1,793 filas), `ordenamiento_bosques_locales`, " +
+      "`ordenamiento_bosques_protectores`, `ordenamiento_bosques_produccion_permanente`. Filtra por " +
+      "`capa` o `nomDep`/`nomPro`/`nomDis` (códigos UBIGEO — **excepto** en " +
+      "`modalidad_autorizacion_cambio_uso_agropecuario`, donde `nomPro`/`nomDis` son nombres reales " +
+      "en texto, inconsistencia real de la fuente entre capas). Cada capa es un snapshot completo " +
+      "reemplazado en cada ingesta, sin clave estable de negocio (mismo criterio que " +
+      "`areas-protegidas`/SERNANP). Verificado en vivo 2026-09-22: 5,391 filas totales, 0 " +
+      "rechazadas; cobertura La Libertad mínima (1 fila) — la actividad forestal real está " +
+      "concentrada en la Amazonía. " + SIN_SCHEDULER,
+    pathTemplate: "/api/titulos",
+    pathParams: [],
+    querySchema: {
+      capa: z
+        .enum([
+          "modalidad_permisos",
+          "modalidad_cesiones_en_uso",
+          "modalidad_autorizaciones_pfdm_avnb",
+          "modalidad_autorizacion_cambio_uso_agropecuario",
+          "modalidad_bosques_locales",
+          "modalidad_unidad_aprovechamiento",
+          "modalidad_concesiones_forestales",
+          "ordenamiento_bosques_locales",
+          "ordenamiento_bosques_protectores",
+          "ordenamiento_bosques_produccion_permanente",
+        ])
+        .optional(),
+      nomDep: z.string().min(1).optional().describe("Código UBIGEO de departamento en las 10 capas."),
+      nomPro: z.string().min(1).optional().describe("Código UBIGEO en 9/10 capas; nombre real en modalidad_autorizacion_cambio_uso_agropecuario."),
+      nomDis: z.string().min(1).optional().describe("Código UBIGEO en 9/10 capas; nombre real en modalidad_autorizacion_cambio_uso_agropecuario."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "catastro_forestal_titulo_detalle",
+    app: "catastro-forestal",
+    description:
+      "Detalle de un título específico por `capa` + `objectid` (ID interno de ArcGIS, único dentro " +
+      "de cada capa, no globalmente). Responde 404 si no existe. " + SIN_SCHEDULER,
+    pathTemplate: "/api/titulos/{capa}/{objectid}",
+    pathParams: ["capa", "objectid"],
+    querySchema: {},
+  },
 ];
