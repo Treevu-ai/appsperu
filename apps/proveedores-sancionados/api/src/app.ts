@@ -7,6 +7,7 @@ import { redesProveedoresRouter } from "./routes/redes-proveedores.js";
 import { personasSancionadasRouter } from "./routes/personas-sancionadas.js";
 import { candidatosSancionadosRouter } from "./routes/candidatos-sancionados.js";
 import { sancionadoRecurrenteRouter } from "./routes/sancionado-recurrente.js";
+import { velocidadSancionContratoRouter } from "./routes/velocidad-sancion-contrato.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 import { pool } from "./db/pool.js";
 
@@ -33,6 +34,7 @@ export function createApp() {
   app.use("/api/crossref/personas-sancionadas", personasSancionadasRouter);
   app.use("/api/crossref/candidatos-sancionados", candidatosSancionadosRouter);
   app.use("/api/crossref/sancionado-recurrente", sancionadoRecurrenteRouter);
+  app.use("/api/crossref/velocidad-sancion-contrato", velocidadSancionContratoRouter);
 
   app.use(errorHandler);
 

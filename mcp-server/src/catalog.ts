@@ -1564,6 +1564,28 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
   {
+    name: "proveedores_sancionados_velocidad_sancion_contrato",
+    app: "proveedores-sancionados",
+    description:
+      "Alerta de velocidad sanción→contrato (2026-09-21, originada en un hallazgo real: LABORATORIOS " +
+      "UNIDOS S.A., RUC 20417180134, recibió S/ 600,000 del MINISTERIO DE SALUD el 2026-08-31 con una " +
+      "inhabilitación OSCE VIGENTE desde el 2026-07-08). Cruza `awards`+`minor_contracts` de " +
+      "`compras-publicas` contra `inhabilitaciones` por RUC y marca dos severidades: " +
+      "`DURANTE_SANCION_VIGENTE` (el contrato se adjudicó mientras la inhabilitación estaba activa) y " +
+      "`POCO_DESPUES_DE_SANCION` (el contrato se adjudicó dentro de `ventanaDiasPostSancion` días después " +
+      "de que la inhabilitación terminó — proveedores que esperan a que expire la sanción). A diferencia de " +
+      "`proveedores_sancionados_crossref` (default La Libertad), este endpoint es un radar de alerta — el " +
+      "default es NACIONAL (`departamento=TODOS` implícito); pasar `departamento` lo acota igual que " +
+      "`crossref`. Ninguna severidad determina irregularidad por sí sola — requiere revisión humana. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/crossref/velocidad-sancion-contrato",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Sin este parámetro, el alcance es nacional (todas las entidades)."),
+      ventanaDiasPostSancion: z.coerce.number().int().min(0).max(3650).optional().describe("Default 90."),
+    },
+  },
+  {
     name: "proveedores_sancionados_redes_proveedores",
     app: "proveedores-sancionados",
     description:
