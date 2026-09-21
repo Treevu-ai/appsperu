@@ -2,9 +2,13 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import request from "supertest";
 
 const queryMock = vi.fn();
+const inversionesQueryMock = vi.fn();
 
 vi.mock("../db/pool.js", () => ({
   pool: { query: queryMock },
+}));
+vi.mock("../db/inversiones-pool.js", () => ({
+  inversionesPool: { query: inversionesQueryMock },
 }));
 
 const { createApp } = await import("../app.js");
