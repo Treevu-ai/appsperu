@@ -83,6 +83,8 @@ describe("GET /api/proyectos", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.total).toBe(5);
+    expect(res.body.limit).toBe(1);
+    expect(res.body.offset).toBe(0);
     expect(res.body.hasMore).toBe(true);
     expect(res.body.resultados[0]).toMatchObject({ pleyNum: 14864, estado: "PRESENTADO" });
   });
@@ -106,6 +108,14 @@ describe("GET /api/proyectos/periodos", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.periodos[0]).toMatchObject({ perParId: 2021, disponible: true, proyectosEnUltimaIngesta: 14864 });
+  });
+
+  it("usa DISTINCT ON por periodo para que fecha y conteo vengan del mismo batch, no de un MAX() mezclado", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+    await request(createApp()).get("/api/proyectos/periodos");
+    const [sql] = queryMock.mock.calls[0];
+    expect(sql).toMatch(/DISTINCT ON \(per_par_id\)/);
+    expect(sql).not.toMatch(/MAX\(/);
   });
 });
 

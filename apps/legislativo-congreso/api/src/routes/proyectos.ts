@@ -65,6 +65,8 @@ proyectosRouter.get(
 
     res.json({
       total,
+      limit,
+      offset,
       hasMore: offset + rows.length < total,
       resultados: rows.map((r) => ({
         perParId: r.per_par_id,
@@ -94,11 +96,15 @@ proyectosRouter.get(
 proyectosRouter.get(
   "/periodos",
   asyncHandler(async (_req, res) => {
+    // `MAX(fetched_at)` y `MAX(record_count)` por separado pueden mezclar columnas de dos
+    // corridas distintas del mismo periodo -- si una ingesta posterior trae menos proyectos, el
+    // MAX de record_count seguiría mostrando el máximo histórico, no el de la última corrida
+    // real (hallazgo real de Copilot). `DISTINCT ON` fija ambas columnas al mismo batch, el más
+    // reciente por `fetched_at`.
     const { rows } = await pool.query(
-      `SELECT per_par_id, MAX(fetched_at) AS ultima_ingesta, MAX(record_count) AS proyectos_en_ultima_ingesta
+      `SELECT DISTINCT ON (per_par_id) per_par_id, fetched_at AS ultima_ingesta, record_count AS proyectos_en_ultima_ingesta
        FROM raw_congreso_batches
-       GROUP BY per_par_id
-       ORDER BY per_par_id DESC`
+       ORDER BY per_par_id DESC, fetched_at DESC, id DESC`
     );
 
     res.json({

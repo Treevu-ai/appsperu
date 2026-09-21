@@ -81,7 +81,23 @@ const UPSERT_COLUMNS = [
   "titulo", "proponente", "autores", "cod_tipo_parl", "cod_tipo_parl_actual", "source_batch_id",
 ] as const;
 
-async function upsertBatch(client: PoolClient, batchId: number, rows: readonly CanonicalProyecto[]): Promise<void> {
+/**
+ * `ON CONFLICT DO UPDATE` no tolera que dos filas del mismo `INSERT` compartan la clave --
+ * Postgres aborta con "ON CONFLICT DO UPDATE command cannot affect row a second time" (hallazgo
+ * real de Copilot). No se ha visto un duplicado real en la fuente (verificado: 0 duplicados
+ * sobre 14,864 filas del periodo 2021), pero el conector no debe asumirlo -- se deduplica por
+ * `perParId`+`pleyNum` antes de armar el `INSERT`, quedándose con la última aparición.
+ */
+function dedupeByKey(rows: readonly CanonicalProyecto[]): CanonicalProyecto[] {
+  const byKey = new Map<string, CanonicalProyecto>();
+  for (const row of rows) {
+    byKey.set(`${row.perParId}|${row.pleyNum}`, row);
+  }
+  return [...byKey.values()];
+}
+
+async function upsertBatch(client: PoolClient, batchId: number, rowsIn: readonly CanonicalProyecto[]): Promise<void> {
+  const rows = dedupeByKey(rowsIn);
   if (rows.length === 0) return;
 
   const values: unknown[] = [];
@@ -150,6 +166,20 @@ async function ingestPeriodo(perParId: number): Promise<PeriodoIngestSummary> {
     for (let i = 0; i < rejected.length; i += INSERT_BATCH_SIZE) {
       await insertRejectedBatch(client, batchId, rejected.slice(i, i + INSERT_BATCH_SIZE));
     }
+
+    /**
+     * Cada corrida trae el snapshot vigente completo de ese periodo -- un proyecto que ya no
+     * aparece en la respuesta (retirado, o el propio Congreso lo quitó del listado) debe
+     * desaparecer de la tabla, no quedarse "vigente" indefinidamente solo porque su fila no fue
+     * tocada en esta corrida (hallazgo real de Copilot: el `ON CONFLICT` nunca borraba nada).
+     * Cualquier fila de este `per_par_id` cuyo `source_batch_id` no sea el de esta corrida no fue
+     * re-confirmada por la fuente -- se elimina, en la misma transacción.
+     */
+    await client.query(
+      "DELETE FROM legislativo_congreso_proyectos WHERE per_par_id = $1 AND source_batch_id <> $2",
+      [perParId, batchId]
+    );
+
     await client.query("UPDATE raw_congreso_batches SET record_count = $1 WHERE id = $2", [rows.length, batchId]);
 
     await client.query("COMMIT");

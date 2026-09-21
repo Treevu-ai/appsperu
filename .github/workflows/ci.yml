@@ -26,6 +26,7 @@ jobs:
           - apps/infracciones-ambientales/api
           - apps/infraestructura-mtc/api
           - apps/instituciones-educativas/api
+          - apps/legislativo-congreso/api
           - apps/mindef/api
           - apps/mimp/api
           - apps/programas-sociales/api
