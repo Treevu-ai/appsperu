@@ -103,4 +103,24 @@ describe("ingestIngemmet", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(summary.filasOrigen).toBe(1);
   });
+
+  it("rechaza una respuesta HTTP 200 sin 'features' como array -- no la trata como catálogo vacío (hallazgo real de Copilot)", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ code: 200 })); // sin campo "features"
+
+    await expect(ingestIngemmet()).rejects.toThrow(/sin "features"/);
+
+    // No debe haber llegado a borrar la tabla con un catálogo malinterpretado como vacío.
+    const deleteCalls = queryMock.mock.calls.filter(([sql]) => sql.includes("DELETE FROM catastro_minero_derechos"));
+    expect(deleteCalls).toHaveLength(0);
+  });
+
+  it("adquiere un advisory lock antes de tocar la tabla, para serializar corridas concurrentes (hallazgo real de Copilot)", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ features: [feature(1)], exceededTransferLimit: false }));
+
+    await ingestIngemmet();
+
+    const lockCalls = queryMock.mock.calls.filter(([sql]) => sql.includes("pg_advisory_xact_lock"));
+    expect(lockCalls).toHaveLength(1);
+    expect(lockCalls[0][0]).toMatch(/hashtext\('catastro_minero_derechos_ingest'\)/);
+  });
 });

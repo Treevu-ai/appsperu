@@ -82,17 +82,33 @@ Devuelve exactamente 1000 features y `"exceededTransferLimit":true`. El conector
 consulta con `WHERE OBJECTID > <último_id_de_la_página_anterior>` mientras
 `exceededTransferLimit` siga en `true` — patrón estándar de ArcGIS REST para este límite.
 
-## Hallazgo real: TLS y Node.js
+## Hallazgo real: TLS y Node.js (corregido tras revisión de Copilot)
 
-`fetch()` de Node.js (v25, CA bundle propio) rechaza el certificado de
-`geocatmin.ingemmet.gob.pe` con `UNABLE_TO_VERIFY_LEAF_SIGNATURE`, mientras que `curl` (CA store
-del sistema operativo) sí confía en la cadena completa. **No es un problema del servidor ni una
-razón para deshabilitar la verificación TLS** — es que el bundle de CAs que Node.js empaqueta por
-defecto no incluye (o no encadena correctamente) la CA intermedia que usa este servidor. La
-solución correcta, verificada en vivo, es `node --use-system-ca` (o `tsx --use-system-ca`), que
-hace que Node use el almacén de confianza del sistema operativo — el mismo que ya usa `curl` — en
-vez de deshabilitar la verificación (`NODE_TLS_REJECT_UNAUTHORIZED=0`, que sí sería inseguro).
-`apps/catastro-minero/api/package.json` declara el script `ingest:ingemmet` con esta flag.
+`fetch()` de Node.js (CA bundle propio) rechaza el certificado de `geocatmin.ingemmet.gob.pe` con
+`UNABLE_TO_VERIFY_LEAF_SIGNATURE`, mientras que `curl` (CA store del sistema operativo) sí confía
+en la cadena completa. **No es un problema del servidor ni una razón para deshabilitar la
+verificación TLS.**
+
+**Causa raíz real, verificada con `openssl s_client -showcerts`**: el servidor solo envía su
+certificado hoja (`CN=*.ingemmet.gob.pe`) en el handshake TLS, sin la CA intermedia real
+(`Sectigo Public Server Authentication CA OV R36`) — el bundle de CAs que Node.js empaqueta por
+defecto no la incluye, así que la cadena no se puede completar. `curl`/navegadores no fallan
+porque el almacén de confianza del sistema operativo sí la tiene cacheada (o la busca vía AIA).
+
+**Primer intento (descartado, hallazgo real de Copilot en el PR)**: `node --use-system-ca` — sí
+funciona, pero ese flag requiere **Node 22+**, y `.github/workflows/ci.yml` fija Node 20
+(`node-version: 20`) — el flag no existe ahí, así que `npm run ingest:ingemmet` fallaría en el
+entorno real del proyecto (aunque CI no ejecuta el script de ingesta, cualquiera corriéndolo con
+la versión de Node del proyecto sí lo sufriría).
+
+**Solución real, compatible con cualquier Node ≥ 18**: se descargó la CA intermedia real de
+Sectigo (`crt.sh`, guardada en
+`apps/catastro-minero/api/certs/sectigo-public-server-authentication-ca-ov-r36.pem`) y se arma un
+`dispatcher` de `undici` (`src/lib/ingemmet-tls.ts`) con el CA bundle por defecto de Node
+(`tls.rootCertificates`) más esa CA intermedia, pasado explícitamente a cada `fetch()` del
+conector — no se toca la configuración TLS global del proceso, ni se deshabilita la verificación
+(`NODE_TLS_REJECT_UNAUTHORIZED=0`, que sí sería inseguro). Verificado en vivo sin ninguna flag de
+CLI: `npm run ingest:ingemmet` (Node normal) trae el catastro completo (66,830 filas).
 
 ## Clave de upsert
 
@@ -101,11 +117,18 @@ completa (`COUNT(*) = COUNT(DISTINCT codigou) = 66823`, verificado con SQL real 
 
 ## Conector (`src/ingest/ingemmet-connector.ts`)
 
-1. Pagina por `OBJECTID` (ver arriba) hasta agotar el catastro completo.
-2. Inserta un `raw_ingemmet_batches` por corrida completa.
-3. Normaliza (`normalize-ingemmet.ts`) — convierte fechas epoch a ISO, valida `OBJECTID`/`CODIGOU`
+1. Adquiere `pg_advisory_xact_lock(hashtext('catastro_minero_derechos_ingest'))` al abrir la
+   transacción — serializa corridas manuales solapadas (hallazgo real de Copilot: sin esto, una
+   corrida con datos más viejos podía confirmar DESPUÉS de una más nueva y dejar el snapshot
+   desactualizado). Se libera solo al hacer COMMIT/ROLLBACK.
+2. Pagina por `OBJECTID` (ver arriba) hasta agotar el catastro completo. Exige explícitamente que
+   `features` sea un array real en cada respuesta — una respuesta `HTTP 200` con schema inesperado
+   (sin ese campo) lanza error en vez de tratarse como "catálogo vacío" (hallazgo real de Copilot:
+   el snapshot completo de abajo habría borrado toda la tabla real sin darse cuenta).
+3. Inserta un `raw_ingemmet_batches` por corrida completa.
+4. Normaliza (`normalize-ingemmet.ts`) — convierte fechas epoch a ISO, valida `OBJECTID`/`CODIGOU`
    como campos obligatorios, el resto es opcional (`null` si ausente).
-4. `ON CONFLICT (codigou) DO UPDATE` por lote de 1000 filas — refleja el catastro vigente.
+5. `ON CONFLICT (codigou) DO UPDATE` por lote de 1000 filas — refleja el catastro vigente.
 
 ### Verificación en vivo (2026-09-21)
 

@@ -2,6 +2,7 @@ import { pathToFileURL } from "node:url";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
 import { normalizeDerechos, type CanonicalDerecho, type EsriFeature, type RejectedRow } from "./normalize-ingemmet.js";
+import { ingemmetDispatcher } from "../lib/ingemmet-tls.js";
 
 const QUERY_ENDPOINT =
   "https://geocatmin.ingemmet.gob.pe/arcgis/rest/services/SERV_CATASTRO_MINERO/MapServer/0/query";
@@ -40,7 +41,7 @@ async function fetchAllFeatures(): Promise<EsriFeature[]> {
       returnGeometry: "false",
       f: "json",
     });
-    const res = await fetch(`${QUERY_ENDPOINT}?${params.toString()}`);
+    const res = await fetch(`${QUERY_ENDPOINT}?${params.toString()}`, { dispatcher: ingemmetDispatcher() } as RequestInit);
     if (!res.ok) {
       throw new Error(`INGEMMET devolvió ${res.status} al consultar OBJECTID>${lastObjectId}`);
     }
@@ -48,8 +49,18 @@ async function fetchAllFeatures(): Promise<EsriFeature[]> {
     if (payload.error) {
       throw new Error(`INGEMMET devolvió error ${payload.error.code}: ${payload.error.message}`);
     }
+    // Hallazgo real de Copilot: `payload.features ?? []` convertía una respuesta HTTP 200 mal
+    // formada (schema inesperado, sin campo `features`) en "catálogo vacío" -- el snapshot
+    // completo (DELETE + INSERT) de abajo borraría entonces TODO el catastro real sin darse
+    // cuenta. Se exige explícitamente que `features` sea un array real.
+    if (!Array.isArray(payload.features)) {
+      throw new Error(
+        `INGEMMET devolvió una respuesta sin "features" (array) para OBJECTID>${lastObjectId} -- ` +
+          "no se asume catálogo vacío ante un schema inesperado."
+      );
+    }
 
-    const features = payload.features ?? [];
+    const features = payload.features;
     if (features.length === 0) break;
 
     all.push(...features);
@@ -153,6 +164,12 @@ export async function ingestIngemmet(): Promise<IngestSummary> {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    // Hallazgo real de Copilot: dos corridas manuales solapadas podrían confirmar la más vieja
+    // DESPUÉS de la más nueva (la que arrancó después, pero con datos más viejos porque tardó
+    // menos en descargar), dejando el snapshot final desactualizado. `pg_advisory_xact_lock`
+    // serializa las corridas -- la segunda espera a que la primera haga COMMIT/ROLLBACK antes de
+    // tocar la tabla, se libera solo automáticamente al terminar la transacción.
+    await client.query("SELECT pg_advisory_xact_lock(hashtext('catastro_minero_derechos_ingest'))");
     const batchId = await saveRawBatch(client);
 
     for (let i = 0; i < rows.length; i += INSERT_BATCH_SIZE) {
