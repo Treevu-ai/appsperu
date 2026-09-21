@@ -10,7 +10,7 @@
 
 | Fase | Objetivo | Tickets comprometibles | Criterio de corte |
 |---|---|---|---|
-| 0 | Los dos hallazgos ya verificados en vivo, mayor valor. | GEO-01, AMB-01 | GEO-01 reproduce una consulta `/query` real en el PR; AMB-01 confirma formato/granularidad real antes de escribir el parser. |
+| 0 | El hallazgo ya verificado en vivo de mayor valor, más el de mayor prioridad de negocio (EUDR) pendiente de su propia verificación. | GEO-01, AMB-01 | GEO-01 reproduce una consulta `/query` real en el PR; AMB-01 (no verificado en vivo todavía) confirma formato/granularidad real antes de escribir el parser. |
 | 1 | Fricción baja, valor real. | GEO-02, ENE-01, FIN-01 | Cada uno con verificación en vivo propia documentada. |
 | 2 | Ampliación y complementos. | ENE-02, ENE-03, AMB-02, AMB-03, FIN-02 | Ninguno bloquea capacidad nueva de fases anteriores. |
 

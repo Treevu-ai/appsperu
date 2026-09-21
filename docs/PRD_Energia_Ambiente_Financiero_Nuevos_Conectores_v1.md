@@ -84,7 +84,7 @@ Mismo patrón que GEO-01: conector vía `/query` de ArcGIS REST, upsert por el i
 **Criterios de aceptación**
 
 - Mismos criterios que GEO-01, adaptados: respuesta real de `?f=json` y de una consulta `/query` de muestra incluida en el PR.
-- Si la fuente no trae un identificador único estable, el data contract documenta explícitamente esa limitación y la clave elegida (ej. nombre + categoría, con el riesgo de colisión que eso implica) en vez de inventar una clave sintética sin advertirlo.
+- **Si la fuente no trae un identificador único estable, no se acepta `nombre + categoría` como clave de upsert incremental sin una política de reconciliación explícita (hallazgo real de CodeRabbit)**: una clave derivada del nombre puede colisionar o quedar huérfana si SERNANP renombra un área entre ingestas, produciendo sobrescrituras o duplicados silenciosos. El data contract debe, en ese caso, (a) bloquear el upsert incremental y tratar cada ingesta como snapshot completo (truncar e insertar, no upsert por clave derivada), o (b) definir una identidad inmutable propia (ej. hash estable de geometría + nombre en el momento de la primera ingesta) junto con una estrategia de reconciliación documentada para colisiones y renombrados — no se implementa `nombre + categoría` como clave de upsert sin elegir explícitamente una de las dos opciones.
 - Test: parseo de una respuesta real de ejemplo por cada una de las 5 capas.
 - `docs/data-contracts/sernanp-areas-protegidas.md` documenta las 5 capas, sus campos reales, y la decisión sobre clave de upsert.
 
@@ -193,7 +193,7 @@ No es un conector nuevo — es agregar códigos de serie al `NATIONAL_TRADE_SERI
 
 | Fase | Entregables | Resultado que desbloquea |
 |---|---|---|
-| **Ahora** | GEO-01, AMB-01 | Los dos hallazgos verificados en vivo con mayor valor — catastro minero y deforestación amazónica (este último, directamente útil para el trabajo EUDR en curso). |
+| **Ahora** | GEO-01, AMB-01 | GEO-01 ya verificado en vivo (catastro minero); AMB-01 (deforestación amazónica) aún requiere su propia verificación en vivo, pero es P0 por su valor directo para el trabajo EUDR en curso — ver §7. |
 | **Siguiente** | GEO-02, ENE-01, FIN-01 | Áreas protegidas, precios de combustibles, presencia del Banco de la Nación — tres fuentes de fricción baja y valor real. |
 | **Después** | ENE-02, ENE-03, AMB-02, AMB-03, FIN-02 | Ampliación y complementos — ninguno bloquea capacidad nueva, todos suman cobertura a lo ya construido en fases anteriores. |
 

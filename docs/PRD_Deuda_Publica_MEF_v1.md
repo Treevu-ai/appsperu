@@ -30,7 +30,7 @@ Determinar si la Consulta de Deuda Pública del MEF es una fuente viable para Ra
 
 - No se construye un conector `fetch()` automático sin antes confirmar que existe una vía que lo permita — si la única vía real es manual-asistida (como `riesgo-fiscal-isds`), este PRD lo acepta explícitamente en vez de forzar automatización donde no la hay.
 - No se cruza deuda pública contra `riesgo-fiscal-isds`/`radar-ejecucion` en este PRD — eso es un PRD de cruces posterior, una vez el conector base exista.
-- No se investigan en este PRD los hallazgos de órganos adscritos (SERFOR, ONPE, SENACE, OSITRAN, etc.) encontrados en paralelo esta misma sesión — quedan pendientes de integrar en su propio documento, por instrucción explícita del usuario.
+- No se investigan en este PRD los hallazgos de órganos adscritos (SERFOR, ONPE, SENACE, OSITRAN, etc.) encontrados en paralelo esta misma sesión — su consolidación ya está completa en `docs/PRD_Organismos_Adscritos_Consolidado_v1.md` / `docs/BACKLOG_Organismos_Adscritos_Consolidado_v1.md`, que son los documentos activos para darles seguimiento (ver también `docs/BACKLOG_Deuda_Publica_MEF_v1.md`, nota de remisión).
 - No se construyen vistas nuevas en `rastro.fyi`/`rastro-web`.
 - No se implementa scheduler.
 
@@ -38,10 +38,10 @@ Determinar si la Consulta de Deuda Pública del MEF es una fuente viable para Ra
 
 | Métrica | Meta de aceptación |
 |---|---|
-| Viabilidad de fuente confirmada | DEU-01 determina, con evidencia real (no snippet de búsqueda), si la fuente es descargable automáticamente, manual-asistida, o no automatizable — y lo documenta en un ADR o sección de data contract, mismo criterio que `docs/adr/0015-mef-connector-offsets-manuales-decision.md`. |
+| Viabilidad de fuente confirmada | DEU-01 determina, con evidencia real (no snippet de búsqueda), si la fuente es descargable automáticamente, manual-asistida, o no automatizable — y lo documenta en un ADR o en `docs/data-contracts/mef-deuda-publica-viabilidad.md`, mismo criterio que `docs/adr/0015-mef-connector-offsets-manuales-decision.md`. |
 | Deuda nacional ingerida (si DEU-01 lo habilita) | Stock de deuda interna/externa consultable, con clasificador (moneda, plazo, tipo de acreedor si la fuente lo trae) y fecha de corte real. |
 | Deuda subnacional ingerida (si DEU-01 lo habilita) | Deuda de gobiernos regionales/locales consultable por UBIGEO/entidad, con cobertura de La Libertad verificada explícitamente. |
-| Documentación honesta | Si la fuente resulta no viable o solo parcialmente viable, `docs/data-contracts/mef-deuda-publica.md` lo documenta como tal — no se cierra el PRD fingiendo cobertura que no existe. |
+| Documentación honesta | Si la fuente resulta no viable o solo parcialmente viable, `docs/data-contracts/mef-deuda-publica-viabilidad.md` (el contrato de fuente de DEU-01, distinto de los contratos nacional/subnacional de DEU-02/DEU-03) lo documenta como tal — no se cierra el PRD fingiendo cobertura que no existe. |
 
 ## 4. Usuarios y casos de uso
 
@@ -78,9 +78,10 @@ Ingerir el módulo de "Deuda del Sector Público" — stock de deuda interna/ext
 
 **Criterios de aceptación**
 
+- Los tres productos descritos arriba se ingieren de forma explícita — stock de deuda interna/externa, desembolsos, y servicio proyectado. Si alguno de los tres no está disponible en la fuente real, se documenta esa ausencia explícitamente en el contrato (no se asume cobertura completa por analogía con los otros dos).
 - Schema de la tabla nueva refleja columnas confirmadas contra una respuesta/descarga real, no contra la descripción de la página de búsqueda.
 - Fecha de corte real declarada en la respuesta de la API (no asumida "hoy" ni "el año en curso").
-- `docs/data-contracts/mef-deuda-publica-nacional.md` documenta la vía de acceso real determinada por DEU-01 y las columnas confirmadas.
+- `docs/data-contracts/mef-deuda-publica-nacional.md` documenta la vía de acceso real determinada por DEU-01 y las columnas confirmadas de los tres productos.
 
 #### DEU-03 — Deuda de gobiernos regionales y locales (subnacional)
 
@@ -132,13 +133,13 @@ Registrar tools MCP nuevas siguiendo el patrón `SIN_SCHEDULER` del resto del ca
 ## 9. Fuera de este PRD
 
 - Cruce entre deuda pública y `riesgo-fiscal-isds`/`radar-ejecucion` — PRD de cruces futuro, una vez el conector base exista.
-- Los hallazgos de órganos adscritos de esta misma sesión (SERFOR/GEOSERFOR, ONPE, SENACE, OSITRAN, SUNAFIL, SUNEDU, RENIEC, INS, INABIF) — pendientes de integrar en su propio documento.
+- Los hallazgos de órganos adscritos de esta misma sesión (SERFOR/GEOSERFOR, ONPE, SENACE, OSITRAN, SUNAFIL, SUNEDU, RENIEC, INS, INABIF) — ya consolidados en `docs/PRD_Organismos_Adscritos_Consolidado_v1.md` / `docs/BACKLOG_Organismos_Adscritos_Consolidado_v1.md`, documentos activos, no pendientes.
 - Cambios en `apps/rastro-web` o `rastro.fyi`.
 - Scheduler/automatización.
 
 ## 10. Definition of Done
 
-- DEU-01 completado con conclusión explícita y evidencia real, documentada en un ADR o en `docs/data-contracts/mef-deuda-publica-nacional.md`.
+- DEU-01 completado con conclusión explícita y evidencia real, documentada en un ADR o en `docs/data-contracts/mef-deuda-publica-viabilidad.md`.
 - Si DEU-01 concluye viable: DEU-02 y DEU-03 mergeados con PR, revisión, pruebas automatizadas, y cobertura territorial real declarada.
 - Si DEU-01 concluye no viable: el PRD se cierra formalmente con la razón documentada — no queda "en pausa" sin resolución.
 - Ninguna ficha de `docs/conectores.md` declara automatización donde la ingesta real fue manual-asistida.

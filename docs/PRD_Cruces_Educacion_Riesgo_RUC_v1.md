@@ -97,7 +97,7 @@ Cuatro cruces nuevos, cada uno con su propio endpoint `GET /api/crossref*`, regi
 
 **Prioridad:** P2 · **Esfuerzo:** S · **Dependencias:** ninguna
 
-`GET /api/resumen` extendido (o un nuevo `GET /api/crossref`) en `violencia-escolar`: agrega casos por DRE y lo cruza contra ejecución presupuestal educativa de `radar-ejecucion`.
+`GET /api/crossref` (misma ruta canónica que EDU-01/EDU-02, no `GET /api/resumen`) en `violencia-escolar`: agrega casos por DRE y lo cruza contra ejecución presupuestal educativa de `radar-ejecucion`.
 
 **Corrección real (Copilot, PR #180) — el contrato territorial exacto queda por definir, no asumir "departamento"**: `violencia_escolar_casos` solo tiene columnas `dre`/`ugel`, no `departamento` — y `GET /api/resumen` ya existente agrupa por DRE (sin filtro) o por UGEL (con `dre=`), ver `apps/violencia-escolar/api/src/routes/resumen.ts`. "DRE" y "departamento" suelen coincidir 1:1 en Perú (una DRE por departamento, con la excepción real de "DRE Lima Metropolitana" vs. "DRE Lima Provincias", que no son departamentos separados), pero este ticket debe fijar explícitamente el mapeo antes de prometer un resultado "por departamento": o (a) se limita el contrato a DRE (más simple, coincide con la fuente tal cual), o (b) se construye el mapeo DRE→departamento (incluyendo el caso Lima Metropolitana/Lima Provincias) para poder cruzar contra `budget_execution`, que si agrupa por departamento real vía `entities`/`meta_departamento`.
 
@@ -189,7 +189,7 @@ Registrar `identidad_fiscal_riesgo_exportador` (o el nombre que corresponda a la
 
 ## 10. Definition of Done
 
-- EDU-01 y VI-02 (los dos P0 reales) mergeados con PR, revisión, y pruebas automatizadas.
+- EDU-01, VI-01 y VI-02 (los tres P0) mergeados con PR, revisión, y pruebas automatizadas — VI-02 no puede cerrar sin VI-01 (es su dependencia directa).
 - Los 4 cruces aparecen en `docs/conectores.md` (sección "Cruces" de su app) y en el "Mapa de cruces entre apps".
 - Ningún territorio o RUC sin match aparece como si tuviera cero incidencia confirmada.
 - EDU-03 (si se implementa) incluye la advertencia de causalidad/acceso como campo de la respuesta, no solo en prosa.

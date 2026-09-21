@@ -259,7 +259,7 @@ Investigado explícitamente a pedido del usuario — son oficinas de protocolo/p
 
 | Fase | Entregables | Resultado que desbloquea |
 |---|---|---|
-| **Ahora** | ADS-01, ADS-03, ADS-05 | Desbloquea SERFOR (mayor relevancia EUDR); SUNARP e INDECI ya listos para ingesta directa sin más investigación. |
+| **Ahora** | ADS-01, ADS-03, ADS-05 | Desbloquea SERFOR (mayor relevancia EUDR); SUNARP e INDECI tienen fuente ya confirmada, pero ADS-03/ADS-05 aún exigen su propia verificación en vivo del recurso, formato y granularidad antes de fijar el schema — "fuente confirmada" no significa "listo para ingestar sin más investigación". |
 | **Siguiente** | ADS-02, ADS-04, ADS-15 | SERFOR construido (una vez ADS-01 lo desbloquee); SENACE construido (API ya confirmada); contrato real de la API del Congreso confirmado. |
 | **Triage en paralelo, no bloqueante** | ADS-06 a ADS-11, ADS-16 a ADS-19 | Cada una resuelve su propia entidad/fuente a Épica A o C — no bloquean las fases anteriores. |
 | **Sin acción** | ADS-12, ADS-14 | Documentadas, no se reinvestigan sin señal nueva. |
