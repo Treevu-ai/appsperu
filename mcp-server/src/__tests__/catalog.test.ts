@@ -84,7 +84,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
   "informes-control": ["informes_control_crossref", "informes_control_informes"],
   mindef: ["mindef_offset_agreements", "mindef_peace_missions", "mindef_training_abroad"],
   mimp: ["mimp_cem_casos", "mimp_chat100_consultas"],
-  renamu: ["renamu_municipalidades", "renamu_equipamiento"],
+  renamu: ["renamu_crossref", "renamu_equipamiento", "renamu_municipalidades"],
   "candidatos-erm": ["candidatos_erm_candidatos"],
   "poder-judicial": ["poder_judicial_procesos", "poder_judicial_procesos_resumen", "poder_judicial_territorios"],
   "autoridades-electas": ["autoridades_electas_autoridades"],

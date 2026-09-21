@@ -2169,6 +2169,30 @@ export const TOOL_CATALOG: ToolSpec[] = [
       anio: z.coerce.number().int().min(2000).max(2100).optional(),
     },
   },
+  {
+    name: "renamu_crossref",
+    app: "renamu",
+    description:
+      "Cruce inversión pública ejecutada POR el gobierno local (radar-inversiones, Invierte.pe/CUI, `nivel=GL`) " +
+      "contra capacidad institucional real de esa misma municipalidad (RENAMU: ¿tiene vehículo operativo?, " +
+      "¿tiene internet?), agregado por ubigeo exacto. Se filtra a `nivel=GL` a propósito: mide la capacidad de " +
+      "LA MUNICIPALIDAD misma, no cualquier inversión nacional/regional que caiga en su distrito. Marca " +
+      "`puntoCiego=true` cuando hay inversión GL real pero la municipalidad no tiene ni vehículo operativo ni " +
+      "internet (o RENAMU no tiene registro de ella) — señal de posible brecha entre ejecución de inversión y " +
+      "capacidad de gestión mínima. Verificado en vivo 2026-09-20: en LA LIBERTAD, 84 distritos con inversión " +
+      "GL, 1 punto ciego real (Paranday, Otuzco: S/45.2M ejecutados, sin vehículo operativo ni internet). " +
+      "Cobertura de investments (nivel=GL) NO es nacional — solo 374 distritos (LIMA, LA LIBERTAD, AREQUIPA) de " +
+      "los 1,891 de RENAMU, ver `coberturaInversion` en la respuesta. Excluye registros con distrito='- TODOS -' " +
+      "(agregados provinciales/departamentales de la fuente, no distritos reales). " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/crossref",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      ubigeo: z.string().min(1).optional(),
+      anio: z.coerce.number().int().min(2000).max(2100).optional().describe("Año de RENAMU a usar para capacidad; default: el más reciente ingerido (DQ-16)."),
+    },
+  },
 
   // ---- candidatos-erm (Elecciones Regionales y Municipales 2026, vía Datapol) ----
   {
