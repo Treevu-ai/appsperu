@@ -61,11 +61,22 @@ async function fetchProyectosDelPeriodo(perParId: number): Promise<Record<string
   if (!res.ok) {
     throw new Error(`Congreso devolvió ${res.status} al consultar proyectos del periodo ${perParId}`);
   }
-  const payload = (await res.json()) as { code: number; data: { proyectos: Record<string, unknown>[] } };
+  const payload = (await res.json()) as { code: number; data?: { proyectos?: unknown } };
   if (payload.code !== 200) {
     throw new Error(`Congreso devolvió code=${payload.code} para el periodo ${perParId}`);
   }
-  return payload.data.proyectos ?? [];
+  // Hallazgo real de Copilot: `payload.data.proyectos ?? []` convertía una respuesta HTTP 200 con
+  // schema inesperado (sin `proyectos`, o `data` ausente) en "periodo sin proyectos" -- el
+  // snapshot completo (DELETE + INSERT) de `ingestPeriodo` habría borrado todos los proyectos
+  // reales de ese periodo sin darse cuenta. Se exige explícitamente que `proyectos` sea un array.
+  const proyectos = payload.data?.proyectos;
+  if (!Array.isArray(proyectos)) {
+    throw new Error(
+      `Congreso devolvió una respuesta sin "data.proyectos" (array) para el periodo ${perParId} -- ` +
+        "no se asume periodo vacío ante un schema inesperado."
+    );
+  }
+  return proyectos as Record<string, unknown>[];
 }
 
 async function saveRawBatch(client: PoolClient, perParId: number): Promise<number> {
@@ -158,6 +169,11 @@ async function ingestPeriodo(perParId: number): Promise<PeriodoIngestSummary> {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    // Hallazgo real de Copilot: dos corridas manuales solapadas del mismo periodo podrían
+    // confirmar la más vieja DESPUÉS de la más nueva, dejando el snapshot final desactualizado.
+    // `pg_advisory_xact_lock` serializa por periodo (hash de `per_par_id`) -- la segunda corrida
+    // espera a que la primera haga COMMIT/ROLLBACK; se libera sola al terminar la transacción.
+    await client.query("SELECT pg_advisory_xact_lock(hashtext('legislativo_congreso_proyectos_ingest'), $1)", [perParId]);
     const batchId = await saveRawBatch(client, perParId);
 
     for (let i = 0; i < rows.length; i += INSERT_BATCH_SIZE) {

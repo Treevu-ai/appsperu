@@ -106,4 +106,34 @@ describe("ingestCongreso", () => {
     await expect(ingestCongreso()).rejects.toThrow(/periodo 2021/);
     expect(releaseMock).toHaveBeenCalled();
   });
+
+  it("rechaza una respuesta HTTP 200 sin 'data.proyectos' como array -- no la trata como periodo vacío (hallazgo real de Copilot)", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(PERIODOS_RESPONSE))
+      .mockResolvedValueOnce(jsonResponse({ code: 200 })) // sin campo "data"
+      .mockResolvedValueOnce(jsonResponse({ code: 200, data: { proyectos: [] } }));
+
+    await expect(ingestCongreso()).rejects.toThrow(/sin "data.proyectos"/);
+
+    // El periodo 2021 no debe haber llegado a borrar filas con un periodo malinterpretado como vacío.
+    const deleteCalls = queryMock.mock.calls.filter(
+      ([sql, params]) => sql.includes("DELETE FROM legislativo_congreso_proyectos") && params?.[0] === 2021
+    );
+    expect(deleteCalls).toHaveLength(0);
+  });
+
+  it("adquiere un advisory lock por periodo antes de tocar la tabla, para serializar corridas concurrentes (hallazgo real de Copilot)", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(PERIODOS_RESPONSE))
+      .mockResolvedValueOnce(jsonResponse({ code: 200, data: { proyectos: [proyectoRow()] } }))
+      .mockResolvedValueOnce(jsonResponse({ code: 200, data: { proyectos: [] } }));
+
+    await ingestCongreso();
+
+    const lockCalls = queryMock.mock.calls.filter(([sql]) => sql.includes("pg_advisory_xact_lock"));
+    expect(lockCalls).toHaveLength(2); // uno por periodo (2021, 2026)
+    expect(lockCalls[0][0]).toMatch(/hashtext\('legislativo_congreso_proyectos_ingest'\)/);
+    expect(lockCalls[0][1]).toEqual([2021]);
+    expect(lockCalls[1][1]).toEqual([2026]);
+  });
 });
