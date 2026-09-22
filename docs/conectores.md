@@ -279,11 +279,12 @@ Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distrito
 | | |
 |---|---|
 | **Descripción** | Trae predios estatales efectivamente **supervisados** por SBN (Superintendencia Nacional de Bienes Estatales) — no el registro completo del universo de predios. Cierra parcialmente el hueco de "patrimonio y bienes muebles" identificado en `docs/COBERTURA_Y_CUMPLIMIENTO.md`; **solo inmuebles, no bienes muebles** (ver limitación). |
-| **Qué hace** | Descarga el CSV completo, parsea (delimitador `;`, encoding Latin-1) y hace upsert en `sbn_supervision_predios` con `ON CONFLICT` sobre (`numero_informe`, `cus`). |
+| **Qué hace** | Descarga el CSV completo, parsea (delimitador `;`, encoding Latin-1) y hace upsert en `sbn_supervision_predios` con `ON CONFLICT` sobre `item` (correlativo de fila único del CSV fuente). |
 | **Cómo lo hace** | Descarga HTTP directa de un CSV público. El servidor está detrás de un WAF que bloquea requests sin `User-Agent` de navegador (responde 418) — no es autenticación real, un header normal basta. Parseo manual (split por `;`, sin librería CSV — archivo pequeño y sin campos entrecomillados). |
-| **Frecuencia** | Manual (`npx tsx src/ingest/sbn-supervision-connector.ts`). Verificado en vivo 2026-09-04: 1,324 filas reales, nacional. |
+| **Frecuencia** | Manual (`npx tsx src/ingest/sbn-supervision-connector.ts`). Verificado en vivo 2026-09-22: 1,762 filas reales, nacional. |
 | **Fuente de datos** | `datosabiertos.gob.pe/sites/default/files/Supervisión de predios estatales.csv` (grupo SBN en la Plataforma Nacional de Datos Abiertos). |
 | **Limitación conocida** | El dataset "SBN Predios del Estado registrados en el SINABIP" (el registro **completo**, no solo supervisados) solo se publica como enlace de Google Drive, y ese enlace está **roto** (verificado en vivo 2026-09-04: "No se encontró la página") — no hay forma pública de acceder al universo completo de predios hoy. Tampoco se encontró fuente pública descargable para **bienes muebles** (vehículos, equipos, mobiliario) tras búsqueda razonable — ese sub-hueco sigue abierto. |
+| **Bugs corregidos (2026-09-22)** | (1) `zona_playa_protegida` solo leía una columna booleana que la fuente dejó de llenar desde 2021 — perdía 204 de 279 casos reales (73%); ahora también detecta el texto dedicado en `actividad`. (2) La clave de upsert `(numero_informe, cus)` colisionaba cuando un mismo informe cubre varios predios con `cus` vacío, pisando filas silenciosamente (perdía 378 de 1,762 filas fuente, 24%); ahora usa `item`, único por fila. Ver `docs/ESTADO.md`. |
 | **Alcance territorial** | Nacional; sin registros para LA LIBERTAD en la muestra verificada 2026-09-04 (LIMA concentra 690/1,324, ~52%) — hallazgo real de la fuente, no un filtro aplicado por el conector. |
 | **Cruces** | Ninguno implementado — candidato: cruzar `titular_predio`/distrito contra entidades ya identificadas en `radar-ejecucion`/`compras-publicas`. |
 

@@ -49,19 +49,36 @@ interface SupervisionRow {
   zonaPlayaProtegida: boolean;
 }
 
-function parseCsv(text: string): SupervisionRow[] {
+/**
+ * Detecta zona de playa protegida por DOS caminos, no solo la columna
+ * booleana -- hallazgo real 2026-09-22 (ver docs/ESTADO.md): la fuente
+ * dejó de llenar la columna "Zona de Playa Protegida" desde 2021 (última
+ * fila con "Sí": 2020-09-30), pero SIGUE reportando supervisiones de playa
+ * protegida -- 204 filas entre 2021 y mayo 2024 (el corte más reciente del
+ * CSV) -- bajo una `actividad` dedicada: "SUPERVISAR ZONA DE PLAYA
+ * PROTEGIDA (ZONA DE DOMINIO RESTRINGIDO)". Leer solo la columna booleana
+ * hacía perder el 73% de los casos reales (204 de 279) sin ningún error
+ * visible -- el conector simplemente reportaba una caída real de
+ * supervisiones que nunca ocurrió.
+ */
+function esZonaPlayaProtegida(columnaBooleana: string, actividad: string): boolean {
+  return columnaBooleana.trim().toUpperCase().startsWith("S") || actividad.toUpperCase().includes("PLAYA PROTEGIDA");
+}
+
+export function parseCsv(text: string): SupervisionRow[] {
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
   const rows: SupervisionRow[] = [];
   for (const line of lines.slice(1)) {
     const cols = line.split(";");
     if (cols.length < 13) continue;
     const [item, tipoInforme, numeroInforme, fechaEmision, actividad, departamento, provincia, distrito, cus, area, resultado, titular, playa] = cols;
+    const actividadTrim = actividad.trim();
     rows.push({
       item: Number(item),
       tipoInforme: tipoInforme.trim(),
       numeroInforme: numeroInforme.trim(),
       fechaEmision: parseFecha(fechaEmision.trim()),
-      actividad: actividad.trim(),
+      actividad: actividadTrim,
       departamento: departamento.trim(),
       provincia: provincia.trim(),
       distrito: distrito.trim(),
@@ -69,7 +86,7 @@ function parseCsv(text: string): SupervisionRow[] {
       areaSupervisadaM2: parseNumero(area.trim()),
       resultadoSupervision: resultado.trim(),
       titularPredio: titular.trim(),
-      zonaPlayaProtegida: playa.trim().toUpperCase().startsWith("S"),
+      zonaPlayaProtegida: esZonaPlayaProtegida(playa, actividadTrim),
     });
   }
   return rows;
@@ -119,14 +136,15 @@ export async function ingestSbnSupervision(): Promise<SbnSupervisionIngestSummar
            departamento, provincia, distrito, cus, area_supervisada_m2,
            resultado_supervision, titular_predio, zona_playa_protegida, source_batch_id
          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-         ON CONFLICT (numero_informe, cus) DO UPDATE SET
-           item = EXCLUDED.item,
+         ON CONFLICT (item) DO UPDATE SET
+           numero_informe = EXCLUDED.numero_informe,
            tipo_informe = EXCLUDED.tipo_informe,
            fecha_emision = EXCLUDED.fecha_emision,
            actividad = EXCLUDED.actividad,
            departamento = EXCLUDED.departamento,
            provincia = EXCLUDED.provincia,
            distrito = EXCLUDED.distrito,
+           cus = EXCLUDED.cus,
            resultado_supervision = EXCLUDED.resultado_supervision,
            area_supervisada_m2 = EXCLUDED.area_supervisada_m2,
            titular_predio = EXCLUDED.titular_predio,
