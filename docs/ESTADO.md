@@ -1,6 +1,34 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-09-21.
+Última actualización: 2026-09-22.
+
+## Segundo departamento verificado — AREQUIPA — preparación de inversión frente a El Niño (2026-09-22)
+
+Misma verificación en vivo del cruce de abajo (INDECI × Invierte.pe × INFOBRAS), corrida ahora
+contra AREQUIPA — segundo departamento con las 3 fuentes completas en el snapshot local (antes
+solo LA LIBERTAD). Resultado distinto, no una repetición: de los 10 distritos con más emergencias
+históricas El Niño-relacionadas, **5 sí tienen** al menos un proyecto de prevención detectado por
+nombre (Chivay, Chuquibamba, Ocoña, Uraca, Yanaquihua) — mejor cobertura relativa que LA LIBERTAD
+(1/10), aunque la brecha sigue existiendo en los otros 5 (Cotahuasi, Salamanca, Toro, Tomepampa,
+Alca). AREQUIPA tiene 69 proyectos de prevención identificados por el filtro de nombre, vs. 19 de
+LA LIBERTAD.
+
+Hallazgo adicional no buscado, distinto en naturaleza al de Chicama: la defensa ribereña del río
+Ocoña (CUI 2091465, sector Huantay-Punta Colorada) tiene **100% de avance físico real** en
+INFOBRAS —obra terminada— pero sigue marcada `existe_paralizacion = true`, con
+`fecha_paralizacion = 2020-09-01` (+5 años). A diferencia de Chicama (incompleta y paralizada),
+acá la obra está completa; la paralización parece ser de cierre/administrativa, no de ejecución
+física — el dato no explica la causa por sí solo.
+
+**Cruce ad hoc, todavía NO integrado al endpoint `/api/crossref/preparacion-riesgo`:** se verificó
+además, por query manual directa contra `compras-publicas` (no vía tool MCP ni endpoint propio),
+que de los procesos de contratación en SEACE con título que sugiere prevención (mismo patrón de
+keyword que Invierte.pe), el resultado es **cero** en ambos departamentos — 416 procesos de LA
+LIBERTAD (2024-09/2026-09) y 278 de AREQUIPA (misma ventana), 0 coincidencias en ambos casos. Es
+la señal más fuerte de las dos corridas porque se repite igual en 2 departamentos con perfiles de
+inversión muy distintos (19 vs. 69 proyectos). **Pendiente:** formalizar este cruce SEACE como
+parte del endpoint `preparacion-riesgo` (hoy solo une INDECI + Invierte.pe + INFOBRAS) en vez de
+dejarlo como verificación manual repetible solo por query directa a Postgres.
 
 ## Preparación de inversión vs. brechas de infraestructura crítica frente a El Niño (2026-09-21)
 
