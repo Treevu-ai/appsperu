@@ -55,7 +55,7 @@ Cerrar la brecha entre "evidencia encontrada por búsqueda" y "evidencia verific
 
 ### Épica A — Fuente real confirmada, esfuerzo de ingesta justificado (verificación de esquema sigue siendo parte de cada ticket)
 
-**Corrección de etiqueta (Copilot, PR #180)**: "Épica A" no significa que el schema ya esté confirmado — significa que la *existencia* de la fuente (el endpoint/dataset responde, sin depender de más investigación de descubrimiento) ya está verificada, y por eso el esfuerzo de ingesta está justificado. ADS-01 sigue siendo un ticket de descubrimiento (todavía no hay URL confirmada). ADS-03 y ADS-05 sí tienen fuente confirmada, pero **su verificación en vivo de formato/columnas/granularidad exacta sigue siendo un criterio de aceptación obligatorio de cada ticket**, no un paso ya completado — ningún ticket de esta épica fija un schema antes de esa verificación.
+**Corrección de etiqueta (Copilot, PR #180)**: "Épica A" no significa que el schema ya esté confirmado — significa que la *existencia* de la fuente (el endpoint/dataset responde, sin depender de más investigación de descubrimiento) ya está verificada, y por eso el esfuerzo de ingesta está justificado. ADS-01 sigue siendo un ticket de descubrimiento (todavía no hay URL confirmada). ADS-05 sí tenía fuente confirmada, pero **su verificación en vivo de formato/columnas/granularidad exacta seguía siendo un criterio de aceptación obligatorio**, no un paso ya completado — ningún ticket de esta épica fija un schema antes de esa verificación. **ADS-03 concluyó de forma distinta**: su verificación en vivo mostró que la "fuente confirmada" original era en realidad estadísticas agregadas, no el registro a nivel de fila que motivó el ticket — se reclasificó a Épica C (ver abajo), no se cerró como ingesta.
 
 #### ADS-01 — SERFOR / GEOSERFOR: confirmar URL real del servicio geoespacial (CERRADO — 2026-09-22)
 
@@ -323,7 +323,7 @@ Investigado explícitamente a pedido del usuario — son oficinas de protocolo/p
 
 | Fase | Entregables | Resultado que desbloquea |
 |---|---|---|
-| **Ahora** | ADS-01, ADS-03, ADS-05 | Desbloquea SERFOR (mayor relevancia EUDR); SUNARP e INDECI tienen fuente ya confirmada, pero ADS-03/ADS-05 aún exigen su propia verificación en vivo del recurso, formato y granularidad antes de fijar el schema — "fuente confirmada" no significa "listo para ingestar sin más investigación". |
+| **Ahora** | ADS-01, ADS-05 | Desbloquea SERFOR (mayor relevancia EUDR); INDECI tiene fuente ya confirmada, pero aún exige su propia verificación en vivo del recurso, formato y granularidad antes de fijar el schema — "fuente confirmada" no significa "listo para ingestar sin más investigación". (ADS-03 ya concluyó: reclasificado a Épica C, ver arriba.) |
 | **Siguiente** | ADS-02, ADS-04, ADS-15 | SERFOR construido (una vez ADS-01 lo desbloquee); SENACE construido (API ya confirmada); contrato real de la API del Congreso confirmado. |
 | **Triage en paralelo, no bloqueante** | ADS-06 a ADS-11, ADS-16 a ADS-19 | Cada una resuelve su propia entidad/fuente a Épica A o C — no bloquean las fases anteriores. |
 | **Sin acción** | ADS-12, ADS-14 | Documentadas, no se reinvestigan sin señal nueva. |
@@ -331,7 +331,7 @@ Investigado explícitamente a pedido del usuario — son oficinas de protocolo/p
 ## 7. Requisitos no funcionales
 
 - **Ninguna entidad de Épica B se ingiere sin pasar primero por su ticket de verificación en vivo propio** — la investigación de esta sesión fue por búsqueda, no reemplaza la verificación que el resto del catálogo exige.
-- **PII se verifica explícitamente, columna por columna, antes de cualquier decisión de ingesta** — especialmente ADS-10 (MTPE puestos de trabajo) y cualquier hallazgo futuro de SUNARP (personas naturales trae poderes/sucesiones, con riesgo de nombres — ADS-03 se limita a personas jurídicas a propósito, no se expande a personas naturales sin una evaluación de PII separada).
+- **PII se verifica explícitamente, columna por columna, antes de cualquier decisión de ingesta** — especialmente ADS-10 (MTPE puestos de trabajo). (SUNARP personas jurídicas/naturales quedó descartado en su totalidad por ADS-03 — ver arriba —, no queda una expansión futura pendiente de evaluar PII.)
 - **Hallazgos negativos se documentan igual de rigurosamente que los positivos** (ADS-12, ADS-14) — evita reinvestigar lo mismo en una sesión futura. Igual de importante: **un hallazgo negativo se corrige en cuanto aparece evidencia nueva** (ver ADS-15) — no queda "descartado" por inercia documental una vez se demuestra falso.
 - **Sin scheduler.**
 
@@ -340,7 +340,7 @@ Investigado explícitamente a pedido del usuario — son oficinas de protocolo/p
 | Riesgo | Mitigación |
 |---|---|
 | ADS-01 no logra encontrar una URL de servicio real para GEOSERFOR | Se reclasifica SERFOR a Épica C con la evidencia del intento — no se fuerza scraping del visor web como alternativa sin evaluar el esfuerzo real que eso tomaría. |
-| SUNARP personas jurídicas resulta tener cobertura parcial o desactualizada (dataset de descarga puntual, no un registro vivo) | ADS-03 declara la fecha de corte real y la cobertura real en el data contract — no se asume "registro completo y actualizado" sin verificarlo. |
+| ~~SUNARP personas jurídicas resulta tener cobertura parcial o desactualizada~~ | **Riesgo resuelto, no aplica**: ADS-03 concluyó que no hay dataset de registro individual que ingerir en absoluto (ver arriba) — no hay cobertura que declarar. |
 | El triage de ADS-11 (9 entidades) subestima el esfuerzo y termina siendo superficial | Esfuerzo declarado como M explícitamente por ser 9 investigaciones, no una — si el triage real toma más de una sesión, se reporta parcial en vez de forzar una conclusión débil sobre las que falten. |
 | El contrato real de `spley-portal-service` (ADS-15) resulta más complejo de inferir de lo esperado (más campos ocultos, autenticación por sesión no evidente en los errores 400/500 vistos) | Si tras un esfuerzo razonable no se logra un `200` real, se reclasifica a Épica C con la evidencia exacta de los intentos — no se fuerza scraping de HTML como alternativa sin evaluarlo aparte. |
 
@@ -353,7 +353,7 @@ Investigado explícitamente a pedido del usuario — son oficinas de protocolo/p
 
 ## 10. Definition of Done
 
-- ADS-01, ADS-03 y ADS-05 (los tres desbloqueantes/listos de Épica A) resueltos — ADS-01 con conclusión explícita, ADS-03 y ADS-05 mergeados con PR, revisión y pruebas.
+- ADS-01, ADS-03 y ADS-05 resueltos — ADS-01 y ADS-03 con conclusión explícita documentada en PR (ADS-03 reclasificado a Épica C, sin conector), ADS-05 mergeado con conector, revisión y pruebas.
 - ADS-02 y ADS-04 mergeados si ADS-01 desbloquea SERFOR (ADS-02 queda condicional, no se fuerza si ADS-01 concluye que no hay servicio público).
 - Cada conector de Épica A tiene su tool correspondiente registrada en `mcp-server/src/catalog.ts` y verificada con al menos una invocación funcional real — ningún ticket de ingesta de este PRD se declara "completo" sin su tool MCP funcionando, mismo estándar que el resto del catálogo. El mismo requisito aplica a cualquier ticket de ingesta real que surja de `docs/BACKLOG_Organismos_Adscritos_Consolidado_v1.md`.
 - Las 9 entidades de ADS-11 tienen conclusión explícita (Épica A o C), ninguna queda indefinida.
