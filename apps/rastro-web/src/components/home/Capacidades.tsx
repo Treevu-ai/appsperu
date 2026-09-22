@@ -12,7 +12,7 @@ type Cap = {
 
 const NUCLEO: Cap = {
   titulo: `${counts.appCount} fuentes de datos oficiales, un solo catálogo`,
-  desc: `Presupuesto (MEF), inversión pública (Invierte.pe), contrataciones (OECE/RNP), obras (INFOBRAS), planeamiento (CEPLAN), identidad fiscal (SUNAT), agro (MIDAGRI), economía (BCRP), seguridad (MININTER), inversión privada (PROINVERSIÓN) y más. ${INTEGRADAS_HOY} tienen vista propia en este sitio hoy; las ${counts.appCount} completas están en el catálogo de tools MCP (/docs/api). Actualizamos a mano, en tandas — cada página muestra la fecha exacta de su último corte.`,
+  desc: `Presupuesto (MEF), inversión pública (Invierte.pe), contrataciones (OECE/RNP), obras (INFOBRAS), planeamiento (CEPLAN), identidad fiscal (SUNAT), agro (MIDAGRI), economía (BCRP), seguridad (MININTER), inversión privada (PROINVERSIÓN), legislativo (Congreso), justicia (Poder Judicial), certificación ambiental (SENACE) y más. ${INTEGRADAS_HOY} tienen vista propia en este sitio hoy; las ${counts.appCount} completas están en el catálogo de tools MCP (/docs/api). Actualizamos a mano, en tandas — cada página muestra la fecha exacta de su último corte.`,
   icon: (
     <svg className="w-6 h-6 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />

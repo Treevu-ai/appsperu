@@ -9,7 +9,9 @@
       "nivel",
       "funcion",
       "anio",
-      "ubigeo"
+      "ubigeo",
+      "departamento",
+      "metaDepartamento"
     ],
     "sinScheduler": true
   },
@@ -304,7 +306,7 @@
   {
     "name": "radar_ejecucion_infrastructure_operation",
     "app": "radar-ejecucion",
-    "description": "Evidencia de recepción, operador y disponibilidad de un activo. La ausencia de estos registros es un vacío de ALSOL, no prueba de que el activo no funcione. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "description": "Evidencia de recepción, operador y disponibilidad de un activo. La ausencia de estos registros es un vacío de evidencia, no prueba de que el activo no funcione. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/infraestructura/activos/{assetId}/operacion",
     "pathParams": [
       "assetId"
@@ -804,7 +806,8 @@
     "queryParams": [
       "departamento",
       "estado",
-      "conParalizacion"
+      "conParalizacion",
+      "distritoSospechoso"
     ],
     "sinScheduler": true
   },
@@ -877,7 +880,7 @@
   {
     "name": "ceplan_estrategico_indicators_seg",
     "app": "ceplan-estrategico",
-    "description": "SEG (Strategic Execution Gap): nacional CEPLAN (CUMP03−CUMP02, GN/GR) o proxy departamental PROXY_DEPARTAMENTAL (MEF devengado/PIM − avance físico INFOBRAS). Solo 5 regiones piloto ALSOL con ?departamento=. Cobertura parcial.",
+    "description": "SEG (Strategic Execution Gap): nacional CEPLAN (CUMP03−CUMP02, GN/GR) o proxy departamental PROXY_DEPARTAMENTAL (MEF devengado/PIM − avance físico INFOBRAS). Solo 5 regiones piloto con ?departamento=. Cobertura parcial.",
     "pathTemplate": "/api/indicators/seg",
     "pathParams": [],
     "queryParams": [
@@ -922,7 +925,7 @@
   {
     "name": "ceplan_estrategico_crossref_territorial",
     "app": "ceplan-estrategico",
-    "description": "Cruce ceplan-estrategico <-> ceplan-geo por departamento piloto ALSOL (5 regiones). Adjunta CUMP02/CUMP03 nacionales (GN/GR) con contexto territorial (distritos, infraestructura). Matcher: departamento_prefijo_ubigeo. Cobertura PARCIAL — no implica desempeño estratégico regional.",
+    "description": "Cruce ceplan-estrategico <-> ceplan-geo por departamento piloto (5 regiones). Adjunta CUMP02/CUMP03 nacionales (GN/GR) con contexto territorial (distritos, infraestructura). Matcher: departamento_prefijo_ubigeo. Cobertura PARCIAL — no implica desempeño estratégico regional.",
     "pathTemplate": "/api/crossref/territorial",
     "pathParams": [],
     "queryParams": [
@@ -990,7 +993,7 @@
   {
     "name": "ceplan_geo_territories_summary",
     "app": "ceplan-geo",
-    "description": "Agregados territoriales por departamento piloto ALSOL (5 regiones): conteo de distritos e infraestructura dentro del polígono departamental. Solo LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO.",
+    "description": "Agregados territoriales por departamento piloto (5 regiones): conteo de distritos e infraestructura dentro del polígono departamental. Solo LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO.",
     "pathTemplate": "/api/territories/summary",
     "pathParams": [],
     "queryParams": [
@@ -1018,7 +1021,10 @@
     "description": "Infraestructura publicada por CEPLAN: aeropuertos, puertos, red hídrica principal (cb_redhidricaprinx) y proyectos sectoriales agro (ip_prysecagr). Filtro opcional por código INEI de departamento (2 dígitos). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/infrastructure",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "type",
+      "departamento"
+    ],
     "sinScheduler": true
   },
   {
@@ -1029,7 +1035,8 @@
     "pathParams": [],
     "queryParams": [
       "ubigeo",
-      "radius_km"
+      "radius_km",
+      "type"
     ],
     "sinScheduler": true
   },
@@ -1164,6 +1171,140 @@
     "sinScheduler": false
   },
   {
+    "name": "identidad_fiscal_ficha_ruc",
+    "app": "identidad-fiscal",
+    "description": "Busca en la ficha individual de SUNAT (`ficha_ruc`) por razón social, cultivo (texto libre sobre razón social) o si exporta. Cobertura MUY PARCIAL: esta ficha se consulta una por una vía navegador, bloqueada por reCAPTCHA v3 para automatización — solo tiene datos para el puñado de RUC ya consultados manualmente, no el universo completo. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/ficha-ruc",
+    "pathParams": [],
+    "queryParams": [
+      "razonSocial",
+      "cultivo",
+      "exportador",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "identidad_fiscal_ficha_ruc_by_ruc",
+    "app": "identidad-fiscal",
+    "description": "Detalle completo de la ficha individual de SUNAT para un RUC específico (razón social, fechas, domicilio, actividades CIIU, comprobantes electrónicos, representantes legales) — solo si ese RUC ya fue consultado manualmente (ver `identidad_fiscal_ficha_ruc`). 404 si no está en la ficha individual todavía.",
+    "pathTemplate": "/api/ficha-ruc/{ruc}",
+    "pathParams": [
+      "ruc"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "identidad_fiscal_padron_ppa",
+    "app": "identidad-fiscal",
+    "description": "Confirma si un RUC está registrado en el Padrón de Productores Agrarios de MIDAGRI — dato de formalidad agraria, no tributario ni comercial. Solo el booleano `registrado` + nombre en el padrón es real: el endpoint de MIDAGRI que prometía cultivo/hectáreas/ubicación nunca responde datos, incluso para RUC confirmados como registrados (ver docs/data-contracts/midagri-padron-ppa.md). Cobertura PARCIAL: solo RUC ya consultados, no el universo completo del padrón. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/padron-ppa",
+    "pathParams": [],
+    "queryParams": [
+      "registrado",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "identidad_fiscal_padron_ppa_by_ruc",
+    "app": "identidad-fiscal",
+    "description": "Estado de un RUC específico en el Padrón de Productores Agrarios (ver `identidad_fiscal_padron_ppa`). 404 si ese RUC no fue consultado todavía contra MIDAGRI — distinto de `registrado: false`, que significa 'se consultó y NO está inscrito'.",
+    "pathTemplate": "/api/padron-ppa/{ruc}",
+    "pathParams": [
+      "ruc"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "identidad_fiscal_oece_ficha",
+    "app": "identidad-fiscal",
+    "description": "Ficha de Proveedor del Estado (OECE, ex-OSCE) por RUC — snapshot fresco de datos SUNAT + contacto (teléfono/email) + si está realmente inscrito en el RNP. `datosSunat` responde para CUALQUIER RUC válido esté o no en el RNP — usa `inscritoRnp`/`codigoRegistro` (no nulo) para saber si de verdad puede contratar con el Estado, nunca la sola presencia de una fila. Cobertura PARCIAL: solo RUC ya consultados. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/oece-ficha",
+    "pathParams": [],
+    "queryParams": [
+      "razonSocial",
+      "departamento",
+      "inscritoRnp",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "identidad_fiscal_oece_ficha_by_ruc",
+    "app": "identidad-fiscal",
+    "description": "Ficha OECE completa de un RUC, incluida su conformación societaria/directiva (`personas`: representantes legales, Consejo de Administración, socios — con DNI, cargo y fecha de ingreso de cada persona). `personas` viene vacío si el RUC no está inscrito en el RNP o nunca llenó esa sección (inscripción sin conformación declarada, caso real observado). 404 si el RUC no fue consultado todavía.",
+    "pathTemplate": "/api/oece-ficha/{ruc}",
+    "pathParams": [
+      "ruc"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "identidad_fiscal_ruc_consulta_masiva",
+    "app": "identidad-fiscal",
+    "description": "Tercera fuente de SUNAT (`ruc_consulta_masiva`) — hasta 100 RUC por corrida vía el formulario de 'Consulta Múltiple' (e-consultaruc.sunat.gob.pe), SIN reCAPTCHA a diferencia de la ficha individual. 23 campos por RUC (CIIU principal/secundarios, actividad de comercio exterior, Buen Contribuyente, Agentes de Retención/Percepción IGV) que `identidad_fiscal_ficha_ruc` no tiene — tabla separada e independiente, no reemplaza esa ficha. Cobertura PARCIAL: solo los RUC ya consultados manualmente por lote, no el universo completo del padrón. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/ruc-consulta-masiva",
+    "pathParams": [],
+    "queryParams": [
+      "razonSocial",
+      "estado",
+      "departamento",
+      "provincia",
+      "distrito",
+      "buenContribuyente",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "identidad_fiscal_ruc_consulta_masiva_by_ruc",
+    "app": "identidad-fiscal",
+    "description": "Detalle completo de un RUC en `ruc_consulta_masiva` (ver `identidad_fiscal_ruc_consulta_masiva`). 404 si ese RUC no fue consultado todavía por esta vía.",
+    "pathTemplate": "/api/ruc-consulta-masiva/{ruc}",
+    "pathParams": [
+      "ruc"
+    ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "identidad_fiscal_exportaciones_fob",
+    "app": "identidad-fiscal",
+    "description": "Valor FOB USD exportado por RUC, agregado por mes/aduana/agente de aduana/país de destino — fuente Aduanas-SUNAT (`aduanet.gob.pe`), sin captcha, ingesta automatizada. NO trae kilos ni peso, solo FOB USD; esa granularidad exige el detalle de cada DUA, no público. Filas a nivel de embarque individual (un RUC puede tener muchas filas por año) — para un total por año usa `identidad_fiscal_exportaciones_fob_resumen`. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/exportaciones-fob",
+    "pathParams": [],
+    "queryParams": [
+      "ruc",
+      "anio",
+      "mes",
+      "paisCodigo",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "identidad_fiscal_exportaciones_fob_resumen",
+    "app": "identidad-fiscal",
+    "description": "FOB total y número de embarques por año para un RUC específico (agregado sobre `identidad_fiscal_exportaciones_fob`) — la forma correcta de responder '¿cuánto exportó este RUC en 20XX?' sin sumar filas a mano. 404 si el RUC no tiene exportaciones registradas en el periodo pedido.",
+    "pathTemplate": "/api/exportaciones-fob/resumen/{ruc}",
+    "pathParams": [
+      "ruc"
+    ],
+    "queryParams": [
+      "anio"
+    ],
+    "sinScheduler": false
+  },
+  {
     "name": "ceplan_geo_patrimonio_predios",
     "app": "ceplan-geo",
     "description": "Predios estatales supervisados por SBN (Superintendencia Nacional de Bienes Estatales) — resultado de supervisión, titular, área y si es zona de playa protegida. Cobertura PARCIAL: solo predios efectivamente supervisados, NO el universo completo del registro SINABIP (se publica solo como enlace de Google Drive, actualmente roto).",
@@ -1236,6 +1377,18 @@
     "sinScheduler": true
   },
   {
+    "name": "proveedores_sancionados_velocidad_sancion_contrato",
+    "app": "proveedores-sancionados",
+    "description": "Alerta de velocidad sanción→contrato (2026-09-21, originada en un hallazgo real: LABORATORIOS UNIDOS S.A., RUC 20417180134, recibió S/ 600,000 del MINISTERIO DE SALUD el 2026-08-31 con una inhabilitación OSCE VIGENTE desde el 2026-07-08). Cruza `awards`+`minor_contracts` de `compras-publicas` contra `inhabilitaciones` por RUC y marca dos severidades: `DURANTE_SANCION_VIGENTE` (el contrato se adjudicó mientras la inhabilitación estaba activa) y `POCO_DESPUES_DE_SANCION` (el contrato se adjudicó dentro de `ventanaDiasPostSancion` días después de que la inhabilitación terminó — proveedores que esperan a que expire la sanción). A diferencia de `proveedores_sancionados_crossref` (default La Libertad), este endpoint es un radar de alerta — el default es NACIONAL (`departamento=TODOS` implícito); pasar `departamento` lo acota igual que `crossref`. Ninguna severidad determina irregularidad por sí sola — requiere revisión humana. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/crossref/velocidad-sancion-contrato",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "ventanaDiasPostSancion"
+    ],
+    "sinScheduler": true
+  },
+  {
     "name": "proveedores_sancionados_redes_proveedores",
     "app": "proveedores-sancionados",
     "description": "Proveedores de contrataciones menores (compras-publicas/SEACE) que ganan en varias municipalidades distintas de un departamento — señal de red o concentración territorial, NO una conclusión de irregularidad. Solo cuenta municipalidades reales (`official_name ILIKE 'MUNICIPALIDAD%'`), excluyendo ministerios/gobiernos regionales/UGEL que también aparecen en el universo de compradores. `soloSancionados=true` filtra solo proveedores con inhabilitación VIGENTE hoy (no al momento de cada contrato). Default: LA LIBERTAD.",
@@ -1245,6 +1398,31 @@
       "departamento",
       "minMunicipios",
       "soloSancionados"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "proveedores_sancionados_inhabilitaciones_judiciales",
+    "app": "proveedores-sancionados",
+    "description": "Inhabilitaciones por mandato judicial vigentes [OECE] (investigado y construido 2026-09-20) — base legal DISTINTA a `proveedores_sancionados_sanciones` (esa es sanción administrativa del Tribunal de Contrataciones; esto es inhabilitación dictada por el Poder Judicial, solo comunicada a OSCE/OECE para registro en el RNP). Sin cruce automático entre ambas fuentes todavía. Cobertura nacional completa verificada en vivo: 14/15 filas del corte 2026-09-01 (1 rechazada por fecha_inicio posterior a fecha_fin en la fuente — anomalía real, no se adivina cuál fecha es correcta). Incluye tanto personas naturales (DNI/RUC-10) como al menos una empresa (RUC-20), pese a que la ficha del dataset dice 'personas naturales'. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/inhabilitaciones-judiciales",
+    "pathParams": [],
+    "queryParams": [
+      "rucDni",
+      "dni",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "proveedores_sancionados_doble_inhabilitacion",
+    "app": "proveedores-sancionados",
+    "description": "Cruce dentro de esta misma app (2026-09-21, no un crosswalk fuzzy — JOIN real por RUC/DNI): ¿qué proveedor/persona tiene sanción ADMINISTRATIVA (Tribunal de Contrataciones, `proveedores_sancionados_sanciones`) Y orden JUDICIAL (`proveedores_sancionados_inhabilitaciones_judiciales`) simultáneamente? Bases legales distintas — la coincidencia es una señal más fuerte que cualquiera de las dos solas, pero sigue siendo solo eso, nunca se fusiona en una sola conclusión. `ambasVigentesHoy` calcula vigencia real con `vigenteEnFecha` (rango [desde,hasta]), no solo el campo `estado` de la fuente. `dniComunEnmascarado` trae solo los últimos 3 dígitos (mismo criterio que `proveedores_sancionados_personas`), nunca el DNI completo. Verificado en vivo: 0 coincidencias contra el universo judicial actual (14 filas, corte 2026-09-01) — 0 resultados es una respuesta esperada, el universo judicial es chico, no un error del cruce.",
+    "pathTemplate": "/api/crossref/doble-inhabilitacion",
+    "pathParams": [],
+    "queryParams": [
+      "ruc"
     ],
     "sinScheduler": false
   },
@@ -1685,6 +1863,40 @@
     "sinScheduler": true
   },
   {
+    "name": "renamu_crossref",
+    "app": "renamu",
+    "description": "Cruce inversión pública ejecutada POR el gobierno local (radar-inversiones, Invierte.pe/CUI, `nivel=GL`) contra capacidad institucional real de esa misma municipalidad (RENAMU: ¿tiene vehículo operativo?, ¿tiene internet?), agregado por ubigeo exacto. Se filtra a `nivel=GL` a propósito: mide la capacidad de LA MUNICIPALIDAD misma, no cualquier inversión nacional/regional que caiga en su distrito. Marca `puntoCiego=true` cuando hay inversión GL real pero la municipalidad no tiene ni vehículo operativo ni internet (o RENAMU no tiene registro de ella) — señal de posible brecha entre ejecución de inversión y capacidad de gestión mínima. Verificado en vivo 2026-09-20: en LA LIBERTAD, 84 distritos con inversión GL, 1 punto ciego real (Paranday, Otuzco: S/45.2M ejecutados, sin vehículo operativo ni internet). Cobertura de investments (nivel=GL) NO es nacional — solo 374 distritos (LIMA, LA LIBERTAD, AREQUIPA) de los 1,891 de RENAMU, ver `coberturaInversion` en la respuesta. Excluye registros con distrito='- TODOS -' (agregados provinciales/departamentales de la fuente, no distritos reales). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/crossref",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "ubigeo",
+      "anio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "candidatos_erm_candidatos",
+    "app": "candidatos-erm",
+    "description": "Candidatos inscritos a Gobernador/Vicegobernador Regional, Consejero Regional, Alcalde y Regidor Provincial/Distrital — Elecciones Regionales y Municipales de octubre 2026. Fuente NO oficial: JNE no publica un dataset abierto de candidatos (sus dos plataformas interactivas están protegidas contra automatización); se usa una republicación de terceros (Datapol) derivada de las mismas hojas de vida que el JNE hace públicas. `sentenciasDeclaradas` es la autodeclaración del candidato ante el JNE (sentencias judiciales) — NO equivale a una sanción del Tribunal de Contrataciones (OSCE); son fuentes y regímenes distintos (ver `proveedores_sancionados_candidatos_sancionados` para ese cruce). El DNI se enmascara siempre en la respuesta (`dniEnmascarado`, últimos 3 dígitos visibles) — el almacenamiento interno lo conserva completo porque el propio JNE lo publica sin enmascarar en la ficha pública de cada candidato, pero esta API nunca lo expone completo. Cobertura nacional completa (101,948 candidatos, snapshot único, sin histórico de altas/bajas). Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/candidatos",
+    "pathParams": [],
+    "queryParams": [
+      "dni",
+      "departamento",
+      "provincia",
+      "distrito",
+      "ubigeo",
+      "cargo",
+      "organizacionPolitica",
+      "tipoEleccion",
+      "estado",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
     "name": "autoridades_electas_autoridades",
     "app": "autoridades-electas",
     "description": "Autoridades proclamadas por el JNE (nombre, cargo, organización política, ubigeo, periodo de mandato) — no candidatos: `pronunciamiento` es un acta de proclamación oficial real, verificada contra el corte 2026-07-30 (Presidencia, Senado, Diputados, Parlamento Andino de Elecciones Generales 2026). Sin documento de identidad — este conector ingiere deliberadamente solo el recurso del JNE sin DNI; el recurso histórico distinto que sí trae DNI sin enmascarar (autoridades regionales/municipales 2014-2022) NO se ingiere en esta versión. Sin clave única de persona (no hay DNI): el match es por nombre completo + cargo + proceso electoral + ubigeo, con riesgo real de colisión por homonimia. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
@@ -1733,6 +1945,24 @@
     "sinScheduler": true
   },
   {
+    "name": "instituciones_educativas_trayectoria",
+    "app": "instituciones-educativas",
+    "description": "Matriculación y trayectoria estudiantil por servicio educativo (SIAGIE/MINEDU, Unidad de Estadística), 2021-2024 — agregado por código modular, con LEFT JOIN al padrón de IIEE para ubigeo/nombre/territorio. Nada parecido existía antes en el catálogo: todo lo demás mide presupuesto/obras/compras, esto mide trayectoria educativa real (matriculados, aprobados, retirados, atraso escolar) por escuela y año. Sin dato de alumno individual — sin PII de estudiantes. `desaprobado`/`promocionGuiada` vienen NULL según el año de origen: la fuente cambió de terminología entre 2021-2022 (`PromocionGuiada`) y 2023-2024 (`Desaprobado`) — desvío de esquema real, no error de ingesta. Sin `anio`, filtra al año más reciente ingerido por defecto (mismo criterio DQ-16 que otros conectores multi-año del catálogo). Devuelve `tasaAtraso`/`tasaRetiro` calculadas (null si `totalEstudiantes` es 0, evita división por cero). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/trayectoria",
+    "pathParams": [],
+    "queryParams": [
+      "codMod",
+      "anio",
+      "departamento",
+      "provincia",
+      "distrito",
+      "ubigeo",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
     "name": "infracciones_ambientales_infracciones",
     "app": "infracciones-ambientales",
     "description": "Registro Único de Infractores Ambientales Sancionados (OEFA) — administrado sancionado, subsector económico (minería, industria, hidrocarburos, agricultura, pesquería, residuos sólidos, electricidad, consultoras ambientales), ubicación, expediente/resolución, detalle de la infracción, monto de multa. `numeroDocumento` se enmascara (últimos 3 dígitos) cuando el administrado es persona natural (D.N.I.) — para R.U.C. se expone completo. 14,724 filas nacionales verificadas (610 en La Libertad, 12 provincias). Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
@@ -1748,6 +1978,20 @@
       "offset"
     ],
     "sinScheduler": true
+  },
+  {
+    "name": "infracciones_ambientales_crossref",
+    "app": "infracciones-ambientales",
+    "description": "¿Qué empresas sancionadas por OEFA (RUIAS) siguen contratando activamente con el Estado (compras-publicas)? Solo cruza R.U.C. (empresas) — las infracciones a persona natural (D.N.I.) vienen enmascaradas desde la ingesta y no se pueden cruzar por identificador completo. Una sanción ambiental NO inhabilita legalmente para contratar (a diferencia de una inhabilitación del Tribunal de Contrataciones en `proveedores_sancionados_sanciones`) — es una coincidencia de identidad entre dos registros públicos independientes, no una irregularidad por sí sola. Verificado en vivo 2026-09-21: 293 de 3,246 RUC sancionados (9.0%) tienen al menos una adjudicación u contrato menor real, incluyendo casos de alto perfil (ej. una empresa estatal con 468 infracciones y S/205M en contratos vigentes).",
+    "pathTemplate": "/api/crossref",
+    "pathParams": [],
+    "queryParams": [
+      "ruc",
+      "departamento",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": false
   },
   {
     "name": "red_vial_subnacional_intervenciones",
@@ -1865,6 +2109,260 @@
     "description": "Metadata de los últimos 10 lotes de ingesta manual (PDF por PDF vía `npm run ingest:pdf`) — checksum, edición, filas insertadas. Útil para confirmar qué documentos ya se ingirieron sin consultar `pasivos-contingentes` directamente. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/mmm/meta/sources",
     "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "poder_judicial_procesos",
+    "app": "poder-judicial",
+    "description": "Estadística agregada de procesos judiciales (pendientes/ingresados/resueltos) por año, mes y órgano jurisdiccional a nivel nacional — SIN expedientes individuales ni nombres de partes, sin PII. Investigado como alternativa a CEJ (consulta de expedientes del Poder Judicial): CEJ está protegido con Radware y desde 2026 exige N° de expediente exacto (medida de protección de datos personales), no es enumerable por nombre/DNI — este dataset agregado sí es bulk-queryable. Sin diccionario de variables oficial: los nombres de columnas (`pendientet`, `ingresot_sin`, `rdev_anulada`, etc., dentro de `conteos`) se preservan tal cual el CSV fuente, no se reinterpretan (ver docs/data-contracts/poder-judicial-procesos-jurisdiccionales.md). Cobertura nacional completa desde 2024 (58,568 filas verificadas en vivo). Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Cada fila trae `ubigeo` (2026-09-20, cruce con el catálogo territorial de ceplan-geo vía provincia+distrito) — `null` cuando el nombre no matcheó (no se adivina; ver `poder_judicial_territorios` para auditar cobertura del cruce). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/procesos-judiciales",
+    "pathParams": [],
+    "queryParams": [
+      "anio",
+      "mes",
+      "distritoJudicial",
+      "provincia",
+      "distrito",
+      "tipoOrgano",
+      "especExp",
+      "condicion",
+      "estado",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "poder_judicial_procesos_resumen",
+    "app": "poder-judicial",
+    "description": "Agrega (SUM) las columnas titulares de `poder_judicial_procesos` (`pendiente`, `resuelto`, `ingreso_sin`, `ingreso_con`, `sentencia`, `conciliado`) por `distritoJudicial`/`tipoOrgano`/`especExp`/`anio`/`mes`/`estado`/`condicion` — la forma correcta de responder 'carga procesal por distrito judicial' sin sumar filas a mano. `pendiente`/`resuelto` ya son el total trámite+ejecución en la fuente (ver el data contract), no hace falta sumarlos con sus variantes `_t`/`_e`.",
+    "pathTemplate": "/api/procesos-judiciales/resumen",
+    "pathParams": [],
+    "queryParams": [
+      "groupBy",
+      "anio",
+      "mes",
+      "distritoJudicial"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "poder_judicial_territorios",
+    "app": "poder-judicial",
+    "description": "Triadas (provincia, distrito) distintas presentes en `poder_judicial_procesos`, con conteo de filas — pensado para auditar la cobertura del cruce territorial (390 triadas, 388 confirmadas contra el catálogo UBIGEO de ceplan-geo al 2026-09-20), no para análisis directo de carga procesal. NO trae `distritoJudicial`: esa columna es una circunscripción judicial, no un territorio administrativo (ej. 'Lima Norte'/'Lima Este'/'Lima Sur' son 3 distritos judiciales dentro del mismo departamento Lima; 'Puente Piedra-Ventanilla' cruza Lima y Callao).",
+    "pathTemplate": "/api/procesos-judiciales/territorios",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "violencia_escolar_casos",
+    "app": "violencia-escolar",
+    "description": "Listado detallado de casos de violencia escolar reportados a SíseVe (MINEDU) — fecha, DRE, UGEL, nivel educativo, tipo de reporte (`Personal IE a Escolares` vs `Entre Escolares`), tipo de violencia (Psicológica/Física/Sexual) y subtipo. Sin PII: la fuente no trae nombre, DNI ni identificador de alumno o IE individual — la granularidad más fina es UGEL. Sin ID de caso en la fuente: filas idénticas pueden representar casos reales distintos, nunca se deduplican por contenido. Decisión explícita del usuario (2026-09-21): se replica el mismo nivel de detalle que MINEDU ya publica sin restricción (UGEL + subtipo completo, incluye violencia sexual) — con 225 UGELs, algunas combinaciones (sobre todo Sexual) tienen conteos de 1-2 casos, tenerlo presente al analizar. Siempre sirve el snapshot más reciente ingerido (cada ingesta es un reemplazo completo del rango 01/01/2024-hoy, no acumulativo). Verificado en vivo 2026-09-21: 50,633 casos nacional, 9,407 de violencia sexual (18.6%), de los cuales 4,670 son `Personal IE a Escolares` (perpetrados por personal de la IE) vs 4,737 `Entre Escolares` — casi mitad y mitad, no predominantemente entre pares. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/casos",
+    "pathParams": [],
+    "queryParams": [
+      "dre",
+      "ugel",
+      "nivelEducativo",
+      "tipoReporte",
+      "tipoViolencia",
+      "subtipoViolencia",
+      "tipoEstadoReporte",
+      "fechaDesde",
+      "fechaHasta",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "violencia_escolar_resumen",
+    "app": "violencia-escolar",
+    "description": "Conteo de casos de violencia escolar por tipo (Psicológica/Física/Sexual), agregado por DRE a nivel nacional (sin filtro) o por UGEL dentro de un DRE específico (con `dre`) — evita paginar miles de filas de `violencia_escolar_casos` cuando lo que se necesita es el conteo por territorio. Mismo snapshot más reciente que `violencia_escolar_casos`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/resumen",
+    "pathParams": [],
+    "queryParams": [
+      "dre"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "legislativo_congreso_proyectos",
+    "app": "legislativo-congreso",
+    "description": "Proyectos de ley del Congreso de la República — filtra por periodo parlamentario (`perParId`), estado (texto exacto, ej. 'APROBADO', 'EN COMISIÓN'), autor (búsqueda parcial ILIKE) o texto libre sobre el título (búsqueda parcial ILIKE). Clave real verificada: `perParId`+`pleyNum` (14,868 filas, 0 duplicados en la ingesta verificada 2026-09-21) — cada ingesta hace upsert por esa clave, no acumula duplicados entre corridas. Fuente pública sin auth ni sesión de navegador (ADS-15). Un resultado vacío para un periodo no listado en `legislativo_congreso_periodos` significa 'nunca ingerido', no 'cero proyectos confirmados' — usar esa tool para distinguir ambos casos. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/proyectos",
+    "pathParams": [],
+    "queryParams": [
+      "periodo",
+      "estado",
+      "autor",
+      "texto",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "legislativo_congreso_proyecto_detalle",
+    "app": "legislativo-congreso",
+    "description": "Detalle de un proyecto de ley específico por `periodo` (perParId) + `numero` (pleyNum) — no por el código legible (ej. '14864/2025-CR'), que contiene '/' y no es válido como segmento de ruta sin codificar. Responde 404 si el proyecto no existe. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/proyectos/{periodo}/{numero}",
+    "pathParams": [
+      "periodo",
+      "numero"
+    ],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "legislativo_congreso_periodos",
+    "app": "legislativo-congreso",
+    "description": "Lista qué periodos parlamentarios (`perParId`) están disponibles — es decir, se han ingerido con éxito al menos una vez — con la fecha de la última ingesta y el conteo de proyectos en esa corrida. Un `perParId` que no aparece aquí es 'no disponible' (nunca ingerido), distinto de un periodo disponible sin proyectos que coincidan con un filtro específico de `legislativo_congreso_proyectos`. Ausencia de dato ≠ cero. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/proyectos/periodos",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "catastro_minero_derechos",
+    "app": "catastro-minero",
+    "description": "Derechos mineros del catastro de INGEMMET — filtra por departamento/provincia/distrito (ej. 'LA LIBERTAD'), estado (código tal cual la fuente, ej. 'T'=Titulado, 'P'=En trámite — ver `estadoDescripcion` para el texto legible, no se normalizó a un enum binario), sustancia, concesión o titular (ambos búsqueda parcial ILIKE). Clave real verificada: `codigou` — 66,823 filas, 0 duplicados en la ingesta nacional completa verificada 2026-09-21 (4,787 en La Libertad). Carácter referencial, solo de consulta (aviso de la propia fuente INGEMMET). `titular` puede ser una empresa o, en minería artesanal/pequeña, una persona natural — mismo tipo de dato público que un registro de propiedad (SUNARP), no enmascarado. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/derechos",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "provincia",
+      "distrito",
+      "estado",
+      "sustancia",
+      "concesion",
+      "titular",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "catastro_minero_derecho_detalle",
+    "app": "catastro-minero",
+    "description": "Detalle de un derecho minero específico por `codigou` (código único de INGEMMET, ej. '010033716'). Responde 404 si no existe. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/derechos/{codigou}",
+    "pathParams": [
+      "codigou"
+    ],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "areas_protegidas_areas",
+    "app": "areas-protegidas",
+    "description": "Áreas naturales protegidas y afines de SERNANP — 5 capas: `anp_nacional_definitiva` (Parques/Reservas/Santuarios Nacionales, con `categoria`), `zona_reservada`, `area_conservacion_regional`, `area_conservacion_privada` y `sitios_prioritarios` (sin `nombre`, la fuente no lo trae). Filtra por `capa`, `nombre`/`ubicacion` (ILIKE) o `categoria` (solo aplica a `anp_nacional_definitiva`). El código de área (`codigo`, ej. 'PN05') NO es una clave única — un área con geometría multi-parte (islas, polígonos disjuntos) puede aparecer en varias filas con el mismo código (verificado: capa `anp_nacional_definitiva` trae 104 filas pero solo 95 códigos únicos). Cada capa es un snapshot completo reemplazado en cada ingesta, sin upsert incremental por esa misma razón. Verificado en vivo 2026-09-21: 4 áreas protegidas nacionales en La Libertad (Bosque de Protección Puquio Santa Rosa, Coto de Caza Sunchubamba, Reserva Nacional y Santuario Nacional de Calipuy). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/areas",
+    "pathParams": [],
+    "queryParams": [
+      "capa",
+      "nombre",
+      "ubicacion",
+      "categoria",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "areas_protegidas_area_detalle",
+    "app": "areas-protegidas",
+    "description": "Detalle de un área específica por `capa` + `objectid` (ID interno de ArcGIS, único dentro de cada capa) — no por el código de área (`codigo`), que puede repetirse en features multi-parte. Responde 404 si no existe. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/areas/{capa}/{objectid}",
+    "pathParams": [
+      "capa",
+      "objectid"
+    ],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "senace_cartera_proyectos",
+    "app": "senace-cartera-proyectos",
+    "description": "Cartera de proyectos de certificación ambiental de SENACE (Clasificación, EIA-d, EIA-sd, MEIA-d, ITS, PPC, TdR y otros instrumentos). Fuente: portal público de datos abiertos de SENACE, sin autenticación (no la API gateada de `/Api/`, que requiere un `auth_key` que no poseemos). Filtra por `estado` ('Aprobado', 'Desaprobado' o 'En Evaluación' — con tilde), `actividad` (ILIKE, ej. Minería, Transportes, Hidrocarburos), `ruc` exacto (11 dígitos) o `texto` (ILIKE sobre título/titular). `senaceId` es único globalmente (verificado: 1,870 IDs únicos sobre 1,870 filas). Verificado en vivo 2026-09-21: 1,568 aprobados + 176 desaprobados + 126 en evaluación; cobertura confirmada en La Libertad (ej. proyectos viales en Virú, cantera Río Chicama). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/proyectos",
+    "pathParams": [],
+    "queryParams": [
+      "estado",
+      "actividad",
+      "ruc",
+      "texto",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "senace_cartera_proyecto_detalle",
+    "app": "senace-cartera-proyectos",
+    "description": "Detalle de un proyecto específico por `senaceId` (ID único de SENACE en este dataset). Responde 404 si no existe. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/proyectos/{senaceId}",
+    "pathParams": [
+      "senaceId"
+    ],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "catastro_forestal_titulos",
+    "app": "catastro-forestal",
+    "description": "Títulos habilitantes y clasificación forestal de SERFOR — 10 capas de 2 servicios ArcGIS: `modalidad_permisos`, `modalidad_cesiones_en_uso`, `modalidad_autorizaciones_pfdm_avnb`, `modalidad_autorizacion_cambio_uso_agropecuario`, `modalidad_bosques_locales`, `modalidad_unidad_aprovechamiento`, `modalidad_concesiones_forestales` (la más relevante para EUDR/deforestación — 1,793 filas), `ordenamiento_bosques_locales`, `ordenamiento_bosques_protectores`, `ordenamiento_bosques_produccion_permanente`. Filtra por `capa` o `nomDep`/`nomPro`/`nomDis` (códigos UBIGEO — **excepto** en `modalidad_autorizacion_cambio_uso_agropecuario`, donde `nomPro`/`nomDis` son nombres reales en texto, inconsistencia real de la fuente entre capas). Cada capa es un snapshot completo reemplazado en cada ingesta, sin clave estable de negocio (mismo criterio que `areas-protegidas`/SERNANP). Verificado en vivo 2026-09-22: 5,391 filas totales, 0 rechazadas; cobertura La Libertad mínima (1 fila) — la actividad forestal real está concentrada en la Amazonía. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/titulos",
+    "pathParams": [],
+    "queryParams": [
+      "capa",
+      "nomDep",
+      "nomPro",
+      "nomDis",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "catastro_forestal_titulo_detalle",
+    "app": "catastro-forestal",
+    "description": "Detalle de un título específico por `capa` + `objectid` (ID interno de ArcGIS, único dentro de cada capa, no globalmente). Responde 404 si no existe. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/titulos/{capa}/{objectid}",
+    "pathParams": [
+      "capa",
+      "objectid"
+    ],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "emergencias_indeci",
+    "app": "emergencias-indeci",
+    "description": "Emergencias y daños históricos a nivel nacional (2003-2025) de INDECI/SINPAD — inundaciones, huaicos, sismos, heladas, incendios, sequías y otros 22 tipos de peligro. Datos EDAN (Evaluación de Daños y Análisis de Necesidades) por evento: fallecidos, desaparecidos, lesionados, damnificados, afectados, viviendas destruidas/afectadas. Filtra por `departamento`/`provincia`/`distrito` (nombres reales, no códigos), `peligro` exacto o `anio`. `sinpadId` **no es una clave única** pese a que la fuente lo documenta como tal (verificado en vivo: 7 códigos repetidos entre eventos genuinamente distintos) — usa el `id` interno para referenciar una fila específica. Snapshot completo del histórico, reemplazado en cada ingesta (sin clave estable de negocio). Verificado en vivo 2026-09-22: 142,139 filas, 0 rechazadas; 2,853 en La Libertad. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/emergencias",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "provincia",
+      "distrito",
+      "peligro",
+      "anio",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "emergencias_indeci_detalle",
+    "app": "emergencias-indeci",
+    "description": "Detalle de una emergencia específica por `id` interno (no por `sinpadId`, que no es único). Responde 404 si no existe. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/emergencias/{id}",
+    "pathParams": [
+      "id"
+    ],
     "queryParams": [],
     "sinScheduler": true
   }

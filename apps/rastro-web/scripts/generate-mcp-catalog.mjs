@@ -93,7 +93,7 @@ function extractQueryParams(block) {
   // indentación de 6 espacios. Ambos formatos aparecen en catalog.ts.
   const m = block.match(/\n {4}querySchema:\s*([\s\S]*)/);
   if (!m) return [];
-  return [...m[1].matchAll(/(\w+):\s*z\./g)].map((mm) => mm[1]);
+  return [...m[1].matchAll(/(\w+):\s*z\s*\./g)].map((mm) => mm[1]);
 }
 
 const tools = blocks.map((block) => {
