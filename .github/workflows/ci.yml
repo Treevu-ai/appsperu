@@ -23,6 +23,7 @@ jobs:
           - apps/ceplan-estrategico/api
           - apps/ceplan-geo/api
           - apps/compras-publicas/api
+          - apps/emergencias-indeci/api
           - apps/identidad-fiscal/api
           - apps/informes-control/api
           - apps/infobras/api

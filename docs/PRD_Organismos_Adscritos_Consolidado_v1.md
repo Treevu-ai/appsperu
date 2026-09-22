@@ -168,16 +168,27 @@ certificación ambiental de proyectos mineros/energéticos grandes (conecta con
 - ✅ Ingesta real ejecutada contra Postgres (1,870/1,870 filas, 0 rechazadas) y API/tools MCP
   verificadas en vivo.
 
-#### ADS-05 — Conector INDECI: emergencias históricas
+#### ADS-05 — Conector INDECI: emergencias históricas (CERRADO — construido 2026-09-22)
 
 **Prioridad:** P1 · **Esfuerzo:** S · **Dependencias:** ninguna
 
-Dataset "Emergencias Históricas Registradas por INDECI" en `datosabiertos.gob.pe` — histórico nacional desde 2003 (inundaciones, huaicos, sismos, heladas, etc.), fuente derivada de SINPAD.
+**Confirmado en vivo 2026-09-22**: el dataset real es "Emergencias y daños a nivel nacional por
+departamento" en `datosabiertos.gob.pe`, un CSV descargable de 25.79 MB (`BD_2003-2025_EMERGENCIAS.csv`)
+con **142,139 filas a nivel de evento individual** (no agregado), 49 columnas EDAN fijas y
+consistentes en el 100% de las filas. Tres hallazgos reales no anticipados: (1) el archivo está
+codificado en Latin-1, no UTF-8; (2) la fecha viene en dos formatos distintos, ambos documentados
+por la propia fuente y verificados 100% consistentes; (3) el campo que la fuente documenta como
+"clave primaria transaccional" (`CODIGO DE EMERGENCIA-SINPAD`) tiene 7 duplicados reales entre
+eventos genuinamente distintos. Ver `docs/data-contracts/indeci-emergencias-historicas.md` y
+`apps/emergencias-indeci/api`.
 
 **Criterios de aceptación**
 
-- Verificación en vivo de formato/columnas/granularidad (¿por evento individual, o agregado por período/ubigeo?) antes de fijar el schema.
-- `docs/data-contracts/indeci-emergencias-historicas.md` documenta columnas reales y si distingue tipo de fenómeno de forma estructurada (no solo texto libre).
+- ✅ Verificación en vivo de formato/columnas/granularidad: evento individual, 49 columnas fijas,
+  tipo de fenómeno estructurado en 3 campos categóricos (`PELIGRO`/`TIPO DE PELIGRO`/`REGIÓN
+  NATURAL`), no texto libre.
+- ✅ `docs/data-contracts/indeci-emergencias-historicas.md` documenta columnas reales y los 3
+  hallazgos de calidad de datos arriba.
 
 ### Épica B — Dataset real confirmado por búsqueda, requiere verificación en vivo propia antes de ingerir
 

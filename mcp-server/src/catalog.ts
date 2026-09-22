@@ -2900,4 +2900,41 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: ["capa", "objectid"],
     querySchema: {},
   },
+
+  // ---- emergencias-indeci (SINPAD, emergencias históricas nacionales) ----
+  {
+    name: "emergencias_indeci",
+    app: "emergencias-indeci",
+    description:
+      "Emergencias y daños históricos a nivel nacional (2003-2025) de INDECI/SINPAD — inundaciones, " +
+      "huaicos, sismos, heladas, incendios, sequías y otros 22 tipos de peligro. Datos EDAN (Evaluación " +
+      "de Daños y Análisis de Necesidades) por evento: fallecidos, desaparecidos, lesionados, " +
+      "damnificados, afectados, viviendas destruidas/afectadas. Filtra por `departamento`/`provincia`/" +
+      "`distrito` (nombres reales, no códigos), `peligro` exacto o `anio`. `sinpadId` **no es una clave " +
+      "única** pese a que la fuente lo documenta como tal (verificado en vivo: 7 códigos repetidos entre " +
+      "eventos genuinamente distintos) — usa el `id` interno para referenciar una fila específica. " +
+      "Snapshot completo del histórico, reemplazado en cada ingesta (sin clave estable de negocio). " +
+      "Verificado en vivo 2026-09-22: 142,139 filas, 0 rechazadas; 2,853 en La Libertad. " + SIN_SCHEDULER,
+    pathTemplate: "/api/emergencias",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Nombre real (no código), ej. LA LIBERTAD."),
+      provincia: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+      peligro: z.string().min(1).optional().describe("Exacto, ej. LLUVIA INTENSA, SEQUIA, SISMO."),
+      anio: z.coerce.number().int().optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "emergencias_indeci_detalle",
+    app: "emergencias-indeci",
+    description:
+      "Detalle de una emergencia específica por `id` interno (no por `sinpadId`, que no es único). " +
+      "Responde 404 si no existe. " + SIN_SCHEDULER,
+    pathTemplate: "/api/emergencias/{id}",
+    pathParams: ["id"],
+    querySchema: {},
+  },
 ];
