@@ -50,7 +50,9 @@ function layerUrl(capa: Capa): string {
  */
 async function fetchLayerFeatures(capa: Capa): Promise<EsriFeature[]> {
   const params = new URLSearchParams({ where: "1=1", outFields: "*", returnGeometry: "false", f: "json" });
-  const res = await fetch(`${layerUrl(capa)}/query?${params.toString()}`);
+  // Sin timeout, una conexión colgada dejaría la ingesta pendiente indefinidamente (mismo
+  // hallazgo real que en senace-cartera-proyectos) -- se propaga como fallo normal de esa capa.
+  const res = await fetch(`${layerUrl(capa)}/query?${params.toString()}`, { signal: AbortSignal.timeout(30_000) });
   if (!res.ok) {
     throw new Error(`SERFOR devolvió ${res.status} al consultar la capa "${capa}"`);
   }
@@ -147,7 +149,9 @@ async function ingestCapa(capa: Capa): Promise<CapaIngestSummary> {
     for (let i = 0; i < rejected.length; i += INSERT_BATCH_SIZE) {
       await insertRejectedBatch(client, batchId, rejected.slice(i, i + INSERT_BATCH_SIZE));
     }
-    await client.query("UPDATE raw_serfor_batches SET record_count = $1 WHERE id = $2", [rows.length, batchId]);
+    // `rows.length` excluye las rechazadas -- record_count debe reflejar el total real que
+    // devolvió la fuente (mismo hallazgo real que en senace-cartera-proyectos).
+    await client.query("UPDATE raw_serfor_batches SET record_count = $1 WHERE id = $2", [features.length, batchId]);
 
     await client.query("COMMIT");
     return { capa, batchId, filasOrigen: features.length, filasInsertadas: rows.length, filasRechazadas: rejected.length };

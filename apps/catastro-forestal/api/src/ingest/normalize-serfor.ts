@@ -33,10 +33,6 @@ export interface RejectedRow {
   reason: string;
 }
 
-interface EsriFeature {
-  attributes: Record<string, unknown>;
-}
-
 function toText(value: unknown): string | null {
   if (value === null || value === undefined) return null;
   const s = String(value).trim();
@@ -125,13 +121,25 @@ export interface NormalizeTitulosResult {
   rejected: RejectedRow[];
 }
 
-export function normalizeTitulos(features: readonly EsriFeature[], capa: Capa): NormalizeTitulosResult {
+export function normalizeTitulos(features: readonly unknown[], capa: Capa): NormalizeTitulosResult {
   const rows: CanonicalTitulo[] = [];
   const rejected: RejectedRow[] = [];
   const extraFields = EXTRA_FIELDS[capa];
 
   for (const feature of features) {
-    const attrs = feature.attributes ?? {};
+    // La fuente es JSON externo -- una entrada `null` o sin `attributes` real haría que
+    // `feature.attributes` lance antes de llegar a `rejected` (mismo hallazgo real que en
+    // senace-cartera-proyectos), en vez de rechazarse igual que cualquier fila malformada.
+    if (typeof feature !== "object" || feature === null) {
+      rejected.push({ raw: feature, reason: "La feature no es un objeto." });
+      continue;
+    }
+    const maybeAttrs = (feature as { attributes?: unknown }).attributes;
+    if (typeof maybeAttrs !== "object" || maybeAttrs === null) {
+      rejected.push({ raw: feature, reason: "La feature no tiene 'attributes' (objeto) válido." });
+      continue;
+    }
+    const attrs = maybeAttrs as Record<string, unknown>;
     const objectid = toInt(attrs.OBJECTID ?? attrs.objectid);
 
     if (objectid === null) {

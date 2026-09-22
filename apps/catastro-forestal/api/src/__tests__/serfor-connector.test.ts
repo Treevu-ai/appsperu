@@ -86,4 +86,15 @@ describe("ingestSerfor", () => {
     await expect(ingestSerfor()).rejects.toThrow(/modalidad_permisos/);
     expect(releaseMock).toHaveBeenCalled();
   });
+
+  it("guarda record_count con el total de la fuente (incluye rechazadas), no solo lo insertado", async () => {
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve(jsonResponse({ features: [esriFeature({ OBJECTID: 1 }), { attributes: null }] }))
+    );
+
+    await ingestSerfor();
+
+    const updateCalls = queryMock.mock.calls.filter(([sql]) => sql.includes("UPDATE raw_serfor_batches"));
+    expect(updateCalls[0][1]).toEqual([2, 1]); // 2 features de origen (1 insertada + 1 rechazada), no 1
+  });
 });

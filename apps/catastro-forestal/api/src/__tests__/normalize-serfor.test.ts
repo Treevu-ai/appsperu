@@ -67,6 +67,19 @@ describe("normalizeTitulos", () => {
     expect(rejected[0].reason).toMatch(/OBJECTID/);
   });
 
+  it("rechaza una entrada que no es un objeto (null), sin lanzar antes de llegar a rejected", () => {
+    const { rows, rejected } = normalizeTitulos([null], "modalidad_concesiones_forestales");
+    expect(rows).toEqual([]);
+    expect(rejected[0].reason).toMatch(/objeto/);
+  });
+
+  it("rechaza una entrada sin 'attributes' válido, sin lanzar antes de llegar a rejected", () => {
+    const { rows, rejected } = normalizeTitulos([{ attributes: null }, {}], "modalidad_concesiones_forestales");
+    expect(rows).toEqual([]);
+    expect(rejected).toHaveLength(2);
+    expect(rejected[0].reason).toMatch(/attributes/);
+  });
+
   it("no confunde campos de una capa distinta -- atributosExtra usa el mapeo propio de cada capa", () => {
     const feature = {
       attributes: {

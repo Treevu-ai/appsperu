@@ -2,15 +2,19 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import request from "supertest";
 
 const queryMock = vi.fn();
+const releaseMock = vi.fn();
+const connectMock = vi.fn(() => Promise.resolve({ query: queryMock, release: releaseMock }));
 
 vi.mock("../db/pool.js", () => ({
-  pool: { query: queryMock },
+  pool: { query: queryMock, connect: connectMock },
 }));
 
 const { createApp } = await import("../app.js");
 
 beforeEach(() => {
   queryMock.mockReset();
+  releaseMock.mockReset();
+  connectMock.mockClear();
 });
 
 describe("GET /health", () => {
@@ -37,18 +41,37 @@ describe("GET /readyz", () => {
   });
 });
 
+/**
+ * `/api/titulos` corre el conteo y la página dentro de una transacción `REPEATABLE READ` sobre
+ * un mismo cliente (`pool.connect()`), no dos `pool.query` sueltos -- ver el hallazgo real
+ * documentado en `serfor-connector.ts`/`titulos.ts`. Cada test resuelve secuencialmente: BEGIN,
+ * count, list, COMMIT.
+ */
 describe("GET /api/titulos", () => {
   it("sin filtros, consulta sin condición WHERE forzada (cada capa es un snapshot completo)", async () => {
-    queryMock.mockResolvedValueOnce({ rows: [{ total: "0" }] }).mockResolvedValueOnce({ rows: [] });
+    queryMock
+      .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockResolvedValueOnce({ rows: [{ total: "0" }] }) // count
+      .mockResolvedValueOnce({ rows: [] }) // list
+      .mockResolvedValueOnce({ rows: [] }); // COMMIT
+
     await request(createApp()).get("/api/titulos");
-    const [countSql] = queryMock.mock.calls[0];
+
+    const [countSql] = queryMock.mock.calls[1];
     expect(countSql).toMatch(/WHERE TRUE/);
+    expect(releaseMock).toHaveBeenCalled();
   });
 
   it("filtra por capa exacta", async () => {
-    queryMock.mockResolvedValueOnce({ rows: [{ total: "0" }] }).mockResolvedValueOnce({ rows: [] });
+    queryMock
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ total: "0" }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+
     await request(createApp()).get("/api/titulos").query({ capa: "modalidad_concesiones_forestales" });
-    const [countSql, countParams] = queryMock.mock.calls[0];
+
+    const [countSql, countParams] = queryMock.mock.calls[1];
     expect(countSql).toMatch(/capa = \$1/);
     expect(countParams).toEqual(["modalidad_concesiones_forestales"]);
   });
@@ -56,20 +79,27 @@ describe("GET /api/titulos", () => {
   it("rechaza una capa que no existe en el enum, sin consultar la base", async () => {
     const res = await request(createApp()).get("/api/titulos").query({ capa: "capa-inventada" });
     expect(res.status).toBe(400);
-    expect(queryMock).not.toHaveBeenCalled();
+    expect(connectMock).not.toHaveBeenCalled();
   });
 
   it("filtra por nomDep (código UBIGEO, no nombre)", async () => {
-    queryMock.mockResolvedValueOnce({ rows: [{ total: "0" }] }).mockResolvedValueOnce({ rows: [] });
+    queryMock
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ total: "0" }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+
     await request(createApp()).get("/api/titulos").query({ nomDep: "22" });
-    const [countSql, countParams] = queryMock.mock.calls[0];
+
+    const [countSql, countParams] = queryMock.mock.calls[1];
     expect(countSql).toMatch(/nom_dep = \$1/);
     expect(countParams).toEqual(["22"]);
   });
 
   it("devuelve resultados con hasMore calculado a partir de total y offset", async () => {
     queryMock
-      .mockResolvedValueOnce({ rows: [{ total: "5" }] })
+      .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockResolvedValueOnce({ rows: [{ total: "5" }] }) // count
       .mockResolvedValueOnce({
         rows: [
           {
@@ -95,7 +125,8 @@ describe("GET /api/titulos", () => {
             atributos_extra: { TIPCON: 80204 },
           },
         ],
-      });
+      }) // list
+      .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
     const res = await request(createApp()).get("/api/titulos").query({ limit: 1, offset: 0 });
 
@@ -103,6 +134,18 @@ describe("GET /api/titulos", () => {
     expect(res.body.total).toBe(5);
     expect(res.body.hasMore).toBe(true);
     expect(res.body.resultados[0]).toMatchObject({ capa: "modalidad_concesiones_forestales", objectid: 16850, nomDep: "22" });
+  });
+
+  it("hace ROLLBACK y libera el cliente si la consulta falla", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockRejectedValueOnce(new Error("db down")); // count falla
+
+    const res = await request(createApp()).get("/api/titulos");
+
+    expect(res.status).toBe(500);
+    expect(queryMock.mock.calls.some(([sql]) => sql === "ROLLBACK")).toBe(true);
+    expect(releaseMock).toHaveBeenCalled();
   });
 });
 
