@@ -32,7 +32,7 @@ function inMemoryKv(): KVNamespace {
 function makeContext(q: string): PagesEventContext {
   return {
     request: new Request(`https://rastro.fyi/api/search?q=${encodeURIComponent(q)}`),
-    env: { RATE_LIMIT: inMemoryKv() },
+    env: { RATE_LIMIT: inMemoryKv(), ACCESS_REQUESTS: inMemoryKv() },
     params: {},
     waitUntil: () => {},
   };

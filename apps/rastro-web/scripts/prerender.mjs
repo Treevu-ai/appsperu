@@ -43,6 +43,7 @@ export const STATIC_ROUTES = [
   "/catalogo",
   "/docs/api",
   "/docs/integridad",
+  "/solicitar-acceso",
   "/estado",
   "/gore/la-libertad/ficha",
   "/gore/la-libertad/comparativo",

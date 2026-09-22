@@ -43,7 +43,7 @@ export function HallazgosRecientes() {
     <section className="relative max-w-5xl mx-auto px-6 py-16 md:py-24">
       <div className="max-w-3xl mb-10 md:mb-14">
         <p className="text-xs font-mono text-accent uppercase tracking-[0.18em] mb-4 md:mb-5">
-          05 — Lo que encontramos
+          01 — Lo que encontramos
         </p>
         <h2 className="text-fg font-semibold text-2xl md:text-3xl leading-tight tracking-tight">
           No es solo un catálogo de datos. Es una infraestructura que sigue mirando.

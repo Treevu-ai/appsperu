@@ -24,6 +24,17 @@ pages_build_output_dir = "./dist"
 binding = "RATE_LIMIT"
 id = "da7766279cc54ba5817e338b76eb3ef1"
 
+# functions/api/solicitud-acceso.ts (formulario /solicitar-acceso) — guarda
+# cada solicitud de sk-rastro-* para revisión manual (nombre, correo,
+# teléfono, motivo). Creado 2026-09-22 con `wrangler kv namespace create
+# ACCESS_REQUESTS`; binding equivalente ya agregado también en Cloudflare
+# Pages → Settings → Functions → KV namespace bindings (deploy vía Git),
+# igual que RATE_LIMIT. Retención: 90 días (expirationTtl en
+# functions/api/solicitud-acceso.ts) — no persiste PII indefinidamente.
+[[kv_namespaces]]
+binding = "ACCESS_REQUESTS"
+id = "139c606fcfb94b71a31606228224ff01"
+
 # Este archivo es solo para `wrangler pages dev` / deploy manual desde
 # apps/rastro-web/ (ver comentario de cabecera). El deploy real vía Git
 # (Cloudflare Workers Builds) lee el wrangler.toml de la raíz del repo —
