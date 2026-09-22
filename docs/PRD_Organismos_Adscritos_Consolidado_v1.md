@@ -112,20 +112,37 @@ y `apps/catastro-forestal/api`.
 - ✅ `docs/data-contracts/serfor-catastro-forestal.md` documenta la vía elegida y el hallazgo real
   de inconsistencia de `NOMDEP`/`NOMPRO`/`NOMDIS` entre capas.
 
-#### ADS-03 — Conector SUNARP: Registro de Personas Jurídicas
+#### ADS-03 — SUNARP: Registro de Personas Jurídicas (RECLASIFICADO A ÉPICA C — 2026-09-22)
 
 **Prioridad:** P0 · **Esfuerzo:** M · **Dependencias:** ninguna
 
-De las 8 categorías de dataset de SUNARP en `datosabiertos.gob.pe`, esta es la de mayor valor inmediato: constitución de empresas y representantes legales/poderes — la pieza que falta para saber quién controla una empresa más allá de su RUC. Verificar en vivo el recurso real (formato, columnas, si incluye persona jurídica + representante en la misma fila o en tablas separadas) antes de fijar el schema.
+**Hallazgo negativo real, verificado en vivo 2026-09-22**: la hipótesis original de este ticket
+—que el dataset "4. Registro de Personas Jurídicas" de `datosabiertos.gob.pe` contendría
+constitución de empresas y representantes legales/poderes a nivel de fila, consultable por
+RUC/partida— **es incorrecta**. El dataset real (`package_show` de la API DKAN, confirmado con
+`curl`) resultó ser 4 archivos XLSX de **estadísticas agregadas por año y departamento**: Rondas
+Campesinas, Comedores Populares, Comités de Vaso de Leche, y conteo de Constitución de MYPEs
+(Sistema de Intermediación Digital) — verificado descargando y abriendo uno de los XLSX (`4.1
+Rondas campesinas`, 462 filas, columnas `AÑO 2005`...`AÑO 2025` × departamento, sin RUC ni
+nombres). **No hay ninguna fila con nombre de empresa, RUC o representante legal.**
 
-**Hallazgo real de PII (Copilot, PR #180) — este ticket no queda limitado a "solo empresas" por defecto**: "Registro de Personas Jurídicas" **incluye representantes legales y apoderados**, que son personas naturales potencialmente identificables (nombre, y posiblemente documento de identidad, según lo que confirme la verificación en vivo). La regla general de PII de este PRD (§7) solo cubre expansiones futuras a datasets de "Personas Naturales" — **no cubre automáticamente los representantes que ya vienen dentro de este dataset de personas jurídicas**. Antes de ingerir cualquier columna de representante, este ticket exige una evaluación explícita: qué campos de persona natural trae realmente la fuente, y si se ingieren con el mismo criterio de minimización/enmascarado que ya usa el catálogo para conformación societaria (`perfilprov-conformacion-connector.ts`, OSCE) — nombre completo puede quedar, documento de identidad se enmascara o se excluye, mismo patrón que el resto del proyecto.
+Se verificaron también las 5 categorías SUNARP restantes en `datosabiertos.gob.pe` (Registro de
+Propiedad Inmueble, Bienes Muebles, Personas Naturales, Publicidad Registral, Servicios
+Registrales) — **las 6 categorías siguen el mismo patrón**: XLSX de conteos agregados por
+año/departamento/oficina registral, sin excepción. No existe ningún dataset SUNARP en
+`datosabiertos.gob.pe` con datos a nivel de registro individual (empresa, poder, representante).
+El hallazgo de PII original (Copilot, PR #180) sobre representantes legales queda sin objeto —
+no hay nombres de personas en ninguno de estos datasets, son puros conteos.
 
-**Criterios de aceptación**
+No se investigó si SUNARP expone una consulta pública gratuita de partidas/poderes fuera de
+`datosabiertos.gob.pe` (su portal `sunarp.gob.pe` de consulta de partidas es históricamente de
+pago por consulta, no un dataset masivo) — se descarta esa vía sin verificarla en profundidad
+porque no encaja con el patrón de "datos abiertos" del resto del catálogo de Rastro.
 
-- Verificación en vivo del recurso real documentada en el PR (no solo la descripción de búsqueda).
-- Schema distingue explícitamente "empresa" de "representante/apoderado" si la fuente los separa — no se colapsan en una sola entidad sin confirmar que es seguro hacerlo.
-- Evaluación de PII de los campos de representante/apoderado documentada explícitamente (qué campos trae la fuente, qué se ingiere y qué se enmascara/excluye) — no se asume "es solo un registro de empresas" sin haber revisado esto.
-- `docs/data-contracts/sunarp-personas-juridicas.md` documenta columnas reales, cobertura (nacional vs. parcial), y la decisión de tratamiento de PII de representantes.
+**Conclusión**: se reclasifica a Épica C. No se construye conector — no hay valor de "quién
+controla una empresa" que extraer de esta fuente. **Resuelve también ADS-17** (Portal de
+Estadística SUNARP): es exactamente el mismo tipo de contenido (agregados XLSX por año), ya
+descartado por esta misma verificación — ver ADS-17 abajo.
 
 #### ADS-04 — Conector SENACE (CERRADO — construido 2026-09-21)
 
@@ -260,16 +277,15 @@ Este ticket determina el contrato real completo (todos los campos que `FiltroPro
 - Se documenta explícitamente que es una fuente de terceros (no oficial) en cualquier ficha que la mencione — mismo criterio de transparencia que el resto del catálogo aplica a fuentes no primarias.
 - Se evalúa (y se documenta la conclusión, aunque sea "no se usa") si vale la pena como validación cruzada puntual de `budget_execution`, sin comprometerse a una dependencia operativa de un tercero no oficial.
 
-#### ADS-17 — Portal de Estadística SUNARP (agregados por año, distinto de ADS-03)
+#### ADS-17 — Portal de Estadística SUNARP: RESUELTO por la verificación de ADS-03 (2026-09-22)
 
 **Prioridad:** P2 · **Esfuerzo:** S · **Dependencias:** ninguna
 
-`sunarp.gob.pe/estadisticas/` — XLSX por año con inmatriculaciones, transferencias, hipotecas, declaratoria de fábrica, independización. **Distinto de ADS-03** (que es el dataset de personas jurídicas a nivel de registro individual, en `datosabiertos.gob.pe`): esto es agregado nacional/regional por tipo de trámite, sin verificar en vivo todavía.
-
-**Criterios de aceptación**
-
-- Verificación en vivo del formato real (XLSX confirmado, columnas exactas, granularidad — ¿nacional, por oficina registral, por departamento?).
-- Se evalúa si complementa o duplica sustancialmente ADS-03 antes de decidir ingesta separada, mismo criterio que AMB-02 de `PRD_Energia_Ambiente_Financiero_Nuevos_Conectores_v1.md` para datasets potencialmente solapados.
+La premisa de este ticket ("distinto de ADS-03") era incorrecta: al verificar ADS-03 en vivo se
+confirmó que **las 6 categorías de dataset SUNARP en `datosabiertos.gob.pe`, incluida la que ADS-03
+investigaba, ya son exactamente este tipo de contenido** — XLSX de agregados por año/departamento
+(`sunarp.gob.pe/estadisticas/file.axd?...`). No hay una fuente distinta que investigar por
+separado. Se cierra sin acción adicional, mismo motivo que ADS-03.
 
 #### ADS-18 — MTC: GeoServer WFS de red vial (geometría real)
 
