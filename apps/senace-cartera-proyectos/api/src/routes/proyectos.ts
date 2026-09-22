@@ -74,16 +74,34 @@ proyectosRouter.get(
     const limitPlaceholder = `$${listParams.push(limit)}`;
     const offsetPlaceholder = `$${listParams.push(offset)}`;
 
-    const [{ rows: countRows }, { rows }] = await Promise.all([
-      pool.query<{ total: string }>(`SELECT COUNT(*) AS total FROM senace_cartera_proyectos WHERE ${whereSql}`, params),
-      pool.query(
+    // Un `pool.query` por separado para el conteo y para la página podría intercalarse con una
+    // ingesta concurrente y mezclar un `total` de un momento con `resultados` de otro, dejando
+    // `hasMore` temporalmente incorrecto (hallazgo real de CodeRabbit) -- ambas consultas corren
+    // sobre el mismo cliente dentro de una transacción `REPEATABLE READ`, que ve un snapshot
+    // fijo de la base para las dos.
+    const client = await pool.connect();
+    let countRows: { total: string }[];
+    let rows: Record<string, unknown>[];
+    try {
+      await client.query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+      ({ rows: countRows } = await client.query<{ total: string }>(
+        `SELECT COUNT(*) AS total FROM senace_cartera_proyectos WHERE ${whereSql}`,
+        params
+      ));
+      ({ rows } = await client.query(
         `SELECT ${SELECT_COLUMNS} FROM senace_cartera_proyectos
          WHERE ${whereSql}
          ORDER BY senace_id DESC
          LIMIT ${limitPlaceholder} OFFSET ${offsetPlaceholder}`,
         listParams
-      ),
-    ]);
+      ));
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
 
     const total = Number(countRows[0].total);
 

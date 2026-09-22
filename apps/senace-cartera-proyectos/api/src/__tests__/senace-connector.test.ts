@@ -86,10 +86,24 @@ describe("ingestSenace", () => {
 
     const deleteCalls = queryMock.mock.calls.filter(([sql]) => sql.includes("DELETE FROM senace_cartera_proyectos"));
     expect(deleteCalls).toHaveLength(3); // una vez por cada estado (Aprobado, Desaprobado, En Evaluación)
-    expect(deleteCalls[0][1]).toEqual(["Aprobado", 1]);
+    expect(deleteCalls[0][1]).toEqual(["Aprobado", 1, []]);
     // El estado "En Evaluacion" (param sin tilde) borra por el label real "En Evaluación" -- no
     // por el param crudo, para que coincida con lo que realmente quedó guardado en `estado`.
-    expect(deleteCalls[2][1]).toEqual(["En Evaluación", 1]);
+    expect(deleteCalls[2][1]).toEqual(["En Evaluación", 1, []]);
+  });
+
+  it("excluye del borrado de stale los senaceId que se rechazaron por otro motivo (ESTADO ausente), para no borrar un proyecto que sigue en la fuente", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({ datos: { data: [proyectoRow({ ID: 1 }), proyectoRow({ ID: 2, ESTADO: "" })] } })
+      )
+      .mockResolvedValueOnce(jsonResponse({ datos: { data: [] } }))
+      .mockResolvedValueOnce(jsonResponse({ datos: { data: [] } }));
+
+    await ingestSenace();
+
+    const deleteCalls = queryMock.mock.calls.filter(([sql]) => sql.includes("DELETE FROM senace_cartera_proyectos"));
+    expect(deleteCalls[0][1]).toEqual(["Aprobado", 1, [2]]);
   });
 
   it("hace rollback y sigue con los demás estados si uno falla, y lanza al final con el detalle", async () => {
@@ -100,5 +114,30 @@ describe("ingestSenace", () => {
 
     await expect(ingestSenace()).rejects.toThrow(/Aprobado/);
     expect(releaseMock).toHaveBeenCalled();
+  });
+
+  it("guarda record_count con el total de la fuente (incluye filas rechazadas), no solo lo insertado", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({ datos: { data: [proyectoRow({ ID: 1 }), proyectoRow({ ID: 2, ESTADO: "" })] } })
+      )
+      .mockResolvedValueOnce(jsonResponse({ datos: { data: [] } }))
+      .mockResolvedValueOnce(jsonResponse({ datos: { data: [] } }));
+
+    await ingestSenace();
+
+    const updateCalls = queryMock.mock.calls.filter(([sql]) => sql.includes("UPDATE raw_senace_batches"));
+    expect(updateCalls[0][1]).toEqual([2, 1]); // 2 filas de origen (1 insertada + 1 rechazada), no 1
+  });
+
+  it("adquiere un lock de sesión único que envuelve toda la corrida (no un lock por estado)", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ datos: { data: [] } }));
+
+    await ingestSenace();
+
+    const lockCalls = queryMock.mock.calls.filter(([sql]) => sql.includes("pg_advisory_lock"));
+    const unlockCalls = queryMock.mock.calls.filter(([sql]) => sql.includes("pg_advisory_unlock"));
+    expect(lockCalls).toHaveLength(1);
+    expect(unlockCalls).toHaveLength(1);
   });
 });

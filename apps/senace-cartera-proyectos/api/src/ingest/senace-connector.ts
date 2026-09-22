@@ -42,7 +42,13 @@ interface CarteraProyectoResponse {
 
 async function fetchProyectosDelEstado(estadoParam: string): Promise<Record<string, unknown>[]> {
   const url = `${BASE_URL}?q=${encodeURIComponent(estadoParam)}`;
-  const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, Accept: "application/json, text/plain, */*" } });
+  const res = await fetch(url, {
+    headers: { "User-Agent": USER_AGENT, Accept: "application/json, text/plain, */*" },
+    // Sin timeout, una conexión colgada dejaría la ingesta pendiente indefinidamente (hallazgo
+    // real de CodeRabbit) -- un timeout se propaga como fallo normal de ese estado, ya cubierto
+    // por el manejo de errores por estado de ingestSenace().
+    signal: AbortSignal.timeout(30_000),
+  });
   if (!res.ok) {
     throw new Error(`SENACE devolvió ${res.status} al consultar el estado "${estadoParam}"`);
   }
@@ -111,6 +117,16 @@ async function insertRejectedBatch(client: PoolClient, batchId: number, rejected
   }
 }
 
+/**
+ * Un `senace_id` válido cuya fila se rechazó por otro motivo (ej. ESTADO ausente) no se
+ * refrescó en `upsertBatch` -- si el borrado de "stale" lo alcanzara solo por compartir el
+ * `estado` de su fila vieja y tener un `source_batch_id` más antiguo, se borraría un proyecto
+ * que sí sigue presente en la fuente (hallazgo real de CodeRabbit). Se excluyen explícitamente.
+ */
+function rejectedIdsValidos(rejected: readonly RejectedRow[]): number[] {
+  return rejected.map((r) => r.senaceId).filter((id): id is number => id !== null);
+}
+
 export interface EstadoIngestSummary {
   estadoParam: string;
   batchId: number;
@@ -133,11 +149,11 @@ export interface IngestSummary {
 async function ingestEstado(estado: EstadoConocido): Promise<EstadoIngestSummary> {
   const rawRows = await fetchProyectosDelEstado(estado.param);
   const { rows, rejected } = normalizeProyectos(rawRows);
+  const rejectedIds = rejectedIdsValidos(rejected);
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    await client.query("SELECT pg_advisory_xact_lock(hashtext('senace_cartera_proyectos_ingest'), hashtext($1))", [estado.label]);
     const batchId = await saveRawBatch(client, estado.param);
 
     for (let i = 0; i < rows.length; i += INSERT_BATCH_SIZE) {
@@ -148,11 +164,13 @@ async function ingestEstado(estado: EstadoConocido): Promise<EstadoIngestSummary
     }
 
     await client.query(
-      "DELETE FROM senace_cartera_proyectos WHERE estado = $1 AND source_batch_id <> $2",
-      [estado.label, batchId]
+      "DELETE FROM senace_cartera_proyectos WHERE estado = $1 AND source_batch_id <> $2 AND senace_id <> ALL($3::int[])",
+      [estado.label, batchId, rejectedIds]
     );
 
-    await client.query("UPDATE raw_senace_batches SET record_count = $1 WHERE id = $2", [rows.length, batchId]);
+    // `rows.length` excluye las filas rechazadas -- record_count debe reflejar el total real que
+    // devolvió la fuente, no solo lo que se insertó (hallazgo real de CodeRabbit).
+    await client.query("UPDATE raw_senace_batches SET record_count = $1 WHERE id = $2", [rawRows.length, batchId]);
 
     await client.query("COMMIT");
     return { estadoParam: estado.param, batchId, filasOrigen: rawRows.length, filasInsertadas: rows.length, filasRechazadas: rejected.length };
@@ -168,12 +186,26 @@ export async function ingestSenace(): Promise<IngestSummary> {
   const estados: EstadoIngestSummary[] = [];
   const errores: string[] = [];
 
-  for (const estado of ESTADOS_CONOCIDOS) {
-    try {
-      estados.push(await ingestEstado(estado));
-    } catch (error) {
-      errores.push(`estado "${estado.param}": ${error instanceof Error ? error.message : String(error)}`);
+  // Lock de sesión (no de transacción) que envuelve la corrida COMPLETA -- si dos ejecuciones
+  // manuales de `ingestSenace()` se solaparan, el lock por-estado anterior se pedía DESPUÉS del
+  // fetch de cada estado, así que dos corridas podían intercalar sus fetches y confirmar en
+  // orden inverso al de sus snapshots, dejando datos más viejos como versión final (hallazgo
+  // real de CodeRabbit). Un solo lock de sesión, sostenido durante todo el fetch+commit de las 3
+  // corridas, serializa la ingesta completa sin depender del orden de llegada de cada estado.
+  const lockClient = await pool.connect();
+  try {
+    await lockClient.query("SELECT pg_advisory_lock(hashtext('senace_cartera_proyectos_ingest'))");
+
+    for (const estado of ESTADOS_CONOCIDOS) {
+      try {
+        estados.push(await ingestEstado(estado));
+      } catch (error) {
+        errores.push(`estado "${estado.param}": ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
+  } finally {
+    await lockClient.query("SELECT pg_advisory_unlock(hashtext('senace_cartera_proyectos_ingest'))");
+    lockClient.release();
   }
 
   if (errores.length > 0) {

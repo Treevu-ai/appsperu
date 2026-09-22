@@ -55,10 +55,23 @@ describe("normalizeProyectos", () => {
     expect(rejected[0].reason).toMatch(/ID/);
   });
 
-  it("rechaza una fila sin ESTADO", () => {
+  it("rechaza una fila sin ESTADO, pero conserva su senaceId (para no borrarla en el stale-cleanup)", () => {
     const { rows, rejected } = normalizeProyectos([realRow({ ESTADO: "" })]);
     expect(rows).toEqual([]);
     expect(rejected[0].reason).toMatch(/ESTADO/);
+    expect(rejected[0].senaceId).toBe(7);
+  });
+
+  it("rechaza una entrada que no es un objeto (null), sin lanzar antes de llegar a rejected", () => {
+    const { rows, rejected } = normalizeProyectos([null]);
+    expect(rows).toEqual([]);
+    expect(rejected[0]).toMatchObject({ reason: expect.stringMatching(/objeto/), senaceId: null });
+  });
+
+  it("trata una fecha con formato correcto pero fecha inexistente (31 de febrero) como null, sin rechazar la fila", () => {
+    const { rows, rejected } = normalizeProyectos([realRow({ FECHA_INICIO: "31/02/2026" })]);
+    expect(rejected).toEqual([]);
+    expect(rows[0].fechaInicio).toBeNull();
   });
 
   it("trata un RUC inválido (no 11 dígitos) como null, sin rechazar la fila -- confirmado en vivo: 7 de 1870 filas reales no tienen RUC válido", () => {

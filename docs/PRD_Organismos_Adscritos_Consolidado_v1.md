@@ -114,8 +114,11 @@ certificación ambiental de proyectos mineros/energéticos grandes (conecta con
 
 **Criterios de aceptación**
 
-- El PR incluye la respuesta real de `/Api/Help` (documentación de endpoints disponibles) y de al menos una consulta real de ejemplo.
-- `docs/data-contracts/senace-cartera-proyectos.md` documenta los endpoints reales de la API (no solo el que se usa primero).
+- ✅ `docs/data-contracts/senace-cartera-proyectos.md` documenta ambos sistemas de la fuente
+  (la API gateada de `/Api/` con sus 7 datastreams y el hallazgo de seguridad, y el portal
+  público `JsonCarteraProyecto` realmente usado) — no solo el endpoint elegido.
+- ✅ Ingesta real ejecutada contra Postgres (1,870/1,870 filas, 0 rechazadas) y API/tools MCP
+  verificadas en vivo.
 
 #### ADS-05 — Conector INDECI: emergencias históricas
 
