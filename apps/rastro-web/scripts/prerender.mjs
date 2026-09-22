@@ -51,7 +51,14 @@ export const STATIC_ROUTES = [
   "/prensa/proveedores",
   "/auditoria/entidades-infobras",
   "/obras-paralizadas",
+  "/admin/solicitudes",
 ];
+
+// Rutas estáticas que SÍ se prerenderizan (necesario para pasar el guardia
+// de STATIC_ROUTES arriba) pero NO deben aparecer en el sitemap público —
+// son privadas, protegidas por Cloudflare Access a nivel de dominio
+// (ver functions/api/admin/solicitudes.ts), no por esta lista.
+const SITEMAP_EXCLUDED_ROUTES = new Set(["/admin/solicitudes"]);
 
 function outputPathFor(routePath) {
   if (routePath === "/") return templatePath;
@@ -92,7 +99,7 @@ const DEFAULT_CHANGEFREQ = "monthly";
  * (STATIC_ROUTES es la misma lista que usa esa guardia).
  */
 function buildSitemap(routes) {
-  const urls = [...routes, ...EXTRA_SITEMAP_URLS];
+  const urls = [...routes.filter((r) => !SITEMAP_EXCLUDED_ROUTES.has(r)), ...EXTRA_SITEMAP_URLS];
   const items = urls
     .map((routePath) => {
       const loc = `https://www.rastro.fyi${routePath}`;
