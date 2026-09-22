@@ -18,11 +18,11 @@ Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tie
 | URL pública | https://rastro.fyi/ (custom domain sobre el proyecto Pages `rastro`; fallback `rastro-5zm.pages.dev`) |
 | Repo | `Treevu-ai/appsperu` (monorepo) |
 | App | `apps/rastro-web/` (Vite 8 + React 19) |
-| Build command (Pages vía Git) | `npm --prefix apps/rastro-web ci && npm --prefix apps/rastro-web run build` |
-| Build output (Pages vía Git) | `apps/rastro-web/dist` |
-| Deploy command (Workers Builds) | `bash scripts/cloudflare-rastro-deploy.sh` |
-| Config wrangler (raíz del repo) | `wrangler.toml` → `[assets] directory = "./apps/rastro-web/dist"` |
-| Deploy on push | GitHub App (Cloudflare) |
+| Root directory (dashboard) | `apps/rastro-web` |
+| Build command (Pages vía Git) | `npm ci && npm run build` |
+| Build output (Pages vía Git) | `dist` (relativo al root directory de arriba) |
+| Config wrangler activa | `apps/rastro-web/wrangler.toml` — fuente de verdad real de `[[kv_namespaces]]`, ver §6 |
+| Deploy on push | GitHub App (Cloudflare) — confirmado vía API (`source.type: "github"`), no el workflow de GitHub Actions (ver §Workflows) |
 | Deploy semanal | Cron miércoles 12:00 UTC → curl a Deploy Hook |
 | Secret requerido (deploy manual/cron) | `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` **o** `CLOUDFLARE_DEPLOY_HOOK_URL` |
 | Decisión cerrada | **No Vercel**. Solo Cloudflare o Fly.io. |
@@ -55,28 +55,27 @@ bash scripts/health-check-apis.sh
 1. Dashboard Cloudflare → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**.
 2. Selecciona el repo `Treevu-ai/appsperu` → autorice la GitHub App de Cloudflare.
 3. **Project name:** `rastro` (subdominio asignado por Cloudflare: `rastro-5zm.pages.dev` — el sufijo `-5zm` lo agrega Cloudflare automáticamente cuando `rastro.pages.dev` ya está tomado).
-4. **Framework preset:** *Vite* (Cloudflare lo detecta) **o** *None* si usas Workers Builds (§1b).
-5. **Build command:** `npm --prefix apps/rastro-web ci && npm --prefix apps/rastro-web run build`
-6. **Build output directory:** `apps/rastro-web/dist`
-7. **Root directory:** dejar en blanco (la build ya apunta al subdirectorio).
-8. **Deploy command:** dejar **vacío** (Pages publica el output automáticamente). No uses `npx wrangler versions upload` aquí — ver §1b si tu proyecto es Workers Builds.
+4. **Framework preset:** *Vite* (Cloudflare lo detecta) o *None*.
+5. **Root directory:** `apps/rastro-web`. **Crítico** — con esto en blanco (config vieja de este repo, incidente 2026-09-22), Cloudflare nunca encuentra `functions/` y las Pages Functions caen en silencio al fallback del SPA en TODAS las rutas `/api/*`, sin error visible en el sitio. Confirma el valor real con la API si tienes dudas:
+   ```bash
+   curl -s "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/pages/projects/rastro" \
+     -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | jq .result.build_config
+   ```
+6. **Build command:** `npm ci && npm run build` (relativo al root directory de arriba — no repetir `--prefix apps/rastro-web`, eso era del build viejo con root directory en blanco).
+7. **Build output directory:** `dist` (también relativo al root directory).
+8. **Deploy command:** dejar **vacío** (Pages publica el output automáticamente).
 9. **Environment variables:** el repo ya trae `.env.production` con las 14 URLs en `https://api.rastro.pe/<app>`. Opcional: duplicarlas en el dashboard (Production) — sobreescriben el archivo. Script automatizado: `bash scripts/set-cloudflare-pages-env.sh` (requiere `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`).
 10. **Save and Deploy.** El primer build tarda ~2 min.
 
-A partir de aquí, **cada push a `master` que toque `apps/rastro-web/**` triggerea rebuild automático** vía la GitHub App. No necesitas hacer nada más para el deploy on push.
+A partir de aquí, **cada push a `master` que toque `apps/rastro-web/**` triggerea rebuild automático** vía la GitHub App. No necesitas hacer nada más para el deploy on push. Confirmado con la API (`GET /pages/projects/rastro` → `source.type: "github"`) que este es el mecanismo activo hoy, no el workflow `rastro-web-deploy.yml` de GitHub Actions (ver más abajo) ni `scripts/cloudflare-rastro-deploy.sh` — ese script y el `wrangler.toml` de la raíz del repo (`[assets] directory = "./apps/rastro-web/dist"`) quedaron de un intento anterior de usar Workers Builds; no están en uso, pero tampoco se borraron por si algún día se vuelve a esa vía.
 
-#### 1b. Si Cloudflare usa Workers Builds (`wrangler versions upload`)
+#### 1b. Gotchas de Pages Functions en este proyecto (3 incidentes reales, 2026-09-22)
 
-Si en los logs ves `Executing user deploy command: npx wrangler versions upload` y falla con **Missing entry-point to Worker script or to assets directory**, el dashboard está en modo **Workers Builds**, no Pages clásico. Configura así:
+Estos tres se dieron encadenados el mismo día — cada uno destapaba al siguiente una vez arreglado. Documentados acá para que no se repitan:
 
-| Campo | Valor |
-|---|---|
-| **Build command** | *(vacío — el script build+deploy lo hace todo)* |
-| **Deploy command** | `bash scripts/cloudflare-rastro-deploy.sh` |
-
-Ese script instala deps, corre `vite build` y luego `wrangler versions upload`. El `wrangler.toml` en la **raíz del repo** declara `assets.directory = "./apps/rastro-web/dist"` y `not_found_handling = "single-page-application"` para React Router.
-
-> **No** ejecutes `npx wrangler versions upload` a secas: Cloudflare clona el monorepo en `/` y sin el `wrangler.toml` raíz no encuentra los assets. Tampoco sirve el `wrangler.toml` de `apps/rastro-web/` solo — wrangler busca config en el cwd del deploy.
+1. **`root_dir` vacío → `functions/` nunca se encuentra.** Ver el paso 5 de arriba. Sin esto, `/api/*` sirve el HTML del SPA (200 pero vacío) en vez de JSON — parece que "el sitio funciona" porque no hay error 4xx/5xx visible, solo respuestas equivocadas.
+2. **`with { type: "json" }` rompe el bundler interno de Pages.** El wrangler que Cloudflare usa para bundlear Functions (3.114.17 al momento de escribir esto) es más viejo que el `wrangler` que usas en tu CLI local y no soporta import attributes modernos. Si un import de `.json` en `functions/**/*.ts` usa `with { type: "json" }`, el build de Functions falla con `Expected ";" but found "with"` — y tumba **todas** las Functions del deploy, no solo el archivo que lo tiene. Import plano (`import x from "./y.json";`, sin atributo) funciona igual en local (esbuild/Vite lo soportan nativamente) y en Cloudflare.
+3. **`apps/rastro-web/wrangler.toml` sincroniza los KV bindings del dashboard, no los espeja.** Cloudflare pisa `deployment_configs.production.kv_namespaces` del proyecto para que coincida con lo que declara este `wrangler.toml`, en cada build. Si agregas un binding nuevo por el dashboard (Settings → Functions → KV namespace bindings) pero no lo agregas también acá, el próximo deploy **lo borra**. `wrangler.toml` es la única fuente de verdad real — el dashboard es solo lo que refleja la última sincronización.
 
 ### 2. Crear el Deploy Hook (para workflow_dispatch y cron semanal)
 
@@ -141,28 +140,35 @@ Para no perder SEO de enlaces antiguos:
 1. Cloudflare Pages → proyecto viejo `alsolperu` → **Settings** → **Custom domains / redirects** → crear un **bulk redirect** (`301`) desde `alsolperu.pages.dev/*` a `https://rastro.fyi/$1`. Cloudflare lo soporta nativamente.
 2. (Opcional) Google Search Console → **Change of Address** tool, si `alsolperu.pages.dev` estaba indexado.
 
-### 6. Rate limit del buscador (KV namespace) — AL3-11/AL3-17
+### 6. KV namespaces de las Pages Functions — AL3-11/AL3-17
 
-`/api/search` y `/api/rate-limit-stats` (`apps/rastro-web/functions/`) son **Cloudflare Pages Functions** — código server-side que corre en el edge de Cloudflare, no en el navegador. Necesitan un namespace de KV para contar requests por IP. Este namespace **no se puede crear por API/dashboard automatizado desde este repo** (requiere tu sesión de `wrangler` o el dashboard) — un solo paso manual, una sola vez:
+`apps/rastro-web/functions/` son **Cloudflare Pages Functions** — código server-side que corre en el edge, no en el navegador. Hoy usan 2 namespaces de KV:
 
-1. Desde `apps/rastro-web/`, con `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` ya configurados (mismos del paso 3) o logueado con `npx wrangler login`:
+| Binding | Para qué | Usado por |
+|---|---|---|
+| `RATE_LIMIT` | Contador de requests por IP (rate limit + métrica de 429) | `functions/api/search.ts`, `functions/api/rate-limit-stats.ts` |
+| `ACCESS_REQUESTS` | Solicitudes del formulario `/solicitar-acceso` (nombre, correo, teléfono, motivo) — retención 90 días | `functions/api/solicitud-acceso.ts` |
+
+Cada namespace nuevo se crea una sola vez por CLI (no hay forma de automatizarlo desde este repo):
+
+1. Desde `apps/rastro-web/`, con `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` configurados o logueado con `npx wrangler login`:
    ```bash
-   npx wrangler kv namespace create RATE_LIMIT
+   npx wrangler kv namespace create <NOMBRE_DEL_BINDING>
    ```
    Devuelve algo como:
    ```
-   { binding = "RATE_LIMIT", id = "abcd1234..." }
+   { binding = "<NOMBRE_DEL_BINDING>", id = "abcd1234..." }
    ```
-2. Copia ese `id` y reemplaza el placeholder en `apps/rastro-web/wrangler.toml`:
+2. Copia ese `id` y agrega el bloque en `apps/rastro-web/wrangler.toml`:
    ```toml
    [[kv_namespaces]]
-   binding = "RATE_LIMIT"
-   id = "abcd1234..."   # el id real, no el placeholder
+   binding = "<NOMBRE_DEL_BINDING>"
+   id = "abcd1234..."   # el id real
    ```
-3. Si el deploy usa **Git deploy de Cloudflare Pages** (no `wrangler pages deploy` desde CI) en algún momento, el binding también debe declararse en el dashboard: Cloudflare → **Pages** → `rastro` → **Settings** → **Functions** → **KV namespace bindings** → agregar `RATE_LIMIT` → el mismo namespace del paso 1. El deploy actual vía `wrangler pages deploy` (workflow `rastro-web-deploy.yml`, opción A de la sección 3) lee el binding directo de `wrangler.toml`, así que este paso 3 es solo necesario si cambia el mecanismo de deploy.
-4. Local: `npx wrangler pages dev dist` simula el KV automáticamente (no necesita el `id` real para desarrollo local — solo para `wrangler pages deploy`). `npm run dev`/`vite` normal **no** sirve las Functions; para probarlas localmente hay que buildear (`npm run build`) y correr `wrangler pages dev dist`.
+   **Este archivo es la única fuente de verdad.** Cloudflare sincroniza `deployment_configs.production.kv_namespaces` del proyecto para que coincida con lo que hay acá en cada build — si el binding solo existe en el dashboard (Settings → Functions → KV namespace bindings) y no acá, el próximo deploy lo borra del dashboard también. Ver §1b, incidente 3. No hace falta tocar el dashboard a mano si ya está declarado acá: el propio deploy lo sincroniza.
+3. Local: `npx wrangler pages dev dist` simula el KV automáticamente (no necesita el `id` real — solo para producción). `npm run dev`/`vite` normal **no** sirve las Functions; para probarlas localmente hay que buildear (`npm run build`) y correr `wrangler pages dev dist`.
 
-Sin este namespace configurado, `/api/search` devuelve un error 500 al intentar `env.RATE_LIMIT.get(...)` — el rate limit no tiene modo "deshabilitado silenciosamente", falla fuerte para no publicar un buscador sin protección alguna.
+Sin un namespace declarado y bindeado, la Function que lo usa devuelve 500 al intentar leer/escribir en `env.<BINDING>` — ninguna tiene un modo "deshabilitado silenciosamente": `/api/search` sin protección de rate limit, o `/solicitar-acceso` sin poder guardar solicitudes, son peores que fallar fuerte.
 
 ---
 
@@ -176,6 +182,8 @@ Hay 2 workflows en `.github/workflows/`:
 | `rastro-web-deploy.yml` | push a master + `workflow_dispatch` + **cron miércoles 12:00 UTC** | CI + deploy vía `wrangler pages deploy` (opción A); cae a Deploy Hook (opción B) solo si faltan los secrets de wrangler |
 
 El **cron semanal** (`0 12 * * 3`) refresca el build cada miércoles a las 07:00 hora Perú para arrastrar los datos más recientes de las 14 APIs (ingestas diarias/semanales).
+
+> Confirmado 2026-09-22 vía la API de Cloudflare (`source.type: "github"`) que un push normal a `master` despliega por la GitHub App nativa de Cloudflare Pages (§1), no por el paso `wrangler pages deploy` de este workflow — ese paso solo dispara si `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` están configurados como secrets. Si en algún momento SÍ lo están, ambos caminos deployan en paralelo para el mismo push (redundante pero inofensivo — el último build que termine gana).
 
 `rastro-web-ci.yml` tiene 2 jobs: `ci` (typecheck + lint:meta + unit + build) y `e2e` (AL3-14, Playwright — ver abajo).
 
@@ -205,7 +213,7 @@ Cloudflare Pages sirve los archivos `public/` directamente en la raíz. No requi
 - `public/robots.txt` — permite indexar todo y declara el `Sitemap:`.
 - `public/sitemap.xml` — incluye las rutas públicas.
 - `public/llms.txt` — descripción del sitio para LLM crawlers (ChatGPT, Perplexity, Claude).
-- `index.html` — JSON-LD con `Organization`, `WebSite` y `SoftwareApplication` (este último para que AI crawlers descubran el MCP server con sus <!-- COUNT:TOOL_COUNT -->189<!-- /COUNT --> tools).
+- `index.html` — JSON-LD con `Organization`, `WebSite` y `SoftwareApplication` (este último para que AI crawlers descubran el MCP server con sus <!-- COUNT:TOOL_COUNT -->190<!-- /COUNT --> tools).
 - `index.html` — `<link rel="canonical">` apunta a `https://rastro.fyi/`.
 
 ---
