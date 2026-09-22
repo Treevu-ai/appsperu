@@ -14,6 +14,7 @@ import { LaLibertadComparativo } from "./routes/gore/LaLibertadComparativo.js";
 import { LaLibertadBenchmark } from "./routes/gore/LaLibertadBenchmark.js";
 import { Home } from "./routes/Home.js";
 import { SolicitarAcceso } from "./routes/SolicitarAcceso.js";
+import { AdminSolicitudes } from "./routes/admin/Solicitudes.js";
 import { Proveedor } from "./routes/Proveedor.js";
 import { Proveedores } from "./routes/prensa/Proveedores.js";
 import { Sector } from "./routes/Sector.js";
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="estado" element={<Estado />} />
         <Route path="docs/api" element={<DocsApi />} />
         <Route path="solicitar-acceso" element={<SolicitarAcceso />} />
+        <Route path="admin/solicitudes" element={<AdminSolicitudes />} />
         <Route path="docs/integridad" element={<DocsIntegridad />} />
         <Route path="buscar" element={<Buscar />} />
         <Route path="catalogo" element={<Catalogo />} />

@@ -10,9 +10,23 @@ interface KVNamespacePutOptions {
   expirationTtl?: number;
 }
 
+interface KVNamespaceListOptions {
+  prefix?: string;
+  limit?: number;
+  cursor?: string;
+}
+
+interface KVNamespaceListResult {
+  keys: { name: string; expiration?: number }[];
+  list_complete: boolean;
+  cursor?: string;
+}
+
 interface KVNamespace {
   get(key: string): Promise<string | null>;
   put(key: string, value: string, options?: KVNamespacePutOptions): Promise<void>;
+  delete(key: string): Promise<void>;
+  list(options?: KVNamespaceListOptions): Promise<KVNamespaceListResult>;
 }
 
 interface PagesEnv {

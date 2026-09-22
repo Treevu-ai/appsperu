@@ -10,6 +10,12 @@ function inMemoryKv(): KVNamespace {
     async put(key: string, value: string) {
       store.set(key, value);
     },
+    async delete(key: string) {
+      store.delete(key);
+    },
+    async list() {
+      return { keys: [...store.keys()].map((name) => ({ name })), list_complete: true };
+    },
   };
 }
 
@@ -45,6 +51,12 @@ function spyKv(): { kv: KVNamespace; store: Map<string, string>; puts: KVNamespa
       async put(key, value, options) {
         store.set(key, value);
         puts.push(options ?? {});
+      },
+      async delete(key) {
+        store.delete(key);
+      },
+      async list() {
+        return { keys: [...store.keys()].map((name) => ({ name })), list_complete: true };
       },
     },
   };
