@@ -1,0 +1,21 @@
+name: catastro-forestal
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: catastro_forestal
+      POSTGRES_PASSWORD: catastro_forestal
+      POSTGRES_DB: catastro_forestal
+    ports:
+      - "127.0.0.1:5465:5432"
+    volumes:
+      - catastro_forestal_pgdata:/var/lib/postgresql/data
+
+volumes:
+  catastro_forestal_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true

@@ -18,6 +18,7 @@ jobs:
           - apps/areas-protegidas/api
           - apps/autoridades-electas/api
           - apps/bcrp-comercio-exterior/api
+          - apps/catastro-forestal/api
           - apps/catastro-minero/api
           - apps/ceplan-estrategico/api
           - apps/ceplan-geo/api
