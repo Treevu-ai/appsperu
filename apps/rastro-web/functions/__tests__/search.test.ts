@@ -18,7 +18,7 @@ function makeContext(q: string): PagesEventContext {
     request: new Request(`https://rastro.fyi/api/search?q=${encodeURIComponent(q)}`),
     // Sin VITE_API_BASE_URL_* — simula las 3 fuentes en vivo no configuradas
     // (mismo estado que producción hoy, sin APIs publicadas).
-    env: { RATE_LIMIT: inMemoryKv() },
+    env: { RATE_LIMIT: inMemoryKv(), ACCESS_REQUESTS: inMemoryKv() },
     params: {},
     waitUntil: () => {},
   };

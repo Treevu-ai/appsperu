@@ -1,15 +1,14 @@
 import { Link } from "react-router-dom";
-import { ElProblema } from "../components/home/ElProblema.js";
-import { ComoFunciona } from "../components/home/ComoFunciona.js";
-import { Capacidades } from "../components/home/Capacidades.js";
-import { ParaQuien } from "../components/home/ParaQuien.js";
 import { HallazgosRecientes } from "../components/home/HallazgosRecientes.js";
-import counts from "../data/catalog-counts.json" with { type: "json" };
+import { QueObtienes } from "../components/home/QueObtienes.js";
+import { ComoSePide } from "../components/home/ComoSePide.js";
 
 export function Home() {
   return (
     <div className="relative overflow-hidden">
-      {/* Hero banner (marca) */}
+      {/* Hero: promesa + 1 CTA dominante. Todo lo demás (metodología,
+          cobertura completa, 4 lentes de audiencia) vive abajo o en
+          /docs/api — no compite acá por atención. */}
       <section className="relative border-b border-line">
         <img
           src="/hero-banner.png"
@@ -21,140 +20,51 @@ export function Home() {
         />
         <div className="bg-ink-950 sm:bg-transparent sm:absolute sm:inset-x-0 sm:bottom-0 sm:bg-gradient-to-t sm:from-ink-950 sm:via-ink-950/80 sm:to-transparent px-4 sm:px-6 pb-6 sm:pb-8 pt-4 sm:pt-16">
           <p className="max-w-5xl mx-auto mb-4 text-fg-soft text-sm sm:text-base">
-            Presupuesto, obras y contratistas de La Libertad, con{" "}
+            Presupuesto, obras y contratistas del Estado peruano, cruzados y verificados, servidos a tu agente IA vía
+            MCP — con{" "}
             <span className="text-accent bg-accent/15 px-1.5 py-0.5 rounded">fuente y fecha verificables</span>.
           </p>
           <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:flex-wrap gap-3">
-            <Link
-              to="/gore/la-libertad/ficha"
-              className="btn-primary w-full sm:w-auto justify-center"
-            >
-              Empezar por La Libertad
+            <Link to="/solicitar-acceso" className="btn-primary w-full sm:w-auto justify-center">
+              Solicitar acceso sk-rastro
             </Link>
-            <Link
-              to="/docs/api"
-              className="btn-ghost w-full sm:w-auto justify-center"
-            >
-              Conectar desde un agente IA
+            <Link to="/docs/api" className="btn-ghost w-full sm:w-auto justify-center">
+              Ver documentación técnica
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Acerca de */}
-      <section className="relative max-w-5xl mx-auto px-6 py-16">
-        <p className="text-xs tracking-widest text-accent font-mono">RASTRO · ALPHA</p>
-        <p className="mt-4 text-fg-soft text-lg max-w-3xl leading-relaxed">
-          Rastro junta la información pública que el Estado ya publica —sobre obras, presupuesto y contratistas— y la
-          muestra clara, en un solo lugar. Cada dato dice de dónde salió y cuándo se actualizó, para que sepas si
-          puedes confiar en él. Cuando no tenemos un dato, lo decimos — nunca inventamos un número.
-        </p>
-      </section>
-
-      {/* 4 secciones de profundidad (migradas de rastro-landing.html) */}
-      <ElProblema />
-      <ComoFunciona />
-      <Capacidades />
-      <ParaQuien />
+      {/* 01 — prueba social: lo que ya se encontró, antes de explicar cómo. */}
       <HallazgosRecientes />
 
-      {/* Lectores */}
-      <section className="relative max-w-5xl mx-auto px-6 pb-16 grid md:grid-cols-3 gap-4">
-        <Link to="/gore/la-libertad/ficha" className="card block">
-          <p className="text-xs text-muted font-mono">LECTOR 1</p>
-          <h3 className="text-fg font-semibold mt-1">GORE La Libertad</h3>
-          <p className="text-sm text-fg-soft mt-2">
-            Ficha, comparativo y benchmark de entidades sectoriales. Todo con la misma regla territorial.
-          </p>
-        </Link>
-        <Link to="/buscar" className="card block">
-          <p className="text-xs text-muted font-mono">LECTOR 2</p>
-          <h3 className="text-fg font-semibold mt-1">Prensa de datos</h3>
-          <p className="text-sm text-fg-soft mt-2">
-            Perfil de proveedor por RUC: identidad, contrataciones, sanciones, observaciones.
-          </p>
-        </Link>
-        <Link to="/distrito/130101" className="card block">
-          <p className="text-xs text-muted font-mono">LECTOR 3</p>
-          <h3 className="text-fg font-semibold mt-1">Auditoría / OCI</h3>
-          <p className="text-sm text-fg-soft mt-2">
-            Obras y activos por distrito, integridad de evidencia, sin score de calidad.
-          </p>
-        </Link>
-      </section>
+      {/* 02 — qué obtienes con la key */}
+      <QueObtienes />
 
-      {/* Para agentes IA */}
+      {/* 03 — cómo se pide (honesto: revisión manual, no autoservicio) */}
+      <ComoSePide />
+
+      {/* Cierre — a quién sirve, en 1 línea, no 4 tarjetas. */}
       <section className="relative max-w-5xl mx-auto px-6 pb-24">
-        <div className="card border-accent/30">
-          <div className="flex items-center gap-3 flex-wrap">
-            <p className="text-xs text-accent font-mono">PARA AGENTES IA</p>
-            <span className="text-xs text-muted flex items-center gap-1.5">
-              <span className="pulse-dot" /> MCP · {counts.toolCount} tools · producción · mcp.rastro.fyi
-            </span>
-          </div>
-          <h2 className="text-fg font-semibold text-lg mt-2">Una sola query. {counts.toolCount} tools a tu disposición.</h2>
-          <p className="text-fg-soft mt-3">
-            Rastro expone un servidor MCP (Model Context Protocol) en producción, en{" "}
-            <code className="text-fg">mcp.rastro.fyi</code>, con {counts.toolCount} herramientas de solo lectura,
-            buscables desde 2 meta-tools (<code className="text-fg">rastro_buscar_tools</code> +{" "}
-            <code className="text-fg">rastro_llamar</code>). Autenticado con una API key <code className="text-fg">sk-rastro-*</code>{" "}
-            por request. Compatible con Claude Code, Claude Desktop, Cursor, Windsurf, Cline y Continue.dev.
-          </p>
-
-          <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-muted font-mono mb-2">Setup (Cursor / Claude Code)</p>
-              <pre className="text-[10px] sm:text-xs bg-ink-950 border border-line rounded-md p-3 overflow-x-auto text-fg-soft whitespace-pre-wrap break-words sm:whitespace-pre">
-                <code>{`{
-  "mcpServers": {
-    "rastro": {
-      "url": "https://mcp.rastro.fyi/mcp",
-      "headers": {
-        "x-api-key": "sk-rastro-..."
-      }
-    }
-  }
-}`}</code>
-              </pre>
-              <p className="text-xs text-muted mt-2">
-                ¿No tienes una key todavía? Pídela en{" "}
-                <Link to="/docs/api" className="text-accent underline">
-                  /docs/api
-                </Link>{" "}
-                o abre un issue en GitHub.
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted font-mono mb-2">Una sola query</p>
-              <pre className="text-xs bg-ink-950 border border-line rounded-md p-3 overflow-x-auto text-fg-soft">
-                <code>{`"Para los últimos 12 meses: lista proveedores
-sancionados por la OECE que también ganaron
-contratos del GORE La Libertad en el sector
-transporte, con valor total adjudicado y % de
-concentración. Cita cada RUC y cada OCID."`}</code>
-              </pre>
-              <p className="text-xs text-muted mt-2">
-                Tu agente busca los tools relevantes con <code className="text-fg">rastro_buscar_tools</code> (ej.
-                "sanciones OECE", "compras La Libertad") y ejecuta cada uno por su nombre exacto con{" "}
-                <code className="text-fg">rastro_llamar</code>, encadenando los resultados — sin que tú toques la
-                terminal.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link to="/docs/api" className="btn-ghost">
-              Ver los {counts.toolCount} tools
-            </Link>
+        <div className="card">
+          <p className="text-sm text-fg-soft leading-relaxed">
+            Lo usan gobiernos regionales y municipales, prensa de datos, auditores y desarrolladores de agentes IA —
+            todos contra el mismo catálogo, cada uno con su propia pregunta. Si prefieres explorar antes de pedir
+            acceso, revisa el{" "}
+            <Link to="/docs/api" className="text-accent underline-offset-2 hover:underline">
+              catálogo completo de tools
+            </Link>{" "}
+            o el{" "}
             <a
               href="https://github.com/Treevu-ai/appsperu/tree/master/mcp-server"
-              className="btn-ghost"
+              className="text-accent underline-offset-2 hover:underline"
               target="_blank"
               rel="noopener"
             >
-              Código del MCP server ↗
+              código del MCP server ↗
             </a>
-          </div>
+            .
+          </p>
         </div>
       </section>
     </div>

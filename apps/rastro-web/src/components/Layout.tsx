@@ -70,6 +70,12 @@ export function Layout() {
             ))}
           </nav>
 
+          {/* Único CTA de negocio de todo el sitio: pedir la sk-rastro-*. Fuera
+              de NAV a propósito — no es un link más, es la acción dominante. */}
+          <NavLink to="/solicitar-acceso" className="btn-primary hidden sm:inline-flex text-sm px-3 py-1.5 shrink-0">
+            Solicitar acceso
+          </NavLink>
+
           {/* Botón hamburguesa: < lg (ver comentario del nav desktop) */}
           <button
             type="button"
@@ -119,6 +125,9 @@ export function Layout() {
             className="lg:hidden border-t border-line bg-ink-900/95 backdrop-blur"
           >
             <div className="px-4 py-3 flex flex-col gap-1">
+              <NavLink to="/solicitar-acceso" className="btn-primary sm:hidden justify-center mb-1">
+                Solicitar acceso
+              </NavLink>
               {NAV.map((item) => (
                 <NavLink
                   key={item.to}
