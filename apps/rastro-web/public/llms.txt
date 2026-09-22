@@ -4,7 +4,7 @@
 > Cada señal deja un rastro. Nosotros lo hacemos visible.
 
 Rastro es una plataforma de trazabilidad sobre datos abiertos del Estado peruano: 3 lectores,
-<!-- COUNT:APP_COUNT -->28<!-- /COUNT --> apps backend y <!-- COUNT:TOOL_COUNT -->154<!-- /COUNT --> tools MCP de solo lectura.
+<!-- COUNT:APP_COUNT -->37<!-- /COUNT --> apps backend y <!-- COUNT:TOOL_COUNT -->189<!-- /COUNT --> tools MCP de solo lectura.
 
 ## URLs públicas
 
@@ -20,7 +20,7 @@ Rastro es una plataforma de trazabilidad sobre datos abiertos del Estado peruano
 
 ## Para agentes IA (MCP)
 
-Rastro expone un servidor MCP (Model Context Protocol) con **<!-- COUNT:TOOL_COUNT -->154<!-- /COUNT --> tools de solo lectura** sobre inversión pública peruana. Compatible con:
+Rastro expone un servidor MCP (Model Context Protocol) con **<!-- COUNT:TOOL_COUNT -->189<!-- /COUNT --> tools de solo lectura** sobre inversión pública peruana. Compatible con:
 
 - Claude Code (`claude mcp add rastro -- node /ruta/al/repo/mcp-server/dist/index.js`)
 - Claude Desktop (`claude_desktop_config.json`)
@@ -29,9 +29,9 @@ Rastro expone un servidor MCP (Model Context Protocol) con **<!-- COUNT:TOOL_COU
 - Cline / Continue.dev
 
 El servidor usa transporte **stdio** y expone solo 2 tools MCP —
-**`rastro_buscar_tools(query?, app?, limit?)`** busca por palabra clave/app entre las <!-- COUNT:TOOL_COUNT -->154<!-- /COUNT -->
+**`rastro_buscar_tools(query?, app?, limit?)`** busca por palabra clave/app entre las <!-- COUNT:TOOL_COUNT -->189<!-- /COUNT -->
 entradas del catálogo, **`rastro_llamar(tool, args?)`** ejecuta el nombre exacto encontrado — en vez de registrar
-los 154 tools individualmente (ver `mcp-server/README.md`). El agente busca, encadena resultados, razona sobre
+los tools individualmente (ver `mcp-server/README.md`). El agente busca, encadena resultados, razona sobre
 ellos y entrega respuestas con citas verificables por RUC, OCID, CUI, UBIGEO, SEC_EJEC.
 
 ### Ejemplo · una sola query
@@ -55,8 +55,8 @@ Y devuelve una tabla con citas (RUC, OCID, fuente, corte) sin que el usuario hay
 - Convierte señales dispersas (presupuesto, contrataciones, inversiones, obras, sanciones, etc.) en una vista con citas verificables.
 - Muestra cifras con metadatos: fuente (app + tool MCP), corte (fecha del dato), cobertura (COMPLETA / PARCIAL / BLOQUEADA / NO_APLICA), matcher (cómo se vinculó).
 - Sirve 3 lectores: GORE (ficha, comparativo, benchmark de sectores), Prensa (perfil de proveedor), Auditoría (obras y activos por distrito).
-- Expone los <!-- COUNT:TOOL_COUNT -->154<!-- /COUNT --> tools MCP en `/docs/api` para que agentes IA los orquesten (vía 2 meta-tools de búsqueda/ejecución, `rastro_buscar_tools` + `rastro_llamar` — no registrados uno por uno).
-- Muestra en `/estado` el estado de las 14 APIs con dashboard visual propio (de las <!-- COUNT:APP_COUNT -->28<!-- /COUNT --> apps backend reales) — decisión de alcance deliberada, no una brecha por cerrar: Rastro es agentic-first, las 27 completas ya están cubiertas hoy vía MCP (`rastro_buscar_tools` + `rastro_llamar`, ver `/docs/api`), un dashboard visual por app no es el patrón que escala.
+- Expone los <!-- COUNT:TOOL_COUNT -->189<!-- /COUNT --> tools MCP en `/docs/api` para que agentes IA los orquesten (vía 2 meta-tools de búsqueda/ejecución, `rastro_buscar_tools` + `rastro_llamar` — no registrados uno por uno).
+- Muestra en `/estado` el estado de las 14 APIs con dashboard visual propio (de las <!-- COUNT:APP_COUNT -->37<!-- /COUNT --> apps backend reales) — decisión de alcance deliberada, no una brecha por cerrar: Rastro es agentic-first, las 23 restantes ya están cubiertas hoy vía MCP (`rastro_buscar_tools` + `rastro_llamar`, ver `/docs/api`), un dashboard visual por app no es el patrón que escala.
 
 ## Lo que Rastro NO hace
 
@@ -69,7 +69,7 @@ Y devuelve una tabla con citas (RUC, OCID, fuente, corte) sin que el usuario hay
 
 ## Fuentes de datos (appsperu)
 
-Rastro NO genera ni infiere datos. Cada cifra viene verbatim de una API del repositorio `Treevu-ai/appsperu`. Las <!-- COUNT:APP_COUNT -->28<!-- /COUNT --> apps backend (14 con dashboard visual propio en este sitio, las 27 completas vía MCP — decisión de alcance, no brecha; ver `src/lib/types.ts`):
+Rastro NO genera ni infiere datos. Cada cifra viene verbatim de una API del repositorio `Treevu-ai/appsperu`. Las <!-- COUNT:APP_COUNT -->37<!-- /COUNT --> apps backend (14 con dashboard visual propio en este sitio, las 23 restantes vía MCP — decisión de alcance, no brecha; ver `src/lib/types.ts`):
 
 - radar-ejecucion (MEF, presupuesto/ejecución)
 - compras-publicas (OECE/OCDS, contrataciones)

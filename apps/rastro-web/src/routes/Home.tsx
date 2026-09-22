@@ -3,6 +3,7 @@ import { ElProblema } from "../components/home/ElProblema.js";
 import { ComoFunciona } from "../components/home/ComoFunciona.js";
 import { Capacidades } from "../components/home/Capacidades.js";
 import { ParaQuien } from "../components/home/ParaQuien.js";
+import { HallazgosRecientes } from "../components/home/HallazgosRecientes.js";
 import counts from "../data/catalog-counts.json" with { type: "json" };
 
 export function Home() {
@@ -55,6 +56,7 @@ export function Home() {
       <ComoFunciona />
       <Capacidades />
       <ParaQuien />
+      <HallazgosRecientes />
 
       {/* Lectores */}
       <section className="relative max-w-5xl mx-auto px-6 pb-16 grid md:grid-cols-3 gap-4">
@@ -86,33 +88,41 @@ export function Home() {
         <div className="card border-accent/30">
           <div className="flex items-center gap-3 flex-wrap">
             <p className="text-xs text-accent font-mono">PARA AGENTES IA</p>
-            <span className="text-xs text-muted">MCP · {counts.toolCount} tools · stdio · local</span>
+            <span className="text-xs text-muted flex items-center gap-1.5">
+              <span className="pulse-dot" /> MCP · {counts.toolCount} tools · producción · mcp.rastro.fyi
+            </span>
           </div>
           <h2 className="text-fg font-semibold text-lg mt-2">Una sola query. {counts.toolCount} tools a tu disposición.</h2>
           <p className="text-fg-soft mt-3">
-            Rastro expone un servidor MCP (Model Context Protocol) con {counts.toolCount} herramientas de solo lectura,
+            Rastro expone un servidor MCP (Model Context Protocol) en producción, en{" "}
+            <code className="text-fg">mcp.rastro.fyi</code>, con {counts.toolCount} herramientas de solo lectura,
             buscables desde 2 meta-tools (<code className="text-fg">rastro_buscar_tools</code> +{" "}
-            <code className="text-fg">rastro_llamar</code>). Compatible con Claude Code, Claude Desktop, Cursor,
-            Windsurf, Cline y Continue.dev. Las APIs corren en localhost; el MCP las agrega para tu agente.
+            <code className="text-fg">rastro_llamar</code>). Autenticado con una API key <code className="text-fg">sk-rastro-*</code>{" "}
+            por request. Compatible con Claude Code, Claude Desktop, Cursor, Windsurf, Cline y Continue.dev.
           </p>
 
           <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-xs text-muted font-mono mb-2">Setup (Cursor / Claude Code)</p>
               <pre className="text-[10px] sm:text-xs bg-ink-950 border border-line rounded-md p-3 overflow-x-auto text-fg-soft whitespace-pre-wrap break-words sm:whitespace-pre">
-                <code>{`# 1. Stack local
-bash scripts/dev-local.sh
-
-# 2. MCP en ~/.cursor/mcp.json
-{
+                <code>{`{
   "mcpServers": {
     "rastro": {
-      "command": "node",
-      "args": ["<repo>/mcp-server/dist/index.js"]
+      "url": "https://mcp.rastro.fyi/mcp",
+      "headers": {
+        "x-api-key": "sk-rastro-..."
+      }
     }
   }
 }`}</code>
               </pre>
+              <p className="text-xs text-muted mt-2">
+                ¿No tienes una key todavía? Pídela en{" "}
+                <Link to="/docs/api" className="text-accent underline">
+                  /docs/api
+                </Link>{" "}
+                o abre un issue en GitHub.
+              </p>
             </div>
             <div>
               <p className="text-xs text-muted font-mono mb-2">Una sola query</p>

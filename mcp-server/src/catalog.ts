@@ -350,7 +350,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
     name: "radar_ejecucion_infrastructure_operation",
     app: "radar-ejecucion",
     description:
-      "Evidencia de recepción, operador y disponibilidad de un activo. La ausencia de estos registros es un vacío de ALSOL, no prueba de que el activo no funcione. " + SIN_SCHEDULER,
+      "Evidencia de recepción, operador y disponibilidad de un activo. La ausencia de estos registros es un vacío de evidencia, no prueba de que el activo no funcione. " + SIN_SCHEDULER,
     pathTemplate: "/api/infraestructura/activos/{assetId}/operacion",
     pathParams: ["assetId"],
     querySchema: {},
@@ -979,7 +979,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
     app: "ceplan-estrategico",
     description:
       "SEG (Strategic Execution Gap): nacional CEPLAN (CUMP03−CUMP02, GN/GR) o proxy departamental " +
-      "PROXY_DEPARTAMENTAL (MEF devengado/PIM − avance físico INFOBRAS). Solo 5 regiones piloto ALSOL " +
+      "PROXY_DEPARTAMENTAL (MEF devengado/PIM − avance físico INFOBRAS). Solo 5 regiones piloto " +
       "con ?departamento=. Cobertura parcial.",
     pathTemplate: "/api/indicators/seg",
     pathParams: [],
@@ -1031,7 +1031,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
     name: "ceplan_estrategico_crossref_territorial",
     app: "ceplan-estrategico",
     description:
-      "Cruce ceplan-estrategico <-> ceplan-geo por departamento piloto ALSOL (5 regiones). Adjunta CUMP02/CUMP03 " +
+      "Cruce ceplan-estrategico <-> ceplan-geo por departamento piloto (5 regiones). Adjunta CUMP02/CUMP03 " +
       "nacionales (GN/GR) con contexto territorial (distritos, infraestructura). Matcher: departamento_prefijo_ubigeo. " +
       "Cobertura PARCIAL — no implica desempeño estratégico regional.",
     pathTemplate: "/api/crossref/territorial",
@@ -1100,7 +1100,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
     name: "ceplan_geo_territories_summary",
     app: "ceplan-geo",
     description:
-      "Agregados territoriales por departamento piloto ALSOL (5 regiones): conteo de distritos e infraestructura " +
+      "Agregados territoriales por departamento piloto (5 regiones): conteo de distritos e infraestructura " +
       "dentro del polígono departamental. Solo LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO.",
     pathTemplate: "/api/territories/summary",
     pathParams: [],

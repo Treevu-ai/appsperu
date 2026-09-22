@@ -76,7 +76,7 @@ export type AppKey =
  * variable de entorno para su fetcher en api-client.ts).
  *
  * Decisión de alcance deliberada, no una brecha por cerrar: Rastro es
- * agentic-first. Las 28 apps reales (154 tools) ya tienen cobertura completa
+ * agentic-first. Las 37 apps reales (189 tools) ya tienen cobertura completa
  * hoy vía el servidor MCP (`rastro_buscar_tools` + `rastro_llamar`, ver
  * mcp-server/README.md y /docs/api) — ese es el canal principal de consumo.
  * Un dashboard visual dedicado por app no escala 1:1 con el crecimiento del
@@ -84,7 +84,7 @@ export type AppKey =
  * registrados uno por uno a 2 meta-tools buscables resolvió del lado del agente); estas
  * 14 son las que además justificaron una vista propia por su rol en los 3
  * lectores (GORE La Libertad, Prensa de datos, Auditoría/OCI), no las
- * primeras 14 de una lista de 27 pendientes.
+ * primeras 14 de una lista de 23 pendientes.
  */
 export const APP_CATALOG: Record<AppKey, { label: string; port: number; envKey: string }> = {
   "radar-ejecucion": { label: "Radar Ejecución (MEF)", port: 4000, envKey: "VITE_API_BASE_URL_RADAR_EJECUCION" },
