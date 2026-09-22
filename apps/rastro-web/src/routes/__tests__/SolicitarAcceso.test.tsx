@@ -30,6 +30,8 @@ async function llenarFormularioValido(user: ReturnType<typeof userEvent.setup>) 
     screen.getByLabelText("Motivo de la solicitud"),
     "Necesito consultar contratos públicos de La Libertad para un reportaje de investigación periodística.",
   );
+  await user.selectOptions(screen.getByLabelText("Tipo de uso"), "prensa");
+  await user.selectOptions(screen.getByLabelText("Frecuencia de uso esperada"), "ocasional");
 }
 
 describe("SolicitarAcceso", () => {
@@ -54,7 +56,25 @@ describe("SolicitarAcceso", () => {
 
     expect(screen.getByText("Ricardo Cuba")).toBeInTheDocument();
     expect(screen.getByText("ricardo@example.com")).toBeInTheDocument();
+    expect(screen.getByText("Prensa / investigación periodística")).toBeInTheDocument();
+    expect(screen.getByText("Uso ocasional (algunas veces al mes)")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Confirmar y enviar" })).toBeInTheDocument();
+  });
+
+  it("no deja avanzar a revisar sin seleccionar tipo de uso", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.type(screen.getByLabelText("Nombre completo"), "Ricardo Cuba");
+    await user.type(screen.getByLabelText("Correo"), "ricardo@example.com");
+    await user.type(screen.getByLabelText("Teléfono"), "+51 999 999 999");
+    await user.type(
+      screen.getByLabelText("Motivo de la solicitud"),
+      "Necesito consultar contratos públicos de La Libertad para un reportaje de investigación periodística.",
+    );
+    await user.click(screen.getByRole("button", { name: "Revisar solicitud" }));
+
+    expect(screen.getByText("Selecciona el tipo de uso.")).toBeInTheDocument();
+    expect(screen.queryByText("Confirmar y enviar")).not.toBeInTheDocument();
   });
 
   it("al confirmar, envía el POST y muestra la confirmación con el correo indicado", async () => {

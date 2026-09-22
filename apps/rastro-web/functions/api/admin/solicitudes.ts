@@ -20,6 +20,9 @@ interface SolicitudGuardada {
   correo: string;
   telefono: string;
   motivo: string;
+  // Opcionales: ausentes en solicitudes guardadas antes del 2026-09-22.
+  tipoUso?: string;
+  frecuenciaUso?: string;
   ip: string;
   creadoEn: string;
 }

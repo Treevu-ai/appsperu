@@ -2,7 +2,8 @@
  * POST /api/solicitud-acceso — Cloudflare Pages Function.
  *
  * Recibe el formulario de /solicitar-acceso (nombre, correo, teléfono,
- * motivo) y lo guarda en KV para revisión manual — no hay emisión
+ * motivo, tipo de uso, frecuencia de uso) y lo guarda en KV para revisión
+ * manual — no hay emisión
  * automática de `sk-rastro-*`, el mismo flujo manual que ya describe
  * docs/FLY_DEPLOY_MCP.md para las keys existentes. Un admin revisa las
  * solicitudes con:
@@ -39,16 +40,33 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TELEFONO_RE = /^[\d\s+()-]+$/;
 const TELEFONO_DIGITOS_MIN = 6;
 
+/**
+ * Captura de intención de uso (2026-09-22) — no gatea el acceso, es insumo
+ * para decidir pricing más adelante con evidencia real en vez de a ciegas
+ * (ver discusión de pricing: segmentar por alcance de uso, no por perfil
+ * autodeclarado — el perfil no se puede verificar, el alcance esperado sí
+ * se puede preguntar). `tipoUso` distingue el eje de misión (prensa,
+ * función pública, academia — pensado para acceso gratuito/preferente) del
+ * eje comercial; `frecuenciaUso` es el proxy de volumen dentro del eje
+ * comercial.
+ */
+const TIPOS_USO = ["prensa", "funcion_publica", "academia", "comercial"] as const;
+const FRECUENCIAS_USO = ["puntual", "ocasional", "recurrente"] as const;
+type TipoUso = (typeof TIPOS_USO)[number];
+type FrecuenciaUso = (typeof FRECUENCIAS_USO)[number];
+
 interface SolicitudBody {
   nombre?: unknown;
   correo?: unknown;
   telefono?: unknown;
   motivo?: unknown;
+  tipoUso?: unknown;
+  frecuenciaUso?: unknown;
   campoTrampa?: unknown;
 }
 
 function validar(body: SolicitudBody): string | null {
-  const { nombre, correo, telefono, motivo } = body;
+  const { nombre, correo, telefono, motivo, tipoUso, frecuenciaUso } = body;
   if (typeof nombre !== "string" || nombre.trim().length < NOMBRE_MIN || nombre.trim().length > NOMBRE_MAX) {
     return `El nombre completo debe tener entre ${NOMBRE_MIN} y ${NOMBRE_MAX} caracteres.`;
   }
@@ -66,6 +84,12 @@ function validar(body: SolicitudBody): string | null {
   }
   if (typeof motivo !== "string" || motivo.trim().length < MOTIVO_MIN || motivo.trim().length > MOTIVO_MAX) {
     return `El motivo de la solicitud debe tener entre ${MOTIVO_MIN} y ${MOTIVO_MAX} caracteres.`;
+  }
+  if (typeof tipoUso !== "string" || !TIPOS_USO.includes(tipoUso as TipoUso)) {
+    return "Selecciona un tipo de uso válido.";
+  }
+  if (typeof frecuenciaUso !== "string" || !FRECUENCIAS_USO.includes(frecuenciaUso as FrecuenciaUso)) {
+    return "Selecciona una frecuencia de uso válida.";
   }
   return null;
 }
@@ -102,12 +126,16 @@ export const onRequestPost: PagesFunctionHandler = async (context) => {
   const correo = (body.correo as string).trim();
   const telefono = (body.telefono as string).trim();
   const motivo = (body.motivo as string).trim();
+  const tipoUso = body.tipoUso as TipoUso;
+  const frecuenciaUso = body.frecuenciaUso as FrecuenciaUso;
   const creadoEn = new Date().toISOString();
   const key = `solicitud:${Date.now()}:${crypto.randomUUID()}`;
 
-  await env.ACCESS_REQUESTS.put(key, JSON.stringify({ nombre, correo, telefono, motivo, ip, creadoEn }), {
-    expirationTtl: RETENTION_SEGUNDOS,
-  });
+  await env.ACCESS_REQUESTS.put(
+    key,
+    JSON.stringify({ nombre, correo, telefono, motivo, tipoUso, frecuenciaUso, ip, creadoEn }),
+    { expirationTtl: RETENTION_SEGUNDOS },
+  );
 
   return Response.json({ ok: true }, { status: 201 });
 };

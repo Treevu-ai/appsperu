@@ -6,16 +6,41 @@
 import { type FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
 
+type TipoUso = "" | "prensa" | "funcion_publica" | "academia" | "comercial";
+type FrecuenciaUso = "" | "puntual" | "ocasional" | "recurrente";
+
 interface FormState {
   nombre: string;
   correo: string;
   telefono: string;
   motivo: string;
+  tipoUso: TipoUso;
+  frecuenciaUso: FrecuenciaUso;
 }
 
-const VACIO: FormState = { nombre: "", correo: "", telefono: "", motivo: "" };
+const VACIO: FormState = { nombre: "", correo: "", telefono: "", motivo: "", tipoUso: "", frecuenciaUso: "" };
 const MOTIVO_MIN = 20;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// No gatea el acceso — es insumo para decidir pricing con evidencia real
+// más adelante (segmentar por alcance de uso, no por perfil autodeclarado
+// e imposible de verificar). Ver docs/... si en algún momento se documenta
+// la decisión de pricing final.
+const TIPOS_USO: { value: TipoUso; label: string }[] = [
+  { value: "prensa", label: "Prensa / investigación periodística" },
+  { value: "funcion_publica", label: "Función pública / gobierno" },
+  { value: "academia", label: "Investigación académica" },
+  { value: "comercial", label: "Uso comercial (empresa, estudio, consultora)" },
+];
+
+const FRECUENCIAS_USO: { value: FrecuenciaUso; label: string }[] = [
+  { value: "puntual", label: "Consulta puntual (una sola vez)" },
+  { value: "ocasional", label: "Uso ocasional (algunas veces al mes)" },
+  { value: "recurrente", label: "Uso recurrente o automatizado (integración vía agente IA)" },
+];
+
+const TIPO_USO_LABEL = Object.fromEntries(TIPOS_USO.map((t) => [t.value, t.label]));
+const FRECUENCIA_USO_LABEL = Object.fromEntries(FRECUENCIAS_USO.map((f) => [f.value, f.label]));
 
 type Paso = "formulario" | "revisar" | "enviado";
 
@@ -24,6 +49,8 @@ function validar(f: FormState): string | null {
   if (!EMAIL_RE.test(f.correo.trim())) return "Ingresa un correo válido.";
   if (f.telefono.trim().length < 6) return "Ingresa un teléfono de contacto válido.";
   if (f.motivo.trim().length < MOTIVO_MIN) return `Cuéntanos el motivo con al menos ${MOTIVO_MIN} caracteres.`;
+  if (!f.tipoUso) return "Selecciona el tipo de uso.";
+  if (!f.frecuenciaUso) return "Selecciona la frecuencia de uso esperada.";
   return null;
 }
 
@@ -115,6 +142,14 @@ export function SolicitarAcceso() {
             <dt className="text-xs text-muted font-mono">Motivo de la solicitud</dt>
             <dd className="text-fg text-sm whitespace-pre-wrap">{form.motivo}</dd>
           </div>
+          <div className="py-3 flex flex-col sm:flex-row sm:justify-between gap-1">
+            <dt className="text-xs text-muted font-mono">Tipo de uso</dt>
+            <dd className="text-fg text-sm sm:text-right">{TIPO_USO_LABEL[form.tipoUso]}</dd>
+          </div>
+          <div className="py-3 flex flex-col sm:flex-row sm:justify-between gap-1">
+            <dt className="text-xs text-muted font-mono">Frecuencia de uso</dt>
+            <dd className="text-fg text-sm sm:text-right">{FRECUENCIA_USO_LABEL[form.frecuenciaUso]}</dd>
+          </div>
         </dl>
 
         {error && <p className="mt-4 text-sm text-danger">{error}</p>}
@@ -201,6 +236,48 @@ export function SolicitarAcceso() {
             className="w-full px-3 py-2 rounded-md bg-ink-900 border border-line text-fg placeholder:text-muted text-sm focus:outline-none focus:border-accent/50"
             placeholder="Para qué vas a usar los datos de Rastro (proyecto, medio, investigación, entidad)."
           />
+        </div>
+
+        <div>
+          <label htmlFor="tipoUso" className="block text-sm text-fg-soft mb-1.5">
+            Tipo de uso
+          </label>
+          <select
+            id="tipoUso"
+            value={form.tipoUso}
+            onChange={(e) => setForm({ ...form, tipoUso: e.target.value as TipoUso })}
+            className="w-full px-3 py-2 rounded-md bg-ink-900 border border-line text-fg text-sm focus:outline-none focus:border-accent/50"
+          >
+            <option value="" disabled>
+              Selecciona una opción
+            </option>
+            {TIPOS_USO.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="frecuenciaUso" className="block text-sm text-fg-soft mb-1.5">
+            Frecuencia de uso esperada
+          </label>
+          <select
+            id="frecuenciaUso"
+            value={form.frecuenciaUso}
+            onChange={(e) => setForm({ ...form, frecuenciaUso: e.target.value as FrecuenciaUso })}
+            className="w-full px-3 py-2 rounded-md bg-ink-900 border border-line text-fg text-sm focus:outline-none focus:border-accent/50"
+          >
+            <option value="" disabled>
+              Selecciona una opción
+            </option>
+            {FRECUENCIAS_USO.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Honeypot anti-spam: oculto para una persona, visible para un bot que rellena todo campo del form. */}
