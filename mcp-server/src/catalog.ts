@@ -2900,7 +2900,6 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: ["capa", "objectid"],
     querySchema: {},
   },
-
   // ---- emergencias-indeci (SINPAD, emergencias históricas nacionales) ----
   {
     name: "emergencias_indeci",
@@ -2936,5 +2935,27 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathTemplate: "/api/emergencias/{id}",
     pathParams: ["id"],
     querySchema: {},
+  },
+  {
+    name: "emergencias_indeci_preparacion_riesgo",
+    app: "emergencias-indeci",
+    description:
+      "Cruce territorial (por distrito) entre historial de emergencias tipo El Niño (INDECI, peligro " +
+      "por defecto: LLUVIA INTENSA/INUNDACION/HUAYCO/DESLIZAMIENTO/EROSION) y proyectos de inversión de " +
+      "prevención (Invierte.pe, filtrados por nombre: defensa ribereña, descolmatación, drenaje pluvial, " +
+      "encauzamiento — NO exhaustivo, es búsqueda de texto, no una clasificación oficial), enriquecido con " +
+      "el estado de ejecución de esas obras en INFOBRAS (paralización, avance físico real). Requiere " +
+      "`INVERSIONES_DATABASE_URL`/`INFOBRAS_DATABASE_URL` configuradas o responde " +
+      "`ENRIQUECIMIENTO_NO_CONFIGURADO`. Solo coincidencia territorial y de texto — nunca causalidad, " +
+      "requiere revisión humana. Verificado en vivo 2026-09-21 contra LA LIBERTAD (único departamento con " +
+      "datos completos de las 3 fuentes en el snapshot local): 9 de los 10 distritos con más emergencias " +
+      "no tienen ningún proyecto de prevención en el pipeline; una defensa ribereña activa (río Chicama) " +
+      "está paralizada. Ver spike real en docs/spike-preparacion-riesgo-nino-2026-09.md. " + SIN_SCHEDULER,
+    pathTemplate: "/api/crossref/preparacion-riesgo",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Default LA LIBERTAD."),
+      peligros: z.string().min(1).optional().describe("Lista separada por comas; reemplaza el set default."),
+    },
   },
 ];
