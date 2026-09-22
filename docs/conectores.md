@@ -1087,6 +1087,30 @@ Investigado y construido 2026-09-22 (tickets ADS-01 desbloqueo + ADS-02 ingesta,
 
 ---
 
+<a id="emergencias-indeci"></a>
+## emergencias-indeci — Emergencias y daños históricos (INDECI/SINPAD)
+
+Investigado y construido 2026-09-22 (ticket ADS-05, `docs/BACKLOG_Organismos_Adscritos_Consolidado_v1.md`).
+
+### `indeci-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Emergencias y daños EDAN a nivel nacional (2003-2025) — inundaciones, huaicos, sismos, heladas, incendios, sequías (22 tipos de peligro), microdatos a nivel de evento individual, no agregado. |
+| **Fuente pública sin auth** | `GET .../sites/default/files/BD_2003-2025_EMERGENCIAS.csv` — CSV directo de `datosabiertos.gob.pe`, 25.79 MB, 142,139 filas, confirmado con `curl` directo. |
+| **Hallazgo real — codificación Latin-1, no UTF-8** | El archivo está en ISO-8859-1; decodificarlo como UTF-8 corrompe todos los caracteres acentuados (`"AÑO"` → `"A�O"`). El conector decodifica explícitamente con `latin1`. |
+| **Hallazgo real — dos formatos de fecha, documentados por la propia fuente** | `DD/MM/AAAA` (88.5% de filas) y `MM/DD/AA` con año de 2 dígitos (11.5% de filas) — distinguibles sin ambigüedad por longitud del año. Las 16,401 filas en el segundo formato son 100% consistentes con la columna `AÑO` tras expandir a `20YY` (verificado, 0 discrepancias). |
+| **Hallazgo real — el "código único" documentado por la fuente no lo es** | El diccionario de datos oficial llama a `CODIGO DE EMERGENCIA-SINPAD` "clave primaria transaccional". Es falso: 7 códigos se repiten entre eventos genuinamente distintos (verificado, no error de parseo). El conector no lo usa como clave — se guarda como `sinpad_id` informativo. |
+| **Sin clave estable → snapshot completo** | Archivo histórico republicado periódicamente, no API incremental. Cada ingesta: `DELETE` completo + `INSERT`, en una transacción con advisory lock — mismo criterio que `areas-protegidas`/`catastro-forestal`. |
+| **Sin PII** | Datos agregados de daños por evento/distrito (conteos), no registros nominales — sin nombres ni DNI en ninguna de las 49 columnas reales. |
+| **Frecuencia** | Manual (`npm run ingest:indeci` en `apps/emergencias-indeci/api`). Sin scheduler. |
+| **Fuente de datos** | `datosabiertos.gob.pe` (INDECI, derivado de SINPAD). |
+| **Cobertura real ingerida** | Verificado en vivo 2026-09-22: **142,139/142,139 filas insertadas, 0 rechazadas**. La Libertad: 2,853 filas (ej. heladas Julcán 2017: 760 damnificados, 45 viviendas destruidas). |
+| **API expuesta** | `GET /api/emergencias` (filtros `departamento`/`provincia`/`distrito`/`peligro`/`anio`, paginado con `total`/`hasMore`) y `GET /api/emergencias/{id}` (detalle por `id` interno, 404 si no existe). Registrada como tools MCP `emergencias_indeci`/`emergencias_indeci_detalle`. |
+| **Cruces** | Ninguno implementado todavía — candidato natural: impacto económico de emergencias cruzado contra `bcrp-la-libertad`/`radar-ejecucion`. |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada
