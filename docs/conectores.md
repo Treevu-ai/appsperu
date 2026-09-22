@@ -1038,6 +1038,30 @@ inmediatamente después de GEO-01 (catastro minero) — misma sesión, mismo pat
 
 ---
 
+<a id="senace-cartera-proyectos"></a>
+## senace-cartera-proyectos — Cartera de proyectos de certificación ambiental (SENACE)
+
+Investigado y construido 2026-09-21 (ticket ADS-04, `docs/BACKLOG_Organismos_Adscritos_Consolidado_v1.md`).
+
+### `senace-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Cartera de proyectos de certificación ambiental de SENACE — Clasificación, EIA-d, EIA-sd, MEIA-d, ITS, PPC, TdR y otros instrumentos, con titular, RUC, ubicación geográfica, resolución y estado. |
+| **Fuente pública sin auth** | `GET .../home/VistaDatos/JsonCarteraProyecto?q=<estado>` — endpoint real detrás de la grilla JS (Wijmo) del catálogo público `/home/CatalogoDatos/` de SENACE, confirmado reproducible con `curl` plano. **Dos sistemas distintos en el mismo dominio (hallazgo real, no confundir)**: la API documentada en `/Api/Help` (7 datastreams) exige un `auth_key` que no poseemos; este conector no la usa. |
+| **Hallazgo de seguridad (fuera de alcance, reportado por separado)** | Al confirmar que la API `/Api/` está gateada, se descubrió que la validación de `auth_key` es inconsistente entre datastreams: el datastream `Reclamos` de esa misma API expuso datos reales (DNI + nombre de ciudadanos) con un token de prueba inválido. Ver `docs/seguridad/senace-reporte-vulnerabilidad-2026-09-21.md`. Este conector no toca ese datastream ni ningún otro de `/Api/`. |
+| **Sin catálogo de estados válidos (hallazgo real)** | A diferencia del Congreso (que expone `GET /periodo-parlamentario`), SENACE no tiene un endpoint de descubrimiento — los 3 valores de `q` (`Aprobado`, `Desaprobado`, `En Evaluacion`) se confirmaron manualmente inspeccionando la grilla del portal. Un estado nuevo que SENACE agregue en el futuro no se detectaría automáticamente. |
+| **Clave real verificada** | `ID` (entero, campo `senace_id`) — confirmado único globalmente sobre las 1,870 filas combinando los 3 estados (0 duplicados). Un proyecto que cambia de estado (ej. "En Evaluación" → "Aprobado") se refleja como `UPDATE` de la misma fila, no como fila nueva; el borrado de "stale" está acotado al `estado` de cada corrida para no borrar un proyecto que simplemente cambió de estado entre ejecuciones. |
+| **`FECHA_INICIO` como texto `DD/MM/YYYY`** | La fuente no usa ISO — el conector lo parsea explícitamente a `YYYY-MM-DD`; un formato inesperado deja el campo en `null` sin rechazar la fila. |
+| **RUC inválido no rechaza la fila** | 7 de 1,870 filas reales (0.4%) no tienen RUC de 11 dígitos válido — se guarda `ruc: null`, la fila no se descarta. |
+| **Frecuencia** | Manual (`npm run ingest:senace` en `apps/senace-cartera-proyectos/api`). Sin scheduler. |
+| **Fuente de datos** | `datosabiertos.senace.gob.pe` (SENACE). |
+| **Cobertura real ingerida** | Verificado en vivo 2026-09-21: **1,870/1,870 filas insertadas, 0 rechazadas** (1,568 Aprobado + 176 Desaprobado + 126 En Evaluación). La Libertad: 68 coincidencias por texto, 197 dentro del bounding box geográfico aproximado del departamento (ej. proyectos viales en Virú, cantera Río Chicama - Autopista del Sol). |
+| **API expuesta** | `GET /api/proyectos` (filtros `estado`/`actividad`/`ruc`/`texto`, paginado con `total`/`hasMore`) y `GET /api/proyectos/{senaceId}` (detalle, 404 si no existe). Registrada como tools MCP `senace_cartera_proyectos`/`senace_cartera_proyecto_detalle`. |
+| **Cruces** | Ninguno implementado todavía — candidato natural: cruce por RUC contra `infracciones-ambientales` (OEFA) para perfil de riesgo ambiental de un titular, o contra `proveedores-sancionados` (OSCE). |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada

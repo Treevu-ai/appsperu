@@ -1,0 +1,113 @@
+export interface CanonicalProyecto {
+  senaceId: number;
+  titular: string | null;
+  ruc: string | null;
+  tituloProyecto: string | null;
+  unidadProyecto: string | null;
+  tipo: string | null;
+  actividad: string | null;
+  fechaInicio: string | null;
+  estado: string;
+  descripcion: string | null;
+  longitud: number | null;
+  latitud: number | null;
+  resolucion: string | null;
+}
+
+export interface RejectedRow {
+  raw: unknown;
+  reason: string;
+  /** `senaceId` cuando la fila tenía un ID válido pero se rechazó por otro campo (ej. ESTADO ausente). */
+  senaceId: number | null;
+}
+
+const RUC_PATTERN = /^\d{11}$/;
+const FECHA_DDMMYYYY = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+
+function toNullableString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function toNullableNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function toRuc(value: unknown): string | null {
+  const str = toNullableString(value);
+  return str && RUC_PATTERN.test(str) ? str : null;
+}
+
+/**
+ * La fuente devuelve `FECHA_INICIO` como texto `DD/MM/YYYY` (confirmado en vivo, ver
+ * docs/data-contracts/senace-cartera-proyectos.md) -- se convierte a `YYYY-MM-DD` para la
+ * columna `DATE`. Una fecha con formato inesperado no rechaza la fila -- solo queda `null`,
+ * igual que cualquier otro campo opcional.
+ *
+ * Valida que sea una fecha calendario real, no solo el patrón `DD/MM/YYYY` (hallazgo real de
+ * CodeRabbit): `31/02/2026` matchea el regex pero no existe -- sin esta validación, Postgres
+ * rechazaría el `INSERT` de la columna `DATE` y haría rollback de la ingesta completa del estado
+ * por una sola fecha inválida, en vez de solo dejar `fechaInicio: null` en esa fila.
+ */
+function toFechaInicio(value: unknown): string | null {
+  const str = toNullableString(value);
+  if (!str) return null;
+  const match = FECHA_DDMMYYYY.exec(str);
+  if (!match) return null;
+  const [, dd, mm, yyyy] = match;
+  const date = new Date(Date.UTC(Number(yyyy), Number(mm) - 1, Number(dd)));
+  const isRealDate =
+    date.getUTCFullYear() === Number(yyyy) &&
+    date.getUTCMonth() === Number(mm) - 1 &&
+    date.getUTCDate() === Number(dd);
+  return isRealDate ? `${yyyy}-${mm}-${dd}` : null;
+}
+
+export function normalizeProyectos(rawRows: readonly unknown[]): {
+  rows: CanonicalProyecto[];
+  rejected: RejectedRow[];
+} {
+  const rows: CanonicalProyecto[] = [];
+  const rejected: RejectedRow[] = [];
+
+  for (const entry of rawRows) {
+    // La fuente es JSON externo -- una entrada `null` u otra que no sea un objeto real haría que
+    // `raw.ID` lance antes de llegar a `rejected` (hallazgo real de CodeRabbit), en vez de
+    // rechazarse igual que cualquier otra fila malformada.
+    if (typeof entry !== "object" || entry === null) {
+      rejected.push({ raw: entry, reason: "La fila no es un objeto.", senaceId: null });
+      continue;
+    }
+    const raw = entry as Record<string, unknown>;
+
+    const senaceId = raw.ID;
+    if (typeof senaceId !== "number" || !Number.isInteger(senaceId)) {
+      rejected.push({ raw, reason: "ID ausente o no es un entero.", senaceId: null });
+      continue;
+    }
+    const estado = toNullableString(raw.ESTADO);
+    if (!estado) {
+      rejected.push({ raw, reason: "ESTADO ausente.", senaceId });
+      continue;
+    }
+
+    rows.push({
+      senaceId,
+      titular: toNullableString(raw.TITULAR),
+      ruc: toRuc(raw.RUC),
+      tituloProyecto: toNullableString(raw.TITULO_PROYECTO),
+      unidadProyecto: toNullableString(raw.UNIDAD_PROYECTO),
+      tipo: toNullableString(raw.TIPO),
+      actividad: toNullableString(raw.ACTIVIDAD),
+      fechaInicio: toFechaInicio(raw.FECHA_INICIO),
+      estado,
+      descripcion: toNullableString(raw.DESCRIPCION),
+      longitud: toNullableNumber(raw.LONGITUD),
+      latitud: toNullableNumber(raw.LATITUD),
+      resolucion: toNullableString(raw.RESOLUCION),
+    });
+  }
+
+  return { rows, rejected };
+}

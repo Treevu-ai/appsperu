@@ -1,0 +1,21 @@
+name: senace-cartera-proyectos
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: senace_cartera_proyectos
+      POSTGRES_PASSWORD: senace_cartera_proyectos
+      POSTGRES_DB: senace_cartera_proyectos
+    ports:
+      - "127.0.0.1:5464:5432"
+    volumes:
+      - senace_cartera_proyectos_pgdata:/var/lib/postgresql/data
+
+volumes:
+  senace_cartera_proyectos_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true

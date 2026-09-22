@@ -40,6 +40,7 @@ jobs:
           - apps/residuos-solidos/api
           - apps/salud-institucional/api
           - apps/seguridad-ciudadana/api
+          - apps/senace-cartera-proyectos/api
           - apps/servicios-salud/api
           - mcp-server
     defaults:
