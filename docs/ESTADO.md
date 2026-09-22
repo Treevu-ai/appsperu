@@ -2,6 +2,34 @@
 
 Última actualización: 2026-09-22.
 
+## Dos bugs de pérdida de datos corregidos en `sbn-supervision-connector.ts` (ceplan-geo, 2026-09-22)
+
+Investigando conectores fuera de emergencias-indeci ("sigamos investigando usando otras tools, tipo
+ceplan geo"), se encontraron y corrigieron dos bugs reales en el conector de supervisión de predios
+estatales de SBN (`apps/ceplan-geo/api/src/ingest/sbn-supervision-connector.ts`):
+
+1. **`zona_playa_protegida` subreportaba 73% de los casos reales.** El conector solo leía la
+   columna booleana dedicada del CSV, pero la fuente dejó de llenarla después de 2020-09-30 (última
+   fila con "Sí") sin avisar — y desde 2021 sigue reportando las mismas supervisiones bajo un texto
+   dedicado en la columna `actividad` ("SUPERVISAR ZONA DE PLAYA PROTEGIDA..."). El conector nunca
+   leía ese campo, así que reportaba una caída real de supervisiones de playa que nunca ocurrió.
+   Fix: `esZonaPlayaProtegida()` ahora detecta por los dos caminos. Confirmado en el parseo crudo
+   del CSV real: 279 casos totales (75 esquema viejo + 204 esquema nuevo), vs. 75 que el conector
+   viejo reportaba.
+2. **La clave de upsert `(numero_informe, cus)` pisaba filas silenciosamente.** Cuando un mismo
+   informe cubre más de un predio y el CSV deja `cus` vacío en varias de esas filas, todas colisionan
+   contra el `UNIQUE (numero_informe, cus)` y el `ON CONFLICT DO UPDATE` las sobrescribe entre sí —
+   de 1,762 filas fuente solo sobrevivían 1,384 en la tabla (24% perdido), incluyendo 134 de los 279
+   casos reales de playa protegida. Fix: migración `011_fix_sbn_supervision_unique_key.sql` cambia
+   la clave única a `item` (correlativo de fila del CSV fuente, único en las 1,762 filas verificado
+   en vivo) y el `ON CONFLICT` pasa a usar esa columna.
+
+Con ambos fixes y reingesta completa contra el CSV real: 1,762 filas en tabla (sin pérdida), 279
+casos de `zona_playa_protegida=true`, de los cuales **204/204 (100%)** de los posteriores a 2021
+muestran `resultado_supervision` = "OCUPADO" (ocupación ilegal de zona de dominio restringido) — la
+estimación previa de "79%" venía de una lectura parcial afectada por el bug #2, ya descartada.
+Ver `docs/conectores.md` para el detalle técnico del conector.
+
 ## Segundo departamento verificado — AREQUIPA — preparación de inversión frente a El Niño (2026-09-22)
 
 Misma verificación en vivo del cruce de abajo (INDECI × Invierte.pe × INFOBRAS), corrida ahora
