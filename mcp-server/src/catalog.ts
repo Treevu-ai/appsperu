@@ -2944,17 +2944,24 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "por defecto: LLUVIA INTENSA/INUNDACION/HUAYCO/DESLIZAMIENTO/EROSION) y proyectos de inversión de " +
       "prevención (Invierte.pe, filtrados por nombre: defensa ribereña, descolmatación, drenaje pluvial, " +
       "encauzamiento — NO exhaustivo, es búsqueda de texto, no una clasificación oficial), enriquecido con " +
-      "el estado de ejecución de esas obras en INFOBRAS (paralización, avance físico real), enriquecimiento " +
-      "opcional independiente: `obrasInfobras`/`obrasParalizadas` son `null` (no `0`) si `INFOBRAS_DATABASE_URL` " +
-      "no está configurada o la consulta falla en vivo (`infobrasEstado` en la respuesta lo indica). " +
-      "Requiere `INVERSIONES_DATABASE_URL` configurada o responde `ENRIQUECIMIENTO_NO_CONFIGURADO`. Solo " +
-      "coincidencia territorial y de texto (`matcherTerritorial`/`matcherProyectos` por separado) — nunca " +
-      "causalidad, requiere revisión humana. La ausencia de proyectos en un distrito significa que el filtro " +
-      "por nombre no detectó ninguno, no que el distrito no tenga proyectos de prevención reales. Verificado " +
-      "en vivo 2026-09-21 contra LA LIBERTAD (único departamento con datos completos de las 3 fuentes en el " +
-      "snapshot local): 9 de los 10 distritos con más emergencias no tienen proyectos de prevención " +
-      "detectados por este filtro; una defensa ribereña activa (río Chicama) está paralizada. Ver spike real " +
-      "en docs/spike-preparacion-riesgo-nino-2026-09.md. " + SIN_SCHEDULER,
+      "el estado de ejecución de esas obras en INFOBRAS (paralización, avance físico real) y, desde " +
+      "2026-09-22, con el volumen de contratación reciente en SEACE (`compras-publicas`, campo `seace`: " +
+      "`totalProcesos`/`procesosPrevencionPorTitulo` con el mismo filtro de keyword sobre `titulo`, agregado " +
+      "departamental no por distrito). Ambos enriquecimientos son opcionales e independientes: " +
+      "`obrasInfobras`/`obrasParalizadas` y `seace` son `null` (no `0`) si `INFOBRAS_DATABASE_URL`/" +
+      "`COMPRAS_DATABASE_URL` no están configuradas o la consulta falla en vivo (`infobrasEstado`/`seaceEstado` " +
+      "en la respuesta lo indican). Requiere `INVERSIONES_DATABASE_URL` configurada o responde " +
+      "`ENRIQUECIMIENTO_NO_CONFIGURADO`. Solo coincidencia territorial y de texto (`matcherTerritorial`/" +
+      "`matcherProyectos`/`matcherSeace` por separado) — nunca causalidad, requiere revisión humana. La " +
+      "ausencia de proyectos en un distrito significa que el filtro por nombre no detectó ninguno, no que el " +
+      "distrito no tenga proyectos de prevención reales. Verificado en vivo contra LA LIBERTAD (2026-09-21) y " +
+      "AREQUIPA (2026-09-22, segundo departamento con las 3 fuentes completas): en ambos, 0 procesos SEACE " +
+      "recientes (416 y 278 respectivamente) tocan prevención por título — mismo patrón repetido en 2 " +
+      "departamentos con perfiles de inversión muy distintos (19 vs. 69 proyectos identificados). LA LIBERTAD: " +
+      "9 de 10 distritos con más emergencias sin proyecto detectado, defensa ribereña del río Chicama " +
+      "paralizada desde 2015. AREQUIPA: 5 de 10 sin proyecto; una obra en Ocoña con 100% de avance físico " +
+      "sigue marcada paralizada desde 2020. Ver docs/spike-preparacion-riesgo-nino-2026-09.md y " +
+      "docs/ESTADO.md. " + SIN_SCHEDULER,
     pathTemplate: "/api/crossref/preparacion-riesgo",
     pathParams: [],
     querySchema: {
