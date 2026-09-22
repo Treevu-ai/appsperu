@@ -49,7 +49,13 @@ const RATE_LIMIT_PER_MINUTE = 30;
 const ACCESS_PROTECTED_ORIGIN = "https://api.rastro.fyi";
 
 import { checkRateLimit, clientIp, recordRateLimitExceeded } from "../lib/rate-limit.js";
-import searchIndex from "../../src/data/search-index.json" with { type: "json" };
+// Sin `with { type: "json" }`: Cloudflare Pages bundlea las Functions con un
+// wrangler interno más viejo (esbuild vía wrangler 3.x) que no soporta la
+// sintaxis de import attributes — falla con "Expected ';' but found 'with'"
+// y tumba el build de TODAS las Functions, no solo esta (incidente real,
+// 2026-09-22). esbuild soporta imports de .json de forma nativa sin el
+// atributo; Vite/Vitest también, así que local y prod quedan iguales.
+import searchIndex from "../../src/data/search-index.json";
 
 type SearchResultado = {
   tipo: "inversion" | "ruc" | "obra";
