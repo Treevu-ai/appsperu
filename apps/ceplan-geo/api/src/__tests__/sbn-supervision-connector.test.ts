@@ -1,4 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// parseCsv no toca la base, pero el módulo importa `pool` a nivel de módulo
+// (para ingestSbnSupervision) y `db/pool.js` lanza si DATABASE_URL no está
+// definida -- mockearlo evita que este test dependa de un Postgres real.
+vi.mock("../db/pool.js", () => ({
+  pool: { query: vi.fn(), connect: vi.fn() },
+}));
+
 import { parseCsv } from "../ingest/sbn-supervision-connector.js";
 
 const HEADER = "Item;Tipo de informe;N° de Informe;Fecha de Emisión;Actividad;Departamento;Provincia;Distrito;CUS;Área Supervisada (m2);Resultado de la Supervisión;Titular del Predio;Zona de Playa Protegida";
