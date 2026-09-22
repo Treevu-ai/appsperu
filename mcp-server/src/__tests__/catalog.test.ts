@@ -96,7 +96,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
   "catastro-minero": ["catastro_minero_derechos", "catastro_minero_derecho_detalle"],
   "areas-protegidas": ["areas_protegidas_areas", "areas_protegidas_area_detalle"],
   "senace-cartera-proyectos": ["senace_cartera_proyectos", "senace_cartera_proyecto_detalle"],
-  "catastro-forestal": ["catastro_forestal_titulos", "catastro_forestal_titulo_detalle"],
+  "catastro-forestal": ["catastro_forestal_titulos", "catastro_forestal_titulo_detalle", "catastro_forestal_conflicto_uso_suelo"],
   "emergencias-indeci": ["emergencias_indeci", "emergencias_indeci_detalle"],
   "autoridades-electas": ["autoridades_electas_autoridades"],
   "instituciones-educativas": [
