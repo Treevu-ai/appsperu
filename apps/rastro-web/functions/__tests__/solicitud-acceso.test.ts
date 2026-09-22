@@ -24,6 +24,8 @@ const VALIDO = {
   correo: "ricardo@example.com",
   telefono: "+51 999 999 999",
   motivo: "Necesito consultar contratos públicos de La Libertad para un reportaje de investigación periodística.",
+  tipoUso: "prensa",
+  frecuenciaUso: "ocasional",
 };
 
 function makeContext(body: unknown, env: Partial<PagesEnv> = {}): PagesEventContext {
@@ -95,6 +97,22 @@ describe("POST /api/solicitud-acceso", () => {
 
   it("rechaza motivo demasiado corto", async () => {
     const res = await onRequestPost(makeContext({ ...VALIDO, motivo: "muy corto" }));
+    expect(res.status).toBe(400);
+  });
+
+  it("rechaza tipoUso fuera del enum permitido", async () => {
+    const res = await onRequestPost(makeContext({ ...VALIDO, tipoUso: "otro" }));
+    expect(res.status).toBe(400);
+  });
+
+  it("rechaza frecuenciaUso fuera del enum permitido", async () => {
+    const res = await onRequestPost(makeContext({ ...VALIDO, frecuenciaUso: "diaria" }));
+    expect(res.status).toBe(400);
+  });
+
+  it("rechaza solicitud sin tipoUso", async () => {
+    const { tipoUso, ...sinTipoUso } = VALIDO;
+    const res = await onRequestPost(makeContext(sinTipoUso));
     expect(res.status).toBe(400);
   });
 
