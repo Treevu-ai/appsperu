@@ -9,7 +9,9 @@
       "nivel",
       "funcion",
       "anio",
-      "ubigeo"
+      "ubigeo",
+      "departamento",
+      "metaDepartamento"
     ],
     "sinScheduler": true
   },
@@ -804,7 +806,8 @@
     "queryParams": [
       "departamento",
       "estado",
-      "conParalizacion"
+      "conParalizacion",
+      "distritoSospechoso"
     ],
     "sinScheduler": true
   },
@@ -1018,7 +1021,10 @@
     "description": "Infraestructura publicada por CEPLAN: aeropuertos, puertos, red hídrica principal (cb_redhidricaprinx) y proyectos sectoriales agro (ip_prysecagr). Filtro opcional por código INEI de departamento (2 dígitos). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/infrastructure",
     "pathParams": [],
-    "queryParams": [],
+    "queryParams": [
+      "type",
+      "departamento"
+    ],
     "sinScheduler": true
   },
   {
@@ -1029,7 +1035,8 @@
     "pathParams": [],
     "queryParams": [
       "ubigeo",
-      "radius_km"
+      "radius_km",
+      "type"
     ],
     "sinScheduler": true
   },
@@ -2255,6 +2262,7 @@
     "pathTemplate": "/api/areas",
     "pathParams": [],
     "queryParams": [
+      "capa",
       "nombre",
       "ubicacion",
       "categoria",
@@ -2309,6 +2317,7 @@
     "pathTemplate": "/api/titulos",
     "pathParams": [],
     "queryParams": [
+      "capa",
       "nomDep",
       "nomPro",
       "nomDis",

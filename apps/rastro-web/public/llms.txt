@@ -20,7 +20,7 @@ Rastro es una plataforma de trazabilidad sobre datos abiertos del Estado peruano
 
 ## Para agentes IA (MCP)
 
-Rastro expone un servidor MCP (Model Context Protocol) con **<!-- COUNT:TOOL_COUNT -->189<!-- /COUNT --> tools de solo lectura** sobre inversión pública peruana. Compatible con:
+Rastro expone un servidor MCP (Model Context Protocol) con **<!-- COUNT:TOOL_COUNT -->189<!-- /COUNT --> tools de solo lectura** sobre inversión pública, identidad y sanciones, justicia, educación, legislativo, medio ambiente, recursos territoriales y emergencias del Estado peruano. Compatible con:
 
 - Claude Code (`claude mcp add rastro -- node /ruta/al/repo/mcp-server/dist/index.js`)
 - Claude Desktop (`claude_desktop_config.json`)
@@ -28,7 +28,7 @@ Rastro expone un servidor MCP (Model Context Protocol) con **<!-- COUNT:TOOL_COU
 - Windsurf
 - Cline / Continue.dev
 
-El servidor usa transporte **stdio** y expone solo 2 tools MCP —
+En producción, el servidor usa transporte **Streamable HTTP** en `https://mcp.rastro.fyi/mcp` y requiere el header **`x-api-key`**. Para desarrollo local, usa transporte **stdio**. Expone solo 2 tools MCP —
 **`rastro_buscar_tools(query?, app?, limit?)`** busca por palabra clave/app entre las <!-- COUNT:TOOL_COUNT -->189<!-- /COUNT -->
 entradas del catálogo, **`rastro_llamar(tool, args?)`** ejecuta el nombre exacto encontrado — en vez de registrar
 los tools individualmente (ver `mcp-server/README.md`). El agente busca, encadena resultados, razona sobre
@@ -98,6 +98,16 @@ Rastro NO genera ni infiere datos. Cada cifra viene verbatim de una API del repo
 - red-vial-subnacional (MTC, red vial subnacional)
 - residuos-solidos (MINAM, residuos sólidos)
 - infraestructura-mtc (MTC, infraestructura de transportes)
+- riesgo-fiscal-isds (MEF, pasivos contingentes ISDS/APP)
+- candidatos-erm (JNE/Datapol, candidatos ERM 2026)
+- poder-judicial (Poder Judicial, estadística jurisdiccional)
+- violencia-escolar (MINEDU/SíseVe, casos reportados)
+- legislativo-congreso (Congreso, proyectos de ley)
+- catastro-minero (INGEMMET, derechos mineros)
+- areas-protegidas (SERNANP, áreas naturales protegidas)
+- senace-cartera-proyectos (SENACE, certificación ambiental)
+- catastro-forestal (SERFOR, catastro forestal)
+- emergencias-indeci (INDECI/SINPAD, emergencias históricas)
 
 ## Persona y proyecto
 

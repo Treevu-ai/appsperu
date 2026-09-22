@@ -46,6 +46,15 @@ Rastro es una plataforma de inteligencia que ayuda a equipos y organizaciones a 
 | `residuos-solidos` | Generación anual de residuos sólidos por distrito, serie 2019-2024 (MINAM/SIGERSOL) | 4025 |
 | `infraestructura-mtc` | Terminales portuarios, aeródromos y peajes de la red vial nacional (MTC) | 4026 |
 | `riesgo-fiscal-isds` | Pasivos contingentes explícitos por ISDS/APP, por año de cierre (MEF, MMM/IAPM) — conector `pdf-parse`, descarga manual | 4027 |
+| `candidatos-erm` | Candidatos a las Elecciones Regionales y Municipales 2026 (JNE/Datapol) | 4027 |
+| `poder-judicial` | Estadística jurisdiccional de procesos judiciales (Poder Judicial) | 4028 |
+| `violencia-escolar` | Casos reportados a SíseVe (MINEDU) | 4029 |
+| `legislativo-congreso` | Proyectos de ley del Congreso de la República | 4030 |
+| `catastro-minero` | Derechos mineros (INGEMMET) | 4031 |
+| `areas-protegidas` | Áreas naturales protegidas (SERNANP) | 4032 |
+| `senace-cartera-proyectos` | Cartera de proyectos de certificación ambiental (SENACE) | 4033 |
+| `catastro-forestal` | Catastro forestal — modalidad de acceso + ordenamiento forestal (SERFOR) | 4034 |
+| `emergencias-indeci` | Emergencias y daños históricos (INDECI/SINPAD) | 4035 |
 
 ## Levantar una app
 
@@ -64,7 +73,7 @@ de las otras bases y `npm run dev`.
 
 [`mcp-server/`](mcp-server/) expone las 37 apps como **189 tools de solo lectura**, buscables desde
 2 meta-tools (`rastro_buscar_tools` + `rastro_llamar`, no registrados uno por uno) para agentes IA
-vía MCP (transporte stdio). Compatible con Claude Code, Claude Desktop, Cursor, Windsurf, Cline y
+vía MCP en producción (`https://mcp.rastro.fyi/mcp`, transporte Streamable HTTP y header `x-api-key`). Para desarrollo local, usa transporte stdio. Compatible con Claude Code, Claude Desktop, Cursor, Windsurf, Cline y
 Continue.dev. Una vez conectado, el agente busca el tool exacto, lo ejecuta, encadena resultados y
 entrega respuestas con citas verificables. Requiere que las apps ya estén corriendo — ver
 [`mcp-server/README.md`](mcp-server/README.md).

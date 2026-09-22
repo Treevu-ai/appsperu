@@ -19,7 +19,7 @@ el MCP.
 
 - **URL producción:** https://rastro.fyi/
 - **Stack:** Vite 8 + React 19 + TypeScript 6 + React Router 7 + Tailwind v4
-- **MCP:** <!-- COUNT:TOOL_COUNT -->189<!-- /COUNT --> tools de solo lectura, transporte stdio
+- **MCP producción:** <!-- COUNT:TOOL_COUNT -->189<!-- /COUNT --> tools de solo lectura, transporte Streamable HTTP en `https://mcp.rastro.fyi/mcp`, autenticado con `x-api-key`; transporte stdio disponible para desarrollo local
 - **Hosting:** Cloudflare Pages (proyecto `rastro`)
 
 ## Estructura
