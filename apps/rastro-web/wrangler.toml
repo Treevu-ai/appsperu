@@ -1,8 +1,12 @@
-# Configuración local / deploy manual con wrangler CLI desde apps/rastro-web/.
-# Para Cloudflare Workers Builds (Git deploy desde la raíz del monorepo),
-# usa el wrangler.toml de la raíz del repo + scripts/cloudflare-rastro-deploy.sh.
-#
-# Deploys via Git (Pages clásico) usan public/_redirects y public/_headers.
+# Config de Cloudflare Pages para rastro-web. Usada para `wrangler pages dev`
+# / deploy manual desde apps/rastro-web/ — Y TAMBIÉN por el deploy real vía
+# Git: Cloudflare resuelve el wrangler.toml más cercano al build output
+# directory (apps/rastro-web/dist), no el de la raíz del repo, pase lo que
+# diga cualquier comentario viejo por acá abajo (confirmado con el incidente
+# de ACCESS_REQUESTS del 2026-09-22 — ver ese bloque más abajo). Cualquier
+# `[[kv_namespaces]]` que se agregue acá AFECTA producción — si ese mismo
+# binding ya existe en el dashboard (Settings → Functions → KV namespace
+# bindings), el publish de TODAS las Functions falla.
 #   - `wrangler pages dev dist`  → simular el entorno Pages en local
 #   - `wrangler pages deploy dist --project-name=rastro` → deploy manual
 #
@@ -26,21 +30,28 @@ id = "da7766279cc54ba5817e338b76eb3ef1"
 
 # functions/api/solicitud-acceso.ts (formulario /solicitar-acceso) — guarda
 # cada solicitud de sk-rastro-* para revisión manual (nombre, correo,
-# teléfono, motivo). Creado 2026-09-22 con `wrangler kv namespace create
-# ACCESS_REQUESTS`; binding equivalente ya agregado también en Cloudflare
-# Pages → Settings → Functions → KV namespace bindings (deploy vía Git),
-# igual que RATE_LIMIT. Retención: 90 días (expirationTtl en
+# teléfono, motivo). Retención: 90 días (expirationTtl en
 # functions/api/solicitud-acceso.ts) — no persiste PII indefinidamente.
-[[kv_namespaces]]
-binding = "ACCESS_REQUESTS"
-id = "139c606fcfb94b71a31606228224ff01"
+#
+# NO declarado acá a propósito (2026-09-22, incidente real): este archivo SÍ
+# lo lee el deploy real vía Git — contra lo que decía el comentario de
+# cabecera de más arriba — porque Cloudflare Pages resuelve el wrangler.toml
+# más cercano al build output directory (apps/rastro-web/dist), no el de la
+# raíz del repo. Declarar ACCESS_REQUESTS acá Y en el dashboard (Settings →
+# Functions → KV namespace bindings, donde ya vive) rompió el publish de
+# TODAS las Functions con "Binding name 'ACCESS_REQUESTS' already in use" —
+# tumbó /api/search también, no solo este endpoint. El namespace real es
+# 139c606fcfb94b71a31606228224ff01; queda solo en el dashboard.
 
-# Este archivo es solo para `wrangler pages dev` / deploy manual desde
-# apps/rastro-web/ (ver comentario de cabecera). El deploy real vía Git
-# (Cloudflare Workers Builds) lee el wrangler.toml de la raíz del repo —
-# ahí viven las 3 VITE_API_BASE_URL_* de producción, NO acá, para que
-# `wrangler pages dev` sin `.dev.vars` configurado no golpee accidentalmente
-# las APIs en vivo — usa `.dev.vars.example` como base para tu `.dev.vars`.
+# Las 3 VITE_API_BASE_URL_* de producción viven en `[vars]` del wrangler.toml
+# de la RAÍZ del repo, no acá — a diferencia de los `[[kv_namespaces]]` de
+# arriba, que si aplican desde este archivo (ver comentario de cabecera). No
+# se han visto duplicados entre ambos wrangler.toml para estas 3 vars, pero
+# no está confirmado con la misma certeza que el caso de KV — si algún día
+# una de ellas también rompe el build con "already in use" o similar, es la
+# misma causa. Localmente, `wrangler pages dev` sin `.dev.vars` configurado
+# no golpea accidentalmente las APIs en vivo — usa `.dev.vars.example` como
+# base para tu `.dev.vars`.
 #
 # CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET — Cloudflare Access Service
 # Token (secreto, NO va en ningún wrangler.toml). Se configura en el
