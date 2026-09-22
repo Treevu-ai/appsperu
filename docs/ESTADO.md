@@ -1,6 +1,23 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-09-14.
+Última actualización: 2026-09-21.
+
+## Conflicto de uso de suelo forestal × minero (2026-09-21)
+
+Segundo cruce nuevo de la sesión, elegido explícitamente porque no dependía de la ingesta de
+Invierte.pe (MEF) que estaba bloqueada por un archivo fuente en 0 bytes. Nuevo endpoint
+`GET /api/crossref/conflicto-uso-suelo` en `catastro-forestal` (ticket CFM-01/02/03,
+`docs/BACKLOG_Conflicto_Uso_Suelo_Forestal_Minero_v1.md`): une concesiones forestales vigentes de
+SERFOR con derechos mineros titulados de INGEMMET, por distrito, traduciendo los códigos UBIGEO de
+SERFOR (hallazgo real: `nom_dep`/`nom_pro`/`nom_dis` son UBIGEO, no nombres, en 9 de 10 capas) vía
+`territories` de ceplan-geo.
+
+Verificado en vivo contra MADRE DE DIOS (departamento con más datos del país): el distrito de
+Huepetuhe — zona de minería informal ampliamente documentada públicamente — tiene 190 derechos
+mineros titulados (32,105 ha) coexistiendo con 5 concesiones forestales vigentes (32,957 ha),
+superficies casi idénticas. Sin geometría real de por medio (ninguna de las dos fuentes la trae en
+este conector): el cruce es por coincidencia de distrito, no superposición de polígonos. Tool MCP
+`catastro_forestal_conflicto_uso_suelo`. 35/35 tests verdes en `catastro-forestal`, build limpio.
 
 ## CX-01 minor_contracts expuesto en GORE La Libertad (2026-09-14)
 
