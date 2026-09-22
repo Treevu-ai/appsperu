@@ -2,17 +2,17 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { DataFreshnessBar } from "./DataFreshnessBar.js";
 
-// Buscar / Proveedores / Auditoría / Datos abiertos PE se sacaron del nav
-// (2026-09-22): eran tabs del modelo viejo de "dashboard público explorable"
-// — no encajan con el modelo actual de vender acceso sk-rastro por
-// solicitud (ver Home.tsx). Las rutas siguen existiendo, solo dejaron de
-// promocionarse en el nav.
-const NAV = [{ to: "/gore/la-libertad", label: "GORE La Libertad" }];
+// Buscar / Proveedores / Auditoría / Datos abiertos PE / GORE La Libertad
+// se sacaron del nav (2026-09-22): eran tabs del modelo viejo de "dashboard
+// público explorable" — no encajan con el modelo actual de vender acceso
+// sk-rastro por solicitud (ver Home.tsx). Las rutas siguen existiendo, solo
+// dejaron de promocionarse en el nav. Queda un solo link, "Docs API" — el
+// único destino que le sirve a alguien que todavía no decidió pedir la key
+// (evaluar si el catálogo de tools le sirve antes de comprometerse).
+const NAV = [{ to: "/docs/api", label: "Docs API" }];
 
-const FOOTER_LINKS = [
-  { to: "/estado", label: "Estado" },
-  { to: "/docs/api", label: "Docs API" },
-];
+// "Docs API" ya está promovido al nav principal arriba — no se repite acá.
+const FOOTER_LINKS = [{ to: "/estado", label: "Estado" }];
 
 export function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -43,10 +43,9 @@ export function Layout() {
             </span>
           </NavLink>
 
-          {/* Nav desktop: ≥ lg — a `sm` (640px) 5 ítems con "GORE La Libertad" desbordan
-              el header (confirmado visualmente, no solo en teoría); el corte sube a `lg`
-              (1024px) para que el rango 640-1023px use el menú hamburguesa en vez de
-              apretar 5 links en una fila sin wrap. */}
+          {/* Nav desktop: ≥ lg. Con un solo item ("Docs API") ya no desborda a `sm`
+              como pasaba con los 5 tabs viejos, pero se deja el mismo corte de
+              breakpoint — cambiarlo es un rediseño de header aparte, no este ajuste. */}
           <nav className="hidden lg:flex items-center gap-1 text-sm">
             {NAV.map((item) => (
               <NavLink
