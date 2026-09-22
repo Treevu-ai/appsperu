@@ -1,12 +1,15 @@
 # Config de Cloudflare Pages para rastro-web. Usada para `wrangler pages dev`
 # / deploy manual desde apps/rastro-web/ — Y TAMBIÉN por el deploy real vía
 # Git: Cloudflare resuelve el wrangler.toml más cercano al build output
-# directory (apps/rastro-web/dist), no el de la raíz del repo, pase lo que
-# diga cualquier comentario viejo por acá abajo (confirmado con el incidente
-# de ACCESS_REQUESTS del 2026-09-22 — ver ese bloque más abajo). Cualquier
-# `[[kv_namespaces]]` que se agregue acá AFECTA producción — si ese mismo
-# binding ya existe en el dashboard (Settings → Functions → KV namespace
-# bindings), el publish de TODAS las Functions falla.
+# directory (apps/rastro-web/dist), no el de la raíz del repo. Este archivo
+# es la ÚNICA fuente de verdad para `[[kv_namespaces]]` — el proyecto
+# también requiere `root_dir = "apps/rastro-web"` en la config del dashboard
+# (Settings → Builds) para que Cloudflare encuentre `functions/`; sin eso
+# TODAS las Functions caen al fallback SPA en silencio (incidente real del
+# 2026-09-22, 3 causas encadenadas: root_dir mal puesto, un `with { type:
+# "json" }` que el bundler interno de Pages no soporta, y este archivo
+# vs. el dashboard desincronizados — ver el bloque de ACCESS_REQUESTS más
+# abajo para el detalle del tercero).
 #   - `wrangler pages dev dist`  → simular el entorno Pages en local
 #   - `wrangler pages deploy dist --project-name=rastro` → deploy manual
 #
@@ -33,15 +36,18 @@ id = "da7766279cc54ba5817e338b76eb3ef1"
 # teléfono, motivo). Retención: 90 días (expirationTtl en
 # functions/api/solicitud-acceso.ts) — no persiste PII indefinidamente.
 #
-# NO declarado acá a propósito (2026-09-22, incidente real): este archivo SÍ
-# lo lee el deploy real vía Git — contra lo que decía el comentario de
-# cabecera de más arriba — porque Cloudflare Pages resuelve el wrangler.toml
-# más cercano al build output directory (apps/rastro-web/dist), no el de la
-# raíz del repo. Declarar ACCESS_REQUESTS acá Y en el dashboard (Settings →
-# Functions → KV namespace bindings, donde ya vive) rompió el publish de
-# TODAS las Functions con "Binding name 'ACCESS_REQUESTS' already in use" —
-# tumbó /api/search también, no solo este endpoint. El namespace real es
-# 139c606fcfb94b71a31606228224ff01; queda solo en el dashboard.
+# SÍ declarado acá (2026-09-22, tercer episodio del mismo incidente):
+# resulta que este archivo NO solo se lee — Cloudflare SINCRONIZA
+# deployment_configs.production.kv_namespaces del dashboard para que
+# coincida exactamente con lo que hay acá, cada build. Quitarlo de acá
+# (creyendo que "ya vivía en el dashboard") lo borró también del dashboard
+# en el siguiente deploy → env.ACCESS_REQUESTS quedó undefined en runtime →
+# 500 en cada POST a /api/solicitud-acceso. wrangler.toml es la única
+# fuente de verdad real para bindings en este proyecto; el dashboard es un
+# espejo, no una config independiente. No lo quites de acá de nuevo.
+[[kv_namespaces]]
+binding = "ACCESS_REQUESTS"
+id = "139c606fcfb94b71a31606228224ff01"
 
 # Las 3 VITE_API_BASE_URL_* de producción viven en `[vars]` del wrangler.toml
 # de la RAÍZ del repo, no acá — a diferencia de los `[[kv_namespaces]]` de
