@@ -17,3 +17,13 @@ export const inversionesPool = process.env.INVERSIONES_DATABASE_URL
 export const infobrasPool = process.env.INFOBRAS_DATABASE_URL
   ? new Pool({ connectionString: process.env.INFOBRAS_DATABASE_URL })
   : null;
+
+/**
+ * Cruce SEACE (2026-09-22, ver docs/ESTADO.md): confirma si hay contratación
+ * pública reciente de infraestructura de prevención, mismo filtro de keyword
+ * que `investments`. Enriquecimiento opcional, igual que los dos de arriba —
+ * sin configurar, `seaceEstado: "NO_CONFIGURADO"` y no rompe el endpoint.
+ */
+export const comprasPool = process.env.COMPRAS_DATABASE_URL
+  ? new Pool({ connectionString: process.env.COMPRAS_DATABASE_URL })
+  : null;

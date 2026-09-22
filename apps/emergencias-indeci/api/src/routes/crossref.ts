@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db/pool.js";
-import { inversionesPool, infobrasPool } from "../db/external-pools.js";
+import { inversionesPool, infobrasPool, comprasPool } from "../db/external-pools.js";
 import { asyncHandler } from "../lib/async-handler.js";
 import { parseQuery } from "../lib/validate-query.js";
 
@@ -113,6 +113,38 @@ crossrefRouter.get(
      * cliente no puede distinguir de una ausencia de obras confirmada.
      */
     let infobrasEstado: "OK" | "NO_CONFIGURADO" | "NO_DISPONIBLE" = infobrasPool ? "OK" : "NO_CONFIGURADO";
+
+    /**
+     * Cruce SEACE, formalizado 2026-09-22 (antes verificación manual, ver docs/ESTADO.md):
+     * mismo filtro de keyword que `investments`, contra `procurement_processes.titulo` de
+     * `compras-publicas`. Agregado departamental, no por distrito -- el hallazgo real (0
+     * coincidencias en La Libertad y Arequipa) es sobre el total de contratación reciente del
+     * departamento, no algo que tenga valor desglosado por distrito con un conteo tan bajo.
+     * Enriquecimiento opcional, mismo patrón tri-estado que infobrasEstado: no bloquea el
+     * endpoint si compras-publicas no está configurado o falla en vivo.
+     */
+    let seaceEstado: "OK" | "NO_CONFIGURADO" | "NO_DISPONIBLE" = comprasPool ? "OK" : "NO_CONFIGURADO";
+    let seace: { totalProcesos: number; procesosPrevencionPorTitulo: number } | null = null;
+    if (comprasPool) {
+      try {
+        const seaceKeywordConditions = KEYWORDS_PREVENCION.map((_, i) => `titulo ILIKE $${i + 2}`).join(" OR ");
+        const { rows: seaceRows } = await comprasPool.query<{ total_procesos: string; procesos_prevencion: string }>(
+          `SELECT COUNT(*) AS total_procesos,
+                  COUNT(*) FILTER (WHERE ${seaceKeywordConditions}) AS procesos_prevencion
+           FROM procurement_processes
+           WHERE departamento = $1`,
+          [departamento, ...KEYWORDS_PREVENCION.map((k) => `%${k}%`)]
+        );
+        seace = {
+          totalProcesos: Number(seaceRows[0]?.total_procesos ?? 0),
+          procesosPrevencionPorTitulo: Number(seaceRows[0]?.procesos_prevencion ?? 0),
+        };
+      } catch (err) {
+        console.error("No se pudo cruzar contra compras-publicas (enriquecimiento opcional):", err instanceof Error ? err.message : err);
+        seaceEstado = "NO_DISPONIBLE";
+      }
+    }
+
     try {
       const keywordConditions = KEYWORDS_PREVENCION.map((_, i) => `nombre ILIKE $${i + 2}`).join(" OR ");
       const { rows: investmentRows } = await inversionesPool.query<{
@@ -217,10 +249,13 @@ crossrefRouter.get(
       peligrosConsultados: peligros,
       matcherTerritorial: "territorial_texto_distrito",
       matcherProyectos: "nombre_keyword",
+      matcherSeace: "titulo_keyword",
       exhaustivo: false,
       infobrasEstado,
+      seaceEstado,
+      seace,
       restriccion:
-        "Coincidencia territorial (mismo nombre de distrito) y de texto libre en el nombre del proyecto de inversión -- no implica causalidad. La ausencia de proyectos en un distrito significa que el filtro por nombre no detectó ninguno, no que el distrito no tenga proyectos de prevención reales (el filtro puede tener falsos negativos). Requiere revisión humana, mismo estándar que el resto del catálogo.",
+        "Coincidencia territorial (mismo nombre de distrito) y de texto libre en el nombre del proyecto de inversión -- no implica causalidad. La ausencia de proyectos en un distrito significa que el filtro por nombre no detectó ninguno, no que el distrito no tenga proyectos de prevención reales (el filtro puede tener falsos negativos). El cruce SEACE (`seace`) es agregado departamental sobre `procurement_processes.titulo`, misma limitación de texto libre no exhaustivo, y solo cubre la ventana de datos ingerida (no la historia completa de contrataciones). Requiere revisión humana, mismo estándar que el resto del catálogo.",
       totalDistritos: distritos.length,
       distritos,
       proyectosSinDistritoAsignado,
