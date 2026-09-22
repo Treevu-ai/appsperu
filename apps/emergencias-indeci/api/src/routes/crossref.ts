@@ -46,10 +46,17 @@ interface ProyectoPrevencion {
   estado: string | null;
   montoViable: number | null;
   costoActualizado: number | null;
-  obrasInfobras: number;
-  obrasParalizadas: number;
+  obrasInfobras: number | null;
+  obrasParalizadas: number | null;
   avanceFisicoRealPromedio: number | null;
 }
+
+/**
+ * Invierte.pe usa este valor literal para inversiones que abarcan más de un distrito (ver
+ * spike). No es un distrito real -- se excluye de `proyectosPorDistrito`/`totalDistritos` y se
+ * reporta aparte en `proyectosSinDistritoAsignado`, hallazgo real de CodeRabbit.
+ */
+const DISTRITO_SENTINEL_MULTIDISTRITO = "- TODOS -";
 
 crossrefRouter.get(
   "/preparacion-riesgo",
@@ -99,6 +106,13 @@ crossrefRouter.get(
     );
 
     let proyectosPorDistrito = new Map<string, ProyectoPrevencion[]>();
+    let proyectosSinDistritoAsignado: ProyectoPrevencion[] = [];
+    /**
+     * Distingue "consultamos INFOBRAS y confirmamos 0 obras" de "no pudimos consultar INFOBRAS"
+     * -- hallazgo real de CodeRabbit: antes ambos casos reportaban `obrasInfobras: 0`, lo que un
+     * cliente no puede distinguir de una ausencia de obras confirmada.
+     */
+    let infobrasEstado: "OK" | "NO_CONFIGURADO" | "NO_DISPONIBLE" = infobrasPool ? "OK" : "NO_CONFIGURADO";
     try {
       const keywordConditions = KEYWORDS_PREVENCION.map((_, i) => `nombre ILIKE $${i + 2}`).join(" OR ");
       const { rows: investmentRows } = await inversionesPool.query<{
@@ -147,13 +161,14 @@ crossrefRouter.get(
           );
         } catch (err) {
           console.error("No se pudo cruzar contra infobras (enriquecimiento opcional):", err instanceof Error ? err.message : err);
+          infobrasEstado = "NO_DISPONIBLE";
         }
       }
 
       proyectosPorDistrito = new Map();
       for (const r of investmentRows) {
-        if (!r.distrito) continue;
-        const obra = obrasPorCui.get(r.cui) ?? { obras: 0, obrasParalizadas: 0, avanceFisicoRealPromedio: null };
+        const obra = obrasPorCui.get(r.cui);
+        const infobrasConfiable = infobrasEstado === "OK";
         const proyecto: ProyectoPrevencion = {
           cui: r.cui,
           distrito: r.distrito,
@@ -161,10 +176,18 @@ crossrefRouter.get(
           estado: r.estado,
           montoViable: r.monto_viable === null ? null : Number(r.monto_viable),
           costoActualizado: r.costo_actualizado === null ? null : Number(r.costo_actualizado),
-          obrasInfobras: obra.obras,
-          obrasParalizadas: obra.obrasParalizadas,
-          avanceFisicoRealPromedio: obra.avanceFisicoRealPromedio,
+          obrasInfobras: infobrasConfiable ? obra?.obras ?? 0 : null,
+          obrasParalizadas: infobrasConfiable ? obra?.obrasParalizadas ?? 0 : null,
+          avanceFisicoRealPromedio: infobrasConfiable ? obra?.avanceFisicoRealPromedio ?? null : null,
         };
+        if (!r.distrito) {
+          proyectosSinDistritoAsignado.push(proyecto);
+          continue;
+        }
+        if (r.distrito === DISTRITO_SENTINEL_MULTIDISTRITO) {
+          proyectosSinDistritoAsignado.push(proyecto);
+          continue;
+        }
         if (!proyectosPorDistrito.has(r.distrito)) proyectosPorDistrito.set(r.distrito, []);
         proyectosPorDistrito.get(r.distrito)!.push(proyecto);
       }
@@ -192,12 +215,15 @@ crossrefRouter.get(
     res.json({
       departamento,
       peligrosConsultados: peligros,
-      matcher: "territorial_texto_distrito",
+      matcherTerritorial: "territorial_texto_distrito",
+      matcherProyectos: "nombre_keyword",
       exhaustivo: false,
+      infobrasEstado,
       restriccion:
-        "Coincidencia territorial (mismo nombre de distrito) y de texto libre en el nombre del proyecto de inversión -- no implica causalidad ni que la lista de proyectos de prevención sea exhaustiva (el filtro por nombre puede tener falsos negativos). Requiere revisión humana, mismo estándar que el resto del catálogo.",
+        "Coincidencia territorial (mismo nombre de distrito) y de texto libre en el nombre del proyecto de inversión -- no implica causalidad. La ausencia de proyectos en un distrito significa que el filtro por nombre no detectó ninguno, no que el distrito no tenga proyectos de prevención reales (el filtro puede tener falsos negativos). Requiere revisión humana, mismo estándar que el resto del catálogo.",
       totalDistritos: distritos.length,
       distritos,
+      proyectosSinDistritoAsignado,
     });
   })
 );

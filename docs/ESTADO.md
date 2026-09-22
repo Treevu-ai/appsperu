@@ -12,11 +12,15 @@ aislar Gestión de Riesgo de Desastres) y su estado de ejecución real en INFOBR
 
 Verificado en vivo contra LA LIBERTAD (único departamento con las 3 fuentes completas en el
 snapshot local de desarrollo): de los 10 distritos con más emergencias históricas, **9 no tienen
-ningún proyecto de prevención en el pipeline**; el único que sí tiene uno (Quiruvilca) no tiene
-obra registrada en INFOBRAS todavía. Hallazgo adicional no buscado: el proyecto de defensa
-ribereña del río Chicama (CUI 2133624, S/16M) está **paralizado** con 64.83% de avance físico
-real. Tool MCP `emergencias_indeci_preparacion_riesgo`. 6 tests nuevos, suite completa verde en
-`emergencias-indeci` (189 tools totales) y `mcp-server` (37/37).
+proyectos de prevención detectados por este filtro** (búsqueda por nombre, no exhaustiva — la
+ausencia no implica que el distrito no tenga ninguno real); el único que sí tiene uno (Quiruvilca)
+no tiene obra registrada en INFOBRAS todavía. Hallazgo adicional no buscado: el proyecto de
+defensa ribereña del río Chicama (CUI 2133624, S/16M, multi-distrito — reportado en
+`proyectosSinDistritoAsignado`, no asociado a un distrito único) está **paralizado** con 64.83% de
+avance físico real. `obrasInfobras`/`obrasParalizadas` son `null` (no `0`) cuando INFOBRAS no está
+configurada o falla en vivo, para no confundir "sin datos" con "cero obras confirmadas". Tool MCP
+`emergencias_indeci_preparacion_riesgo`. 10 tests, suite completa verde en `emergencias-indeci`
+(189 tools totales) y `mcp-server` (40/40).
 
 ## CX-01 minor_contracts expuesto en GORE La Libertad (2026-09-14)
 

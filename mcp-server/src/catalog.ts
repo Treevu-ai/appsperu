@@ -2944,13 +2944,17 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "por defecto: LLUVIA INTENSA/INUNDACION/HUAYCO/DESLIZAMIENTO/EROSION) y proyectos de inversión de " +
       "prevención (Invierte.pe, filtrados por nombre: defensa ribereña, descolmatación, drenaje pluvial, " +
       "encauzamiento — NO exhaustivo, es búsqueda de texto, no una clasificación oficial), enriquecido con " +
-      "el estado de ejecución de esas obras en INFOBRAS (paralización, avance físico real). Requiere " +
-      "`INVERSIONES_DATABASE_URL`/`INFOBRAS_DATABASE_URL` configuradas o responde " +
-      "`ENRIQUECIMIENTO_NO_CONFIGURADO`. Solo coincidencia territorial y de texto — nunca causalidad, " +
-      "requiere revisión humana. Verificado en vivo 2026-09-21 contra LA LIBERTAD (único departamento con " +
-      "datos completos de las 3 fuentes en el snapshot local): 9 de los 10 distritos con más emergencias " +
-      "no tienen ningún proyecto de prevención en el pipeline; una defensa ribereña activa (río Chicama) " +
-      "está paralizada. Ver spike real en docs/spike-preparacion-riesgo-nino-2026-09.md. " + SIN_SCHEDULER,
+      "el estado de ejecución de esas obras en INFOBRAS (paralización, avance físico real), enriquecimiento " +
+      "opcional independiente: `obrasInfobras`/`obrasParalizadas` son `null` (no `0`) si `INFOBRAS_DATABASE_URL` " +
+      "no está configurada o la consulta falla en vivo (`infobrasEstado` en la respuesta lo indica). " +
+      "Requiere `INVERSIONES_DATABASE_URL` configurada o responde `ENRIQUECIMIENTO_NO_CONFIGURADO`. Solo " +
+      "coincidencia territorial y de texto (`matcherTerritorial`/`matcherProyectos` por separado) — nunca " +
+      "causalidad, requiere revisión humana. La ausencia de proyectos en un distrito significa que el filtro " +
+      "por nombre no detectó ninguno, no que el distrito no tenga proyectos de prevención reales. Verificado " +
+      "en vivo 2026-09-21 contra LA LIBERTAD (único departamento con datos completos de las 3 fuentes en el " +
+      "snapshot local): 9 de los 10 distritos con más emergencias no tienen proyectos de prevención " +
+      "detectados por este filtro; una defensa ribereña activa (río Chicama) está paralizada. Ver spike real " +
+      "en docs/spike-preparacion-riesgo-nino-2026-09.md. " + SIN_SCHEDULER,
     pathTemplate: "/api/crossref/preparacion-riesgo",
     pathParams: [],
     querySchema: {

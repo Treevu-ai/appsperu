@@ -128,4 +128,70 @@ describe("GET /api/crossref/preparacion-riesgo", () => {
     expect(res.body.peligrosConsultados).toEqual(["SEQUIA", "BAJAS TEMPERATURAS"]);
     expect(queryMock).toHaveBeenCalledWith(expect.any(String), ["LA LIBERTAD", ["SEQUIA", "BAJAS TEMPERATURAS"]]);
   });
+
+  it("excluye el sentinel '- TODOS -' (inversión multi-distrito) de distritos/totalDistritos y lo reporta aparte", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+    inversionesQueryMock.mockResolvedValueOnce({
+      rows: [{ ...INVERSION_QUIRUVILCA, cui: "2133624", distrito: "- TODOS -", nombre: "DEFENSA RIBEREÑA RIO CHICAMA" }],
+    });
+    infobrasQueryMock.mockResolvedValueOnce({
+      rows: [{ cui: "2133624", obras: "1", obras_paralizadas: "1", avance_fisico_real_promedio: "64.83" }],
+    });
+
+    const res = await request(createApp()).get("/api/crossref/preparacion-riesgo?departamento=LA LIBERTAD");
+
+    expect(res.status).toBe(200);
+    expect(res.body.totalDistritos).toBe(0);
+    expect(res.body.distritos).toEqual([]);
+    expect(res.body.proyectosSinDistritoAsignado).toEqual([
+      expect.objectContaining({ cui: "2133624", obrasInfobras: 1, obrasParalizadas: 1 }),
+    ]);
+  });
+
+  it("reporta obrasInfobras/obrasParalizadas como null (no 0) cuando INFOBRAS no está configurado", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+    inversionesQueryMock.mockResolvedValueOnce({ rows: [INVERSION_QUIRUVILCA] });
+    vi.doMock("../db/external-pools.js", () => ({ inversionesPool: { query: inversionesQueryMock }, infobrasPool: null }));
+    vi.resetModules();
+    const { createApp: createAppSinInfobras } = await import("../app.js");
+
+    const res = await request(createAppSinInfobras()).get("/api/crossref/preparacion-riesgo?departamento=LA LIBERTAD");
+
+    expect(res.status).toBe(200);
+    expect(res.body.infobrasEstado).toBe("NO_CONFIGURADO");
+    expect(res.body.distritos[0].proyectosPrevencion[0]).toMatchObject({
+      obrasInfobras: null,
+      obrasParalizadas: null,
+      avanceFisicoRealPromedio: null,
+    });
+
+    vi.doUnmock("../db/external-pools.js");
+    vi.resetModules();
+  });
+
+  it("reporta obrasInfobras/obrasParalizadas como null (no 0) cuando INFOBRAS falla en vivo", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+    inversionesQueryMock.mockResolvedValueOnce({ rows: [INVERSION_QUIRUVILCA] });
+    infobrasQueryMock.mockRejectedValueOnce(new Error("connection refused"));
+
+    const res = await request(createApp()).get("/api/crossref/preparacion-riesgo?departamento=LA LIBERTAD");
+
+    expect(res.status).toBe(200);
+    expect(res.body.infobrasEstado).toBe("NO_DISPONIBLE");
+    expect(res.body.distritos[0].proyectosPrevencion[0]).toMatchObject({
+      obrasInfobras: null,
+      obrasParalizadas: null,
+    });
+  });
+
+  it("expone matcherTerritorial y matcherProyectos por separado", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+    inversionesQueryMock.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(createApp()).get("/api/crossref/preparacion-riesgo?departamento=LA LIBERTAD");
+
+    expect(res.status).toBe(200);
+    expect(res.body.matcherTerritorial).toBe("territorial_texto_distrito");
+    expect(res.body.matcherProyectos).toBe("nombre_keyword");
+  });
 });
