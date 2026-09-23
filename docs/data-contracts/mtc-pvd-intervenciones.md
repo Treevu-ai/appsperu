@@ -43,6 +43,14 @@ TRAMO, FECHA_CORTE
   `"VIRU"` y `"VIRÚ"`, `"GRAN CHIMU"` y `"GRAN CHIMÚ"` aparecen como valores distintos en La
   Libertad) — **no normalizado en esta versión**; un `GROUP BY provincia` cuenta estas variantes
   por separado. Limitación conocida, documentada, no oculta.
+- **Nombres de departamento con la misma inconsistencia de tildes** — confirmado en vivo
+  2026-09-22 al armar un ranking nacional por % de red en mal estado: `"ANCASH"`/`"ÁNCASH"`,
+  `"APURIMAC"`/`"APURÍMAC"`, `"SAN MARTIN"`/`"SAN MARTÍN"`, `"JUNIN"`/`"JUNÍN"` y
+  `"HUANUCO"`/`"HUÁNUCO"` aparecen como valores distintos. Sin normalizar, un `GROUP BY
+  departamento` subestima esos 5 departamentos (parte su conteo real en dos filas). **No
+  normalizado en el conector** — se normalizó ad hoc en la consulta de análisis del
+  2026-09-22 (mapeo manual de variantes a la forma sin tilde); el conector en sí sigue
+  ingiriendo el valor crudo de la fuente.
 - Sin dato de persona natural: es infraestructura (rutas, tramos, estado de conservación), no
   contratistas ni personal.
 
@@ -54,7 +62,10 @@ arriba — el conteo real de provincias "limpias" sería menor a 12 combinando v
 ## Pendiente / limitaciones conocidas
 
 1. **Normalización de tildes en `PROVINCIA`** — no resuelta, documentada como limitación.
-2. **Estabilidad del nombre de archivo entre cortes** — no confirmada; si el patrón cambia, el
+2. **Normalización de tildes en `DEPARTAMENTO`** — no resuelta en el conector (ver arriba);
+   cualquier agregación nacional por departamento debe normalizar antes de agrupar, igual que
+   `PROVINCIA`. Candidato a resolver junto con el punto 1 si se retoma este dataset.
+3. **Estabilidad del nombre de archivo entre cortes** — no confirmada; si el patrón cambia, el
    conector fallará con un 404 explícito (no falla en silencio).
-3. Diccionario de datos (`.xlsx`, mencionado en el dataset) no decodificado — las columnas ya
+4. Diccionario de datos (`.xlsx`, mencionado en el dataset) no decodificado — las columnas ya
    son suficientemente auto-descriptivas para esta versión.
