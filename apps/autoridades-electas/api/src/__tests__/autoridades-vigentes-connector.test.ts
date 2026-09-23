@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 // Las funciones puras bajo prueba no tocan la base, pero el módulo importa `pool` a nivel de
 // módulo (para ingestAutoridadesVigentes) y `db/pool.js` lanza si DATABASE_URL no está
@@ -7,6 +7,14 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("../db/pool.js", () => ({
   pool: { query: vi.fn(), connect: vi.fn() },
 }));
+
+// hashDni() ahora exige DNI_HASH_SECRET (hallazgo de CodeRabbit, PR #208: SHA-256 directo de un
+// DNI de 8 dígitos es enumerable offline) -- el valor exacto no importa para estos tests, solo
+// que exista, ya que solo se verifica el formato/determinismo del hash, nunca un valor esperado
+// específico.
+beforeAll(() => {
+  process.env.DNI_HASH_SECRET = "test-secret-no-usar-en-produccion";
+});
 
 import { normalizeConformacion, soloDistritos, soloProvincias } from "../ingest/autoridades-vigentes-connector.js";
 
@@ -31,12 +39,15 @@ describe("soloDistritos / soloProvincias", () => {
 });
 
 describe("normalizeConformacion", () => {
-  // Fila real confirmada en vivo 2026-09-22 contra
+  // Fila basada en la respuesta real confirmada en vivo 2026-09-22 contra
   // POST cej.jne.gob.pe/Autoridades/ListarConformacionActual {idTipoEleccion:6, strUbigeo:"120307"}
-  // (alcalde vigente de Sarín, Sánchez Carrión, La Libertad).
+  // (alcalde vigente de Sarín, Sánchez Carrión, La Libertad) -- el DNI real se reemplazó por uno
+  // sintético (hallazgo de CodeRabbit, PR #208: no guardar un DNI real en texto plano en el
+  // repositorio, ni siquiera en un fixture de test). El resto de campos (nombre, cargo,
+  // organización política) son información pública por ley al ser autoridad electa.
   function filaRealAlcaldeSarin(overrides: Record<string, unknown> = {}) {
     return {
-      strDocumentoIdentidad: "41070984",
+      strDocumentoIdentidad: "00000000",
       strNombres: "RICHAR YORAN",
       strApellidoPaterno: "POLO",
       strApellidoMaterno: "CABRERA",
@@ -59,10 +70,22 @@ describe("normalizeConformacion", () => {
     };
   }
 
-  it("nunca guarda el DNI en texto plano: dniHash es un hash SHA-256, no el DNI original", () => {
+  it("nunca guarda el DNI en texto plano: dniHash es un hash HMAC-SHA-256, no el DNI original", () => {
     const [row] = normalizeConformacion([filaRealAlcaldeSarin()], "120307", 6, "MUNICIPALIDAD DISTRITAL");
-    expect(row.dniHash).not.toBe("41070984");
+    expect(row.dniHash).not.toBe("00000000");
     expect(row.dniHash).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("lanza un error explícito si DNI_HASH_SECRET no está definida, en vez de guardar el DNI sin proteger", () => {
+    const original = process.env.DNI_HASH_SECRET;
+    delete process.env.DNI_HASH_SECRET;
+    try {
+      expect(() => normalizeConformacion([filaRealAlcaldeSarin()], "120307", 6, "MUNICIPALIDAD DISTRITAL")).toThrow(
+        /DNI_HASH_SECRET/
+      );
+    } finally {
+      process.env.DNI_HASH_SECRET = original;
+    }
   });
 
   it("el mismo DNI produce siempre el mismo hash (determinístico, sirve para detectar duplicados)", () => {

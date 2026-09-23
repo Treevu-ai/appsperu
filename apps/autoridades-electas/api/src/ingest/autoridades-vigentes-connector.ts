@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
@@ -64,9 +64,22 @@ function checksumOf(text: string): string {
   return createHash("sha256").update(text).digest("hex");
 }
 
+// Hallazgo de CodeRabbit (2026-09-22, PR #208), confirmado real: un SHA-256 directo de un DNI
+// peruano (8 dígitos, ~10^8 combinaciones) es enumerable offline en segundos si alguien accede
+// a la base -- no cumple la promesa de "no reconstruible" que se le hizo al usuario. Se usa
+// HMAC-SHA-256 con una clave separada de la base de datos (solo en el entorno del conector) en
+// su lugar: sin esa clave, el hash no es enumerable por fuerza bruta.
+//
+// Se lee `process.env` dentro de la función (no cacheado en una constante de módulo a nivel
+// top-level) a propósito: permite que los tests fijen `DNI_HASH_SECRET` en `beforeAll` sin
+// depender del orden de evaluación de imports de ESM.
 function hashDni(dni: string | null): string | null {
   if (!dni) return null;
-  return createHash("sha256").update(dni.trim()).digest("hex");
+  const secret = process.env.DNI_HASH_SECRET;
+  if (!secret) {
+    throw new Error("DNI_HASH_SECRET no está definida. Copia .env.example a .env.");
+  }
+  return createHmac("sha256", secret).update(dni.trim()).digest("hex");
 }
 
 // Formato fuente: "31/12/2026 00:00:00" -> "2026-12-31". Sin librería de fechas: mismo patrón
@@ -268,18 +281,42 @@ async function ingestUbigeo(
     body,
   });
 
-  if (!response.success || response.data.lbeConformacion.length === 0) {
+  // Hallazgo de CodeRabbit (2026-09-22, PR #208), confirmado real: `success:false` es un error
+  // real de la API (no "sin autoridad"), y mezclarlo con una respuesta vacía-pero-exitosa
+  // ocultaba fallas reales de ingesta como si fueran vacantes legítimas -- se separan.
+  if (!response.success) {
+    throw new Error(`respuesta no exitosa del JNE para ubigeo ${ubigeo.strUbigeo} (idTipoEleccion ${idTipoEleccion})`);
+  }
+
+  if (response.data.lbeConformacion.length === 0) {
+    // Respuesta vacía pero exitosa: es un estado real (ej. cargo vacante), no un error. Si una
+    // corrida anterior había guardado autoridades para este ubigeo+tipo, hay que reconciliar --
+    // sin esto, autoridades que la fuente ya no reporta como vigentes quedarían marcadas como
+    // vigentes para siempre (otro hallazgo real de CodeRabbit en el mismo PR).
+    await pool.query(`DELETE FROM autoridades_vigentes WHERE ubigeo = $1 AND id_tipo_eleccion = $2`, [
+      ubigeo.strUbigeo,
+      idTipoEleccion,
+    ]);
     return { inserted: 0, hadData: false };
   }
 
   const rows = normalizeConformacion(response.data.lbeConformacion, ubigeo.strUbigeo, idTipoEleccion, tipoEleccion);
   const checksum = checksumOf(JSON.stringify(response.data.lbeConformacion));
+  const idsVigentes = rows.map((r) => r.idConformacionDetalle);
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
     const batchId = await saveRawBatch(client, ubigeo.strUbigeo, idTipoEleccion, checksum, rows.length);
     await persistRows(client, rows, batchId);
+    // Reconciliación: elimina cualquier fila de una corrida anterior para este ubigeo+tipo que
+    // ya no esté en la respuesta actual (ej. un regidor reemplazado cuyo registro antiguo, con
+    // otro id_conformacion_detalle, quedaría huérfano marcado como vigente si no se limpia).
+    await client.query(
+      `DELETE FROM autoridades_vigentes
+       WHERE ubigeo = $1 AND id_tipo_eleccion = $2 AND NOT (id_conformacion_detalle = ANY($3::int[]))`,
+      [ubigeo.strUbigeo, idTipoEleccion, idsVigentes]
+    );
     await client.query("COMMIT");
     return { inserted: rows.length, hadData: true };
   } catch (error) {
@@ -326,6 +363,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   ingestAutoridadesVigentes()
     .then((summary) => {
       console.log(JSON.stringify(summary, null, 2));
+      // Hallazgo de CodeRabbit (2026-09-22, PR #208): sin esto, una corrida con errores
+      // parciales terminaba con exit code 0 -- automatización externa la trataría como éxito.
+      if (summary.errores > 0) process.exitCode = 1;
       return pool.end();
     })
     .catch((error) => {
