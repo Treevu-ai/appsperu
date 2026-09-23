@@ -4,7 +4,7 @@
 > Cada señal deja un rastro. Nosotros lo hacemos visible.
 
 Rastro es una plataforma de trazabilidad sobre datos abiertos del Estado peruano: 3 lectores,
-<!-- COUNT:APP_COUNT -->37<!-- /COUNT --> apps backend y <!-- COUNT:TOOL_COUNT -->189<!-- /COUNT --> tools MCP de solo lectura.
+<!-- COUNT:APP_COUNT -->37<!-- /COUNT --> apps backend y <!-- COUNT:TOOL_COUNT -->190<!-- /COUNT --> tools MCP de solo lectura.
 
 ## URLs públicas
 
@@ -20,7 +20,7 @@ Rastro es una plataforma de trazabilidad sobre datos abiertos del Estado peruano
 
 ## Para agentes IA (MCP)
 
-Rastro expone un servidor MCP (Model Context Protocol) con **<!-- COUNT:TOOL_COUNT -->189<!-- /COUNT --> tools de solo lectura** sobre inversión pública, identidad y sanciones, justicia, educación, legislativo, medio ambiente, recursos territoriales y emergencias del Estado peruano. Compatible con:
+Rastro expone un servidor MCP (Model Context Protocol) con **<!-- COUNT:TOOL_COUNT -->190<!-- /COUNT --> tools de solo lectura** sobre inversión pública, identidad y sanciones, justicia, educación, legislativo, medio ambiente, recursos territoriales y emergencias del Estado peruano. Compatible con:
 
 - Claude Code (`claude mcp add rastro -- node /ruta/al/repo/mcp-server/dist/index.js`)
 - Claude Desktop (`claude_desktop_config.json`)
@@ -29,7 +29,7 @@ Rastro expone un servidor MCP (Model Context Protocol) con **<!-- COUNT:TOOL_COU
 - Cline / Continue.dev
 
 En producción, el servidor usa transporte **Streamable HTTP** en `https://mcp.rastro.fyi/mcp` y requiere el header **`x-api-key`**. Para desarrollo local, usa transporte **stdio**. Expone solo 2 tools MCP —
-**`rastro_buscar_tools(query?, app?, limit?)`** busca por palabra clave/app entre las <!-- COUNT:TOOL_COUNT -->189<!-- /COUNT -->
+**`rastro_buscar_tools(query?, app?, limit?)`** busca por palabra clave/app entre las <!-- COUNT:TOOL_COUNT -->190<!-- /COUNT -->
 entradas del catálogo, **`rastro_llamar(tool, args?)`** ejecuta el nombre exacto encontrado — en vez de registrar
 los tools individualmente (ver `mcp-server/README.md`). El agente busca, encadena resultados, razona sobre
 ellos y entrega respuestas con citas verificables por RUC, OCID, CUI, UBIGEO, SEC_EJEC.
@@ -55,7 +55,7 @@ Y devuelve una tabla con citas (RUC, OCID, fuente, corte) sin que el usuario hay
 - Convierte señales dispersas (presupuesto, contrataciones, inversiones, obras, sanciones, etc.) en una vista con citas verificables.
 - Muestra cifras con metadatos: fuente (app + tool MCP), corte (fecha del dato), cobertura (COMPLETA / PARCIAL / BLOQUEADA / NO_APLICA), matcher (cómo se vinculó).
 - Sirve 3 lectores: GORE (ficha, comparativo, benchmark de sectores), Prensa (perfil de proveedor), Auditoría (obras y activos por distrito).
-- Expone los <!-- COUNT:TOOL_COUNT -->189<!-- /COUNT --> tools MCP en `/docs/api` para que agentes IA los orquesten (vía 2 meta-tools de búsqueda/ejecución, `rastro_buscar_tools` + `rastro_llamar` — no registrados uno por uno).
+- Expone los <!-- COUNT:TOOL_COUNT -->190<!-- /COUNT --> tools MCP en `/docs/api` para que agentes IA los orquesten (vía 2 meta-tools de búsqueda/ejecución, `rastro_buscar_tools` + `rastro_llamar` — no registrados uno por uno).
 - Muestra en `/estado` el estado de las 14 APIs con dashboard visual propio (de las <!-- COUNT:APP_COUNT -->37<!-- /COUNT --> apps backend reales) — decisión de alcance deliberada, no una brecha por cerrar: Rastro es agentic-first, las 23 restantes ya están cubiertas hoy vía MCP (`rastro_buscar_tools` + `rastro_llamar`, ver `/docs/api`), un dashboard visual por app no es el patrón que escala.
 
 ## Lo que Rastro NO hace
