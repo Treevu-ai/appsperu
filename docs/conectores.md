@@ -142,6 +142,19 @@ revisar tras cada seed/despliegue de datos nuevo.
 | **Detalle completo** | [`docs/data-contracts/oece-contrataciones-abiertas.md`](data-contracts/oece-contrataciones-abiertas.md) |
 | **Ítems sin adjudicar (2026-09-06)** | `normalize-unsuccessful-tenders.ts` reutiliza los mismos records ya traídos por este conector (sin llamadas extra) y captura ítems `tender.items[].statusDetails IN ('DESIERTO','NULO')` — dinero público convocado que terminó sin adjudicar a nadie, invisible hasta ahora porque `normalizeAwards` descarta en silencio todo record sin `awards`. ~29% de una muestra real (19/66 ítems, 4 meses de 2026). Tabla `unsuccessful_tenders`, expuesta en `GET /api/procurement-sin-adjudicar`. Detalle en el mismo data contract de arriba. |
 
+<a id="compras-publicas-reactivos-medicos"></a>
+### `reactivos-medicos-scan.ts` — Mercado de reactivos médicos (recorte temático)
+
+| | |
+|---|---|
+| **Descripción** | No es un conector genérico — es un recorte de negocio sobre `/releases`: procesos cuyo título/descripción/ítems mencionan "reactivo", cruzados con `/records?ocid=...` para traer el adjudicatario si ya existe. Nace de un análisis manual del mercado de reactivos médicos como proveedores del Estado (sesión 2026-09-23), persistido como capacidad reusable en vez de quedar en scratchpad. |
+| **Qué hace** | Pagina `/releases` (`mainProcurementCategory=goods`) en la ventana pedida, filtra con `isReactivoText` (`/REACTIV/i`), y por cada match consulta `/records?ocid=` para el award; hace upsert en `reactivos_medicos_hallazgos` por `(ocid, item_desc)`. |
+| **Cómo lo hace** | Reusa `fetchWithTimeout`/`API_BASE_URL` de los conectores OECE existentes; no reingesta releases completos como `oece-connector.ts`. |
+| **Frecuencia** | Manual (`npm run ingest:reactivos-medicos -- --start-date YYYY-MM-DD --end-date YYYY-MM-DD`), ventana obligatoria. |
+| **Fuente de datos** | `contratacionesabiertas.oece.gob.pe/api/v1` (mismo host que el resto de conectores OECE). |
+| **Limitación real confirmada** | El cap por defecto (`--max-pages`, 40 páginas = 800 releases) puede dejar fuera procesos dentro de la ventana de fechas si el volumen nacional de tenders "goods" lo supera en pocos días — confirmado en vivo con un proceso adjudicado (GORE Madre de Dios → INTERSHOPLAB S.A.C., S/ 211,638) que no apareció en dos corridas de verificación pese a estar dentro de ambas ventanas por fecha de publicación. No es exhaustivo por diseño. |
+| **Detalle completo** | [`docs/data-contracts/oece-reactivos-medicos-hallazgos.md`](data-contracts/oece-reactivos-medicos-hallazgos.md) |
+
 <a id="compras-publicas-legacy"></a>
 ### `legacy-seace-orders-connector.ts` — Órdenes históricas SEACE (legado)
 
@@ -573,6 +586,20 @@ duplicar lógica entre los tres.
 | **Anomalía real encontrada** | **85% de las filas (50,404) están en `SITUACION = 'ELABORANDO PECOSA'`** (orden de despacho en preparación) — solo 335 llegaron a `ENVIADO A ALMACEN`. El dataset documenta el flujo interno de gestión de CENARES, no necesariamente la entrega confirmada al establecimiento; no asumir que una fila = medicamento ya recibido. |
 | **Cruces** | Ninguno implementado — candidato natural: por texto de `destino` contra `ipress.nombre` (sin ubigeo estructurado en CENARES, sería fuzzy, no exacto). |
 | **Detalle completo** | [`docs/data-contracts/cenares-distribucion.md`](data-contracts/cenares-distribucion.md) |
+
+### `cenares-pecosas-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Trae el seguimiento de Pecosas (Pedido de Comprobante de Salida de Almacén) del CENARES — mismo publicador que `cenares-connector.ts`, dataset distinto (corte 2023, no un recurso adicional del mismo). A diferencia del dataset de distribución, sí trae proveedor por entrega. |
+| **Qué hace** | Resuelve el único recurso CSV del dataset vía `package_show` de CKAN, lo descarga e inserta completo en `cenares_pecosas`. Mismo patrón sin upsert que CENARES distribución: snapshot completo por lote, dedup por `checksum` en `raw_cenares_pecosas_batches`. |
+| **Cómo lo hace** | Descarga HTTP directa (66,687 filas, ~13 MB), mismo `User-Agent` obligatorio. CSV delimitado por `;`, encoding Latin-1. `FECHAPECOSA` viene sin cero a la izquierda (`"6/03/2023"`) — parser de fecha propio (`parseFechaFlexibleDDMMYYYY`), distinto del de CENARES distribución. |
+| **Frecuencia** | Manual (`npm run ingest:cenares-pecosas` en `apps/servicios-salud/api`). |
+| **Fuente de datos** | `datosabiertos.gob.pe` (PNDA), dataset `seguimiento-de-pecosas-del-centro-nacional-de-abastecimiento-en-recursos-estratégicos` — CENARES/MINSA. |
+| **Cobertura real ingerida** | Nacional, 66,687 filas confirmadas en la corrida verificada (2026-09-23), 0 rechazadas, 103 proveedores distintos. |
+| **Hallazgo real** | **0 filas mencionan "reactivo"** (`desc_marca_pecosa ILIKE '%REACTIV%'`) — el dataset es de medicamentos (droguerías/laboratorios farmacéuticos), no reactivos de laboratorio. CENARES no es fuente útil para el mercado de reactivos médicos. |
+| **Cruces** | Ninguno implementado. |
+| **Detalle completo** | [`docs/data-contracts/cenares-pecosas.md`](data-contracts/cenares-pecosas.md) |
 
 ---
 
