@@ -1,4 +1,5 @@
 import { pathToFileURL } from "node:url";
+import type { PoolClient } from "pg";
 import { fetchWithTimeout } from "@appsperu/http-client";
 import { pool } from "../db/pool.js";
 import type { OcdsParty } from "./normalize.js";
@@ -176,6 +177,57 @@ async function fetchRecordByOcid(ocid: string): Promise<OcdsRecord | undefined> 
   return body.records?.[0];
 }
 
+/**
+ * Upsert compartido por las dos vías de ingesta de este recorte temático:
+ * la paginada (`scanReactivosMedicos`, vía API `/releases`+`/records?ocid=`)
+ * y la de descarga masiva (`oece-bulk-reactivos.ts`, vía los `.jsonl.gz`
+ * anuales de OCP). Mismo `ON CONFLICT (ocid, item_desc)` para ambas, así un
+ * mismo hallazgo re-detectado por cualquiera de las dos vías converge a la
+ * misma fila en vez de duplicarse.
+ */
+export async function upsertReactivoHallazgo(
+  client: Pick<PoolClient, "query">,
+  match: ReactivoMatch,
+  award: ReactivoAward | null
+): Promise<void> {
+  await client.query(
+    `INSERT INTO reactivos_medicos_hallazgos
+       (ocid, buyer_id, buyer_name, departamento, titulo, item_desc, valor_tender, valor_moneda,
+        fecha_publicacion, award_supplier_id, award_supplier_name, award_valor, award_moneda, award_fecha)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+     ON CONFLICT (ocid, item_desc) DO UPDATE SET
+       buyer_id = EXCLUDED.buyer_id,
+       buyer_name = EXCLUDED.buyer_name,
+       departamento = EXCLUDED.departamento,
+       titulo = EXCLUDED.titulo,
+       valor_tender = EXCLUDED.valor_tender,
+       valor_moneda = EXCLUDED.valor_moneda,
+       fecha_publicacion = EXCLUDED.fecha_publicacion,
+       award_supplier_id = EXCLUDED.award_supplier_id,
+       award_supplier_name = EXCLUDED.award_supplier_name,
+       award_valor = EXCLUDED.award_valor,
+       award_moneda = EXCLUDED.award_moneda,
+       award_fecha = EXCLUDED.award_fecha,
+       detectado_at = now()`,
+    [
+      match.ocid,
+      match.buyerId,
+      match.buyerName,
+      match.departamento,
+      match.titulo,
+      match.itemDesc,
+      match.valorTender,
+      match.valorMoneda,
+      match.fechaPublicacion,
+      award?.supplierId ?? null,
+      award?.supplierName ?? null,
+      award?.valor ?? null,
+      award?.moneda ?? null,
+      award?.fecha ?? null,
+    ]
+  );
+}
+
 export interface ReactivosMedicosScanSummary {
   startDate: string;
   endDate: string;
@@ -214,42 +266,7 @@ export async function scanReactivosMedicos(options: {
       const award = firstAwardOf(record);
       if (award) matchesConAward++;
 
-      await client.query(
-        `INSERT INTO reactivos_medicos_hallazgos
-           (ocid, buyer_id, buyer_name, departamento, titulo, item_desc, valor_tender, valor_moneda,
-            fecha_publicacion, award_supplier_id, award_supplier_name, award_valor, award_moneda, award_fecha)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-         ON CONFLICT (ocid, item_desc) DO UPDATE SET
-           buyer_id = EXCLUDED.buyer_id,
-           buyer_name = EXCLUDED.buyer_name,
-           departamento = EXCLUDED.departamento,
-           titulo = EXCLUDED.titulo,
-           valor_tender = EXCLUDED.valor_tender,
-           valor_moneda = EXCLUDED.valor_moneda,
-           fecha_publicacion = EXCLUDED.fecha_publicacion,
-           award_supplier_id = EXCLUDED.award_supplier_id,
-           award_supplier_name = EXCLUDED.award_supplier_name,
-           award_valor = EXCLUDED.award_valor,
-           award_moneda = EXCLUDED.award_moneda,
-           award_fecha = EXCLUDED.award_fecha,
-           detectado_at = now()`,
-        [
-          match.ocid,
-          match.buyerId,
-          match.buyerName,
-          match.departamento,
-          match.titulo,
-          match.itemDesc,
-          match.valorTender,
-          match.valorMoneda,
-          match.fechaPublicacion,
-          award?.supplierId ?? null,
-          award?.supplierName ?? null,
-          award?.valor ?? null,
-          award?.moneda ?? null,
-          award?.fecha ?? null,
-        ]
-      );
+      await upsertReactivoHallazgo(client, match, award);
       filasUpsertadas++;
     }
   } finally {
