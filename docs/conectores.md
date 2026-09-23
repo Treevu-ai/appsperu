@@ -155,6 +155,19 @@ revisar tras cada seed/despliegue de datos nuevo.
 | **Limitación real confirmada** | El cap por defecto (`--max-pages`, 40 páginas = 800 releases) puede dejar fuera procesos dentro de la ventana de fechas si el volumen nacional de tenders "goods" lo supera en pocos días — confirmado en vivo con un proceso adjudicado (GORE Madre de Dios → INTERSHOPLAB S.A.C., S/ 211,638) que no apareció en dos corridas de verificación pese a estar dentro de ambas ventanas por fecha de publicación. No es exhaustivo por diseño. |
 | **Detalle completo** | [`docs/data-contracts/oece-reactivos-medicos-hallazgos.md`](data-contracts/oece-reactivos-medicos-hallazgos.md) |
 
+<a id="compras-publicas-reactivos-medicos-bulk"></a>
+### `oece-bulk-reactivos.ts` — Mercado de reactivos médicos vía descarga masiva (segunda vía)
+
+| | |
+|---|---|
+| **Descripción** | Segunda vía de ingesta para el mismo recorte "reactivos médicos" de `reactivos-medicos-scan.ts`, pero desde el bulk anual (`.jsonl.gz`) republicado por Open Contracting Partnership en `data.open-contracting.org/en/publication/135`, no desde la API paginada de OECE. |
+| **Por qué existe una segunda vía** | `GET /api/v1/search?supplier=` de OECE ignora el filtro en servidor (confirmado en vivo 2026-09-23: mismo `total_results` con RUC distinto/inventado/ausente). Además, la vía paginada tiene un límite real ya documentado arriba (`--max-pages`) que dejó fuera un award real (GORE Madre de Dios → INTERSHOPLAB S.A.C., S/ 211,638) — ese mismo proveedor sí aparece en la validación del bulk 2025 (`DIRECCION DE REDES INTEGRADAS DE SALUD LIMA CENTRO`, S/ 156,348, otro proceso), evidencia de que el bulk cubre lo que la paginación puede perder. |
+| **Qué hace** | Descarga el `.jsonl.gz` del año pedido (cache en disco, se salta la descarga si ya existe), itera línea por línea sin cargar el archivo completo en memoria, reusa `findReactivoMatches`/`firstAwardOf`/`upsertReactivoHallazgo` de `reactivos-medicos-scan.ts` (mismo `ON CONFLICT (ocid, item_desc)`, converge a la misma tabla). El award ya viene embebido en el release del bulk — a diferencia de la vía paginada, no hace falta el segundo `GET /records?ocid=`. |
+| **Cómo lo hace** | `npm run ingest:reactivos-medicos:bulk -- --years 2022-2026` (o un año único, lista `2022,2024`, o `all` para 2003-actual). |
+| **Validado en vivo (2026-09-23)** | 2022-2026: 463,968 releases, 3,720 matches de "reactivo", 80% con adjudicatario ya embebido — ~180x la muestra manual de ~21 que motivó el recorte original. Sin falsos positivos en una muestra de 15 ítems revisados a mano. |
+| **Limitación real confirmada** | El bulk se bucketiza por fecha de *compilación/actualización* de OECE, no por fecha real del proceso — el archivo "2026" trae procesos con fecha real de 2015-2017 recompilados ese año. El scan resuelve duplicados entre años procesando en orden ascendente y dejando que el upsert compartido sobrescriba (el año más reciente que toque un `ocid` gana). El monto total agregado no filtra por moneda ni excluye `awards` en estado no terminal (`DESIERTO`/`NULO`/`RETROTRAIDO_POR_RESOLUCION`, ver hallazgo de `oece-connector.ts` arriba) — cualquier reporte agregado sobre esta tabla debe declarar esa salvedad. |
+| **Detalle completo** | Mismo contrato que la vía paginada: [`docs/data-contracts/oece-reactivos-medicos-hallazgos.md`](data-contracts/oece-reactivos-medicos-hallazgos.md); fuente del bulk documentada en [`docs/data-contracts/oece-contrataciones-abiertas.md`](data-contracts/oece-contrataciones-abiertas.md). |
+
 <a id="compras-publicas-legacy"></a>
 ### `legacy-seace-orders-connector.ts` — Órdenes históricas SEACE (legado)
 
