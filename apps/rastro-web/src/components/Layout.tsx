@@ -2,22 +2,17 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { DataFreshnessBar } from "./DataFreshnessBar.js";
 
-// "/catalogo" (índice nacional de datosabiertos.gob.pe, PNDA) y "/docs/api"
-// (los 154 tools MCP propios de Rastro) son contenidos sin relación entre
-// sí — "Catálogo" a secas en el nav confundía cuál es cuál. El label deja
-// claro que este es el índice externo, no el catálogo de Rastro.
-const NAV = [
-  { to: "/gore/la-libertad", label: "GORE La Libertad" },
-  { to: "/buscar", label: "Buscar" },
-  { to: "/prensa/proveedores", label: "Proveedores" },
-  { to: "/auditoria/entidades-infobras", label: "Auditoría" },
-  { to: "/catalogo", label: "Datos abiertos PE" },
-];
+// Buscar / Proveedores / Auditoría / Datos abiertos PE / GORE La Libertad
+// se sacaron del nav (2026-09-22): eran tabs del modelo viejo de "dashboard
+// público explorable" — no encajan con el modelo actual de vender acceso
+// sk-rastro por solicitud (ver Home.tsx). Las rutas siguen existiendo, solo
+// dejaron de promocionarse en el nav. Queda un solo link, "Docs API" — el
+// único destino que le sirve a alguien que todavía no decidió pedir la key
+// (evaluar si el catálogo de tools le sirve antes de comprometerse).
+const NAV = [{ to: "/docs/api", label: "Docs API" }];
 
-const FOOTER_LINKS = [
-  { to: "/estado", label: "Estado" },
-  { to: "/docs/api", label: "Docs API" },
-];
+// "Docs API" ya está promovido al nav principal arriba — no se repite acá.
+const FOOTER_LINKS = [{ to: "/estado", label: "Estado" }];
 
 export function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -48,10 +43,9 @@ export function Layout() {
             </span>
           </NavLink>
 
-          {/* Nav desktop: ≥ lg — a `sm` (640px) 5 ítems con "GORE La Libertad" desbordan
-              el header (confirmado visualmente, no solo en teoría); el corte sube a `lg`
-              (1024px) para que el rango 640-1023px use el menú hamburguesa en vez de
-              apretar 5 links en una fila sin wrap. */}
+          {/* Nav desktop: ≥ lg. Con un solo item ("Docs API") ya no desborda a `sm`
+              como pasaba con los 5 tabs viejos, pero se deja el mismo corte de
+              breakpoint — cambiarlo es un rediseño de header aparte, no este ajuste. */}
           <nav className="hidden lg:flex items-center gap-1 text-sm">
             {NAV.map((item) => (
               <NavLink
@@ -69,6 +63,12 @@ export function Layout() {
               </NavLink>
             ))}
           </nav>
+
+          {/* Único CTA de negocio de todo el sitio: pedir la sk-rastro-*. Fuera
+              de NAV a propósito — no es un link más, es la acción dominante. */}
+          <NavLink to="/solicitar-acceso" className="btn-primary hidden sm:inline-flex text-sm px-3 py-1.5 shrink-0">
+            Solicitar acceso
+          </NavLink>
 
           {/* Botón hamburguesa: < lg (ver comentario del nav desktop) */}
           <button
@@ -119,6 +119,9 @@ export function Layout() {
             className="lg:hidden border-t border-line bg-ink-900/95 backdrop-blur"
           >
             <div className="px-4 py-3 flex flex-col gap-1">
+              <NavLink to="/solicitar-acceso" className="btn-primary sm:hidden justify-center mb-1">
+                Solicitar acceso
+              </NavLink>
               {NAV.map((item) => (
                 <NavLink
                   key={item.to}

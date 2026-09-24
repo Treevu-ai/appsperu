@@ -26,13 +26,19 @@ function inMemoryKv(): KVNamespace {
     async put(key: string, value: string) {
       store.set(key, value);
     },
+    async delete(key: string) {
+      store.delete(key);
+    },
+    async list() {
+      return { keys: [...store.keys()].map((name) => ({ name })), list_complete: true };
+    },
   };
 }
 
 function makeContext(q: string): PagesEventContext {
   return {
     request: new Request(`https://rastro.fyi/api/search?q=${encodeURIComponent(q)}`),
-    env: { RATE_LIMIT: inMemoryKv() },
+    env: { RATE_LIMIT: inMemoryKv(), ACCESS_REQUESTS: inMemoryKv() },
     params: {},
     waitUntil: () => {},
   };

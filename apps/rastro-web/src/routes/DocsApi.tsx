@@ -61,15 +61,46 @@ export function DocsApi() {
         (índice nacional PNDA) — sin relación con este catálogo de {TOOLS.length} tools.
       </p>
 
-      <section className="mt-8 grid md:grid-cols-2 gap-4">
-        <div className="card">
-          <p className="text-xs text-muted font-mono mb-2">Claude Code / Cursor / Windsurf</p>
-          <pre className="text-xs bg-ink-950 border border-line rounded-md p-3 overflow-x-auto text-fg-soft">
-            <code>{`# Desde el shell
+      <section className="mt-8 card border-accent/30">
+        <div className="flex items-center gap-3 flex-wrap">
+          <p className="text-xs text-accent font-mono">EN PRODUCCIÓN</p>
+          <span className="text-xs text-muted flex items-center gap-1.5">
+            <span className="pulse-dot" /> mcp.rastro.fyi
+          </span>
+        </div>
+        <p className="text-fg-soft mt-2 text-sm">
+          Contra el servidor en producción necesitas una API key <code className="text-fg">sk-rastro-*</code> por
+          request — no hay autoservicio, cada solicitud se revisa a mano.
+        </p>
+        <pre className="text-[10px] sm:text-xs bg-ink-950 border border-line rounded-md p-3 overflow-x-auto text-fg-soft whitespace-pre-wrap break-words sm:whitespace-pre mt-3">
+          <code>{`{
+  "mcpServers": {
+    "rastro": {
+      "url": "https://mcp.rastro.fyi/mcp",
+      "headers": {
+        "x-api-key": "sk-rastro-..."
+      }
+    }
+  }
+}`}</code>
+        </pre>
+        <Link to="/solicitar-acceso" className="btn-primary mt-4 inline-flex">
+          Solicitar acceso sk-rastro
+        </Link>
+      </section>
+
+      <section className="mt-6 card">
+        <p className="text-xs text-muted font-mono mb-2">Alternativa: correr tu propio servidor local</p>
+        <p className="text-fg-soft text-sm mb-3">
+          Si prefieres no depender de <code className="text-fg">mcp.rastro.fyi</code>, el servidor MCP es código
+          abierto — clónalo y corre tu propia instancia sin pedir ninguna key.
+        </p>
+        <pre className="text-xs bg-ink-950 border border-line rounded-md p-3 overflow-x-auto text-fg-soft">
+          <code>{`# Desde el shell
 claude mcp add rastro \\
   -- node /ruta/al/repo/mcp-server/dist/index.js
 
-# O en .mcp.json del proyecto
+# O en .mcp.json / claude_desktop_config.json
 {
   "mcpServers": {
     "rastro": {
@@ -78,31 +109,13 @@ claude mcp add rastro \\
     }
   }
 }`}</code>
-          </pre>
-        </div>
-        <div className="card">
-          <p className="text-xs text-muted font-mono mb-2">Claude Desktop</p>
-          <pre className="text-xs bg-ink-950 border border-line rounded-md p-3 overflow-x-auto text-fg-soft">
-            <code>{`# ~/Library/Application Support/Claude/
-#   claude_desktop_config.json
-{
-  "mcpServers": {
-    "rastro": {
-      "command": "node",
-      "args": [
-        "/ruta/al/repo/mcp-server/dist/index.js"
-      ]
-    }
-  }
-}`}</code>
-          </pre>
-        </div>
+        </pre>
       </section>
 
       <section className="mt-8 card border-accent/30">
         <p className="text-xs text-accent font-mono mb-2">CÓMO LLAMA UN AGENTE A ESTOS TOOLS</p>
         <p className="text-fg-soft text-sm">
-          No hay 154 tools registrados en tu cliente MCP — hay 2. Primero se busca el nombre exacto, después se
+          No hay {tools.length} tools registrados en tu cliente MCP — hay 2. Primero se busca el nombre exacto, después se
           ejecuta con ese nombre:
         </p>
         <pre className="text-xs bg-ink-950 border border-line rounded-md p-3 overflow-x-auto text-fg-soft mt-3">

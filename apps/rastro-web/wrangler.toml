@@ -1,8 +1,15 @@
-# Configuración local / deploy manual con wrangler CLI desde apps/rastro-web/.
-# Para Cloudflare Workers Builds (Git deploy desde la raíz del monorepo),
-# usa el wrangler.toml de la raíz del repo + scripts/cloudflare-rastro-deploy.sh.
-#
-# Deploys via Git (Pages clásico) usan public/_redirects y public/_headers.
+# Config de Cloudflare Pages para rastro-web. Usada para `wrangler pages dev`
+# / deploy manual desde apps/rastro-web/ — Y TAMBIÉN por el deploy real vía
+# Git: Cloudflare resuelve el wrangler.toml más cercano al build output
+# directory (apps/rastro-web/dist), no el de la raíz del repo. Este archivo
+# es la ÚNICA fuente de verdad para `[[kv_namespaces]]` — el proyecto
+# también requiere `root_dir = "apps/rastro-web"` en la config del dashboard
+# (Settings → Builds) para que Cloudflare encuentre `functions/`; sin eso
+# TODAS las Functions caen al fallback SPA en silencio (incidente real del
+# 2026-09-22, 3 causas encadenadas: root_dir mal puesto, un `with { type:
+# "json" }` que el bundler interno de Pages no soporta, y este archivo
+# vs. el dashboard desincronizados — ver el bloque de ACCESS_REQUESTS más
+# abajo para el detalle del tercero).
 #   - `wrangler pages dev dist`  → simular el entorno Pages en local
 #   - `wrangler pages deploy dist --project-name=rastro` → deploy manual
 #
@@ -24,12 +31,33 @@ pages_build_output_dir = "./dist"
 binding = "RATE_LIMIT"
 id = "da7766279cc54ba5817e338b76eb3ef1"
 
-# Este archivo es solo para `wrangler pages dev` / deploy manual desde
-# apps/rastro-web/ (ver comentario de cabecera). El deploy real vía Git
-# (Cloudflare Workers Builds) lee el wrangler.toml de la raíz del repo —
-# ahí viven las 3 VITE_API_BASE_URL_* de producción, NO acá, para que
-# `wrangler pages dev` sin `.dev.vars` configurado no golpee accidentalmente
-# las APIs en vivo — usa `.dev.vars.example` como base para tu `.dev.vars`.
+# functions/api/solicitud-acceso.ts (formulario /solicitar-acceso) — guarda
+# cada solicitud de sk-rastro-* para revisión manual (nombre, correo,
+# teléfono, motivo). Retención: 90 días (expirationTtl en
+# functions/api/solicitud-acceso.ts) — no persiste PII indefinidamente.
+#
+# SÍ declarado acá (2026-09-22, tercer episodio del mismo incidente):
+# resulta que este archivo NO solo se lee — Cloudflare SINCRONIZA
+# deployment_configs.production.kv_namespaces del dashboard para que
+# coincida exactamente con lo que hay acá, cada build. Quitarlo de acá
+# (creyendo que "ya vivía en el dashboard") lo borró también del dashboard
+# en el siguiente deploy → env.ACCESS_REQUESTS quedó undefined en runtime →
+# 500 en cada POST a /api/solicitud-acceso. wrangler.toml es la única
+# fuente de verdad real para bindings en este proyecto; el dashboard es un
+# espejo, no una config independiente. No lo quites de acá de nuevo.
+[[kv_namespaces]]
+binding = "ACCESS_REQUESTS"
+id = "139c606fcfb94b71a31606228224ff01"
+
+# Las 3 VITE_API_BASE_URL_* de producción viven en `[vars]` del wrangler.toml
+# de la RAÍZ del repo, no acá — a diferencia de los `[[kv_namespaces]]` de
+# arriba, que si aplican desde este archivo (ver comentario de cabecera). No
+# se han visto duplicados entre ambos wrangler.toml para estas 3 vars, pero
+# no está confirmado con la misma certeza que el caso de KV — si algún día
+# una de ellas también rompe el build con "already in use" o similar, es la
+# misma causa. Localmente, `wrangler pages dev` sin `.dev.vars` configurado
+# no golpea accidentalmente las APIs en vivo — usa `.dev.vars.example` como
+# base para tu `.dev.vars`.
 #
 # CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET — Cloudflare Access Service
 # Token (secreto, NO va en ningún wrangler.toml). Se configura en el

@@ -1,6 +1,62 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-09-21.
+Última actualización: 2026-09-22.
+
+## Dos bugs de pérdida de datos corregidos en `sbn-supervision-connector.ts` (ceplan-geo, 2026-09-22)
+
+Investigando conectores fuera de emergencias-indeci ("sigamos investigando usando otras tools, tipo
+ceplan geo"), se encontraron y corrigieron dos bugs reales en el conector de supervisión de predios
+estatales de SBN (`apps/ceplan-geo/api/src/ingest/sbn-supervision-connector.ts`):
+
+1. **`zona_playa_protegida` subreportaba 73% de los casos reales.** El conector solo leía la
+   columna booleana dedicada del CSV, pero la fuente dejó de llenarla después de 2020-09-30 (última
+   fila con "Sí") sin avisar — y desde 2021 sigue reportando las mismas supervisiones bajo un texto
+   dedicado en la columna `actividad` ("SUPERVISAR ZONA DE PLAYA PROTEGIDA..."). El conector nunca
+   leía ese campo, así que reportaba una caída real de supervisiones de playa que nunca ocurrió.
+   Fix: `esZonaPlayaProtegida()` ahora detecta por los dos caminos. Confirmado en el parseo crudo
+   del CSV real: 279 casos totales (75 esquema viejo + 204 esquema nuevo), vs. 75 que el conector
+   viejo reportaba.
+2. **La clave de upsert `(numero_informe, cus)` pisaba filas silenciosamente.** Cuando un mismo
+   informe cubre más de un predio y el CSV deja `cus` vacío en varias de esas filas, todas colisionan
+   contra el `UNIQUE (numero_informe, cus)` y el `ON CONFLICT DO UPDATE` las sobrescribe entre sí —
+   de 1,762 filas fuente solo sobrevivían 1,384 en la tabla (24% perdido), incluyendo 134 de los 279
+   casos reales de playa protegida. Fix: migración `011_fix_sbn_supervision_unique_key.sql` cambia
+   la clave única a `item` (correlativo de fila del CSV fuente, único en las 1,762 filas verificado
+   en vivo) y el `ON CONFLICT` pasa a usar esa columna.
+
+Con ambos fixes y reingesta completa contra el CSV real: 1,762 filas en tabla (sin pérdida), 279
+casos de `zona_playa_protegida=true`, de los cuales **204/204 (100%)** de los posteriores a 2021
+muestran `resultado_supervision` = "OCUPADO" (ocupación ilegal de zona de dominio restringido) — la
+estimación previa de "79%" venía de una lectura parcial afectada por el bug #2, ya descartada.
+Ver `docs/conectores.md` para el detalle técnico del conector.
+
+## Segundo departamento verificado — AREQUIPA — preparación de inversión frente a El Niño (2026-09-22)
+
+Misma verificación en vivo del cruce de abajo (INDECI × Invierte.pe × INFOBRAS), corrida ahora
+contra AREQUIPA — segundo departamento con las 3 fuentes completas en el snapshot local (antes
+solo LA LIBERTAD). Resultado distinto, no una repetición: de los 10 distritos con más emergencias
+históricas El Niño-relacionadas, **5 sí tienen** al menos un proyecto de prevención detectado por
+nombre (Chivay, Chuquibamba, Ocoña, Uraca, Yanaquihua) — mejor cobertura relativa que LA LIBERTAD
+(1/10), aunque la brecha sigue existiendo en los otros 5 (Cotahuasi, Salamanca, Toro, Tomepampa,
+Alca). AREQUIPA tiene 69 proyectos de prevención identificados por el filtro de nombre, vs. 19 de
+LA LIBERTAD.
+
+Hallazgo adicional no buscado, distinto en naturaleza al de Chicama: la defensa ribereña del río
+Ocoña (CUI 2091465, sector Huantay-Punta Colorada) tiene **100% de avance físico real** en
+INFOBRAS —obra terminada— pero sigue marcada `existe_paralizacion = true`, con
+`fecha_paralizacion = 2020-09-01` (+5 años). A diferencia de Chicama (incompleta y paralizada),
+acá la obra está completa; la paralización parece ser de cierre/administrativa, no de ejecución
+física — el dato no explica la causa por sí solo.
+
+**Cruce ad hoc, todavía NO integrado al endpoint `/api/crossref/preparacion-riesgo`:** se verificó
+además, por query manual directa contra `compras-publicas` (no vía tool MCP ni endpoint propio),
+que de los procesos de contratación en SEACE con título que sugiere prevención (mismo patrón de
+keyword que Invierte.pe), el resultado es **cero** en ambos departamentos — 416 procesos de LA
+LIBERTAD (2024-09/2026-09) y 278 de AREQUIPA (misma ventana), 0 coincidencias en ambos casos. Es
+la señal más fuerte de las dos corridas porque se repite igual en 2 departamentos con perfiles de
+inversión muy distintos (19 vs. 69 proyectos). **Pendiente:** formalizar este cruce SEACE como
+parte del endpoint `preparacion-riesgo` (hoy solo une INDECI + Invierte.pe + INFOBRAS) en vez de
+dejarlo como verificación manual repetible solo por query directa a Postgres.
 
 ## Conflicto de uso de suelo forestal × minero (2026-09-21)
 
@@ -18,6 +74,26 @@ mineros titulados (32,105 ha) coexistiendo con 5 concesiones forestales vigentes
 superficies casi idénticas. Sin geometría real de por medio (ninguna de las dos fuentes la trae en
 este conector): el cruce es por coincidencia de distrito, no superposición de polígonos. Tool MCP
 `catastro_forestal_conflicto_uso_suelo`. 35/35 tests verdes en `catastro-forestal`, build limpio.
+
+## Preparación de inversión vs. brechas de infraestructura crítica frente a El Niño (2026-09-21)
+
+Nuevo cruce `GET /api/crossref/preparacion-riesgo` en `emergencias-indeci` (ticket PRV-01/02/03,
+`docs/BACKLOG_Preparacion_Riesgo_Fenomeno_Nino_v1.md`): une el historial de emergencias tipo El
+Niño de INDECI (por distrito) con los proyectos de inversión de prevención de Invierte.pe
+(filtrados por nombre — `funcion` resultó un hallazgo negativo, ningún valor real sirve para
+aislar Gestión de Riesgo de Desastres) y su estado de ejecución real en INFOBRAS.
+
+Verificado en vivo contra LA LIBERTAD (único departamento con las 3 fuentes completas en el
+snapshot local de desarrollo): de los 10 distritos con más emergencias históricas, **9 no tienen
+proyectos de prevención detectados por este filtro** (búsqueda por nombre, no exhaustiva — la
+ausencia no implica que el distrito no tenga ninguno real); el único que sí tiene uno (Quiruvilca)
+no tiene obra registrada en INFOBRAS todavía. Hallazgo adicional no buscado: el proyecto de
+defensa ribereña del río Chicama (CUI 2133624, S/16M, multi-distrito — reportado en
+`proyectosSinDistritoAsignado`, no asociado a un distrito único) está **paralizado** con 64.83% de
+avance físico real. `obrasInfobras`/`obrasParalizadas` son `null` (no `0`) cuando INFOBRAS no está
+configurada o falla en vivo, para no confundir "sin datos" con "cero obras confirmadas". Tool MCP
+`emergencias_indeci_preparacion_riesgo`. 10 tests, suite completa verde en `emergencias-indeci`
+(189 tools totales) y `mcp-server` (40/40).
 
 ## CX-01 minor_contracts expuesto en GORE La Libertad (2026-09-14)
 

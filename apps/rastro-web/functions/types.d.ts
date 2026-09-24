@@ -10,13 +10,37 @@ interface KVNamespacePutOptions {
   expirationTtl?: number;
 }
 
+interface KVNamespaceListOptions {
+  prefix?: string;
+  limit?: number;
+  cursor?: string;
+}
+
+interface KVNamespaceListResult {
+  keys: { name: string; expiration?: number }[];
+  list_complete: boolean;
+  cursor?: string;
+}
+
 interface KVNamespace {
   get(key: string): Promise<string | null>;
   put(key: string, value: string, options?: KVNamespacePutOptions): Promise<void>;
+  delete(key: string): Promise<void>;
+  list(options?: KVNamespaceListOptions): Promise<KVNamespaceListResult>;
 }
 
 interface PagesEnv {
   RATE_LIMIT: KVNamespace;
+  /**
+   * Solicitudes de acceso a `sk-rastro-*` (formulario /solicitar-acceso).
+   * Cada registro trae PII real (nombre, correo, teléfono, motivo) — se
+   * guarda con expirationTtl de 90 días (ver RETENTION_DIAS en
+   * functions/api/solicitud-acceso.ts), no indefinidamente. Un admin las
+   * revisa a mano con `wrangler kv key list --binding=ACCESS_REQUESTS` /
+   * `wrangler kv key get <key> --binding=ACCESS_REQUESTS`, mismo flujo
+   * manual que la emisión de keys documentada en docs/FLY_DEPLOY_MCP.md.
+   */
+  ACCESS_REQUESTS: KVNamespace;
   /**
    * Cloudflare Access Service Token — Client ID.
    * Header saliente: `CF-Access-Client-Id`.

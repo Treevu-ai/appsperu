@@ -4,6 +4,7 @@
 
 User-agent: *
 Allow: /
+Disallow: /admin/
 
 # Sitemap principal
 Sitemap: https://www.rastro.fyi/sitemap.xml

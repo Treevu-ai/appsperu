@@ -350,7 +350,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
     name: "radar_ejecucion_infrastructure_operation",
     app: "radar-ejecucion",
     description:
-      "Evidencia de recepción, operador y disponibilidad de un activo. La ausencia de estos registros es un vacío de ALSOL, no prueba de que el activo no funcione. " + SIN_SCHEDULER,
+      "Evidencia de recepción, operador y disponibilidad de un activo. La ausencia de estos registros es un vacío de evidencia, no prueba de que el activo no funcione. " + SIN_SCHEDULER,
     pathTemplate: "/api/infraestructura/activos/{assetId}/operacion",
     pathParams: ["assetId"],
     querySchema: {},
@@ -979,7 +979,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
     app: "ceplan-estrategico",
     description:
       "SEG (Strategic Execution Gap): nacional CEPLAN (CUMP03−CUMP02, GN/GR) o proxy departamental " +
-      "PROXY_DEPARTAMENTAL (MEF devengado/PIM − avance físico INFOBRAS). Solo 5 regiones piloto ALSOL " +
+      "PROXY_DEPARTAMENTAL (MEF devengado/PIM − avance físico INFOBRAS). Solo 5 regiones piloto " +
       "con ?departamento=. Cobertura parcial.",
     pathTemplate: "/api/indicators/seg",
     pathParams: [],
@@ -1031,7 +1031,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
     name: "ceplan_estrategico_crossref_territorial",
     app: "ceplan-estrategico",
     description:
-      "Cruce ceplan-estrategico <-> ceplan-geo por departamento piloto ALSOL (5 regiones). Adjunta CUMP02/CUMP03 " +
+      "Cruce ceplan-estrategico <-> ceplan-geo por departamento piloto (5 regiones). Adjunta CUMP02/CUMP03 " +
       "nacionales (GN/GR) con contexto territorial (distritos, infraestructura). Matcher: departamento_prefijo_ubigeo. " +
       "Cobertura PARCIAL — no implica desempeño estratégico regional.",
     pathTemplate: "/api/crossref/territorial",
@@ -1100,7 +1100,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
     name: "ceplan_geo_territories_summary",
     app: "ceplan-geo",
     description:
-      "Agregados territoriales por departamento piloto ALSOL (5 regiones): conteo de distritos e infraestructura " +
+      "Agregados territoriales por departamento piloto (5 regiones): conteo de distritos e infraestructura " +
       "dentro del polígono departamental. Solo LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO.",
     pathTemplate: "/api/territories/summary",
     pathParams: [],
@@ -2923,7 +2923,6 @@ export const TOOL_CATALOG: ToolSpec[] = [
       departamento: z.string().min(1).optional().describe("Default MADRE DE DIOS."),
     },
   },
-
   // ---- emergencias-indeci (SINPAD, emergencias históricas nacionales) ----
   {
     name: "emergencias_indeci",
@@ -2959,5 +2958,38 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathTemplate: "/api/emergencias/{id}",
     pathParams: ["id"],
     querySchema: {},
+  },
+  {
+    name: "emergencias_indeci_preparacion_riesgo",
+    app: "emergencias-indeci",
+    description:
+      "Cruce territorial (por distrito) entre historial de emergencias tipo El Niño (INDECI, peligro " +
+      "por defecto: LLUVIA INTENSA/INUNDACION/HUAYCO/DESLIZAMIENTO/EROSION) y proyectos de inversión de " +
+      "prevención (Invierte.pe, filtrados por nombre: defensa ribereña, descolmatación, drenaje pluvial, " +
+      "encauzamiento — NO exhaustivo, es búsqueda de texto, no una clasificación oficial), enriquecido con " +
+      "el estado de ejecución de esas obras en INFOBRAS (paralización, avance físico real) y, desde " +
+      "2026-09-22, con el volumen de contratación reciente en SEACE (`compras-publicas`, campo `seace`: " +
+      "`totalProcesos`/`procesosPrevencionPorTitulo` con el mismo filtro de keyword sobre `titulo`, agregado " +
+      "departamental no por distrito). Ambos enriquecimientos son opcionales e independientes: " +
+      "`obrasInfobras`/`obrasParalizadas` y `seace` son `null` (no `0`) si `INFOBRAS_DATABASE_URL`/" +
+      "`COMPRAS_DATABASE_URL` no están configuradas o la consulta falla en vivo (`infobrasEstado`/`seaceEstado` " +
+      "en la respuesta lo indican). Requiere `INVERSIONES_DATABASE_URL` configurada o responde " +
+      "`ENRIQUECIMIENTO_NO_CONFIGURADO`. Solo coincidencia territorial y de texto (`matcherTerritorial`/" +
+      "`matcherProyectos`/`matcherSeace` por separado) — nunca causalidad, requiere revisión humana. La " +
+      "ausencia de proyectos en un distrito significa que el filtro por nombre no detectó ninguno, no que el " +
+      "distrito no tenga proyectos de prevención reales. Verificado en vivo contra LA LIBERTAD (2026-09-21) y " +
+      "AREQUIPA (2026-09-22, segundo departamento con las 3 fuentes completas): en ambos, 0 procesos SEACE " +
+      "recientes (416 y 278 respectivamente) tocan prevención por título — mismo patrón repetido en 2 " +
+      "departamentos con perfiles de inversión muy distintos (19 vs. 69 proyectos identificados). LA LIBERTAD: " +
+      "9 de 10 distritos con más emergencias sin proyecto detectado, defensa ribereña del río Chicama " +
+      "paralizada desde 2015. AREQUIPA: 5 de 10 sin proyecto; una obra en Ocoña con 100% de avance físico " +
+      "sigue marcada paralizada desde 2020. Ver docs/spike-preparacion-riesgo-nino-2026-09.md y " +
+      "docs/ESTADO.md. " + SIN_SCHEDULER,
+    pathTemplate: "/api/crossref/preparacion-riesgo",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Default LA LIBERTAD."),
+      peligros: z.string().min(1).optional().describe("Lista separada por comas; reemplaza el set default."),
+    },
   },
 ];
