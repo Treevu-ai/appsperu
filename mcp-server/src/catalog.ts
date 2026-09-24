@@ -2900,6 +2900,29 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: ["capa", "objectid"],
     querySchema: {},
   },
+  {
+    name: "catastro_forestal_conflicto_uso_suelo",
+    app: "catastro-forestal",
+    description:
+      "Cruce territorial (por distrito) entre concesiones forestales vigentes de SERFOR (capa " +
+      "`modalidad_concesiones_forestales`, vigencia por `fec_ter`, NO por `SITUAC` -- sin significado " +
+      "documentado por la fuente) y derechos mineros titulados de INGEMMET (`estado = 'T'`, D.M. " +
+      "Titulado D.L. 708). Los códigos UBIGEO de SERFOR se traducen a nombre real vía `territories` " +
+      "de ceplan-geo (join exacto, no texto libre). Requiere `CEPLAN_GEO_DATABASE_URL`/" +
+      "`CATASTRO_MINERO_DATABASE_URL` configuradas o responde `ENRIQUECIMIENTO_NO_CONFIGURADO`. Sin " +
+      "geometría real de por medio (ninguna de las dos fuentes trae polígono en este conector) -- " +
+      "solo coincidencia de distrito, nunca superposición de polígonos ni causalidad/ilegalidad. " +
+      "Verificado en vivo 2026-09-21 contra MADRE DE DIOS (departamento default, más datos del " +
+      "país): distrito de Huepetuhe (epicentro conocido de minería informal) tiene 190 derechos " +
+      "mineros titulados (32,105 ha) coexistiendo con 5 concesiones forestales vigentes (32,957 ha) " +
+      "-- superficies casi idénticas. Ver spike real en " +
+      "docs/spike-conflicto-uso-suelo-forestal-minero-2026-09.md. " + SIN_SCHEDULER,
+    pathTemplate: "/api/crossref/conflicto-uso-suelo",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Default MADRE DE DIOS."),
+    },
+  },
   // ---- emergencias-indeci (SINPAD, emergencias históricas nacionales) ----
   {
     name: "emergencias_indeci",
