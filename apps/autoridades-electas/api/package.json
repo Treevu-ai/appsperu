@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "migrate": "tsx src/db/migrate.ts",
     "ingest:autoridades": "tsx src/ingest/autoridades-connector.ts",
+    "ingest:autoridades-vigentes": "tsx src/ingest/autoridades-vigentes-connector.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
