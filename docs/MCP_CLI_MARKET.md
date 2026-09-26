@@ -97,3 +97,10 @@ Con clave:
 curl -sS -H "Authorization: Bearer sk-TU_CLAVE" \
   "https://cli-market-api.fly.dev/v1/stats" | head
 ```
+
+## Visual (análisis cuidado de rostro LATAM)
+
+Si el Canvas del agente no previsualiza en Cursor (común en runs Cloud / Agent Store en Windows), abre el informe estático en el repo:
+
+- [`docs/assets/rostro-latam-cuidado-visual.html`](assets/rostro-latam-cuidado-visual.html) — doble clic o arrastrar al navegador
+- [`docs/assets/rostro-latam-visual.png`](assets/rostro-latam-visual.png) — imagen lista para LinkedIn
