@@ -3,6 +3,12 @@
     "rastro": {
       "command": "node",
       "args": ["mcp-server/dist/index.js"]
+    },
+    "market-mcp": {
+      "url": "https://cli-market-api.fly.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer sk-TU_CLAVE"
+      }
     }
   }
 }
