@@ -78,6 +78,10 @@ Continue.dev. Una vez conectado, el agente busca el tool exacto, lo ejecuta, enc
 entrega respuestas con citas verificables. Requiere que las apps ya estén corriendo — ver
 [`mcp-server/README.md`](mcp-server/README.md).
 
+**CLI Market (retail LATAM, proyecto hermano):** MCP remoto en `https://cli-market-api.fly.dev/mcp`
+o cliente stdio `market-mcp` — ver [`docs/MCP_CLI_MARKET.md`](docs/MCP_CLI_MARKET.md) y
+[`.mcp.json.example`](.mcp.json.example).
+
 Para conectar Rastro desde un agente: ver [`apps/rastro-web/DEPLOY.md`](apps/rastro-web/DEPLOY.md)
 y la página pública `/docs/api` en [rastro.fyi/docs/api](https://rastro.fyi/docs/api).
 

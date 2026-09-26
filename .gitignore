@@ -9,6 +9,7 @@ coverage/
 # Env locales (cada app declara los suyos si necesita excepciones)
 .env
 .env.local
+.mcp.json
 
 # Logs y artefactos operativos
 logs/

@@ -1,0 +1,195 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cuidado de rostro LATAM — CLI Market</title>
+  <style>
+    :root {
+      --bg: #0f1114;
+      --surface: #181b21;
+      --text: #e8eaed;
+      --muted: #9aa0a6;
+      --accent: #6b9bd1;
+      --warn: #d4a574;
+      --danger: #c97b7b;
+      --ok: #7eb892;
+      --border: #2a2f38;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+      padding: 32px 24px 48px;
+    }
+    .wrap { max-width: 960px; margin: 0 auto; }
+    h1 { font-size: 1.65rem; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.02em; }
+    .lead { color: var(--muted); margin: 0 0 8px; max-width: 52rem; }
+    .meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 24px; }
+    .callout {
+      background: var(--surface);
+      border-left: 3px solid var(--warn);
+      padding: 14px 16px;
+      margin-bottom: 28px;
+      font-size: 0.95rem;
+    }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+    section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 16px 18px 20px;
+      margin-bottom: 20px;
+    }
+    section h2 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      margin: 0 0 4px;
+    }
+    section .caption {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin: 10px 0 0;
+    }
+    .stats { display: flex; flex-wrap: wrap; gap: 16px; margin: 16px 0; }
+    .stat { min-width: 120px; }
+    .stat .v { font-size: 1.5rem; font-weight: 600; color: var(--accent); }
+    .stat .l { font-size: 0.75rem; color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 500; }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+    .tag {
+      font-size: 0.72rem;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--muted);
+    }
+    svg text { fill: var(--muted); font-size: 11px; font-family: inherit; }
+    .bar-label { fill: var(--text); font-size: 11px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="tags">
+      <span class="tag">PE</span><span class="tag">CL</span><span class="tag">CO</span>
+      <span class="tag">MX</span><span class="tag">AR</span><span class="tag">BR</span>
+    </div>
+    <h1>Dónde hay mercado en cuidado de rostro (LATAM)</h1>
+    <p class="lead">Catálogo indexado en retailers conectados (CLI Market). Concentración de canal define farmacia, discount o multicanal.</p>
+    <p class="meta">Fuente: cli-market-api.fly.dev · 26 sep 2026 · crema facial, sérum facial, limpiador facial</p>
+
+    <div class="callout">
+      <strong>Insight clave:</strong> Chile concentra el índice en una cadena (HHI 9565). Perú reparte entre farmacia, dermotienda y departamentales (HHI 1736) — mejor terreno para multicanal y arbitraje de precio.
+    </div>
+
+    <div class="grid2">
+      <section>
+        <h2>Concentración retailers — HHI (0–10 000)</h2>
+        <svg viewBox="0 0 420 220" width="100%" role="img" aria-label="HHI por país">
+          <text x="8" y="14">Eje Y: país · Eje X: HHI</text>
+          <line x1="100" y1="30" x2="400" y2="30" stroke="#2a2f38"/>
+          <line x1="235" y1="30" x2="235" y2="200" stroke="#d4a574" stroke-dasharray="4 3" opacity="0.7"/>
+          <text x="238" y="44" fill="#d4a574" font-size="9">2 500</text>
+          <text class="bar-label" x="4" y="58">CL</text>
+          <rect x="100" y="46" width="300" height="16" fill="#c97b7b" rx="2"/>
+          <text class="bar-label" x="405" y="58">9565</text>
+          <text class="bar-label" x="4" y="88">AR</text>
+          <rect x="100" y="76" width="174" height="16" fill="#c97b7b" rx="2"/>
+          <text class="bar-label" x="280" y="88">5556</text>
+          <text class="bar-label" x="4" y="118">MX</text>
+          <rect x="100" y="106" width="135" height="16" fill="#c97b7b" rx="2"/>
+          <text class="bar-label" x="240" y="118">4312</text>
+          <text class="bar-label" x="4" y="148">CO</text>
+          <rect x="100" y="136" width="107" height="16" fill="#c97b7b" rx="2"/>
+          <text class="bar-label" x="212" y="148">3407</text>
+          <text class="bar-label" x="4" y="178">BR</text>
+          <rect x="100" y="166" width="91" height="16" fill="#c97b7b" rx="2"/>
+          <text class="bar-label" x="196" y="178">2913</text>
+          <text class="bar-label" x="4" y="208">PE</text>
+          <rect x="100" y="196" width="54" height="16" fill="#7eb892" rx="2"/>
+          <text class="bar-label" x="160" y="208">1736</text>
+        </svg>
+        <p class="caption">Serie: HHI · Referencia 2 500 = alta concentración</p>
+      </section>
+
+      <section>
+        <h2>SKUs únicos indexados por país</h2>
+        <svg viewBox="0 0 420 220" width="100%" role="img" aria-label="SKUs por país">
+          <text x="8" y="14">Eje X: país · Eje Y: conteo SKUs</text>
+          <line x1="40" y1="180" x2="400" y2="180" stroke="#2a2f38"/>
+          <rect x="52" y="50" width="36" height="130" fill="#6b9bd1" rx="2"/>
+          <text x="58" y="44" class="bar-label">45</text><text x="58" y="198" fill="#9aa0a6">CL</text>
+          <rect x="108" y="50" width="36" height="130" fill="#6b9bd1" rx="2"/>
+          <text x="114" y="44" class="bar-label">45</text><text x="114" y="198" fill="#9aa0a6">AR</text>
+          <rect x="164" y="58" width="36" height="122" fill="#6b9bd1" rx="2"/>
+          <text x="170" y="52" class="bar-label">43</text><text x="170" y="198" fill="#9aa0a6">PE</text>
+          <rect x="220" y="66" width="36" height="114" fill="#6b9bd1" rx="2"/>
+          <text x="226" y="60" class="bar-label">40</text><text x="226" y="198" fill="#9aa0a6">MX</text>
+          <rect x="276" y="74" width="36" height="106" fill="#6b9bd1" rx="2"/>
+          <text x="282" y="68" class="bar-label">38</text><text x="282" y="198" fill="#9aa0a6">CO</text>
+          <rect x="332" y="98" width="36" height="82" fill="#6b9bd1" rx="2"/>
+          <text x="338" y="92" class="bar-label">29</text><text x="338" y="198" fill="#9aa0a6">BR</text>
+        </svg>
+        <p class="caption">Serie: SKUs deduplicados (3 queries faciales)</p>
+      </section>
+    </div>
+
+    <section>
+      <h2>Mix de canal (% SKUs en muestra)</h2>
+      <svg viewBox="0 0 520 220" width="100%" role="img" aria-label="Mix canal apilado">
+        <text x="8" y="14">Leyenda: Farmacia (azul) · Super (ámbar) · Otros (verde)</text>
+        <text x="4" y="48">PE</text>
+        <rect x="32" y="36" width="260" height="18" fill="#6b9bd1"/><rect x="292" y="36" width="68" height="18" fill="#d4a574"/><rect x="360" y="36" width="162" height="18" fill="#7eb892"/>
+        <text x="4" y="78">CL</text>
+        <rect x="32" y="66" width="490" height="18" fill="#6b9bd1"/><rect x="522" y="66" width="10" height="18" fill="#d4a574"/>
+        <text x="4" y="108">CO</text>
+        <rect x="32" y="96" width="475" height="18" fill="#d4a574"/><rect x="507" y="96" width="25" height="18" fill="#7eb892"/>
+        <text x="4" y="138">MX</text>
+        <rect x="32" y="126" width="392" height="18" fill="#6b9bd1"/><rect x="424" y="126" width="98" height="18" fill="#d4a574"/>
+        <text x="4" y="168">AR</text>
+        <rect x="32" y="156" width="358" height="18" fill="#6b9bd1"/><rect x="390" y="156" width="118" height="18" fill="#d4a574"/><rect x="508" y="156" width="14" height="18" fill="#7eb892"/>
+        <text x="4" y="198">BR</text>
+        <rect x="32" y="186" width="275" height="18" fill="#6b9bd1"/><rect x="307" y="186" width="225" height="18" fill="#7eb892"/>
+      </svg>
+      <p class="caption">100% apilado por país · Otros = belleza, dept, moda</p>
+    </section>
+
+    <section>
+      <h2>Perú — señales operativas</h2>
+      <div class="stats">
+        <div class="stat"><div class="v">44%</div><div class="l">Intensidad promocional</div></div>
+        <div class="stat"><div class="v">8.4%</div><div class="l">Dispersión precio (mercado)</div></div>
+        <div class="stat"><div class="v">1736</div><div class="l">HHI (fragmentado)</div></div>
+      </div>
+      <p style="font-size:0.88rem;margin:0;color:var(--muted)">
+        Top retailers en muestra: InkaFarma (13 SKUs), Mifarma (9), Dermo Tienda (5). Ejemplo arbitraje: Neutrogena Hydro Boost ~S/ 48.5 (dept) vs ~S/ 92.1 (dermo).
+      </p>
+    </section>
+
+    <section>
+      <h2>Playbook por objetivo</h2>
+      <table>
+        <thead>
+          <tr><th>Objetivo</th><th>Mercados</th><th>Canal</th><th>Señal</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Dermo / ticket alto</td><td>CL, AR</td><td>Farmacia</td><td>Eucerin, Cetaphil, Isdin</td></tr>
+          <tr><td>Escala farmacia</td><td>MX</td><td>Farmatodo, Similares</td><td>~80% SKUs farmacia</td></tr>
+          <tr><td>Masivo precio</td><td>CO</td><td>D1, Olímpica</td><td>Hard discount</td></tr>
+          <tr><td>Multicanal + pricing</td><td>PE</td><td>Farma + dermo + dept</td><td>Spread hasta ~90%</td></tr>
+          <tr><td>Skincare emergente</td><td>BR, PE</td><td>Droguería + belleza</td><td>Principia, Celimax, Medicube</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+</body>
+</html>
