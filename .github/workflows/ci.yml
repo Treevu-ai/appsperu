@@ -18,21 +18,26 @@ jobs:
           - apps/areas-protegidas/api
           - apps/autoridades-electas/api
           - apps/bcrp-comercio-exterior/api
+          - apps/bcrp-la-libertad/api
+          - apps/candidatos-erm/api
           - apps/catastro-forestal/api
           - apps/catastro-minero/api
           - apps/ceplan-estrategico/api
           - apps/ceplan-geo/api
           - apps/compras-publicas/api
           - apps/emergencias-indeci/api
+          - apps/geo-intersections/api
           - apps/identidad-fiscal/api
           - apps/informes-control/api
           - apps/infobras/api
           - apps/infracciones-ambientales/api
           - apps/infraestructura-mtc/api
           - apps/instituciones-educativas/api
+          - apps/inversion-privada/api
           - apps/legislativo-congreso/api
           - apps/mindef/api
           - apps/mimp/api
+          - apps/poder-judicial/api
           - apps/programas-sociales/api
           - apps/proveedores-sancionados/api
           - apps/radar-ejecucion/api
@@ -40,10 +45,14 @@ jobs:
           - apps/red-vial-subnacional/api
           - apps/renamu/api
           - apps/residuos-solidos/api
+          - apps/riesgo-fiscal-isds/api
           - apps/salud-institucional/api
           - apps/seguridad-ciudadana/api
           - apps/senace-cartera-proyectos/api
           - apps/servicios-salud/api
+          - apps/sunat-aduanas/api
+          - apps/territorio-inteligencia/api
+          - apps/violencia-escolar/api
           - mcp-server
     defaults:
       run:

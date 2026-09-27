@@ -1,4 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// `candidatos-connector.ts` importa el pool para su ruta de ingesta, pero lo que
+// se prueba acá (`flattenCandidatosJson`) es una función pura sobre un fixture.
+// Sin este mock, importar el módulo dispara el throw de `db/pool.ts` cuando no
+// hay `DATABASE_URL`: la suite entera moría en CI mientras pasaba en local,
+// donde el `.env` de la máquina sí la tenía. Mockear y no saltarse es
+// deliberado — el test no necesita base, así que debe correr siempre.
+vi.mock("../db/pool.js", () => ({
+  pool: { query: vi.fn(), connect: vi.fn(), end: vi.fn() },
+}));
+
 import { flattenCandidatosJson } from "../ingest/candidatos-connector.js";
 
 /**
