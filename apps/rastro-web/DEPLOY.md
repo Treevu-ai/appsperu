@@ -1,7 +1,6 @@
 # Deploy — Rastro en Cloudflare Pages
 
-> **RASTRO** convierte señales dispersas en inteligencia clara para decidir mejor.
-> *Cada señal deja un rastro. Nosotros lo hacemos visible.*
+> **El Estado peruano deja más datos abiertos de los que nadie está usando. Nosotros los estamos conectando.**
 
 **Rastro** es una plataforma de inteligencia que ayuda a equipos y organizaciones a encontrar, conectar y entender las señales que importan. Transformamos información dispersa en contexto accionable, con foco en trazabilidad, claridad y decisiones más seguras.
 
@@ -213,7 +212,7 @@ Cloudflare Pages sirve los archivos `public/` directamente en la raíz. No requi
 - `public/robots.txt` — permite indexar todo y declara el `Sitemap:`.
 - `public/sitemap.xml` — incluye las rutas públicas.
 - `public/llms.txt` — descripción del sitio para LLM crawlers (ChatGPT, Perplexity, Claude).
-- `index.html` — JSON-LD con `Organization`, `WebSite` y `SoftwareApplication` (este último para que AI crawlers descubran el MCP server con sus <!-- COUNT:TOOL_COUNT -->190<!-- /COUNT --> tools).
+- `index.html` — JSON-LD con `Organization`, `WebSite` y `SoftwareApplication` (este último para que AI crawlers descubran el MCP server con sus <!-- COUNT:TOOL_COUNT -->209<!-- /COUNT --> tools).
 - `index.html` — `<link rel="canonical">` apunta a `https://rastro.fyi/`.
 
 ---

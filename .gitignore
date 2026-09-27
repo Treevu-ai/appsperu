@@ -37,6 +37,29 @@ logs/
 __pycache__/
 *.pyc
 
+# Dumps de consulta y scratch local de depuracion — salidas de una sesion de
+# trabajo, no codigo fuente ni artefactos de despliegue
+/docs/out_*.txt
+/docs/err_*.txt
+/docs/ocds_*.txt
+/docs/search_*.mjs
+/docs/find_ocds_ids.mjs
+/tmp_*.py
+/tmp_*.js
+/agg_*.py
+/aggregate_*.py
+/check_*.py
+/query_*.py
+/query_*.js
+/bcrp_fetch.js
+/find_bad_chars.py
+/make_pdf.py
+/html_to_pdf.js
+/run_vitest.ps1
+/dy
+/tools/test_gpp.py
+/tools/test_gpp.ps1
+
 # Caché y salidas locales de tools/scrapers y tools/ckan-indexer — datos
 # descargados/generados, no código fuente, no se versionan
 tools/scrapers/cache/

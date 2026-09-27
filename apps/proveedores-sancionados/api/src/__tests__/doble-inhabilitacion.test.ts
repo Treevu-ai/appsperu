@@ -32,6 +32,7 @@ const FILA_BASE = {
   admin_estado: "VIGENTE",
   ruc_dni_judicial: "10040039711",
   nombre_judicial: "BARRETO MARCELO TEODORO",
+  organo_jurisdiccional: "FISCALIA ESPECIALIZADA EN NARCOTICOS",
   resolucion_judicial: "SENTENCIA DE FECHA 28.04.2017",
   judicial_desde: "2017-04-28",
   judicial_hasta: "2099-01-01", // vigente muy a futuro para el test
@@ -100,7 +101,7 @@ describe("GET /api/crossref/doble-inhabilitacion", () => {
     expect(params).toEqual(["10040039711"]);
   });
 
-  it("filtra también por DNI de 8 dígitos (regresión: antes solo calzaba el RUC/ruc_dni completo)", async () => {
+   it("filtra también por DNI de 8 dígitos (regresión: antes solo calzaba el RUC/ruc_dni completo)", async () => {
     queryMock.mockResolvedValueOnce({ rows: [] });
 
     await request(createApp()).get("/api/crossref/doble-inhabilitacion").query({ ruc: "04003971" });
@@ -108,5 +109,39 @@ describe("GET /api/crossref/doble-inhabilitacion", () => {
     const [sql, params] = queryMock.mock.calls[0];
     expect(sql).toMatch(/i\.dni = \$1 OR ij\.dni = \$1/);
     expect(params).toEqual(["04003971"]);
+  });
+
+  it("exige organo_jurisdiccional en la respuesta judicial (nuevo campo para SEC-11 narcotráfico)", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [FILA_BASE] });
+
+    const res = await request(createApp()).get("/api/crossref/doble-inhabilitacion");
+
+    expect(res.body.resultados[0].judicial.organoJurisdiccional).toBe("FISCALIA ESPECIALIZADA EN NARCOTICOS");
+  });
+
+  it("filtra por keyword en organo_jurisdiccional (ILIKE, case-insensitive) — para detectar Fiscalías de Narcóticos entre casos judiciales", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+
+    await request(createApp()).get("/api/crossref/doble-inhabilitacion").query({
+      organoJurisdiccional: "narcoticos",
+    });
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toMatch(/ij\.organo_jurisdiccional ILIKE/);
+    expect(params).toEqual(["%narcoticos%"]);
+  });
+
+  it("combina filtro ruc + organoJurisdiccional en un solo query", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+
+    await request(createApp()).get("/api/crossref/doble-inhabilitacion").query({
+      ruc: "10040039711",
+      organoJurisdiccional: "droga",
+    });
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toMatch(/i\.ruc = \$1/);
+    expect(sql).toMatch(/ij\.organo_jurisdiccional ILIKE \$2/);
+    expect(params).toEqual(["10040039711", "%droga%"]);
   });
 });
