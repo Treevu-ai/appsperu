@@ -69,7 +69,9 @@ async function fetchReporteHtml(): Promise<string> {
   // 2026-08-20) — `.text()` decodificaría como UTF-8 por defecto y corrompe
   // cualquier tilde/ñ que venga como byte crudo en vez de entidad HTML
   // (`&oacute;`). Bug real encontrado al revisar el resultado en el
-  // navegador: "resolución" salía como "resoluci�n". Se decodifica el buffer
+  // navegador: "resolución" salía con el ó convertido en un carácter de
+  // reemplazo U+FFFD (0xF3 de Latin-1 no es una secuencia UTF-8 válida).
+  // Se decodifica el buffer
   // crudo como Latin-1 explícitamente, igual que el padrón RUC de SUNAT.
   const buffer = await exportRes.arrayBuffer();
   return Buffer.from(buffer).toString("latin1");

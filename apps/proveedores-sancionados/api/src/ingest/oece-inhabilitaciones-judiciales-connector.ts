@@ -62,7 +62,8 @@ async function fetchCsvText(): Promise<{ text: string; sourceUrl: string }> {
   // El archivo real está codificado en Latin-1, no UTF-8 (confirmado en vivo
   // 2026-09-20: byte 0xC1 crudo para "Á", no la secuencia UTF-8 0xC3 0x81) —
   // `.text()` decodificaría como UTF-8 por defecto y corrompería cualquier
-  // tilde/Ñ ("REATEGUI VÁSQUEZ" salía como "REATEGUI V�SQUEZ"). Mismo bug de
+  // tilde/Ñ ("REATEGUI VÁSQUEZ" salía con la Á convertida en un carácter de
+  // reemplazo U+FFFD). Mismo bug de
   // clase ya encontrado y corregido en `sanciones-connector.ts` (RNP,
   // 2026-08-20) — mismo fix: decodificar el buffer crudo como Latin-1.
   const buffer = await res.arrayBuffer();

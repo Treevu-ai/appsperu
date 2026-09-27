@@ -8,8 +8,9 @@ const INSERT_BATCH_SIZE = 1000;
 
 /**
  * Confirmado en vivo 2026-09-22 (ADS-05): el archivo real está codificado en **ISO-8859-1
- * (Latin-1), no UTF-8** ("AÑO" llega como bytes que decodificados como UTF-8 se ven como
- * "A�O") -- se decodifica explícitamente como `latin1`, no se asume UTF-8 por defecto.
+ * (Latin-1), no UTF-8** ("AÑO" llega como bytes que decodificados como UTF-8
+ * producen un carácter de reemplazo U+FFFD) -- se decodifica explícitamente como
+ * `latin1`, no se asume UTF-8 por defecto.
  * El archivo no contiene ninguna comilla (`"`) en sus 142,139 filas reales -- un split manual
  * por `;` es seguro aquí; no hace falta un parser CSV completo con manejo de comillas/escapes.
  */
