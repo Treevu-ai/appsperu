@@ -1427,6 +1427,52 @@
     "sinScheduler": false
   },
   {
+    "name": "proveedores_sancionados_extorsion_duenos_reales",
+    "app": "proveedores-sancionados",
+    "description": "Extorsión en territorio alto contra los dueños reales de la obra pública (2026-09-26): cruza las denuncias policiales de Extorsión por distrito (seguridad-ciudadana) con los ganadores de los contratos de esa zona y con las sanciones recaídas sobre las PERSONAS (DNI) vinculadas a esos proveedores — la cuenta atrás del contratista no siempre es la persona jurídica. Los tres dominios (denuncias, contratos, sanciones) se ingieren por separado y pueden tener fechas de corte distintas: un vacío aquí puede ser cobertura faltante, no ausencia de sanción.Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/crossref/extorsion-duenos-reales",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "anio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "proveedores_sancionados_extorsion_sancionados",
+    "app": "proveedores-sancionados",
+    "description": "Extorsión en distritos con proveedor sancionado (2026-09-26): para cada distrito con denuncias de Extorsión, lista los proveedores sancionados (persona jurídica, con su RUC) con contratos en ese mismo distrito y año. Es una COINCIDENCIA TERRITORIAL, no prueba de relación: el sanción y la denuncia pueden no estar vinculados. Úsalo para priorizar verificación, no para concluir.Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/crossref/extorsion-sancionados",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "anio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "proveedores_sancionados_extorsion_velocidad_sancion",
+    "app": "proveedores-sancionados",
+    "description": "Velocidad sanción→contrato en distritos con denuncias de Extorsión (2026-09-26): a diferencia de los otros dos cruces de extorsión, aquí la ventana temporal ES la señal — un proveedor que empieza a contratar pocos días después de recibir su sanción, en un distrito con extorsión activa. La coincidencia temporal NO prueba que la sanción motivara el contrato; es un patrón para priorizar.Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/crossref/extorsion-velocidad-sancion",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "anio",
+      "ventanaDiasPostSancion"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "proveedores_sancionados_meta_freshness",
+    "app": "proveedores-sancionados",
+    "description": "Freshness de la fuente de sanciones (TCE/OSCE, clave `tce_osce`): fecha de la última ingesta, días sin actualizar y filas ingeridas. Sirve para no presentar una sanción vigente como si reflejara el estado de hoy.Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/meta/freshness",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
     "name": "salud_institucional_score",
     "app": "salud-institucional",
     "description": "Score compuesto 0-100 por entidad, calculado EN VIVO combinando ejecución (radar-ejecucion), obras (infobras), inversiones (radar-inversiones), compras (compras-publicas) y salud tributaria de proveedores (identidad-fiscal). Si una fuente no tiene dato para una entidad, ese componente se OMITE del promedio — nunca se imputa 0 ni 100 por ausencia. No hay 'ingesta' propia que programar: requiere que las otras 5 apps estén corriendo. Cada resultado con score también trae `banda` (SI-04, 2026-09-08): Sobresaliente/Alto/Medio/Bajo/Crítico, umbrales fijos por percentiles reales de La Libertad — null si scoreCompuesto es null. Default: LA LIBERTAD, año 2026.",
@@ -1537,6 +1583,59 @@
     "sinScheduler": false
   },
   {
+    "name": "seguridad_ciudadana_comisarias",
+    "app": "seguridad-ciudadana",
+    "description": "Comisarías auditadas con hallazgos de Contraloría, con su informe de origen (URL) y el detalle de hallazgos en JSONB. Filtra por severidad de hallazgo (critica|mayor|menor) vía containment sobre el JSONB, no por columna propia. Cobertura: comisarías de LIMA auditadas — no es el padrón nacional de unidades policiales. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/comisarias",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "distrito",
+      "severidad",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "seguridad_ciudadana_comisaria_detalle",
+    "app": "seguridad-ciudadana",
+    "description": "Detalle de una comisaría auditada por su `id` interno (el de la fila en `comisarias_auditadas`, no un código de unidad policial). 404 si el id no existe. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/comisarias/{id}",
+    "pathParams": [
+      "id"
+    ],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "seguridad_ciudadana_equipamiento",
+    "app": "seguridad-ciudadana",
+    "description": "Equipamiento PNP adquirido vía SEACE (inversión en vehículos, armamento, comunicaciones y equipo de seguridad) por año y tipo, con el proveedor y el contrato de origen. Sin filtro `tipo` devuelve además un resumen agregado por tipo. Importes en soles de la fuente, sin conversión cambiaria. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/equipamiento",
+    "pathParams": [],
+    "queryParams": [
+      "anio_desde",
+      "anio_hasta",
+      "tipo",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "seguridad_ciudadana_equipamiento_resumen",
+    "app": "seguridad-ciudadana",
+    "description": "Inversión PNP en equipamiento agregada por año (contratos y monto total), para ver la tendencia plurianual sin el detalle por contrato. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/equipamiento/resumen",
+    "pathParams": [],
+    "queryParams": [
+      "anio_desde",
+      "anio_hasta"
+    ],
+    "sinScheduler": true
+  },
+  {
     "name": "bcrp_comercio_exterior_trade",
     "app": "bcrp-comercio-exterior",
     "description": "Comercio exterior agregado nacional (millones US$ FOB) — exportaciones, importaciones y balanza comercial mensual, series PN38714BM–PN38723BM. Sin desagregación territorial ni por empresa; indicador macro de contexto. Cobertura nacional completa desde 2012. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
@@ -1544,6 +1643,22 @@
     "pathParams": [],
     "queryParams": [
       "series",
+      "category",
+      "anio",
+      "desde",
+      "hasta"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "bcrp_comercio_exterior_macro",
+    "app": "bcrp-comercio-exterior",
+    "description": "Series macro nacionales del BCRP — tipo de cambio (S/ por US$), inflación (IPC Lima var% mensual), PBI (índice 2007=100), tasa de referencia de política monetaria (%). Mensuales, agregado nacional. Cobertura desde 1992 (PBI) o 2003 (tasas). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/trade/macro",
+    "pathParams": [],
+    "queryParams": [
+      "series",
+      "category",
       "anio",
       "desde",
       "hasta"
@@ -2077,6 +2192,50 @@
     "sinScheduler": true
   },
   {
+    "name": "infraestructura_mtc_terminales_vulnerabilidad",
+    "app": "infraestructura-mtc",
+    "description": "Índice de vulnerabilidad estructural de terminales portuarias, ordenadas de mayor a menor score. El score combina estado de conservación, concesión, geolocalización y antigüedad con pesos fijos (metodología en `docs/metodologia-indice-vulnerabilidad-portuaria.md`); un score alto indica una terminal más expuesta, NO que vaya a ocurrir un accidente. `esPuntoCritico` marca el corte de ese umbral. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/terminales/vulnerabilidad",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "ambito",
+      "fuente",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "infraestructura_mtc_terminal_vulnerabilidad",
+    "app": "infraestructura-mtc",
+    "description": "Índice de vulnerabilidad de UNA terminal portuaria por su código, con el desglose de componentes del score y su ranking global dentro de la misma fuente. 404 si el código no existe en esa fuente. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/terminales/vulnerabilidad/{codigo}",
+    "pathParams": [
+      "codigo"
+    ],
+    "queryParams": [
+      "fuente"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "infraestructura_mtc_terminales_vulnerabilidad_clima",
+    "app": "infraestructura-mtc",
+    "description": "Índice v2 de vulnerabilidad: la parte estructural del score más el riesgo CLIMÁTICO de la terminal (fuente ANA), con la serie histórica del riesgo. Es un índice COMPUESTO y por tanto más frágil que el score estructural: un cambio en la fecha de los datos climáticos mueve el valor sin que cambie la terminal. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/terminales/vulnerabilidad/clima",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "ambito",
+      "fecha",
+      "fuente",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
     "name": "riesgo_fiscal_isds_pasivos_contingentes",
     "app": "riesgo-fiscal-isds",
     "description": "Pasivos contingentes explícitos del Sector Público No Financiero, POR AÑO DE CIERRE (no por edición del MMM — es una serie continua que cada documento nuevo extiende o revisa): controversias internacionales de inversión (categoría `isds`, CIADI/ICSID), contingencias de Asociaciones Público-Privadas (`app`), y procesos judiciales/administrativos/arbitraje nacional (`judicial_administrativo`), más el `total`. Serie 2020-2025 verificada por lectura directa del PDF (conector `pdf-parse` para 2020-2023; 2024-2025 cargados a mano por formato de tabla no soportado, ver ADR-0023). ISDS llegó a 4.24% del PBI en 2025, el máximo de toda la serie. `pctPbi` es `null` cuando un año/categoría no se pudo verificar — nunca se completa con un valor supuesto.",
@@ -2128,10 +2287,25 @@
       "especExp",
       "condicion",
       "estado",
+      "dependencia",
       "limit",
       "offset"
     ],
     "sinScheduler": true
+  },
+  {
+    "name": "poder_judicial_crimen_organizado",
+    "app": "poder-judicial",
+    "description": "Estadística agregada de casos de Crimen Organizado — filtra `procesos_judiciales_jurisdiccional` a juzgados/salas especializados en 'Crimen Organizado' (12 dependencias distintas identificadas en vivo 2026-09-26) y devuelve PENDIENTE/RESUELTO/INGRESO/SENTENCIA agrupados por distrito judicial y año. No trae expedientes individuales ni PII (igual que `poder_judicial_procesos`). No vinculable a proveedores: los datos son conteos agregados, no partes ni RUC/DNI. Cobertura: 174 filas de proceso (2,743 pendientes / 777 resueltos) a nivel nacional. Filtros opcionales: `anio`, `distritoJudicial`. Paginación real con `limit`/`offset`.",
+    "pathTemplate": "/api/procesos-judiciales/crimen-organizado",
+    "pathParams": [],
+    "queryParams": [
+      "anio",
+      "distritoJudicial",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": false
   },
   {
     "name": "poder_judicial_procesos_resumen",
@@ -2339,6 +2513,78 @@
     "sinScheduler": true
   },
   {
+    "name": "catastro_forestal_conflicto_uso_suelo",
+    "app": "catastro-forestal",
+    "description": "Cruce territorial (por distrito) entre concesiones forestales vigentes de SERFOR (capa `modalidad_concesiones_forestales`, vigencia por `fec_ter`, NO por `SITUAC` -- sin significado documentado por la fuente) y derechos mineros titulados de INGEMMET (`estado = 'T'`, D.M. Titulado D.L. 708). Los códigos UBIGEO de SERFOR se traducen a nombre real vía `territories` de ceplan-geo (join exacto, no texto libre). Requiere `CEPLAN_GEO_DATABASE_URL`/`CATASTRO_MINERO_DATABASE_URL` configuradas o responde `ENRIQUECIMIENTO_NO_CONFIGURADO`. Sin geometría real de por medio (ninguna de las dos fuentes trae polígono en este conector) -- solo coincidencia de distrito, nunca superposición de polígonos ni causalidad/ilegalidad. Verificado en vivo 2026-09-21 contra MADRE DE DIOS (departamento default, más datos del país): distrito de Huepetuhe (epicentro conocido de minería informal) tiene 190 derechos mineros titulados (32,105 ha) coexistiendo con 5 concesiones forestales vigentes (32,957 ha) -- superficies casi idénticas. Ver spike real en docs/spike-conflicto-uso-suelo-forestal-minero-2026-09.md. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/crossref/conflicto-uso-suelo",
+    "pathParams": [],
+    "queryParams": [
+      "departamento"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "geo_intersections_cruce_punto",
+    "app": "geo-intersections",
+    "description": "Dado un punto (lat/lon), devuelve los derechos mineros y títulos forestales que lo cubren directamente (punto exacto) o dentro de un radio en km. PostGIS ST_Contains.Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/cruce/punto",
+    "pathParams": [],
+    "queryParams": [
+      "lat",
+      "lon",
+      "radio_km"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "geo_intersections_reporte",
+    "app": "geo-intersections",
+    "description": "Reporte completo de superposiciones entre derechos mineros y títulos forestales (mining ∩ forest). Filtra por departamento, sustancia, capa forestal y área mínima. Ordenado por km² de intersección descendente.Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/cruce/report",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "sustancia",
+      "capa",
+      "min_area_km2",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "geo_intersections_stats",
+    "app": "geo-intersections",
+    "description": "Estadísticas resumen: cuántos derechos mineros y títulos forestales hay con geometría, cuántas intersecciones totales, desglose por departamento, sustancia y capa forestal.Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/cruce/stats",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "geo_intersections_minero",
+    "app": "geo-intersections",
+    "description": "Superposiciones de un derecho minero específico (por CODIGOU) con títulos forestales. Muestra qué bosques cubre parcialmente ese derecho.Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/cruce/minero/:codigou",
+    "pathParams": [
+      "codigou"
+    ],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "geo_intersections_forestal",
+    "app": "geo-intersections",
+    "description": "Superposiciones de un título forestal específico (por capa + objectid) con derechos mineros. Muestra qué concesiones mineras cubren parcialmente ese bosque.Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/cruce/forestal/:capa/:objectid",
+    "pathParams": [
+      "capa",
+      "objectid"
+    ],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
     "name": "emergencias_indeci",
     "app": "emergencias-indeci",
     "description": "Emergencias y daños históricos a nivel nacional (2003-2025) de INDECI/SINPAD — inundaciones, huaicos, sismos, heladas, incendios, sequías y otros 22 tipos de peligro. Datos EDAN (Evaluación de Daños y Análisis de Necesidades) por evento: fallecidos, desaparecidos, lesionados, damnificados, afectados, viviendas destruidas/afectadas. Filtra por `departamento`/`provincia`/`distrito` (nombres reales, no códigos), `peligro` exacto o `anio`. `sinpadId` **no es una clave única** pese a que la fuente lo documenta como tal (verificado en vivo: 7 códigos repetidos entre eventos genuinamente distintos) — usa el `id` interno para referenciar una fila específica. Snapshot completo del histórico, reemplazado en cada ingesta (sin clave estable de negocio). Verificado en vivo 2026-09-22: 142,139 filas, 0 rechazadas; 2,853 en La Libertad. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
@@ -2369,7 +2615,7 @@
   {
     "name": "emergencias_indeci_preparacion_riesgo",
     "app": "emergencias-indeci",
-    "description": "Cruce territorial (por distrito) entre historial de emergencias tipo El Niño (INDECI, peligro por defecto: LLUVIA INTENSA/INUNDACION/HUAYCO/DESLIZAMIENTO/EROSION) y proyectos de inversión de prevención (Invierte.pe, filtrados por nombre: defensa ribereña, descolmatación, drenaje pluvial, encauzamiento — NO exhaustivo, es búsqueda de texto, no una clasificación oficial), enriquecido con el estado de ejecución de esas obras en INFOBRAS (paralización, avance físico real), enriquecimiento opcional independiente: `obrasInfobras`/`obrasParalizadas` son `null` (no `0`) si `INFOBRAS_DATABASE_URL` no está configurada o la consulta falla en vivo (`infobrasEstado` en la respuesta lo indica). Requiere `INVERSIONES_DATABASE_URL` configurada o responde `ENRIQUECIMIENTO_NO_CONFIGURADO`. Solo coincidencia territorial y de texto (`matcherTerritorial`/`matcherProyectos` por separado) — nunca causalidad, requiere revisión humana. La ausencia de proyectos en un distrito significa que el filtro por nombre no detectó ninguno, no que el distrito no tenga proyectos de prevención reales. Verificado en vivo 2026-09-21 contra LA LIBERTAD (único departamento con datos completos de las 3 fuentes en el snapshot local): 9 de los 10 distritos con más emergencias no tienen proyectos de prevención detectados por este filtro; una defensa ribereña activa (río Chicama) está paralizada. Ver spike real en docs/spike-preparacion-riesgo-nino-2026-09.md. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "description": "Cruce territorial (por distrito) entre historial de emergencias tipo El Niño (INDECI, peligro por defecto: LLUVIA INTENSA/INUNDACION/HUAYCO/DESLIZAMIENTO/EROSION) y proyectos de inversión de prevención (Invierte.pe, filtrados por nombre: defensa ribereña, descolmatación, drenaje pluvial, encauzamiento — NO exhaustivo, es búsqueda de texto, no una clasificación oficial), enriquecido con el estado de ejecución de esas obras en INFOBRAS (paralización, avance físico real) y, desde 2026-09-22, con el volumen de contratación reciente en SEACE (`compras-publicas`, campo `seace`: `totalProcesos`/`procesosPrevencionPorTitulo` con el mismo filtro de keyword sobre `titulo`, agregado departamental no por distrito). Ambos enriquecimientos son opcionales e independientes: `obrasInfobras`/`obrasParalizadas` y `seace` son `null` (no `0`) si `INFOBRAS_DATABASE_URL`/`COMPRAS_DATABASE_URL` no están configuradas o la consulta falla en vivo (`infobrasEstado`/`seaceEstado` en la respuesta lo indican). Requiere `INVERSIONES_DATABASE_URL` configurada o responde `ENRIQUECIMIENTO_NO_CONFIGURADO`. Solo coincidencia territorial y de texto (`matcherTerritorial`/`matcherProyectos`/`matcherSeace` por separado) — nunca causalidad, requiere revisión humana. La ausencia de proyectos en un distrito significa que el filtro por nombre no detectó ninguno, no que el distrito no tenga proyectos de prevención reales. Verificado en vivo contra LA LIBERTAD (2026-09-21) y AREQUIPA (2026-09-22, segundo departamento con las 3 fuentes completas): en ambos, 0 procesos SEACE recientes (416 y 278 respectivamente) tocan prevención por título — mismo patrón repetido en 2 departamentos con perfiles de inversión muy distintos (19 vs. 69 proyectos identificados). LA LIBERTAD: 9 de 10 distritos con más emergencias sin proyecto detectado, defensa ribereña del río Chicama paralizada desde 2015. AREQUIPA: 5 de 10 sin proyecto; una obra en Ocoña con 100% de avance físico sigue marcada paralizada desde 2020. Ver docs/spike-preparacion-riesgo-nino-2026-09.md y docs/ESTADO.md. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/crossref/preparacion-riesgo",
     "pathParams": [],
     "queryParams": [

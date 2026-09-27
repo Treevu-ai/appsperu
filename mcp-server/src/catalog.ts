@@ -2804,28 +2804,28 @@ export const TOOL_CATALOG: ToolSpec[] = [
        offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
      },
    },
-   {
-     name: "poder_judicial_crimen_organizado",
-     app: "poder-judicial",
-     description:
-       "Estadística agregada de casos de Crimen Organizado — filtra `procesos_judiciales_jurisdiccional` " +
-       "a juzgados/salas especializados en 'Crimen Organizado' (12 dependencias distintas identificadas " +
-       "en vivo 2026-09-26) y devuelve PENDIENTE/RESUELTO/INGRESO/SENTENCIA agrupados por distrito " +
-       "judicial y año. No trae expedientes individuales ni PII (igual que `poder_judicial_procesos`). " +
-       "No vinculable a proveedores: los datos son conteos agregados, no partes ni RUC/DNI. " +
-       "Cobertura: 174 filas de proceso (2,743 pendientes / 777 resueltos) a nivel nacional. " +
-       "Filtros opcionales: `anio`, `distritoJudicial`. Paginación real con `limit`/`offset`.",
-     pathTemplate: "/api/procesos-judiciales/crimen-organizado",
-     pathParams: [],
-     querySchema: {
-       anio: z.coerce.number().int().min(2000).max(2100).optional(),
-       distritoJudicial: z.string().min(1).optional(),
-       limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
-       offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
-     },
-   },
-   {
-     name: "poder_judicial_procesos_resumen",
+  {
+    name: "poder_judicial_crimen_organizado",
+    app: "poder-judicial",
+    description:
+      "Estadística agregada de casos de Crimen Organizado — filtra `procesos_judiciales_jurisdiccional` " +
+      "a juzgados/salas especializados en 'Crimen Organizado' (12 dependencias distintas identificadas " +
+      "en vivo 2026-09-26) y devuelve PENDIENTE/RESUELTO/INGRESO/SENTENCIA agrupados por distrito " +
+      "judicial y año. No trae expedientes individuales ni PII (igual que `poder_judicial_procesos`). " +
+      "No vinculable a proveedores: los datos son conteos agregados, no partes ni RUC/DNI. " +
+      "Cobertura: 174 filas de proceso (2,743 pendientes / 777 resueltos) a nivel nacional. " +
+      "Filtros opcionales: `anio`, `distritoJudicial`. Paginación real con `limit`/`offset`.",
+    pathTemplate: "/api/procesos-judiciales/crimen-organizado",
+    pathParams: [],
+    querySchema: {
+      anio: z.coerce.number().int().min(2000).max(2100).optional(),
+      distritoJudicial: z.string().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "poder_judicial_procesos_resumen",
     app: "poder-judicial",
     description:
       "Agrega (SUM) las columnas titulares de `poder_judicial_procesos` (`pendiente`, `resuelto`, " +

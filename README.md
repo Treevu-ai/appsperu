@@ -4,13 +4,13 @@
 
 Repo: https://github.com/Treevu-ai/appsperu
 
-Monorepo con 40 apps backend (APIs Express + Postgres por app) que exponen datos abiertos
+Monorepo de apps backend (APIs Express + Postgres por app) que exponen datos abiertos
 del Estado peruano — presupuesto, contrataciones, inversiones, obras públicas, catastro minero,
 títulos forestales, transporte, infraestructura, supervisión ambiental, **macro BCRP
 (tipo de cambio, inflación, PBI, tasas de interés)** — cruzados en un solo
 pipeline con conectores Python estándar, cache local y rate limits respetuosos. La capa de
 lectura pública para humanos y agentes IA es **Rastro** (`apps/rastro-web/`, publicada en
-`rastro.fyi`); el servidor MCP (`mcp-server/`) expone 38 de las 40 APIs como tools de solo lectura
+`rastro.fyi`); el servidor MCP (`mcp-server/`) expone 38 de las APIs del monorepo como tools de solo lectura
 para Claude Code, Claude Desktop, Cursor, Windsurf, Cline y Continue.dev.
 
 ## Apps

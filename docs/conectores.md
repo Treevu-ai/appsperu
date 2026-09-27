@@ -544,8 +544,24 @@ duplicar lógica entre los tres.
 | **Cómo lo hace** | Descarga HTTP directa de un CSV (delimitado por coma, con BOM). El portal está detrás de un WAF que bloquea requests sin headers de navegador — confirmado en vivo el 2026-08-27 (un fetch sin `User-Agent` devuelve HTTP 418 con una página de bloqueo en vez del CSV). |
 | **Frecuencia** | Manual (`npm run ingest:sidpol`). Snapshot completo del CSV nacional en cada corrida. |
 | **Fuente de datos** | `www.datosabiertos.gob.pe` (MININTER — `DATASET_Denuncias_Policiales_Ene 2018 a Julio 2026.csv`). |
+| **Segundo conector: equipamiento PNP** | `seace-pnp-equipamiento-connector.ts` es un conector distinto, con fuente distinta: consume la API de [`compras-publicas`](#compras-publicas) (SEACE `awards`), filtra los adjudicatarios que son PNP, agrega el equipamiento por tipo y guarda series históricas de lo que la PNP compró. Alimenta `GET /api/equipamiento` y su resumen anual, que es un subrouter aparte de las denuncias — ver la nota de `/equipamiento` más abajo. No usa el CSV de SIDPOL: son dos cadenas de ingesta separadas dentro de la misma app. |
 | **Cruces** | `GET /api/crossref` junta denuncias con `budget_execution` de [`radar-ejecucion`](#radar-ejecucion), FUNCION=ORDEN PUBLICO Y SEGURIDAD, exacto por departamento+año — mismo patrón de bucket exacto (sin matcher difuso) que usa [`actividad-agraria`](#actividad-agraria) para gasto agropecuario. Distingue igual ejecución regional/local de gasto nacional dirigido (ej. PNP con sede en Lima operando en la región), y advierte explícitamente que no implica causalidad entre denuncias y gasto. |
 | **Sin cobertura de homicidios (DQ-15, 2026-09-08)** | El dataset SIDPOL no incluye "Homicidio" como modalidad — verificado contra las 369,100 filas completas (todo el Perú, 2018-2026): existen exactamente 7 modalidades (Otros, Violencia contra la mujer e integrantes, Hurto, Robo, Estafa, Extorsión, Secuestro). No es un defecto del conector — SIDPOL registra *denuncias*, y un homicidio se investiga de oficio, no por denuncia. INEI publica tasas de homicidio, pero solo a nivel departamental y como reporte PDF periódico, no como dataset distrital descargable. Candidato sin verificar: `[MPFN] Delitos` (Ministerio Público, `datosabiertos.gob.pe`) — reportaría "homicidio doloso" por **distrito fiscal** (circunscripción judicial, ~34 en el país, más fino que departamento pero no equivalente a distrito/provincia administrativo) — no se pudo inspeccionar el archivo real en esta evaluación (el dominio no resolvió por DNS desde este entorno). |
+
+---
+
+<a id="sunat-aduanas"></a>
+## sunat-aduanas — Comercio exterior (SUNAT, Anuario)
+
+| | |
+|---|---|
+| **Descripción** | Ingiere los XLSX del Anuario de Comercio Exterior de SUNAT: dos hojas, `cdro_15` (importaciones CIF por aduana, trimestral + total anual) y `cdro_16` (importaciones FOB y CIF por aduana y subpartida), ambas 2023-2024. |
+| **Qué hace** | Lee los XLSX y puebla las tablas de comercio exterior por aduana y por subpartida, que es el nivel más fino de la clasificación arancelaria. Sirve para saber qué se importa realmente por puerto, no solo qué se画出. |
+| **Cómo lo hace** | Descarga y parseo de XLSX (no CSV): el Anuario se publica solo en Excel. |
+| **Frecuencia** | Manual (`npx tsx src/ingest/sunat-connector.ts`). El Anuario es una publicación anual con cortes trimestrales. |
+| **Fuente de datos** | Anuario de Comercio Exterior de SUNAT (`sunat.gob.pe`). |
+| **Cobertura en el MCP** | No está en el catálogo MCP: la app existe y tiene datos, pero todavía no se han cableado sus tools en `mcp-server/src/catalog.ts`. |
+| **Conector** | `sunat-connector.ts` |
 
 ---
 

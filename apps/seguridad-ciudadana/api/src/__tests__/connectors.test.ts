@@ -1,10 +1,19 @@
 /**
  * __tests__/connectors.test.ts
- * 
+ *
  * Tests unitarios para Connector 1 (informes-control) y Connector 2 (SEACE)
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+// Los dos conectores importan el pool para sus rutas de ingesta, pero los tests
+// de acá solo ejercitan funciones puras. Sin este mock, importar el módulo
+// dispara el throw de `db/pool.ts` cuando no hay DATABASE_URL: la suite entera
+// moría en CI mientras pasaba en local, donde el `.env` sí la tenía.
+vi.mock("../db/pool.js", () => ({
+  pool: { query: vi.fn(), end: vi.fn() },
+}));
+
 import {
   extractComisariaNames,
   extractHallazgos,

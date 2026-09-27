@@ -1,20 +1,41 @@
+/**
+ * Tests de INTEGRACION del endpoint /api/terminales/vulnerabilidad.
+ * PRD-004 · Épica 4, Historia 4.2 — VUL-06 a VUL-10
+ *
+ * Mezcla dos cosas con el mismo requisito: todo este archivo necesita Postgres.
+ * El scoring parece puro, pero vive en `routes/vulnerabilidad-portuaria.ts`,
+ * que importa el pool al cargar el módulo — sin `DATABASE_URL` hasta `import`
+ * revienta. Así que el guard es del archivo entero, no test por test.
+ *
+ * Antes de esto fallaba en CI con "DATABASE_URL no está definida" y en local
+ * pasaba siempre, porque el `.env` de la máquina sí la tenía: el verde local no
+ * probaba nada. Ahora se salta a la vista cuando no hay base, en vez de romper
+ * la integración continua.
+ */
+import "dotenv/config";
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
-import { createApp } from "../src/app.js";
-import { pool } from "../src/db/pool.js";
 import type { Express } from "express";
 
-let app: Express;
+const CON_DB = Boolean(process.env.DATABASE_URL);
+
+let app: Express | undefined;
 const baseUrl = "/api/terminales/vulnerabilidad";
 
-beforeAll(() => {
+beforeAll(async () => {
+  if (!CON_DB) return;
+  // Import dinamico: importar el pool en el tope del modulo dispara el throw de
+  // `db/pool.ts` aunque la suite inteira termine saltandose.
+  const { createApp } = await import("../src/app.js");
   app = createApp();
 });
 
 afterAll(async () => {
+  if (!CON_DB) return;
+  const { pool } = await import("../src/db/pool.js");
   await pool.end();
 });
 
-describe("Índice de Vulnerabilidad Portuaria", () => {
+describe.skipIf(!CON_DB)("Índice de Vulnerabilidad Portuaria", () => {
   // ─── Test: El score se calcula correctamente ───────────────────────────────
   it("debe calcular el score correctamente para un terminal conocido", async () => {
     // Terminal en buenas condiciones, concedido, con geo
@@ -227,7 +248,7 @@ function makeEstacion(overrides: Partial<AnaEstacion>): AnaEstacion {
   };
 }
 
-describe("Scoring Riesgo Climatico v2", () => {
+describe.skipIf(!CON_DB)("Scoring Riesgo Climatico v2", () => {
   it("debe asignar riesgo bajo a terminal sin geo en departamento costero", async () => {
     const { calcularRiesgoClimatico } = await import(
       "../src/routes/vulnerabilidad-portuaria.js"
