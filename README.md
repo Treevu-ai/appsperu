@@ -1,18 +1,17 @@
 # appsperu — monorepo de Rastro
 
-> **RASTRO** convierte señales dispersas en inteligencia clara para decidir mejor.
-> *Cada señal deja un rastro. Nosotros lo hacemos visible.*
+> **El Estado peruano deja más datos abiertos de los que nadie está usando. Nosotros los estamos conectando.**
 
 Repo: https://github.com/Treevu-ai/appsperu
 
-Monorepo con 37 apps backend (APIs Express + Postgres por app) que exponen datos abiertos
-del Estado peruano (presupuesto, contrataciones, inversiones, obras públicas) cruzados por
-claves compartidas o matching difuso de nombres de entidad. La capa de lectura pública para
-humanos y agentes IA es **Rastro** (`apps/rastro-web/`, publicada en `rastro.fyi`); el
-servidor MCP (`mcp-server/`) expone las 37 APIs como tools de solo lectura para Claude Code,
-Claude Desktop, Cursor, Windsurf, Cline y Continue.dev.
-
-Rastro es una plataforma de inteligencia que ayuda a equipos y organizaciones a encontrar, conectar y entender las señales que importan. Transformamos información dispersa en contexto accionable, con foco en trazabilidad, claridad y decisiones más seguras. Porque detrás de cada cambio, oportunidad o riesgo hay un rastro, y verlo a tiempo cambia lo que viene después.
+Monorepo con 40 apps backend (APIs Express + Postgres por app) que exponen datos abiertos
+del Estado peruano — presupuesto, contrataciones, inversiones, obras públicas, catastro minero,
+títulos forestales, transporte, infraestructura, supervisión ambiental, **macro BCRP
+(tipo de cambio, inflación, PBI, tasas de interés)** — cruzados en un solo
+pipeline con conectores Python estándar, cache local y rate limits respetuosos. La capa de
+lectura pública para humanos y agentes IA es **Rastro** (`apps/rastro-web/`, publicada en
+`rastro.fyi`); el servidor MCP (`mcp-server/`) expone las 40 APIs como tools de solo lectura
+para Claude Code, Claude Desktop, Cursor, Windsurf, Cline y Continue.dev.
 
 ## Apps
 
@@ -29,7 +28,7 @@ Rastro es una plataforma de inteligencia que ayuda a equipos y organizaciones a 
 | `proveedores-sancionados` | Inhabilitaciones/multas RNP/OECE | 4008 |
 | `actividad-agraria` | Series MIDAGRI regionales (jornal, tractor, yunta) | 4009 |
 | `seguridad-ciudadana` | Denuncias policiales SIDPOL (MININTER) | 4010 |
-| `bcrp-comercio-exterior` | Comercio exterior agregado nacional (BCRP) | 4011 |
+| `bcrp-comercio-exterior` | Comercio exterior + macro BCRP (tipo de cambio, inflación, PBI, tasas) | 4011 |
 | `inversion-privada` | Cartera APP/PA + Obras por Impuestos (PROINVERSIÓN/VERTIX) | 4012 |
 | `bcrp-la-libertad` | Síntesis de actividad económica de La Libertad (BCRP Trujillo) | 4013 |
 | `servicios-salud` | Establecimientos de salud (RENIPRESS/SUSALUD) + cruce con inversión | 4014 |
@@ -71,9 +70,9 @@ de las otras bases y `npm run dev`.
 
 ## Servidor MCP (Model Context Protocol)
 
-[`mcp-server/`](mcp-server/) expone las 37 apps como **189 tools de solo lectura**, buscables desde
+[`mcp-server/`](mcp-server/) expone las 40 apps como **203 tools de solo lectura**, buscables desde
 2 meta-tools (`rastro_buscar_tools` + `rastro_llamar`, no registrados uno por uno) para agentes IA
-vía MCP en producción (`https://mcp.rastro.fyi/mcp`, transporte Streamable HTTP y header `x-api-key`). Para desarrollo local, usa transporte stdio. Compatible con Claude Code, Claude Desktop, Cursor, Windsurf, Cline y
+vía MCP en producción (`https://rastro.fyi` o `https://treevu-rastro-gw.fly.dev`, transporte Streamable HTTP). Para desarrollo local, usa transporte stdio. Compatible con Claude Code, Claude Desktop, Cursor, Windsurf, Cline y
 Continue.dev. Una vez conectado, el agente busca el tool exacto, lo ejecuta, encadena resultados y
 entrega respuestas con citas verificables. Requiere que las apps ya estén corriendo — ver
 [`mcp-server/README.md`](mcp-server/README.md).

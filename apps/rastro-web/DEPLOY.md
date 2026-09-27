@@ -1,7 +1,6 @@
 # Deploy — Rastro en Cloudflare Pages
 
-> **RASTRO** convierte señales dispersas en inteligencia clara para decidir mejor.
-> *Cada señal deja un rastro. Nosotros lo hacemos visible.*
+> **El Estado peruano deja más datos abiertos de los que nadie está usando. Nosotros los estamos conectando.**
 
 **Rastro** es una plataforma de inteligencia que ayuda a equipos y organizaciones a encontrar, conectar y entender las señales que importan. Transformamos información dispersa en contexto accionable, con foco en trazabilidad, claridad y decisiones más seguras.
 

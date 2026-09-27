@@ -41,6 +41,9 @@ export const APP_KEYS = [
   "senace-cartera-proyectos",
   "catastro-forestal",
   "emergencias-indeci",
+  "territorio-inteligencia",
+  "geo-intersections",
+  "riesgo-territorial",
 ] as const;
 
 export type AppKey = (typeof APP_KEYS)[number];
@@ -88,6 +91,9 @@ const DEFAULT_PORTS: Record<AppKey, number> = {
   "senace-cartera-proyectos": 4033,
   "catastro-forestal": 4034,
   "emergencias-indeci": 4035,
+  "territorio-inteligencia": 4036,
+  "geo-intersections": 4037,
+  "riesgo-territorial": 4038,
 };
 
 function envVarFor(app: AppKey): string {

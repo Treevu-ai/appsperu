@@ -38,6 +38,16 @@ Parámetros confirmados:
 traer páginas y filtrar client-side (o buscar la entidad primero en la sección
 "Entidades" del portal, no probado aún).
 
+**`GET /api/v1/search?supplier=PE-RUC-{ruc}` no filtra — devuelve el corpus completo
+sin importar el valor del parámetro.** Confirmado en vivo el 2026-09-23: tres llamadas
+con RUC distinto, RUC inventado y sin parámetro devolvieron el mismo
+`pagination.total_results` (2,758,081). No existe hoy un endpoint de búsqueda por
+RUC/proveedor funcional en esta API — para resolver "¿qué contrató este RUC?" hay que
+usar `/records?ocid=` puntual (funciona, confirmado) o descargar el bulk anual y
+filtrar client-side (ver `docs/conectores.md#compras-publicas-reactivos-medicos-bulk`
+para un conector real que usa esta segunda vía). Cualquier conector futuro que necesite
+"buscar por proveedor" debe asumir esto, no intentar el parámetro `supplier` de nuevo.
+
 ### Respuesta real (recortada, release de ejemplo)
 
 ```json

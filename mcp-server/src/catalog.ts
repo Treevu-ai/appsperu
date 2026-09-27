@@ -1644,6 +1644,71 @@ export const TOOL_CATALOG: ToolSpec[] = [
       ruc: z.string().min(1).optional().describe("Filtra a un RUC/DNI específico (busca en ambos lados del JOIN)."),
     },
   },
+  {
+    name: "proveedores_sancionados_extorsion_duenos_reales",
+    app: "proveedores-sancionados",
+    description:
+      "Extorsión en territorio alto contra los dueños reales de la obra pública (2026-09-26): cruza las " +
+      "denuncias policiales de Extorsión por distrito (seguridad-ciudadana) con los ganadores de los contratos " +
+      "de esa zona y con las sanciones recaídas sobre las PERSONAS (DNI) vinculadas a esos proveedores — la " +
+      "cuenta atrás del contratista no siempre es la persona jurídica. Los tres dominios (denuncias, " +
+      "contratos, sanciones) se ingieren por separado y pueden tener fechas de corte distintas: un vacío aquí " +
+      "puede ser cobertura faltante, no ausencia de sanción." + SIN_SCHEDULER,
+    pathTemplate: "/api/crossref/extorsion-duenos-reales",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).describe("Requerido. Nombre real (no código), ej. LA LIBERTAD."),
+      anio: z.string().regex(/^\d{4}$/).describe("Requerido. Año de 4 dígitos de las denuncias."),
+    },
+  },
+  {
+    name: "proveedores_sancionados_extorsion_sancionados",
+    app: "proveedores-sancionados",
+    description:
+      "Extorsión en distritos con proveedor sancionado (2026-09-26): para cada distrito con denuncias de " +
+      "Extorsión, lista los proveedores sancionados (persona jurídica, con su RUC) con contratos en ese mismo " +
+      "distrito y año. Es una COINCIDENCIA TERRITORIAL, no prueba de relación: el sanción y la denuncia pueden " +
+      "no estar vinculados. Úsalo para priorizar verificación, no para concluir." + SIN_SCHEDULER,
+    pathTemplate: "/api/crossref/extorsion-sancionados",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).describe("Requerido. Nombre real (no código), ej. LA LIBERTAD."),
+      anio: z.string().regex(/^\d{4}$/).describe("Requerido. Año de 4 dígitos de las denuncias."),
+    },
+  },
+  {
+    name: "proveedores_sancionados_extorsion_velocidad_sancion",
+    app: "proveedores-sancionados",
+    description:
+      "Velocidad sanción→contrato en distritos con denuncias de Extorsión (2026-09-26): a diferencia de los otros " +
+      "dos cruces de extorsión, aquí la ventana temporal ES la señal — un proveedor que empieza a contratar pocos " +
+      "días después de recibir su sanción, en un distrito con extorsión activa. La coincidencia temporal NO prueba " +
+      "que la sanción motivara el contrato; es un patrón para priorizar." + SIN_SCHEDULER,
+    pathTemplate: "/api/crossref/extorsion-velocidad-sancion",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).describe("Requerido. Nombre real (no código), ej. LA LIBERTAD."),
+      anio: z.string().regex(/^\d{4}$/).describe("Requerido. Año de 4 dígitos de las denuncias."),
+      ventanaDiasPostSancion: z.coerce
+        .number()
+        .int()
+        .min(0)
+        .max(3650)
+        .optional()
+        .describe("Días posteriores a la sanción que se consideran, default 90."),
+    },
+  },
+  {
+    name: "proveedores_sancionados_meta_freshness",
+    app: "proveedores-sancionados",
+    description:
+      "Freshness de la fuente de sanciones (TCE/OSCE, clave `tce_osce`): fecha de la última ingesta, días sin " +
+      "actualizar y filas ingeridas. Sirve para no presentar una sanción vigente como si reflejara el estado " +
+      "de hoy." + SIN_SCHEDULER,
+    pathTemplate: "/api/meta/freshness",
+    pathParams: [],
+    querySchema: {},
+  },
 
   // ---- salud-institucional (agregador, sin base propia) ----
   {
@@ -1785,7 +1850,70 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
 
-  // ---- bcrp-comercio-exterior (BCRP, balanza comercial nacional) ----
+  {
+    name: "seguridad_ciudadana_comisarias",
+    app: "seguridad-ciudadana",
+    description:
+      "Comisarías auditadas con hallazgos de Contraloría, con su informe de origen (URL) y el detalle de hallazgos " +
+      "en JSONB. Filtra por severidad de hallazgo (critica|mayor|menor) vía containment sobre el JSONB, no por " +
+      "columna propia. Cobertura: comisarías de LIMA auditadas — no es el padrón nacional de unidades " +
+      "policiales. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/comisarias",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().optional().describe("Default LIMA."),
+      distrito: z.string().optional(),
+      severidad: z.string().optional().describe("critica | mayor | menor."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 100."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "seguridad_ciudadana_comisaria_detalle",
+    app: "seguridad-ciudadana",
+    description:
+      "Detalle de una comisaría auditada por su `id` interno (el de la fila en `comisarias_auditadas`, no un " +
+      "código de unidad policial). 404 si el id no existe. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/comisarias/{id}",
+    pathParams: ["id"],
+    querySchema: {},
+  },
+  {
+    name: "seguridad_ciudadana_equipamiento",
+    app: "seguridad-ciudadana",
+    description:
+      "Equipamiento PNP adquirido vía SEACE (inversión en vehículos, armamento, comunicaciones y equipo de " +
+      "seguridad) por año y tipo, con el proveedor y el contrato de origen. Sin filtro `tipo` devuelve además un " +
+      "resumen agregado por tipo. Importes en soles de la fuente, sin conversión cambiaria. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/equipamiento",
+    pathParams: [],
+    querySchema: {
+      anio_desde: z.coerce.number().int().min(2000).max(2100).optional().describe("Default 2020."),
+      anio_hasta: z.coerce.number().int().min(2000).max(2100).optional().describe("Default 2026."),
+      tipo: z.string().optional().describe("VEHICULO | ARMAMENTO | COMUNICACIONES | EQUIPAMIENTO_SEGURIDAD."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 100."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "seguridad_ciudadana_equipamiento_resumen",
+    app: "seguridad-ciudadana",
+    description:
+      "Inversión PNP en equipamiento agregada por año (contratos y monto total), para ver la tendencia " +
+      "plurianual sin el detalle por contrato. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/equipamiento/resumen",
+    pathParams: [],
+    querySchema: {
+      anio_desde: z.coerce.number().int().min(2000).max(2100).optional().describe("Default 2020."),
+      anio_hasta: z.coerce.number().int().min(2000).max(2100).optional().describe("Default 2026."),
+    },
+  },
+
+  // ---- bcrp-comercio-exterior (BCRP, balanza comercial nacional + series macro) ----
   {
     name: "bcrp_comercio_exterior_trade",
     app: "bcrp-comercio-exterior",
@@ -1797,7 +1925,26 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathTemplate: "/api/trade",
     pathParams: [],
     querySchema: {
-      series: z.string().min(1).optional().describe("Clave corta: exportaciones, importaciones, balanza_comercial, etc."),
+      series: z.string().min(1).optional().describe("Clave corta: exportaciones, importaciones, balanza_comercial, exportaciones_tradicionales, exportaciones_no_tradicionales, importaciones_consumo, importaciones_insumos, importaciones_capital, importaciones_otros"),
+      category: z.string().min(1).optional().describe("Filtro por categoría: exportacion_fob, importacion, balanza"),
+      anio: z.string().regex(/^\d{4}$/).optional(),
+      desde: z.string().regex(/^\d{4}-\d{2}$/).optional().describe("Filtro inclusive YYYY-MM."),
+      hasta: z.string().regex(/^\d{4}-\d{2}$/).optional().describe("Filtro inclusive YYYY-MM."),
+    },
+  },
+  {
+    name: "bcrp_comercio_exterior_macro",
+    app: "bcrp-comercio-exterior",
+    description:
+      "Series macro nacionales del BCRP — tipo de cambio (S/ por US$), inflación (IPC Lima var% mensual), PBI (índice 2007=100), " +
+      "tasa de referencia de política monetaria (%). Mensuales, agregado nacional. " +
+      "Cobertura desde 1992 (PBI) o 2003 (tasas). " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/trade/macro",
+    pathParams: [],
+    querySchema: {
+      series: z.string().min(1).optional().describe("Clave corta: tipo_cambio_promedio, ipc_lima_var_mensual, pbi_indice, tasa_referencia_politica_monetaria"),
+      category: z.string().min(1).optional().describe("Filtro por categoría: tipo_cambio, inflacion, pbi, tasas_interes"),
       anio: z.string().regex(/^\d{4}$/).optional(),
       desde: z.string().regex(/^\d{4}-\d{2}$/).optional().describe("Filtro inclusive YYYY-MM."),
       hasta: z.string().regex(/^\d{4}-\d{2}$/).optional().describe("Filtro inclusive YYYY-MM."),
@@ -2513,6 +2660,58 @@ export const TOOL_CATALOG: ToolSpec[] = [
       historico: z.enum(["true", "false"]).optional().describe("true trae todos los cortes (DQ-03); default: solo el más reciente."),
     },
   },
+  {
+    name: "infraestructura_mtc_terminales_vulnerabilidad",
+    app: "infraestructura-mtc",
+    description:
+      "Índice de vulnerabilidad estructural de terminales portuarias, ordenadas de mayor a menor score. El score " +
+      "combina estado de conservación, concesión, geolocalización y antigüedad con pesos fijos (metodología en " +
+      "`docs/metodologia-indice-vulnerabilidad-portuaria.md`); un score alto indica una terminal más expuesta, " +
+      "NO que vaya a ocurrir un accidente. `esPuntoCritico` marca el corte de ese umbral. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/terminales/vulnerabilidad",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Código UBIGEO de departamento, ej. '13' para La Libertad."),
+      ambito: z.string().min(1).optional().describe("Marítimo | Fluvial | Lacustre."),
+      fuente: z.string().min(1).optional().describe("Fuente de datos para el índice, default MTC_2025."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 500, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "infraestructura_mtc_terminal_vulnerabilidad",
+    app: "infraestructura-mtc",
+    description:
+      "Índice de vulnerabilidad de UNA terminal portuaria por su código, con el desglose de componentes del " +
+      "score y su ranking global dentro de la misma fuente. 404 si el código no existe en esa fuente. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/terminales/vulnerabilidad/{codigo}",
+    pathParams: ["codigo"],
+    querySchema: {
+      fuente: z.string().min(1).optional().describe("Filtra a una fuente de datos concreta, ej. MTC_2025."),
+    },
+  },
+  {
+    name: "infraestructura_mtc_terminales_vulnerabilidad_clima",
+    app: "infraestructura-mtc",
+    description:
+      "Índice v2 de vulnerabilidad: la parte estructural del score más el riesgo CLIMÁTICO de la terminal " +
+      "(fuente ANA), con la serie histórica del riesgo. Es un índice COMPUESTO y por tanto más frágil que el " +
+      "score estructural: un cambio en la fecha de los datos climáticos mueve el valor sin que cambie la " +
+      "terminal. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/terminales/vulnerabilidad/clima",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Código UBIGEO de departamento."),
+      ambito: z.string().min(1).optional(),
+      fecha: z.string().optional().describe("Fecha de datos ANA (DD/MM/YYYY), default hoy."),
+      fuente: z.string().min(1).optional().describe("Fuente de datos para el índice, default MTC_2025."),
+      limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 500."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
 
   // ---- riesgo-fiscal-isds (MEF, Marco Macroeconómico Multianual / IAPM) ----
   {
@@ -2599,13 +2798,34 @@ export const TOOL_CATALOG: ToolSpec[] = [
       tipoOrgano: z.string().min(1).optional().describe("Ej. Juzgado de Paz Letrado, Juzgado Especializado o Mixto, Sala Superior."),
       especExp: z.string().min(1).optional().describe("Ej. Civil, Familia, Laboral, Penal, Extinción de Dominio."),
       condicion: z.string().min(1).optional().describe("Permanente o Transitorio."),
-      estado: z.string().min(1).optional().describe("Ej. En Funcionamiento, Convertido, Desactivado."),
-      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
-      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
-    },
-  },
-  {
-    name: "poder_judicial_procesos_resumen",
+       estado: z.string().min(1).optional().describe("Ej. En Funcionamiento, Convertido, Desactivado."),
+       dependencia: z.string().min(1).optional().describe("Filtra por nombre de dependencia/juzgado (ILIKE). Útil para 'Crimen Organizado' o 'Corrupción de Funcionarios'."),
+       limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+       offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+     },
+   },
+   {
+     name: "poder_judicial_crimen_organizado",
+     app: "poder-judicial",
+     description:
+       "Estadística agregada de casos de Crimen Organizado — filtra `procesos_judiciales_jurisdiccional` " +
+       "a juzgados/salas especializados en 'Crimen Organizado' (12 dependencias distintas identificadas " +
+       "en vivo 2026-09-26) y devuelve PENDIENTE/RESUELTO/INGRESO/SENTENCIA agrupados por distrito " +
+       "judicial y año. No trae expedientes individuales ni PII (igual que `poder_judicial_procesos`). " +
+       "No vinculable a proveedores: los datos son conteos agregados, no partes ni RUC/DNI. " +
+       "Cobertura: 174 filas de proceso (2,743 pendientes / 777 resueltos) a nivel nacional. " +
+       "Filtros opcionales: `anio`, `distritoJudicial`. Paginación real con `limit`/`offset`.",
+     pathTemplate: "/api/procesos-judiciales/crimen-organizado",
+     pathParams: [],
+     querySchema: {
+       anio: z.coerce.number().int().min(2000).max(2100).optional(),
+       distritoJudicial: z.string().min(1).optional(),
+       limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+       offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+     },
+   },
+   {
+     name: "poder_judicial_procesos_resumen",
     app: "poder-judicial",
     description:
       "Agrega (SUM) las columnas titulares de `poder_judicial_procesos` (`pendiente`, `resuelto`, " +
@@ -2923,6 +3143,63 @@ export const TOOL_CATALOG: ToolSpec[] = [
       departamento: z.string().min(1).optional().describe("Default MADRE DE DIOS."),
     },
   },
+  // ---- geo-intersections (INGEMMET ∩ SERFOR — cruces geoespaciales) ----
+  {
+    name: "geo_intersections_cruce_punto",
+    app: "geo-intersections",
+    description:
+      "Dado un punto (lat/lon), devuelve los derechos mineros y títulos forestales que lo cubren directamente (punto exacto) o dentro de un radio en km. PostGIS ST_Contains." + SIN_SCHEDULER,
+    pathTemplate: "/api/cruce/punto",
+    pathParams: [],
+    querySchema: {
+      lat: z.number().describe("Latitud WGS84 (entre -18 y -0.5)"),
+      lon: z.number().describe("Longitud WGS84 (entre -81.5 y -68.5)"),
+      radio_km: z.number().optional().describe("Radio en km para buffer circular (0 = punto exacto)"),
+    },
+  },
+  {
+    name: "geo_intersections_reporte",
+    app: "geo-intersections",
+    description:
+      "Reporte completo de superposiciones entre derechos mineros y títulos forestales (mining ∩ forest). Filtra por departamento, sustancia, capa forestal y área mínima. Ordenado por km² de intersección descendente." + SIN_SCHEDULER,
+    pathTemplate: "/api/cruce/report",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().optional().describe("Departamento del derecho minero (ej. 'LA LIBERTAD')"),
+      sustancia: z.string().optional().describe("Código de sustancia del derecho minero"),
+      capa: z.string().optional().describe("Capa forestal (ej. 'modalidad_concesiones_forestales')"),
+      min_area_km2: z.number().optional().describe("Área mínima de intersección en km²"),
+      limit: z.number().optional().describe("Límite de resultados (default 200, máx 1000)"),
+      offset: z.number().optional().describe("Offset para paginación"),
+    },
+  },
+  {
+    name: "geo_intersections_stats",
+    app: "geo-intersections",
+    description:
+      "Estadísticas resumen: cuántos derechos mineros y títulos forestales hay con geometría, cuántas intersecciones totales, desglose por departamento, sustancia y capa forestal." + SIN_SCHEDULER,
+    pathTemplate: "/api/cruce/stats",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
+    name: "geo_intersections_minero",
+    app: "geo-intersections",
+    description:
+      "Superposiciones de un derecho minero específico (por CODIGOU) con títulos forestales. Muestra qué bosques cubre parcialmente ese derecho." + SIN_SCHEDULER,
+    pathTemplate: "/api/cruce/minero/:codigou",
+    pathParams: ["codigou"],
+    querySchema: {},
+  },
+  {
+    name: "geo_intersections_forestal",
+    app: "geo-intersections",
+    description:
+      "Superposiciones de un título forestal específico (por capa + objectid) con derechos mineros. Muestra qué concesiones mineras cubren parcialmente ese bosque." + SIN_SCHEDULER,
+    pathTemplate: "/api/cruce/forestal/:capa/:objectid",
+    pathParams: ["capa", "objectid"],
+    querySchema: {},
+  },
   // ---- emergencias-indeci (SINPAD, emergencias históricas nacionales) ----
   {
     name: "emergencias_indeci",
@@ -2990,6 +3267,65 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: {
       departamento: z.string().min(1).optional().describe("Default LA LIBERTAD."),
       peligros: z.string().min(1).optional().describe("Lista separada por comas; reemplaza el set default."),
+    },
+  },  {
+    name: "territorio_inteligencia_titulares_riesgo",
+    app: "territorio-inteligencia",
+    description: "Detecta titulares de derechos mineros o forestales que presentan riesgos (inhabilitaciones, multas o sanciones judiciales). " + SIN_SCHEDULER,
+    pathTemplate: "/api/titulares-riesgo",
+    pathParams: [],
+    querySchema: {
+      ruc: z.string().min(1).optional().describe("RUC del titular a consultar."),
+      tipoRiesgo: z.enum(["administrativo", "judicial", "multa"]).optional().describe("Filtra por tipo de riesgo."),
+    },
+  },
+  {
+    name: "territorio_inteligencia_captura_territorio",
+    app: "territorio-inteligencia",
+    description: "Analiza la concentraci�n de superficie territorial por RUC en un departamento para detectar posibles capturas de territorio. " + SIN_SCHEDULER,
+    pathTemplate: "/api/captura-territorio",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).describe("Departamento a analizar."),
+      ruc: z.string().min(1).optional().describe("RUC espec�fico para analizar su porcentaje de ocupaci�n."),
+    },
+  },
+  {
+    name: "territorio_inteligencia_inconsistencia_presupuesto",
+    app: "territorio-inteligencia",
+    description: "Cruza proyectos de inversi�n p�blica con superposiciones de derechos mineros y forestales para identificar inconsistencias presupuestales en zonas de conflicto. " + SIN_SCHEDULER,
+    pathTemplate: "/api/inconsistencia-presupuesto",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).describe("Departamento donde se ubica la inversi�n."),
+      cui: z.string().min(1).optional().describe("C�digo �nico de Inversi�n del proyecto."),
+    },
+  },
+  {
+    name: "territorio_inteligencia_riesgo_eudr",
+    app: "territorio-inteligencia",
+    description: "Eval�a el riesgo de cumplimiento del EUDR (European Union Deforestation Regulation) cruzando t�tulos forestales con datos de deforestaci�n del MINAM. " + SIN_SCHEDULER,
+    pathTemplate: "/api/riesgo-eudr",
+    pathParams: [],
+    querySchema: {
+      ruc: z.string().min(1).optional().describe("RUC del titular forestal."),
+      departamento: z.string().min(1).optional().describe("Departamento del predio."),
+    },
+  },
+
+  // ---- riesgo-territorial (vista compuesta) ----
+  {
+    name: "riesgo_territorial_resumen",
+    app: "riesgo-territorial",
+    description:
+      "Vista compuesta que orquesta 4 tools existentes y devuelve un solo response agregado: " +
+      "captura de territorio, superposiciones mineras-forestales, riesgo EUDR y emergencias INDECI. " +
+      "Cada fuente puede fallar independientemente. " + SIN_SCHEDULER,
+    pathTemplate: "/api/riesgo-territorial",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).describe("Código UBIGEO de 2 dígitos del departamento (ej. '13' para La Libertad)."),
+      ruc: z.string().min(1).optional().describe("RUC específico para enriquecimiento en riesgo EUDR."),
     },
   },
 ];

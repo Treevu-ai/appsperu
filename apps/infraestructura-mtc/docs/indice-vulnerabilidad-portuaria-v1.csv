@@ -1,0 +1,152 @@
+CODIGO,NOMBRE,DPTO,AMBITO,ALCANCE,ESTADO,CONCESIONADO,GEO,SCORE,ESTADO_SC,CONCESION_SC,ALCANCE_SC,AMBITO_SC,GEO_SC,RANK
+162YMS8,"HP (Hector de Paz)",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,1
+162NAT1,"Aqua Expeditions",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,2
+162YMS3,"TP Eduardo - Yurimaguas",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,3
+162NAT2,"Eduardo - Nauta",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,4
+162RQN0,"Requena",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,5
+162CPJ1,"Cabo Pantoja",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,6
+162IQT26,"Valverde",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,7
+162NAT5,"Nauta Port",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,8
+162IQT15,"Triplay Martín S.A.C.",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,9
+162PEB1,"Pebas",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,10
+162NAT6,"Transportes Miguel",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,11
+162YMS9,"MARBLU SAC (La Charapita)",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,12
+162YMS5,"Inversiones NH EIRL",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,13
+162YMS6,"Jorge Delgado Peña (La Ramada)",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,14
+162IQT21,"Morochita 2",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,15
+162IQT24,"Trans Linares 2",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,16
+162IQT20,"Mercado de Productores",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,17
+162IQT22,"Petroperú",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,18
+162IQT18,"INPOLOR",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,19
+162IQT17,"Eduardo - Iquitos",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,20
+162NAT4,"Global Romero",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,21
+162NAT3,"Delfin Amazon Cruises",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,22
+252PCL19,"El Bambino",25,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,23
+252PCL18,"Maderera Marañón",25,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,24
+252PCL17,"Negociación Maderera Travi Satipo",25,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,25
+252PCL16,"Augusto Granda Daza",25,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,26
+162IQT4,"Mario Da Costa Manzur",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,27
+252PCL15,"Representaciones Mishael E.I.R.L.",25,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,28
+252PCL14,"León Eleuterio Valverde Loayza",25,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,29
+162IQT19,"JESSMARA",16,Fluvial,Regional,Malo,false,true,22.75,50,30,15,20,0,30
+162ADS2,"Pluspetrol - Andoas",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,31
+162IQT2,"Silfo Albán del Castillo - Masusa",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,32
+162IQT29,"SANTA ROSA",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,33
+162VTS1,"Pluspetrol - Villa Trompeteros",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,34
+162YMS1,"Yurimaguas",16,Fluvial,Regional,Malo,false,true,22.75,50,30,15,20,0,35
+162CNT2,"Maple - Contamana",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,36
+252PCL4,"Henry - Pucallpa",25,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,37
+252PCL13,"Arias",25,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,38
+252PCL12,"A.N KERO E.I.R.L",25,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,39
+252PCL11,"Chiu Hermanos S.R.L (USHICO)",25,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,40
+252PCL10,"Carrillo",25,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,41
+252PCL9,"IMSA (Ex Rocha)",25,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,42
+162INH1,"Inahuaya",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,43
+162IQT10,"COMANA S.A.C",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,44
+162SRS1,"Santa Rosa",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,45
+162YMS7,"Flor de Café",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,46
+162IQT8,"Mercado Mayorista Belén",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,47
+162IQT13,"Transporte Fluvial JV",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,48
+162IQT14,"Trans Linares",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,49
+162IQT7,"Morochita",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,50
+162IQT11,"Servicios y Equipos Amazónicos",16,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,51
+252PCL6,"Alpi Cargo",25,Fluvial,Regional,Información no disponible,false,true,22.75,50,30,15,20,0,52
+071CLL9,"Muelle de Capitanes",07,Marítimo,Regional,Información no disponible,false,true,22.25,50,30,15,15,0,53
+241ZOR1,"BPZ Albacora",24,Marítimo,Regional,Información no disponible,false,true,22.25,50,30,15,15,0,54
+201TGA3,"Parcela 25",20,Marítimo,Regional,Información no disponible,false,true,22.25,50,30,15,15,0,55
+241ZOR2,"BPZ Corvina",24,Marítimo,Regional,Información no disponible,false,true,22.25,50,30,15,15,0,56
+213PUN1,"Puno",21,Lacustre,Regional,Malo,false,true,21.75,50,30,15,10,0,57
+021CHB1,"Chimbote",02,Marítimo,Nacional,Malo,false,true,20.75,50,30,5,15,0,58
+181ILO1,"Ilo",18,Marítimo,Nacional,Malo,false,true,20.75,50,30,5,15,0,59
+201BAY1,"Petroperú - Bayóvar",20,Marítimo,Nacional,Malo,false,true,20.75,50,30,5,15,0,60
+162TFR1,"Tres Fronteras",16,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,61
+162SPA2,"San Pablo",16,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,62
+162ISL1,"Islandia",16,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,63
+162SCL1,"Santa Clotilde",16,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,64
+162EST1,"El Estrecho",16,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,65
+252PCL8,"Logística Selva",25,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,66
+162NSP1,"Nueva Esperanza",16,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,67
+162IQT25,"TRIMASA",16,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,68
+162CSR1,"Campo Serio",16,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,69
+162IQT16,"Exploraciones Amazónicas",16,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,70
+162YMS2,"Petroperú - Yurimaguas",16,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,71
+162SRZ1,"Petroperù - Saramiriza (Estación 5)",16,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,72
+162CNT1,"Contamana",16,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,73
+162SVA1,"Soplín Vargas",16,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,74
+162IQT9,"Mazán",16,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,75
+162SRO2,"Petroperú - San José de Saramuro (Estación 1)",16,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,76
+162NAG1,"Nueva Angusilla",16,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,77
+162IQT6,"GLP Amazónico",16,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,78
+172PEM1,"Puerto Maldonado",17,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,79
+162SMD1,"Santa Mercedes",16,Fluvial,Regional,Regular,false,true,16.50,25,30,15,20,0,80
+201TGA2,"Mc Donald",20,Marítimo,Regional,Regular,false,true,16.00,25,30,15,15,0,81
+201TGA1,"Tortuga",20,Marítimo,Regional,Regular,false,true,16.00,25,30,15,15,0,82
+151SUP4,"Multiboyas Quimpac - Paramonga",15,Marítimo,Regional,Regular,false,true,16.00,25,30,15,15,0,83
+201BAY2,"San Pedro 1",20,Marítimo,Regional,Regular,false,true,16.00,25,30,15,15,0,84
+213PUN0,"Ferrovias - Puno",21,Lacustre,Regional,Regular,false,true,15.50,25,30,15,10,0,85
+213JLI1,"Juli",21,Lacustre,Regional,Regular,false,true,15.50,25,30,15,10,0,86
+162BR95,"Lote 95 - Bretaña",16,Fluvial,Nacional,Regular,false,true,15.00,25,30,5,20,0,87
+162IQT12,"Fluvial Júpiter",16,Fluvial,Nacional,Regular,false,true,15.00,25,30,5,20,0,88
+162IQT5,"Henry - Iquitos",16,Fluvial,Nacional,Regular,false,true,15.00,25,30,5,20,0,89
+201TYL1,"Muelle MU1",20,Marítimo,Nacional,Regular,false,true,14.50,25,30,5,15,0,90
+201PAS0,"Multiboyas Punta Arenas",20,Marítimo,Nacional,Regular,false,true,14.50,25,30,5,15,0,91
+021SCO1,"Casamar",02,Marítimo,Nacional,Regular,false,true,14.50,25,30,5,15,0,92
+201BAY4,"Bayóvar",20,Marítimo,Nacional,Regular,false,true,14.50,25,30,5,15,0,93
+111SJA1,"Shougang Hierro Perú",11,Marítimo,Nacional,Regular,false,true,14.50,25,30,5,15,0,94
+021CSH1,"Pesquero Austral - Coishco",02,Marítimo,Nacional,Regular,false,true,14.50,25,30,5,15,0,95
+071CLL7,"Multiboyas TRALSA",07,Marítimo,Nacional,Regular,false,true,14.50,25,30,5,15,0,96
+201PAI3,"Estación Naval de Paita",20,Marítimo,Nacional,Regular,false,true,14.50,25,30,5,15,0,97
+162IQT28,"Turístico de Iquitos - El Huequito",16,Fluvial,Regional,Bueno,false,true,12.75,10,30,15,20,0,98
+252PCL7,"Terranova",25,Fluvial,Regional,Bueno,false,true,12.75,10,30,15,20,0,99
+252PCL5,"Logística Peruana del Oriente de Pucallpa",25,Fluvial,Regional,Bueno,false,true,12.75,10,30,15,20,0,100
+131SVY2,"Multiboyas Salaverry",13,Marítimo,Regional,Bueno,false,true,12.25,10,30,15,15,0,101
+021CHB3,"Multiboyas Chimbote",02,Marítimo,Regional,Bueno,false,true,12.25,10,30,15,15,0,102
+151SUP2,"Multiboyas Supe",15,Marítimo,Regional,Bueno,false,true,12.25,10,30,15,15,0,103
+141ETE1,"Multiboyas Eten",14,Marítimo,Regional,Bueno,false,true,12.25,10,30,15,15,0,104
+201BRN1,"La Brea y Negritos",20,Marítimo,Regional,Bueno,false,true,12.25,10,30,15,15,0,105
+111PCO3,"Multiboyas Pisco",11,Marítimo,Regional,Bueno,false,true,12.25,10,30,15,15,0,106
+151HCO1,"Huacho",15,Marítimo,Regional,Bueno,false,true,12.25,10,30,15,15,0,107
+151SUP1,"Supe",15,Marítimo,Regional,Bueno,false,true,12.25,10,30,15,15,0,108
+021CHB4,"Multiboyas Colpex - Chimbote",02,Marítimo,Regional,Bueno,false,true,12.25,10,30,15,15,0,109
+162IQT27,"Iquitos (Pasajeros)",16,Fluvial,Nacional,Bueno,false,true,11.25,10,30,5,20,0,110
+162IQT3,"Petroperú - Iquitos",16,Fluvial,Nacional,Bueno,false,true,11.25,10,30,5,20,0,111
+162IQT1,"Iquitos",16,Fluvial,Nacional,Bueno,false,true,11.25,10,30,5,20,0,112
+071CLL10,"Multiboyas Valero Perú S.A.C",07,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,113
+041MRI3,"Multiboyas Monte Azul",04,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,114
+151CHAY2,"Multipropósito de Chancay",15,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,115
+111MJU,"Multiboyas Mina Justa",11,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,116
+201TYL3,"Muelle Híbrido MU2",20,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,117
+201PAI2,"Multiboyas Penta Tanks Terminals",20,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,118
+071CLL11,"Refinería La Pampilla S.A.A. (Amarradero Multiboyas 1)",07,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,119
+071CLL13,"Refinería La Pampilla S.A.A. (Amarradero Multiboyas 4)",07,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,120
+071CLL12,"Refinería La Pampilla S.A.A. (Amarradero Multiboyas 2)",07,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,121
+151CON1,"Multiboyas Conchán",15,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,122
+021HUY1,"Punta Lobitos - Antamina",02,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,123
+231ARIC1,"Malecón de Atraque al Servicio del Perú en Arica",99,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,124
+071CLL8,"Refinería La Pampilla S.A.A. (Amarradero Multiboyas 3)",07,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,125
+181ILO3,"Southern Perú",18,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,126
+041MRI2,"Multiboyas Mollendo",04,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,127
+071CLL2,"Multiboyas Zeta Gas Andino",07,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,128
+151CON2,"Unión Andina de Cementos",15,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,129
+181TBN2,"Tablones - SOUTHERN (Muelle)",18,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,130
+181TBN1,"Tablones - SOUTHERN (Amarradero Multiboyas)",18,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,131
+201BAY3,"Miski Mayo",20,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,132
+151MTA1,"Perú LNG Melchorita",15,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,133
+151CHAY1,"Multiboyas Blue Pacific Oils - Chancay",15,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,134
+181ILO4,"Multiboyas TLT",18,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,135
+181PPA1,"ENGIE",18,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,136
+181ILO2,"Multiboyas Ilo",18,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,137
+071CLL3,"Multiboyas Sudamericana de Fibras",07,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,138
+071CLL4,"Multiboyas Quimpac - Oquendo",07,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,139
+071CLL6,"Multiboyas Solgas - Ventanilla",07,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,140
+021CHB2,"Muelle Siderperú",02,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,141
+151SUP3,"Multiboyas Colpex - Supe",15,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,142
+111PCO2,"Pluspetrol - Pisco",11,Marítimo,Nacional,Bueno,false,true,10.75,10,30,5,15,0,143
+162YMS4,"Yurimaguas - Nueva Reforma",16,Fluvial,Nacional,Bueno,true,true,6.25,10,5,5,20,0,144
+071CLL1-3,"Callao (Terminal de Embarque de Concentrado de Minerales)",07,Marítimo,Nacional,Bueno,true,true,5.75,10,5,5,15,0,145
+071CLL1-2,"Callao (Terminal de Contenedores Muelle Sur)",07,Marítimo,Nacional,Bueno,true,true,5.75,10,5,5,15,0,146
+041MRI1,"Matarani (Muelle 1A y 1B)",04,Marítimo,Nacional,Bueno,true,true,5.75,10,5,5,15,0,147
+131SVY1,"Multipropósito de Salaverry",13,Marítimo,Nacional,Bueno,true,true,5.75,10,5,5,15,0,148
+201PAI1,"Paita",20,Marítimo,Nacional,Bueno,true,true,5.75,10,5,5,15,0,149
+071CLL1-1,"Callao (Terminal Multipropósito Muelle Norte)",07,Marítimo,Nacional,Bueno,true,true,5.75,10,5,5,15,0,150
+111PCO1,"General San Martín",11,Marítimo,Nacional,Bueno,true,true,5.75,10,5,5,15,0,151

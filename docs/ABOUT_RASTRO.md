@@ -1,6 +1,6 @@
 # Rastro — Documento institucional
 
-> **Cada señal deja un rastro. Nosotros lo hacemos visible.**
+> **El Estado peruano deja más datos abiertos de los que nadie está usando. Nosotros los estamos conectando.**
 
 Documento de referencia. Describe qué es Rastro, cómo está construido, qué hace
 hoy, qué no hace, y para quién sirve. Pensado para ser leído por públicos
@@ -8,7 +8,7 @@ distintos: un vecino curioso, un periodista, un académico, un servidor público
 un desarrollador y un financiador. El índice al inicio indica por dónde entrar
 según quién seas.
 
-Última revisión: 2026-09-13.
+Última revisión: 2026-09-27.
 
 ---
 
@@ -19,7 +19,7 @@ según quién seas.
 | Si vos sos… | Empezá por | Saltá a |
 |---|---|---|
 | Vecino, periodista, ciudadano curioso | §1 Resumen ejecutivo → §2 Historia → §3 Lo que hace hoy → §10 Audiencias (subsección "ciudadano") | §15 Cómo citar Rastro |
-| Servidor público, gestor, fiscalizador | §1 → §3 → §4 Catálogo de fuentes (27 apps) → §11 Alcance territorial → §10 (subsección "servidor público") | §9 Seguridad y operación |
+| Servidor público, gestor, fiscalizador | §1 → §3 → §4 Catálogo de fuentes (40 apps) → §11 Alcance territorial → §10 (subsección "servidor público") | §9 Seguridad y operación |
 | Académico, investigador, estudiante | §1 → §4 → §5 Cómo funciona → §14 Glosario → §10 (subsección "académico") | §12 Roadmap (lo que viene) |
 | Desarrollador, ingeniero de datos, devops | §1 → §5 → §6 Arquitectura técnica → §7 Capa de lectura → §8 Servidor MCP → §10 (subsección "desarrollador") | §9 Seguridad, runbooks de deploy |
 | Financiador, donante, aliado institucional | §1 → §2 → §10 (subsección "financiador") → §12 Roadmap → §13 Equipo y gobierno | §15 Cómo citar |
@@ -30,7 +30,7 @@ según quién seas.
 1. Resumen ejecutivo
 2. La historia detrás de Rastro
 3. Lo que Rastro hace hoy
-4. Las fuentes de datos (catálogo — 27 apps backend)
+4. Las fuentes de datos (catálogo — 40 apps backend)
 5. Cómo funciona Rastro (alto nivel)
 6. Arquitectura técnica
 7. La capa de lectura: `rastro.fyi`
@@ -47,35 +47,60 @@ según quién seas.
 
 ## 1. Resumen ejecutivo
 
-**Qué es.** Rastro es una plataforma de inteligencia que cruza datos abiertos
-del Estado peruano — presupuesto, contrataciones, obras públicas, inversiones,
-planificación estratégica, identidad fiscal, proveedores, actividad agraria y
-seguridad ciudadana — para que cualquier persona, periodista, fiscalizador o
-agente de IA pueda responder preguntas que hoy requieren juntar cinco
-portales y saber qué llave oficial las conecta.
+**Qué es.** Rastro es una capa de datos que conecta las fuentes públicas más
+relevantes del Estado peruano en un solo pipeline. Cada día, el gobierno
+publica miles de datos sobre presupuestos, contratos, concesiones mineras,
+títulos forestales, infraestructura de transporte y decisiones ambientales.
+La información existe — pero está dispersa en decenas de portales, cada uno
+con su formato, su API, su log-in, su rate limit. Rastro elimina esa fricción.
 
-**Para quién existe.** Para quien necesita decidir mejor con evidencia del
-Estado peruano. El visitante no técnico entra a `rastro.fyi` y obtiene
-fichas, comparativos y un buscador. El desarrollador o el agente de IA usa
-el servidor MCP y obtiene respuestas estructuradas con citas a la fuente.
+**Cobertura núcleo (septiembre 2026):**
 
-**Qué problema resuelve.** El Estado peruano publica sus datos en
-14 portales distintos, con llaves diferentes (CUI, RUC, código INFOBRAS,
-entidad presupuestal, UBIGEO) y sin un punto de cruce oficial. Rastro
-construye ese cruce con verificación explícita: cuando una obra se vincula
-a un proveedor, se muestra el score de confianza del match y se declara el
-corte temporal usado. Si la fuente no tiene un dato, Rastro lo dice en
-vez de inventarlo.
+- **Finanzas públicas:** réplica DuckDB del MEF con **32 millones de filas**
+  de ejecución presupuestal — 13 años de históricos por departamento,
+  genérica de gasto, proyecto de inversión.
+- **Geoespacial:** **66,823 derechos mineros** de INGEMMET y **5,391 títulos
+  forestales** del SERFOR en PostGIS, con cruces territoriales calculados.
+  Madre de Dios concentra la mayor presión territorial del país.
+- **Transporte:** catálogo CKAN del PNDA con **4,647 datasets** sobre
+  logística y carreteras, reportes en vivo del OSITRAN sobre concesiones de
+  infraestructura, y capas geoespaciales del Geoserver del MTC.
+- **Comercio exterior:** series nacionales de exportaciones, importaciones
+  y balanza comercial del BCRP (10 series mensuales, 2012–actualidad).
+- **Macro BCRP:** tipo de cambio (S/ por US$), inflación (IPC Lima var% mensual),
+  PBI (índice 2007=100) y tasa de referencia de política monetaria (%) — 4 series mensuales,
+  cobertura nacional desde 1992/2003.
+- **Ambiental:** registro de infracciones ambientales sancionadas (OEFA) y
+  catastro forestal (SERFOR).
+- **Próximamente:** microdatos de ENAHO/ENDES del INEI, resoluciones del INDECOPI y
+  datasets ampliados de supervisión ambiental del OEFA.
 
-**Estado al 2026-09-13.** El monorepo tiene **27 apps backend** operativas con
-datos ingeridos para La Libertad (más agregadores sin BD propia). La capa web
-`rastro.fyi` publica un **corte semanal** con tableros de lectura no técnica.
-El servidor MCP expone **154 tools** de solo lectura (más 2 meta-tools de
-descubrimiento, no contados en ese total). La API pública está protegida con
-Cloudflare Access. **Sprint GORE S1 (sep 2026):** ficha sectorial del GORE La
-Libertad con cruces CUI/obra/contrato, señales INFOBRAS y barra de frescura
-INFOBRAS+compras — en cierre. Próximo hito: E2E comparativo/benchmark GORE y
-paquete de datos abiertos v1.
+Todo esto vive en conectores Python estándar, sin dependencias propietarias,
+con cache local y rate limits respetuosos. El output son JSONs limpios,
+listos para alimentar dashboards, modelos predictivos o reportes.
+
+**Para quién existe.** Para el analista, el periodista, el fiscalizador, el
+desarrollador y el agente de IA que necesitan cruzar fuentes sin pasar semanas
+haciendo trabajo manual. El visitante no técnico entra a `rastro.fyi` y obtiene
+fichas y comparativos. El desarrollador o el agente de IA usa el servidor MCP
+y obtiene respuestas estructuradas con citas a la fuente.
+
+**Estado al 2026-09-27.** El monorepo tiene **40 apps backend** operativas.
+La capa web `rastro.fyi` publica un **corte semanal** con tableros de lectura
+no técnica. El servidor MCP expone **202 tools** de solo lectura (más 2
+meta-tools de descubrimiento, no contados en ese total) y ya corre **en
+producción** (`mcp.rastro.fyi`, Fly.io, autenticado con API keys
+`sk-rastro-*`) además de la instalación local. El catálogo del repo
+(`mcp-server/src/catalog.ts`) tiene 203 entradas: una tool del branch
+`feat/conectores-reactivos-medicos` aún no está desplegada. La API pública está
+protegida con Cloudflare Access. **Sprints GORE S1/S2/S3 (sep 2026): cerrados** —
+ficha sectorial del GORE La Libertad, rutas web PV y cruce de proveedores de
+riesgo (CX-01) ya en producción. Desde entonces se sumaron 11 fuentes nuevas
+(INDECI, SERFOR, SENACE, INGEMMET, SERNANP, Congreso, SIAGIE, SíseVe, Poder
+Judicial y la ampliación de identidad fiscal con OECE/RNP/PPA/exportaciones
+FOB) y 5 cruces de riesgo nuevos, incluido el que expuso a PETROPERÚ (468
+infracciones OEFA + S/205M en contratos vigentes). Próximo hito: paquete de
+datos abiertos v1 y regionalización a Lambayeque/Piura.
 
 ---
 
@@ -85,18 +110,24 @@ paquete de datos abiertos v1.
 
 El Perú publica, en teoría, una cantidad enorme de información sobre cómo
 gasta, qué contrata y qué obras ejecuta. En la práctica esa información
-está fragmentada en 14 portales administrados por 9 entidades distintas,
-cada una con su propio formato, su propia llave de cruce, su propio
-calendario de actualización y su propio nivel de calidad:
+está fragmentada en decenas de portales, cada uno con su formato, su API,
+su log-in, su rate limit. Un analista que quisiera cruzar el presupuesto de
+Madre de Dios con las concesiones mineras y los títulos forestales
+necesitaría semanas de trabajo manual.
 
-- MEF publica el Presupuesto Institucional de Apertura (PIA) y la ejecución
- (devengado) con código de entidad presupuestal, pero sin CUI.
-- Invierte.pe publica la cartera de inversiones con CUI, pero sin UBIGEO
+El Estado peruano deja más datos abiertos de los que nadie está usando.
+Nosotros los estamos conectando.
+
+El problema no es la falta de datos. Es la falta de una capa que los una:
+
+- **MEF** publica el Presupuesto Institucional de Apertura (PIA) y la
+  ejecución (devengado) con código de entidad presupuestal, pero sin CUI.
+- **Invierte.pe** publica la cartera de inversiones con CUI, pero sin UBIGEO
   exacto en muchos registros.
-- INFOBRAS publica obras con su propio código, pero sin nombre normalizado
+- **INFOBRAS** publica obras con su propio código, pero sin nombre normalizado
   de la entidad ejecutora.
-- OECE publica contrataciones con RUC, pero sin código de unidad ejecutora.
-- SUNAT publica el padrón RUC, pero el RUC del proveedor no siempre
+- **OECE** publica contrataciones con RUC, pero sin código de unidad ejecutora.
+- **SUNAT** publica el padrón RUC, pero el RUC del proveedor no siempre
   coincide con el RUC de la entidad que contrató.
 
 Para saber "¿esta obra la está ejecutando el mismo proveedor que en
@@ -121,6 +152,33 @@ criterio rector es la honestidad:
 Esa honestidad es la que permite que Rastro sea útil en la práctica: los
 datos que se muestran tienen una cita trazable al origen y al corte
 temporal del que salieron.
+
+En las últimas semanas armamos una capa de datos que conecta las fuentes
+públicas más relevantes del Estado peruano en un solo pipeline:
+
+- **Finanzas públicas:** accedimos a la réplica DuckDB del MEF con **32
+  millones de filas** de ejecución presupuestal — 13 años de históricos por
+  departamento, genérica de gasto, proyecto de inversión.
+- **Geoespacial:** replicamos los derechos mineros de INGEMMET y los títulos
+  forestales del SERFOR en PostGIS. Calculamos intersecciones directas entre
+  ambas capas para detectar presión territorial.
+- **Transporte:** conectamos el catálogo CKAN del PNDA, los reportes en
+  vivo del OSITRAN sobre concesiones de infraestructura, y la red
+  Geoserver del MTC.
+- **Comercio exterior:** 10 series mensuales del BCRP (exportaciones,
+  importaciones y balanza comercial, 2012–actualidad).
+- **Macro BCRP:** 4 series mensuales — tipo de cambio (S/ por US$), inflación
+  (IPC Lima var% mensual), PBI (índice 2007=100) y tasa de referencia de
+  política monetaria (%). Cobertura nacional desde 1992/2003.
+- **Ambiental:** integramos las infracciones ambientales del OEFA y el
+  catastro forestal del SERFOR.
+- **Próximamente:** microdatos de ENAHO/ENDES del INEI, resoluciones del
+  INDECOPI y datasets ampliados de supervisión ambiental del OEFA.
+
+Todo esto vive en conectores Python estándar, sin dependencias
+propietarias, con cache local y rate limits respetuosos. El output son
+JSONs limpios, listos para alimentar dashboards, modelos predictivos o
+reportes.
 
 ### 2.3 Por qué La Libertad
 
@@ -172,10 +230,12 @@ cae** cuando una API del Estado está caída.
 
 ### 3.2 El servidor MCP — para agentes de IA
 
-Un servidor local que se conecta a Claude Code, Claude Desktop, Cursor,
-Windsurf, Cline y Continue.dev, y le entrega al agente **154 tools** de solo
-lectura (más 2 meta-tools para buscar e invocar) sobre las **27 APIs**
-backend. Un agente con el MCP conectado puede responder preguntas como:
+Un servidor que se conecta a Claude Code, Claude Desktop, Cursor,
+Windsurf, Cline y Continue.dev — local o apuntando a la instancia en
+producción (`mcp.rastro.fyi`, con API key `sk-rastro-*`) — y le entrega al
+agente **202 tools** de solo lectura (más 2 meta-tools para buscar e
+invocar) sobre las **40 APIs** backend. Un agente con el MCP conectado puede
+responder preguntas como:
 
 - "¿Cuál es la inversión del sector Salud en La Libertad este año y cómo
   se compara con la del 2025?"
@@ -183,6 +243,10 @@ backend. Un agente con el MCP conectado puede responder preguntas como:
   más de 180 días de paralización y un Cost Drift mayor al 30%."
 - "Compara la concentración de proveedores entre el Gobierno Regional
   La Libertad y el Ministerio de Transportes."
+- "¿Qué empresas sancionadas por OEFA siguen firmando contratos con el
+  Estado, y cuánto tiempo pasó entre la sanción y el siguiente contrato?"
+- "¿Este proveedor tiene una inhabilitación administrativa de OECE, un
+  mandato judicial vigente, o ambos?"
 
 Las respuestas vienen con la cita de qué endpoint se consultó y a qué
 corte temporal. El agente no tiene que aprender el modelo de datos:
@@ -214,17 +278,17 @@ datos abiertos que se va a publicar en datosabiertos.gob.pe.
 
 ---
 
-## 4. Las fuentes de datos (catálogo — 27 apps backend)
+## 4. Las fuentes de datos (catálogo — 40 apps backend)
 
-El monorepo expone **27 apps backend** (API Express + Postgres cada una, salvo
+El monorepo expone **40 apps backend** (API Express + Postgres cada una, salvo
 agregadores sin BD propia). La web `rastro.fyi` tiene tableros de lectura para
-las **14 fuentes núcleo** (puertos 4000–4013); las **13 restantes** (4014–4026)
+las **14 fuentes núcleo** (puertos 4000–4013); las **23 restantes** (4014–4035)
 están disponibles hoy vía API y MCP, sin dashboard propio en la web.
 
 | Capa | Cantidad | Dónde se usa |
 |---|---|---|
 | Fuentes con tablero o vista dedicada en `rastro.fyi` | 14 | GORE, distrito, proveedor, buscador, catálogo, auditoría |
-| Dominios solo API/MCP (sin ruta web propia aún) | 13 | Servidor MCP, scripts, integraciones futuras |
+| Dominios solo API/MCP (sin ruta web propia aún) | 23 | Servidor MCP, scripts, integraciones futuras |
 
 Listado completo con puertos: [`README.md`](../README.md) (tabla **Apps**).
 
@@ -241,7 +305,7 @@ conector de ingesta y tools MCP.
 | 4 | `infobras` | 4003 | Contraloría (INFOBRAS) | Obras públicas con código INFOBRAS, estado de ejecución, paralización, Cost Drift, gap físico-financiero. |
 | 5 | `ceplan-estrategico` | 4004 | CEPLAN (ObservaPerú) | Indicadores estratégicos del SINAPLAN, sectores, territorio. |
 | 6 | `ceplan-geo` | 4005 | CEPLAN (GeoServer) | Capas geoespaciales: distritos, infraestructura, áreas protegidas. |
-| 7 | `identidad-fiscal` | 4006 | SUNAT (Padrón RUC) | Contribuyentes con RUC, razón social, estado, condición, UBIGEO. |
+| 7 | `identidad-fiscal` | 4006 | SUNAT (Padrón RUC) + OECE/RNP + MIDAGRI-PPA + Aduanet | Contribuyentes con RUC, razón social, estado, condición, UBIGEO; ficha de proveedor OECE, directivos/representantes, inscripción RNP; Padrón de Productores Agrarios; exportaciones FOB por RUC. |
 | 8 | `salud-institucional` | 4007 | (agregador) | Score compuesto que cruza las 5 dependencias relevantes. No tiene BD propia. |
 | 9 | `proveedores-sancionados` | 4008 | OECE/RNP | Inhabilitaciones, multas, sanciones vigentes por RUC. |
 | 10 | `actividad-agraria` | 4009 | MIDAGRI | Series regionales: jornal, tractor, yunta, producción agraria. |
@@ -250,13 +314,17 @@ conector de ingesta y tools MCP.
 | 13 | `inversion-privada` | 4012 | PROINVERSIÓN / VERTIX | Cartera de APP, PA y Obras por Impuestos. |
 | 14 | `bcrp-la-libertad` | 4013 | BCRP Trujillo | Síntesis mensual de la actividad económica de La Libertad. |
 
-### 4.2 Las 13 fuentes de expansión (solo API/MCP hoy)
+### 4.2 Las 23 fuentes de expansión (solo API/MCP hoy)
 
-Agregadas entre 2026-09 y 2026-09 para ampliar dominios (salud
-institucional detallada, programas sociales, educación, ambiental, MTC,
-etc.) sin duplicar tableros en la web todavía. Consumibles desde el MCP
-y desde integraciones directas a `api.rastro.pe`. Ver tabla completa en
-[`README.md`](../README.md) (filas `servicios-salud` … `infraestructura-mtc`).
+Agregadas desde 2026-09 para ampliar dominios: salud institucional
+detallada, programas sociales, educación, ambiental (OEFA/SERFOR/
+INGEMMET/SERNANP/SENACE), MTC, gestión de riesgo de desastres (INDECI),
+Legislativo (Congreso), Poder Judicial, procesos electorales
+(autoridades electas, candidatos ERM) y la ampliación de identidad
+fiscal (OECE, RNP, MIDAGRI-PPA, exportaciones FOB) — sin duplicar
+tableros en la web todavía. Consumibles desde el MCP y desde
+integraciones directas a `api.rastro.pe`. Ver tabla completa en
+[`README.md`](../README.md) (tabla **Apps**).
 
 ### 4.3 Notas importantes del catálogo
 
@@ -318,7 +386,7 @@ Si lo contamos sin jerga técnica, Rastro hace cuatro cosas:
 ### 5.1 La metáfora del agua
 
 Pensá en los datos del Estado como ríos que bajan por quebradas distintas.
-Rastro construye **27 estanques** (las 27 apps backend), los conecta con
+Rastro construye **40 estanques** (las 40 apps backend), los conecta con
 tuberías verificadas (cruces con score de confianza), y abre dos canillas:
 una para humanos (la web con corte semanal) y otra para máquinas (API + MCP).
 
@@ -348,7 +416,7 @@ para no abusar del portal.
 | Capa | Tecnología |
 |---|---|
 | Frontend (web) | Vite 8 + React 19 + Tailwind 4, deploy en Cloudflare Pages |
-| API backend (27 apps) | Node 22 + Express + TypeScript, una BD Postgres por app (salvo agregadores) |
+| API backend (40 apps) | Node 22 + Express + TypeScript, una BD Postgres por app (salvo agregadores) |
 | Proxy público | nginx + Certbot en VPS (149.104.66.100), proxy path-based |
 | Protección de API | Cloudflare Access (Zero Trust) sobre `api.rastro.pe` |
 | Rate limit en el edge | Cloudflare Pages Functions + Workers KV |
@@ -360,23 +428,23 @@ para no abusar del portal.
 ### 6.2 El monorepo
 
 El repo `appsperu` usa workspaces npm (ver `package.json` raíz). Las
-**27 apps backend** son proyectos npm independientes, cada una con su
+**40 apps backend** son proyectos npm independientes, cada una con su
 propio ciclo de releases y su propia BD.
 
 El ADR-0017 (`docs/adr/0017-consolidacion-entity-crosswalk-evaluacion.md`)
 documenta por qué se consolidaron solo los matchers de entidad (en
 `packages/entity-matcher`) y no el resto.
 
-### 6.3 Las 27 APIs Express
+### 6.3 Las 40 APIs Express
 
-Cada app expone REST en un puerto fijo (4000–4026). El shape de respuesta
+Cada app expone REST en un puerto fijo (4000–4035). El shape de respuesta
 es estable: cada tool del MCP corresponde 1:1 a un endpoint GET documentado.
 Las apps viven en `apps/<slug>/api/` con `src/routes/`, `src/ingest/`,
 `src/db/` y tests vitest.
 
 ### 6.4 El proxy `api.rastro.pe`
 
-Las **27 APIs** corren en `127.0.0.1:<port>` dentro del VPS. El proxy
+Las **40 APIs** corren en `127.0.0.1:<port>` dentro del VPS. El proxy
 nginx (`infra/api-proxy/nginx/api.rastro.pe.conf`) expone un único
 hostname público (`https://api.rastro.pe/<slug>/`) que routea por path
 al puerto correspondiente. Esto permite:
@@ -439,10 +507,12 @@ embeben en el bundle, así que tampoco quedan visibles en DevTools.
 ### 6.8 El servidor MCP
 
 `mcp-server/` es un paquete independiente que usa el SDK oficial de
-MCP. Expone **154 tools** de solo lectura sobre las 27 APIs (más 2
+MCP. Expone **202 tools** de solo lectura sobre las 40 APIs (más 2
 meta-tools de descubrimiento). No transforma shapes: la respuesta de un
 tool es la respuesta del endpoint, con la misma metadata de cobertura,
-matcher y corte que devuelve la API.
+matcher y corte que devuelve la API. Además de la instalación local,
+corre **en producción** en `mcp.rastro.fyi` (Fly.io), autenticado con
+API keys `sk-rastro-*`.
 
 El catálogo de tools se parsea en build-time desde
 `mcp-server/src/catalog.ts` (ver `apps/rastro-web/scripts/generate-mcp-catalog.mjs`)
@@ -477,7 +547,7 @@ con datos: titular, números, fuente, fecha.
 | `/gore/la-libertad/ficha` | Ficha sectorial GORE (presupuesto + CUI + obras + contratos) |
 | `/gore/la-libertad/comparativo` | Comparativo entre sectores verificados |
 | `/gore/la-libertad/benchmark` | Percentil de entidad contra cohorte |
-| `/docs/api` | Catálogo MCP (154 tools, generado desde el repo) |
+| `/docs/api` | Catálogo MCP (202 tools, generado desde el repo) |
 | `/docs/integridad` | Metodología de integridad documental |
 
 ### 7.3 El buscador (`/buscar`)
@@ -503,7 +573,8 @@ La web siempre muestra la fecha del corte:
 Esto es deliberado. La web no promete datos al segundo: promete
 **datos al corte**, con la fecha visible, y la cita a la fuente
 debajo de cada número. Si el visitante quiere datos en vivo, el
-runbook lo manda al servidor MCP local.
+runbook lo manda al servidor MCP (local o en producción,
+`mcp.rastro.fyi`).
 
 ---
 
@@ -520,7 +591,7 @@ pregunte.
 
 ### 8.2 Qué hace el servidor MCP de Rastro
 
-Expone las 27 APIs como **154 tools de solo lectura**, sin transformar
+Expone las 40 APIs como **202 tools de solo lectura**, sin transformar
 shapes. Cada tool tiene un nombre semántico (ej.
 `infobras_public_works`, `radar_ejecucion_sector_ficha`,
 `compras_publicas_suppliers`), un input schema (validado con zod) y
@@ -541,8 +612,17 @@ Está pensado para 3 perfiles:
 
 ### 8.4 Cómo se instala
 
+**Opción recomendada — servidor en producción (sin instalar nada local):**
+
+1. Pedir una API key `sk-rastro-*` (ver `mcp.rastro.fyi`).
+2. Apuntar el cliente MCP (Claude Code, Claude Desktop, Cursor, etc.) a
+   `mcp.rastro.fyi` con esa key.
+3. Conectado. El agente ya puede preguntar.
+
+**Opción local (para desarrollo o correr el backend propio):**
+
 1. Tener Node 22+.
-2. Tener las 27 APIs corriendo (o apuntar `<APP>_API_URL` a
+2. Tener las 40 APIs corriendo (o apuntar `<APP>_API_URL` a
    `https://api.rastro.pe/<app>/` con un Service Token válido).
 3. `npx -y @modelcontextprotocol/inspector` o agregar la config en
    `~/.config/claude-code/mcp.json` apuntando a `mcp-server/dist/index.js`.
@@ -576,7 +656,7 @@ Workers KV). 30 búsquedas/minuto por IP, devolviendo 429 con
 
 ### 9.3 Capa 3 — Rate limit por origen en el backend (donde aplique)
 
-Las 27 apps Express declaran un `WEB_ORIGIN` que el CORS middleware
+Las 40 apps Express declaran un `WEB_ORIGIN` que el CORS middleware
 valida. Requests desde un origen no declarado (otro dominio) reciben
 CORS error antes de llegar a la lógica de negocio. La lista actual
 de orígenes permitidos está en `infra/api-proxy/setup-api-rastro-pe.sh`.
@@ -636,9 +716,15 @@ cambio).
 - **Comparar entidades.** `/entidad/<code>` muestra el percentil de
   una entidad contra su cohorte. Una entidad que ejecuta mucho menos
   que sus pares es noticia.
-- **Bajar el catálogo.** `/docs/api` lista los 154 tools del MCP con
+- **Bajar el catálogo.** `/docs/api` lista los 202 tools del MCP con
   ejemplos de uso. Si tenés un data journalist en el equipo, el
-  MCP server se instala en 5 minutos.
+  MCP server se instala en 5 minutos (o se conecta directo a
+  `mcp.rastro.fyi` con una API key, sin instalar nada).
+- **Seguir el rastro de una empresa sancionada.** El cruce OEFA×compras
+  públicas muestra si una empresa sancionada ambientalmente sigue
+  contratando con el Estado, y cuánto tardó entre la sanción y el
+  siguiente contrato — así se encontró el caso PETROPERÚ (468
+  infracciones OEFA + S/205M en contratos vigentes).
 - **Citar la fuente.** Cada número en la web tiene la fecha del
   corte y la fuente visible. Para el artículo: "Según Rastro al
   corte del 2 de septiembre de 2026, sobre datos del MEF…"
@@ -651,7 +737,7 @@ cambio).
 - **Frescura documentada.** Cada fuente tiene su `cobertura`,
   `matcher` y `corte` declarados en la respuesta. No hay inferencia
   silenciosa.
-- **Metadata de la metadata.** El catálogo de las 14 fuentes está
+- **Metadata de la metadata.** El catálogo de las 37 fuentes está
   en `docs/conectores.md` con la ficha técnica por conector
   (qué hace, cómo, con qué frecuencia, de qué fuente).
 - **Para papers y comités.** Hay un bundle citable (snapshot
@@ -680,7 +766,7 @@ cambio).
 
 ### 10.5 Para el desarrollador
 
-- **Las 27 APIs están documentadas en `/docs/api`.** Cada endpoint
+- **Las 40 APIs están documentadas en `/docs/api`.** Cada endpoint
   con su shape, sus códigos de error, su semántica.
 - **El servidor MCP es open source.** Lo podés forkear, lo podés
   mejorar, lo podés usar en otro agente que no sea Claude o Cursor.
@@ -715,7 +801,7 @@ cambio).
 ### 11.1 Lo que hoy cubre Rastro
 
 **La Libertad**, en sus 3 provincias costeras, 3 andinas, y 83
-distritos. Las **27 apps backend** tienen datos para La Libertad con
+distritos. Las **40 apps backend** tienen datos para La Libertad con
 cobertura verificada por el ledger de cobertura territorial
 (`scripts/seguimiento-semanal-territorial.ps1` corre los miércoles).
 
@@ -767,26 +853,31 @@ Rastro no cubre:
 
 ### 12.1 Próximos 3 meses (Q4 2026)
 
-**Sprint GORE S1 (sep 2026) — en cierre**
+**Completado (sep 2026, ver `ESTADO.md` para el detalle sesión por sesión)**
 
-- Ficha GORE con cruces CUI/obra/contrato, señales INFOBRAS y frescura
-  multi-fuente (INFOBRAS + compras). Pendiente: E2E comparativo/benchmark
-  y cierre documentado en `ESTADO.md`.
-
-**Completado recientemente (backend PV, sin UI web aún)**
-
-- Ficha sectorial con `ambito=NACIONAL` (PV-01), filtros INFOBRAS por sector
-  y días de paralización (PV-03), vigilancia de proveedores sancionados
-  (PV-06) — consumibles vía MCP/API.
+- **Sprints GORE S1/S2/S3 — cerrados.** Ficha GORE con cruces CUI/obra/contrato,
+  señales INFOBRAS y frescura multi-fuente; rutas web PV (`/sector/:id`,
+  `/obras-paralizadas`, vigilancia de sancionados); cruce CX-01
+  (proveedores de riesgo) expuesto en `/gore/la-libertad/ficha`.
+- **PV-01 a PV-06** (ámbito nacional en ficha sectorial, filtros INFOBRAS,
+  vigilancia de sancionados con estado persistido) — implementados y
+  consumibles vía MCP/API.
+- **MCP en producción** (`mcp.rastro.fyi`, Fly.io, autenticación por API
+  key) — antes solo instalación local.
+- **11 fuentes de datos nuevas** (INDECI, SERFOR, SENACE, INGEMMET,
+  SERNANP, Congreso, SIAGIE, SíseVe, Poder Judicial, y la ampliación de
+  identidad fiscal con OECE/RNP/PPA/exportaciones FOB) y **5 cruces de
+  riesgo nuevos** (OEFA×compras, doble inhabilitación, velocidad
+  sanción→contrato, RENAMU×inversiones, Poder Judicial×CEPLAN-geo).
 
 **En curso**
 
+- **Mercado de reactivos médicos** (`servicios-salud` + `compras-publicas`,
+  ingesta bulk OCDS): investigación de concentración de mercado y
+  dependencia de comprador único (CENARES) en compras de reactivos de
+  diagnóstico — rama en desarrollo, sin mergear aún.
 - **Paquete de datos abiertos v1.** Exportar el snapshot semanal más metadata
   de cobertura como bundle publicable en datosabiertos.gob.pe.
-- **Rutas web PV (S2):** `/sector/:id`, `/obras-paralizadas`, vigilancia
-  sancionados en capa de lectura.
-- **3 features del backlog abierto:** dashboard de integridad por distrito,
-  comparativa de cohortes, reporte de smoke-test firmado.
 
 ### 12.2 Próximos 12 meses (Q4 2026 — Q3 2027)
 
@@ -795,8 +886,10 @@ Rastro no cubre:
 - **Sostenibilidad:** un plan de servicios pagados para empresas
   (alertas, datasets premium, integraciones) que financie la capa
   gratuita sin comprometer la apertura.
-- **MCP ampliado:** mantener el catálogo al día (154 tools verificados
-  en sep 2026) e incorporar alertas/comparaciones automáticas.
+- **MCP ampliado:** mantener el catálogo al día (203 tools en el repo;
+  última auditoría de sincronización con las rutas Express: 199 tools el
+  2026-09-25, pendiente re-ejecutarse) e incorporar alertas/comparaciones
+  automáticas.
 - **Cobertura completa del GORE La Libertad:** terminar las 5
   dependencias ministeriales que hoy se miran a medias.
 
@@ -946,12 +1039,16 @@ es open source."
 | 0015 | Offsets manuales en el conector MEF | Aceptado |
 | 0016 | Evaluación de automatizar los conectores núcleo | Aceptado |
 | 0017 | Consolidación del entity matcher entre apps | Aceptado (alcance acotado a packages/) |
+| 0022 | `crossref:build` como operación continua (no one-off) | Aceptado |
+| 0023 | `riesgo-fiscal-isds` — semilla manual de la serie MMM/IAPM mientras la descarga automatizada está bloqueada | Aceptado |
 
-Ver `docs/adr/` para el detalle de cada uno.
+Hay 23 ADRs en total al 2026-09-24; esta tabla resume solo los más
+relevantes para lo descrito en este documento. Ver `docs/adr/` para el
+índice completo.
 
 ## Anexo B — Documentos relacionados
 
-- `README.md` — el README del monorepo, con la tabla de las 27 apps
+- `README.md` — el README del monorepo, con la tabla de las 40 apps
 - `DESIGN.md` — el sistema de diseño visual de `rastro-web` (tokens, tipografía, componentes)
 - `docs/ESTADO.md` — bitácora operativa (cambios recientes, pendientes, decisiones de la última sesión)
 - `docs/API_PROXY_DEPLOY.md` — cómo se despliega el proxy `api.rastro.pe`

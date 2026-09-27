@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rastro — Trazabilidad real de la inversión pública</title>
-  <meta name="description" content="Del expediente técnico al último comprobante. Visibilidad total de la inversión pública para gobiernos, contratistas, auditores y ciudadanos." />
+  <title>Rastro — Conectando los datos abiertos del Estado peruano</title>
+  <meta name="description" content="El Estado peruano publica miles de datos en decenas de portales. Rastro los conecta en un solo pipeline: MEF, INGEMMET, SERFOR, PNDA, OSITRAN, MTC y más. JSONs limpios para dashboards, modelos predictivos y reportes." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -146,13 +146,16 @@
           </div>
 
           <h1 class="font-sans font-semibold text-4xl md:text-5xl lg:text-6xl leading-[1.05] tracking-[-0.02em] text-fg">
-            Trazabilidad real de la
-            <span class="font-serif italic font-normal text-accent">inversión pública</span>.
+            El Estado peruano deja más datos
+            <span class="font-serif italic font-normal text-accent">abiertos</span> de
+            los que nadie está usando.
           </h1>
 
           <p class="mt-6 text-lg md:text-xl text-fg-soft max-w-2xl leading-relaxed">
-            Del expediente técnico al último comprobante. Una capa de visibilidad que conecta
-            Invierte.pe, SIAF, MEF y SEACE en una sola línea de tiempo auditable.
+            Nosotros los estamos conectando. Presupuesto, contratos, concesiones
+            mineras, títulos forestales, transporte y supervisión ambiental — todo
+            en un solo pipeline, sin dependencias propietarias, con JSONs listos
+            para dashboards, modelos predictivos o reportes.
           </p>
 
           <div class="mt-9 flex flex-wrap items-center gap-3">
@@ -167,19 +170,23 @@
 
           <!-- Trust strip -->
           <div class="mt-12">
-            <p class="text-xs mono-num text-muted-soft uppercase tracking-[0.18em] mb-4">Integración nativa</p>
+            <p class="text-xs mono-num text-muted-soft uppercase tracking-[0.18em] mb-4">Fuentes conectadas</p>
             <div class="flex flex-wrap gap-x-8 gap-y-3 text-sm mono-num text-muted">
-              <span>Invierte.pe</span>
-              <span class="text-line">·</span>
               <span>MEF</span>
               <span class="text-line">·</span>
-              <span>SIAF</span>
+              <span>INGEMMET</span>
               <span class="text-line">·</span>
-              <span>OSCE</span>
+              <span>SERFOR</span>
               <span class="text-line">·</span>
-              <span>SEACE</span>
+              <span>PNDA</span>
               <span class="text-line">·</span>
-              <span>Contraloría</span>
+              <span>OSITRAN</span>
+              <span class="text-line">·</span>
+              <span>MTC</span>
+              <span class="text-line">·</span>
+              <span>OEFA</span>
+              <span class="text-line">·</span>
+              <span>BCRP macro</span>
             </div>
           </div>
         </div>
@@ -224,13 +231,16 @@
       <div class="lg:col-span-4">
         <p class="text-xs mono-num text-accent uppercase tracking-[0.18em] mb-5">01 — El problema</p>
         <h2 class="font-sans font-semibold text-3xl md:text-4xl leading-[1.1] tracking-[-0.01em] text-fg">
-          La inversión pública se pierde en el camino.
+          La información existe — pero está dispersa.
         </h2>
         <p class="mt-5 text-fg-soft leading-relaxed">
-          El PIA 2026 de inversión pública nacional es S/ 257,562 millones. A junio, hay 2,262 obras
-          paralizadas con S/ 62,828 millones sin terminar. Y un vecino, un periodista o un contralor
-          ciudadano no puede ver, en una sola pantalla, dónde está cada sol. La plata no se pierde
-          en un titular: se pierde en un cronograma que nadie ve.
+          Cada día, el gobierno publica miles de datos sobre presupuestos,
+          contratos, concesiones mineras, títulos forestales, infraestructura
+          de transporte y decisiones ambientales. La información existe — pero
+          está dispersa en decenas de portales, cada uno con su formato, su API,
+          su log-in, su rate limit. Un analista que quisiera cruzar el presupuesto
+          de Madre de Dios con las concesiones mineras y los títulos forestales
+          necesitaría semanas de trabajo manual.
         </p>
       </div>
 
@@ -306,97 +316,100 @@
   <!-- 3. CÓMO FUNCIONA                                                 -->
   <!-- ============================================================== -->
   <section id="como" class="relative max-w-6xl mx-auto px-6 md:px-8 py-24 md:py-32">
-    <div class="max-w-3xl mb-14">
-      <p class="text-xs mono-num text-accent uppercase tracking-[0.18em] mb-5">02 — Cómo funciona</p>
-      <h2 class="font-sans font-semibold text-3xl md:text-4xl leading-[1.1] tracking-[-0.01em] text-fg">
-        Una cadena de evidencia inmutable, del planeamiento a la liquidación.
-      </h2>
-      <p class="mt-5 text-fg-soft leading-relaxed">
-        Conectamos los sistemas nacionales y construimos una capa de trazabilidad que ningún actor
-        puede alterar sin dejar huella. Lo que hoy está disperso en 7 portales distintos,
-        mañana vive en una sola línea de tiempo.
-      </p>
-    </div>
-
-    <!-- Process flow: 5 steps -->
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-3">
-
-      <!-- Step 1 -->
-      <div class="step-connector card rounded-2xl border border-line bg-ink-900/60 p-6">
-        <div class="flex items-center gap-3 mb-4">
-          <span class="mono-num text-xs text-accent">01</span>
-          <span class="h-px flex-1 bg-line"></span>
-        </div>
-        <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
-          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        </div>
-        <h3 class="font-semibold text-fg mb-2">Ingesta</h3>
-        <p class="text-sm text-muted leading-relaxed">
-          Conectores API nativos a MEF, SIAF, Invierte.pe, SEACE y OSCE. Sincronización continua.
+      <div class="max-w-3xl mb-14">
+        <p class="text-xs mono-num text-accent uppercase tracking-[0.18em] mb-5">02 — Cómo funciona</p>
+        <h2 class="font-sans font-semibold text-3xl md:text-4xl leading-[1.1] tracking-[-0.01em] text-fg">
+          No estamos construyendo un portal más. Estamos construyendo la tubería que alimenta las decisiones.
+        </h2>
+        <p class="mt-5 text-fg-soft leading-relaxed">
+          En las últimas semanas armamos una capa de datos que conecta las fuentes públicas más relevantes
+          del Estado peruano en un solo pipeline: finanzas públicas (MEF), geoespacial (INGEMMET + SERFOR),
+          transporte (PNDA, OSITRAN, MTC) y supervisión ambiental (OEFA, SENACE). Conectores Python estándar,
+          sin dependencias propietarias, con cache local y rate limits respetuosos. El output son JSONs limpios,
+          listos para alimentar dashboards, modelos predictivos o reportes.
         </p>
       </div>
 
-      <!-- Step 2 -->
-      <div class="step-connector card rounded-2xl border border-line bg-ink-900/60 p-6">
-        <div class="flex items-center gap-3 mb-4">
-          <span class="mono-num text-xs text-accent">02</span>
-          <span class="h-px flex-1 bg-line"></span>
-        </div>
-        <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
-          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-        </div>
-        <h3 class="font-semibold text-fg mb-2">Normalización</h3>
-        <p class="text-sm text-muted leading-relaxed">
-          Catálogo único de proyectos, componentes, metas y partidas. Misma CUI, misma lectura.
-        </p>
-      </div>
+        <!-- Process flow: 5 steps -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-3">
 
-      <!-- Step 3 -->
-      <div class="step-connector card rounded-2xl border border-line bg-ink-900/60 p-6">
-        <div class="flex items-center gap-3 mb-4">
-          <span class="mono-num text-xs text-accent">03</span>
-          <span class="h-px flex-1 bg-line"></span>
-        </div>
-        <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
-          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        </div>
-        <h3 class="font-semibold text-fg mb-2">Trazabilidad</h3>
-        <p class="text-sm text-muted leading-relaxed">
-          Cada hito con timestamp, responsable, evidencia firmada y hash encadenado.
-        </p>
-      </div>
+          <!-- Step 1 -->
+          <div class="step-connector card rounded-2xl border border-line bg-ink-900/60 p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="mono-num text-xs text-accent">01</span>
+              <span class="h-px flex-1 bg-line"></span>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
+              <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </div>
+            <h3 class="font-semibold text-fg mb-2">Finanzas públicas</h3>
+            <p class="text-sm text-muted leading-relaxed">
+              Réplica DuckDB del MEF con 32 millones de filas de ejecución presupuestal — 13 años de históricos.
+            </p>
+          </div>
 
-      <!-- Step 4 -->
-      <div class="step-connector card rounded-2xl border border-line bg-ink-900/60 p-6">
-        <div class="flex items-center gap-3 mb-4">
-          <span class="mono-num text-xs text-accent">04</span>
-          <span class="h-px flex-1 bg-line"></span>
-        </div>
-        <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
-          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        </div>
-        <h3 class="font-semibold text-fg mb-2">Alertas</h3>
-        <p class="text-sm text-muted leading-relaxed">
-          Patrones de riesgo detectados antes de que se vuelvan escándalo. Cronograma, costo, metas.
-        </p>
-      </div>
+          <!-- Step 2 -->
+          <div class="step-connector card rounded-2xl border border-line bg-ink-900/60 p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="mono-num text-xs text-accent">02</span>
+              <span class="h-px flex-1 bg-line"></span>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
+              <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+            </div>
+            <h3 class="font-semibold text-fg mb-2">Geoespacial</h3>
+            <p class="text-sm text-muted leading-relaxed">
+              66,823 derechos mineros (INGEMMET) y 5,391 títulos forestales (SERFOR) en PostGIS.
+            </p>
+          </div>
 
-      <!-- Step 5 -->
-      <div class="step-connector card rounded-2xl border border-line bg-ink-900/60 p-6">
-        <div class="flex items-center gap-3 mb-4">
-          <span class="mono-num text-xs text-accent">05</span>
-          <span class="h-px flex-1 bg-line"></span>
-        </div>
-        <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
-          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-        </div>
-        <h3 class="font-semibold text-fg mb-2">Visibilidad</h3>
-        <p class="text-sm text-muted leading-relaxed">
-          Dashboards por actor. Gobierno, contratista, auditor y ciudadano, cada uno con su lente.
-        </p>
-      </div>
+          <!-- Step 3 -->
+          <div class="step-connector card rounded-2xl border border-line bg-ink-900/60 p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="mono-num text-xs text-accent">03</span>
+              <span class="h-px flex-1 bg-line"></span>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
+              <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <h3 class="font-semibold text-fg mb-2">Transporte</h3>
+            <p class="text-sm text-muted leading-relaxed">
+              4,647 datasets PNDA, reportes en vivo OSITRAN y capas Geoserver del MTC.
+            </p>
+          </div>
 
-    </div>
+          <!-- Step 4 -->
+          <div class="step-connector card rounded-2xl border border-line bg-ink-900/60 p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="mono-num text-xs text-accent">04</span>
+              <span class="h-px flex-1 bg-line"></span>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
+              <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <h3 class="font-semibold text-fg mb-2">Ambiental + comercio exterior + macro BCRP</h3>
+            <p class="text-sm text-muted leading-relaxed">
+              Infracciones OEFA y catastro forestal SERFOR. Comercio exterior BCRP
+              (10 series). Macro BCRP: tipo de cambio, inflación, PBI, tasa de referencia (4 series).
+            </p>
+          </div>
+
+          <!-- Step 5 -->
+          <div class="step-connector card rounded-2xl border border-line bg-ink-900/60 p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="mono-num text-xs text-accent">05</span>
+              <span class="h-px flex-1 bg-line"></span>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
+              <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <h3 class="font-semibold text-fg mb-2">JSONs listos</h3>
+            <p class="text-sm text-muted leading-relaxed">
+              Cache local, rate limits respetuosos, output limpio para dashboards, modelos predictivos y reportes.
+            </p>
+          </div>
+
+        </div>
 
     <!-- Schema snippet -->
     <div class="mt-10 rounded-2xl border border-line bg-ink-900/60 p-6 md:p-7">
@@ -426,11 +439,13 @@
     <div class="max-w-3xl mb-14">
       <p class="text-xs mono-num text-accent uppercase tracking-[0.18em] mb-5">03 — Capacidades</p>
       <h2 class="font-sans font-semibold text-3xl md:text-4xl leading-[1.1] tracking-[-0.01em] text-fg">
-        Construido para los actores reales del sistema.
+        Conectores Python estándar, cache local, JSONs limpios.
       </h2>
       <p class="mt-5 text-fg-soft leading-relaxed">
-        No es un dashboard más. Es la infraestructura de transparencia sobre la que se monta la próxima
-        década de inversión pública en Latinoamérica.
+        No estamos construyendo un portal más. Estamos construyendo la tubería
+        que alimenta las decisiones. Cada fuente se ingiere con respeto al
+        rate limit, se cachea localmente y se entrega como JSON listo para
+        consumir.
       </p>
     </div>
 
@@ -445,11 +460,13 @@
           </div>
           <div>
             <p class="text-xs mono-num text-accent mb-1">Capacidad núcleo</p>
-            <h3 class="font-semibold text-xl text-fg">Monitoreo en tiempo real, multi-fuente</h3>
+            <h3 class="font-semibold text-xl text-fg">Pipeline de datos abiertos del Estado peruano</h3>
             <p class="mt-3 text-fg-soft leading-relaxed">
-              Sincronización continua con MEF, SIAF, Invierte.pe, SEACE y OSCE. Una sola línea de
-              tiempo por proyecto, con cada hito cruzado contra la fuente oficial. Si un dato cambia
-              en un sistema, el reflejo aparece en menos de 5 minutos.
+              37 fuentes oficiales conectadas en un solo flujo: MEF (32M de filas en DuckDB),
+              INGEMMET (66,823 derechos mineros), SERFOR (5,391 títulos forestales), PNDA
+              (4,647 datasets), OSITRAN (reportes en vivo), MTC (Geoserver), OEFA
+              (infracciones ambientales), BCRP macro (tipo de cambio, inflación, PBI, tasas) y más.
+              Cada centavo asignado, cada título, cada concesión — accesible en segundos.
             </p>
           </div>
         </div>
@@ -458,44 +475,55 @@
       <!-- Feature 2 -->
       <div class="card rounded-2xl border border-line bg-ink-900/60 p-6">
         <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
-          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
         </div>
-        <h3 class="font-semibold text-fg mb-2">Cadena de evidencia</h3>
+        <h3 class="font-semibold text-fg mb-2">Geoespacial</h3>
         <p class="text-sm text-muted leading-relaxed">
-          Hash encadenado por hito. Cualquier modificación deja rastro verificable.
+          Derechos mineros + títulos forestales en PostGIS. Intersecciones calculadas para detectar presión territorial.
         </p>
       </div>
 
       <!-- Feature 3 -->
       <div class="card rounded-2xl border border-line bg-ink-900/60 p-6">
         <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
-          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6h6V2"/><path d="M5 8h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z"/></svg>
         </div>
-        <h3 class="font-semibold text-fg mb-2">Alertas tempranas</h3>
+        <h3 class="font-semibold text-fg mb-2">Transporte</h3>
         <p class="text-sm text-muted leading-relaxed">
-          Cronograma, sobrecosto, cambio de metas, paralización. Antes del titular.
+          PNDA (4,647 datasets), OSITRAN en vivo y Geoserver MTC. Infraestructura de carreteras, puertos y aeropuertos.
         </p>
       </div>
 
       <!-- Feature 4 -->
       <div class="card rounded-2xl border border-line bg-ink-900/60 p-6">
         <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
-          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
-        <h3 class="font-semibold text-fg mb-2">Dashboards por actor</h3>
+        <h3 class="font-semibold text-fg mb-2">Macro BCRP</h3>
         <p class="text-sm text-muted leading-relaxed">
-          Cuatro lentes: gobierno, contratista, auditor, ciudadano. La misma verdad, distinta utilidad.
+          Tipo de cambio (S/ por US$), inflación (IPC var%), PBI (índice 2007=100), tasa de referencia (%). 4 series mensuales.
         </p>
       </div>
 
       <!-- Feature 5 -->
       <div class="card rounded-2xl border border-line bg-ink-900/60 p-6">
         <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
-          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6h6V2"/><path d="M5 8h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z"/></svg>
+          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
         </div>
-        <h3 class="font-semibold text-fg mb-2">Reportes automáticos</h3>
+        <h3 class="font-semibold text-fg mb-2">Rate limits respetuosos</h3>
         <p class="text-sm text-muted leading-relaxed">
-          Exportación lista para Contraloría, OCI y comisión de presupuesto. Formato institucional.
+          Cache local y backoff automático. Sin dependencias propietarias, solo Python estándar.
+        </p>
+      </div>
+
+      <!-- Feature 6 -->
+      <div class="card rounded-2xl border border-line bg-ink-900/60 p-6">
+        <div class="w-10 h-10 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center mb-4">
+          <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <h3 class="font-semibold text-fg mb-2">JSONs listos</h3>
+        <p class="text-sm text-muted leading-relaxed">
+          Output limpio para dashboards, modelos predictivos o reportes. Sin formato propietario.
         </p>
       </div>
 

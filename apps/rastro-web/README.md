@@ -1,14 +1,13 @@
 # Rastro Web — Capa de lectura para no-técnicos + MCP
 
-> **RASTRO** convierte señales dispersas en inteligencia clara para decidir mejor.
-> *Cada señal deja un rastro. Nosotros lo hacemos visible.*
+> **El Estado peruano deja más datos abiertos de los que nadie está usando. Nosotros los estamos conectando.**
 
 **Rastro** es una plataforma de inteligencia que ayuda a equipos y organizaciones a encontrar, conectar y entender las señales que importan. Transformamos información dispersa en contexto accionable, con foco en trazabilidad, claridad y decisiones más seguras.
 
 Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tiempo cambia lo que viene después.
 
 Rastro es agentic-first: el canal principal de consumo son los
-**<!-- COUNT:TOOL_COUNT -->189<!-- /COUNT --> tools MCP** de las <!-- COUNT:APP_COUNT -->37<!-- /COUNT -->
+**<!-- COUNT:TOOL_COUNT -->190<!-- /COUNT --> tools MCP** de las <!-- COUNT:APP_COUNT -->37<!-- /COUNT -->
 apps reales de appsperu, buscables vía 2 meta-tools (`rastro_buscar_tools` + `rastro_llamar`, ver
 `mcp-server/README.md`) para que un agente IA (Claude Code, Claude Desktop, Cursor, Windsurf, Cline,
 Continue.dev) encadene consultas complejas con una sola query. Esta web app (Vite + React Router 7 SPA)
@@ -19,7 +18,7 @@ el MCP.
 
 - **URL producción:** https://rastro.fyi/
 - **Stack:** Vite 8 + React 19 + TypeScript 6 + React Router 7 + Tailwind v4
-- **MCP producción:** <!-- COUNT:TOOL_COUNT -->189<!-- /COUNT --> tools de solo lectura, transporte Streamable HTTP en `https://mcp.rastro.fyi/mcp`, autenticado con `x-api-key`; transporte stdio disponible para desarrollo local
+- **MCP producción:** <!-- COUNT:TOOL_COUNT -->190<!-- /COUNT --> tools de solo lectura, transporte Streamable HTTP en `https://mcp.rastro.fyi/mcp`, autenticado con `x-api-key`; transporte stdio disponible para desarrollo local
 - **Hosting:** Cloudflare Pages (proyecto `rastro`)
 
 ## Estructura

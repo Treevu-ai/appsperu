@@ -1,0 +1,16 @@
+name: sunat-aduanas
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sunat
+      POSTGRES_PASSWORD: sunat
+      POSTGRES_DB: sunat_aduanas
+    ports:
+      - "127.0.0.1:5446:5432"
+    volumes:
+      - sunat_pgdata:/var/lib/postgresql/data
+
+volumes:
+  sunat_pgdata:

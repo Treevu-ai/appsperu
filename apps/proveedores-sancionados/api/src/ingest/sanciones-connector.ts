@@ -245,6 +245,14 @@ export interface IngestSummary {
 
 type Seccion = "ninguna" | "inhabilitacion" | "multa";
 
+async function logIngestion(client: PoolClient, fuente: string, filas: number, estado: "success" | "error", mensaje: string | null): Promise<void> {
+  await client.query(
+    `INSERT INTO ingestion_log (fuente, ultima_ejecucion, filas_ingeridas, estado, mensaje_error)
+     VALUES ($1, now(), $2, $3, $4)`,
+    [fuente, filas, estado, mensaje]
+  );
+}
+
 export async function ingestSanciones(): Promise<IngestSummary> {
   const html = await fetchReporteHtml();
   const checksum = checksumOf(html);
@@ -323,17 +331,32 @@ export async function ingestSanciones(): Promise<IngestSummary> {
     client.query("UPDATE raw_sanciones_batches SET record_count = $1 WHERE id = $2", [totalRows, batchId])
   );
 
+  const acceptedRows = totalRows - rechazadas;
+  await withClient((client) =>
+    logIngestion(client, "tce_osce", acceptedRows, "success", null)
+  );
+
   return { batchId, totalRows, inhabilitacionesAceptadas, multasAceptadas, rechazadas };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   ingestSanciones()
-    .then((summary) => {
+    .then(async (summary) => {
       console.log("Ingesta de proveedores sancionados completada:", summary);
       return pool.end();
     })
-    .catch((err) => {
+    .catch(async (err) => {
       console.error("Ingesta falló:", err);
+      try {
+        const client = await pool.connect();
+        try {
+          await logIngestion(client, "tce_osce", 0, "error", err.message);
+        } finally {
+          client.release();
+        }
+      } catch {
+        // No hacer nada — el error original es lo importante
+      }
       process.exit(1);
     });
 }
