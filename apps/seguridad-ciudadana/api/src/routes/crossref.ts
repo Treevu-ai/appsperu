@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { LATEST_BUDGET_CTE } from "@appsperu/shared-queries";
 import { pool } from "../db/pool.js";
-import { ejecucionPool } from "../db/ejecucion-pool.js";
+import { ejecucionPool, EJECUCION_NO_CONFIGURADA } from "../db/ejecucion-pool.js";
 import { asyncHandler } from "../lib/async-handler.js";
 import { parseQuery } from "../lib/validate-query.js";
 
@@ -36,6 +36,15 @@ crossrefRouter.get(
 
     const departamento = parsed.departamento.toUpperCase();
     const anio = Number(parsed.anio);
+
+    // Sin `EJECUCION_DATABASE_URL` este cruce no se puede calcular. Se dice
+    // explícitamente en vez de devolver el conteo de denuncias con ceros de
+    // gasto: un 0 inventado se lee como "el Estado no invirtió en orden
+    // público", que es una conclusión, no una falta de dato.
+    if (!ejecucionPool) {
+      res.status(503).json({ error: EJECUCION_NO_CONFIGURADA });
+      return;
+    }
 
     const { rows: denunciasRows } = await pool.query<{ modalidad: string; total: string }>(
       `SELECT modalidad, SUM(cantidad)::text AS total

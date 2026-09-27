@@ -10,6 +10,10 @@ import { getRealRoutesForApp, normalizeCatalogPath } from "../route-introspectio
  * Express reales de cada app, para detectar el caso que `EXPECTED_TOOLS_BY_APP` no puede: un
  * endpoint real que nunca tuvo tool, o un tool que ya no corresponde a ningún endpoint real —
  * exactamente el gap de 20 endpoints de `compras-publicas` que motivó este ticket (ver PR #99).
+ *
+ * Sin excepciones: toda app en `APP_KEYS` tiene backend propio con rutas GET
+ * verificables. Una app sin ingesta real (como `territorio-inteligencia`) no entra
+ * en `APP_KEYS` —ver su README— en vez de exemptarse acá.
  */
 describe("catálogo MCP vs. rutas Express reales (CX-15)", () => {
   for (const app of APP_KEYS) {

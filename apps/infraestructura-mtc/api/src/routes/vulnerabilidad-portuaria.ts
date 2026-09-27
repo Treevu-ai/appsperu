@@ -1,0 +1,815 @@
+import { Router } from "express";
+import { z } from "zod";
+import { pool } from "../db/pool.js";
+import { asyncHandler } from "../lib/async-handler.js";
+import { parseQuery } from "../lib/validate-query.js";
+
+// ─── Tipos para datos ANA SNIRH ─────────────────────────────────────────────
+
+export interface AnaEstacion {
+  IDESTACIONCONFIG: number;
+  IDESTACION: number;
+  ESTACION: string;
+  RIO: string;
+  DEPARTAMENTO: string;
+  PROVINCIA: string;
+  DISTRITO: string;
+  LONGITUD: string;
+  LATITUD: string;
+  VALOR: string;
+  UALERTA: string;
+  UEMERGENCIA: string;
+  UNIDADMEDIDA: string;
+  TENDENCIA: string;
+  FLGPUNTOCRITICO: number;
+  OPERADOR: string;
+  REGIONHIDRO: string;
+  RPT_PERIODO: string;
+}
+
+export interface RiesgoClimaticoResult {
+  scoreClima: number;
+  nivelRiesgo: "bajo" | "medio" | "alto" | "muy_alto";
+  estacionCercana: {
+    nombre: string;
+    rio: string;
+    departamento: string;
+    distanciaKm: number;
+  } | null;
+  estadoCaudal: "normal" | "alerta" | "emergencia" | "sin_datos";
+  tendencia: string | null;
+  periodo: string;
+  esPuntoCritico: boolean;
+  fuente: string;
+  fechaDatos: string;
+}
+
+/** Fila de `GET /api/terminales/vulnerabilidad/clima`: la parte estructural (V1) más la climática.
+ *  Los campos climáticos se llenan en un segundo paso, cuando ya se resolvió el terminal más
+ *  cercano por coordenadas — por eso arrancan en `null` y no son opcionales. */
+interface FilaVulnerabilidadClima {
+  ranking: number;
+  codigoPuerto: string;
+  nombreTerminal: string;
+  idDepartamento: string;
+  scoreV1: number;
+  componentesV1: unknown;
+  scoreClima: number | null;
+  nivelRiesgoClima: RiesgoClimaticoResult["nivelRiesgo"] | null;
+  scoreV2: number;
+  estacionCercana: RiesgoClimaticoResult["estacionCercana"];
+  estadoCaudal: RiesgoClimaticoResult["estadoCaudal"] | null;
+  tendenciaCaudal: string | null;
+  periodoHidrologico: string | null;
+  esPuntoCritico: boolean | null;
+}
+
+export const vulnerabilidadRouter = Router();
+
+const DEFAULT_LIMIT = 500;
+const MAX_LIMIT = 1000;
+
+/** Scoring por estado de conservación (0-75) */
+function estadoScore(estado: string | null): number {
+  switch (estado?.toLowerCase()) {
+    case "bueno":
+      return 10;
+    case "regular":
+      return 25;
+    case "malo":
+      return 50;
+    case "muy malo":
+      return 75;
+    default:
+      return 50; // null o desconocido = riesgo alto
+  }
+}
+
+/** Scoring por concesión (concesionados suelen tener mejor mantenimiento) */
+function concesionScore(esConcesionado: boolean | null): number {
+  return esConcesionado === true ? 5 : 30;
+}
+
+/** Scoring por alcance geográfico */
+function alcanceScore(alcance: string | null): number {
+  switch (alcance?.toLowerCase()) {
+    case "nacional":
+      return 5;
+    case "regional":
+      return 15;
+    case "local":
+      return 25;
+    default:
+      return 20;
+  }
+}
+
+/** Scoring por ámbito */
+function ambitoScore(ambito: string | null): number {
+  switch (ambito?.toLowerCase()) {
+    case "marítimo":
+      return 15;
+    case "fluvial":
+      return 20;
+    case "lacustre":
+      return 10;
+    default:
+      return 15;
+  }
+}
+
+/** Scoring por geolocalización (sin geo no se puede supervisar) */
+function geoScore(tieneGeo: boolean): number {
+  return tieneGeo ? 0 : 20;
+}
+
+/**
+ * Calcula el score de vulnerabilidad para un terminal.
+ * Fórmula: estado*0.25 + concesion*0.20 + alcance*0.15 + ambito*0.10 + geo*0.10
+ */
+export function calcularScoreVulnerabilidad(params: {
+  estadoConservacion: string | null;
+  esConcesionado: boolean | null;
+  alcance: string | null;
+  ambito: string | null;
+  tieneGeolocalizacion: boolean;
+}): { score: number; componentes: Record<string, number> } {
+  const estadoS = estadoScore(params.estadoConservacion);
+  const concesionS = concesionScore(params.esConcesionado);
+  const alcanceS = alcanceScore(params.alcance);
+  const ambitoS = ambitoScore(params.ambito);
+  const geoS = geoScore(params.tieneGeolocalizacion);
+
+  const score =
+    estadoS * 0.25 +
+    concesionS * 0.20 +
+    alcanceS * 0.15 +
+    ambitoS * 0.10 +
+    geoS * 0.10;
+
+  return {
+    score: Math.round(score * 100) / 100,
+    componentes: {
+      estadoConservacion: estadoS,
+      esConcesionado: concesionS,
+      alcance: alcanceS,
+      ambito: ambitoS,
+      tieneGeolocalizacion: geoS,
+    },
+  };
+}
+
+// ─── Endpoint: GET /api/terminales/vulnerabilidad ─────────────────────────────
+
+const QuerySchema = z.object({
+  departamento: z.string().min(1).optional().describe("Código UBIGEO de departamento, ej. '13' para La Libertad."),
+  ambito: z.string().min(1).optional().describe("Filtrar por ámbito: 'Marítimo', 'Fluvial', 'Lacustre'."),
+  fuente: z.string().min(1).default("MTC_2025").describe("Fuente de datos para el índice."),
+  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+vulnerabilidadRouter.get(
+  "/",
+  asyncHandler(async (req, res) => {
+    const parsed = parseQuery(QuerySchema, req.query, res);
+    if (!parsed) return;
+    const { departamento, ambito, fuente, limit, offset } = parsed;
+
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+
+    if (departamento) {
+      params.push(departamento);
+      conditions.push(`iv.id_departamento = $${params.length}`);
+    }
+    if (ambito) {
+      params.push(`%${ambito}%`);
+      conditions.push(`iv.ambito ILIKE $${params.length}`);
+    }
+    if (fuente) {
+      params.push(fuente);
+      conditions.push(`iv.fuente_datos = $${params.length}`);
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    // Contar total
+    const { rows: countRows } = await pool.query<{ total: string }>(
+      `SELECT COUNT(*) AS total FROM indice_vulnerabilidad_portuaria iv ${where}`,
+      params
+    );
+    const total = Number(countRows[0].total);
+
+    // Obtener resultados con ranking
+    const { rows } = await pool.query(
+      `SELECT
+         iv.*,
+         ROW_NUMBER() OVER (ORDER BY iv.score_vulnerabilidad DESC) AS ranking
+       FROM indice_vulnerabilidad_portuaria iv
+       ${where}
+       ORDER BY iv.score_vulnerabilidad DESC
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
+    );
+
+    res.json({
+      total,
+      limit,
+      offset,
+      hasMore: offset + rows.length < total,
+      fuente: fuente,
+      resultados: rows.map((r) => ({
+        ranking: Number(r.ranking),
+        codigoPuerto: r.codigo_puerto,
+        nombreTerminal: r.nombre_terminal,
+        idDepartamento: r.id_departamento,
+        departamento: r.departamento,
+        ambito: r.ambito,
+        alcance: r.alcance,
+        estadoConservacion: r.estado_conservacion,
+        esConcesionado: r.es_concesionado,
+        tieneGeolocalizacion: r.tiene_geolocalizacion,
+        scoreVulnerabilidad: Number(r.score_vulnerabilidad),
+        componentes: r.componentes,
+        fuenteDatos: r.fuente_datos,
+        calculadoEn: r.calculado_en,
+      })),
+    });
+  })
+);
+
+// ─── Endpoint: GET /api/terminales/vulnerabilidad/:codigo ─────────────────────
+
+vulnerabilidadRouter.get(
+  "/:codigo",
+  asyncHandler(async (req, res) => {
+    const { codigo } = req.params;
+    const { fuente } = req.query;
+
+    const params: unknown[] = [codigo];
+    let query = `SELECT * FROM indice_vulnerabilidad_portuaria WHERE codigo_puerto = $1`;
+    
+    if (fuente && typeof fuente === "string") {
+      params.push(fuente);
+      query += ` AND fuente_datos = $${params.length}`;
+    }
+
+    const { rows } = await pool.query(query, params);
+
+    if (rows.length === 0) {
+      res.status(404).json({ error: `No se encontró índice para el código '${codigo}'.` });
+      return;
+    }
+
+    const r = rows[0];
+
+    // Obtener ranking global
+    const { rows: rankRows } = await pool.query<{ ranking: string }>(
+      `SELECT COUNT(*) + 1 AS ranking
+       FROM indice_vulnerabilidad_portuaria
+       WHERE score_vulnerabilidad > $1
+         AND fuente_datos = $2`,
+      [r.score_vulnerabilidad, r.fuente_datos]
+    );
+
+    res.json({
+      codigoPuerto: r.codigo_puerto,
+      nombreTerminal: r.nombre_terminal,
+      idDepartamento: r.id_departamento,
+      departamento: r.departamento,
+      ambito: r.ambito,
+      alcance: r.alcance,
+      estadoConservacion: r.estado_conservacion,
+      esConcesionado: r.es_concesionado,
+      tieneGeolocalizacion: r.tiene_geolocalizacion,
+      scoreVulnerabilidad: Number(r.score_vulnerabilidad),
+      componentes: r.componentes,
+      ranking: Number(rankRows[0]?.ranking ?? 1),
+      totalTerminales: null, // Se puede agregar si se requiere
+      fuenteDatos: r.fuente_datos,
+      calculadoEn: r.calculado_en,
+    });
+  })
+);
+
+// ─── Scoring riesgo climatico (v2) ──────────────────────────────────────────────
+
+/**
+ * Distancia en km entre dos puntos lat/lon (formula de Haversine).
+ */
+function distanciaKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
+ * Parsea valor numerico de cadena (maneja espacios, "s.d.", N/A).
+ */
+function parseValor(val: string): number | null {
+  const cleaned = val.trim();
+  if (!cleaned || cleaned === "s.d." || cleaned === "N/A" || cleaned === "n/d") return null;
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? null : n;
+}
+
+/**
+ * Determina el nivel de alerta de una estacion segun valor vs umbrales.
+ * En estiaje (meses 8-10): alerta si valor < umbral naranja
+ * En crecida (meses 1-4, 12): alerta si valor > umbral naranja
+ */
+function nivelAlerta(
+  valor: number | null,
+  uAlerta: number | null,
+  uEmergencia: number | null,
+  periodo: string,
+  mesActual: number
+): "normal" | "alerta" | "emergencia" {
+  if (valor === null || uAlerta === null || uAlerta === 0) return "normal";
+
+  const esEstiaje = [8, 9, 10].includes(mesActual);
+  const esCrecida = [1, 2, 3, 4, 12].includes(mesActual);
+
+  if (esEstiaje) {
+    // En estiaje: rojo si bajo del umbral de emergencia, naranja si bajo del umbral de alerta
+    if (uEmergencia !== null && uEmergencia > 0 && valor < uEmergencia) return "emergencia";
+    if (valor < uAlerta) return "alerta";
+  } else if (esCrecida || periodo.includes("CRECIDA")) {
+    // En crecida: rojo si sobre umbral de emergencia, naranja si sobre umbral de alerta
+    if (uEmergencia !== null && uEmergencia > 0 && valor > uEmergencia) return "emergencia";
+    if (valor > uAlerta) return "alerta";
+  } else {
+    // Transicion: similar a crecida
+    if (uEmergencia !== null && uEmergencia > 0 && valor > uEmergencia) return "emergencia";
+    if (valor > uAlerta) return "alerta";
+  }
+
+  return "normal";
+}
+
+/**
+ * Calcula el score de riesgo climatico para un terminal portuario.
+ * Utiliza datos del ANA SNIRH (caudales en tiempo real).
+ *
+ * Score maximo = 40 puntos (≈ 40% del indice v2).
+ * Se suma al score v1 para obtener el score v2 total.
+ */
+export function calcularRiesgoClimatico(params: {
+  latitud: number | null;
+  longitud: number | null;
+  departamento: string | null; // codigo UBIGEO
+  estacionesAna: AnaEstacion[];
+  fechaDatos: string; // "DD/MM/YYYY"
+}): RiesgoClimaticoResult {
+  const { latitud, longitud, estacionesAna, fechaDatos } = params;
+
+  // Default: riesgo bajo
+  let scoreClima = 0;
+  let nivelRiesgo: RiesgoClimaticoResult["nivelRiesgo"] = "bajo";
+  let estacionCercana: RiesgoClimaticoResult["estacionCercana"] = null;
+  let estadoCaudal: RiesgoClimaticoResult["estadoCaudal"] = "sin_datos";
+  let tendencia: string | null = null;
+  let esPuntoCritico = false;
+
+  const periodoActual = estacionesAna[0]?.RPT_PERIODO ?? "ESTIAJE";
+  const mesActual = parseInt(fechaDatos.split("/")[1]) || 9;
+
+  // Departamentos amazonicos con riesgohidrico alto
+  const depsAmazonicos = new Set([
+    "LORETO", "UCAYALI", "MADRE DE DIOS", "AMAZONAS", "SAN MARTIN"
+  ]);
+
+  // Si el puerto no tiene geo, asignar riesgo medio-alto por departamento amazonico
+  if (latitud === null || longitud === null) {
+    const dep = params.departamento?.toUpperCase() ?? "";
+    if (depsAmazonicos.has(dep)) {
+      scoreClima = 25;
+      nivelRiesgo = "alto";
+      estadoCaudal = "sin_datos";
+    } else {
+      scoreClima = 10;
+      nivelRiesgo = "medio";
+    }
+    return {
+      scoreClima,
+      nivelRiesgo,
+      estacionCercana: null,
+      estadoCaudal,
+      tendencia: null,
+      periodo: periodoActual,
+      esPuntoCritico: false,
+      fuente: "ANA_SNIRH",
+      fechaDatos,
+    };
+  }
+
+  // Buscar estacion mas cercana con coordenadas validas
+  let mejorEstacion: AnaEstacion | null = null;
+  let menorDistancia = Infinity;
+
+  for (const est of estacionesAna) {
+    const latEst = parseFloat(est.LATITUD.trim());
+    const lonEst = parseFloat(est.LONGITUD.trim());
+    if (isNaN(latEst) || isNaN(lonEst)) continue;
+
+    const dist = distanciaKm(latitud, longitud, latEst, lonEst);
+    if (dist < menorDistancia) {
+      menorDistancia = dist;
+      mejorEstacion = est;
+    }
+  }
+
+  // Si no hay ninguna estacion con geo, riesgo bajo
+  if (!mejorEstacion) {
+    return {
+      scoreClima: 5,
+      nivelRiesgo: "bajo",
+      estacionCercana: null,
+      estadoCaudal: "normal",
+      tendencia: null,
+      periodo: periodoActual,
+      esPuntoCritico: false,
+      fuente: "ANA_SNIRH",
+      fechaDatos,
+    };
+  }
+
+  // Distancia maxima para considerar relevante: 100km
+  if (menorDistancia > 100) {
+    return {
+      scoreClima: 5,
+      nivelRiesgo: "bajo",
+      estacionCercana: {
+        nombre: mejorEstacion.ESTACION,
+        rio: mejorEstacion.RIO,
+        departamento: mejorEstacion.DEPARTAMENTO,
+        distanciaKm: Math.round(menorDistancia),
+      },
+      estadoCaudal: "normal",
+      tendencia: null,
+      periodo: periodoActual,
+      esPuntoCritico: false,
+      fuente: "ANA_SNIRH",
+      fechaDatos,
+    };
+  }
+
+  // Calcular riesgo segun la estacion cercana
+  const valor = parseValor(mejorEstacion.VALOR);
+  const uAlerta = parseValor(mejorEstacion.UALERTA);
+  const uEmergencia = parseValor(mejorEstacion.UEMERGENCIA);
+  esPuntoCritico = mejorEstacion.FLGPUNTOCRITICO === 1;
+  tendencia = mejorEstacion.TENDENCIA.trim() || null;
+
+  estadoCaudal = nivelAlerta(valor, uAlerta, uEmergencia, periodoActual, mesActual);
+
+  // Scoring base por distancia (0-15 pts)
+  if (menorDistancia <= 10) scoreClima += 15;
+  else if (menorDistancia <= 30) scoreClima += 10;
+  else if (menorDistancia <= 60) scoreClima += 5;
+  else scoreClima += 2;
+
+  // Scoring por estado de caudal (0-15 pts)
+  if (estadoCaudal === "emergencia") scoreClima += 15;
+  else if (estadoCaudal === "alerta") scoreClima += 8;
+
+  // Scoring por punto critico (0-10 pts)
+  if (esPuntoCritico) scoreClima += 10;
+
+  // Scoring por tendencia ascendente en meses de crecida (0-5 pts)
+  if (
+    tendencia?.toLowerCase().includes("ascendente") &&
+    [1, 2, 3, 4, 12].includes(mesActual)
+  ) {
+    scoreClima += 5;
+  }
+
+  // Scoring por region amazonica sin geo (0-5 pts)
+  const dep = params.departamento?.toUpperCase() ?? "";
+  if (depsAmazonicos.has(dep)) scoreClima += 5;
+
+  // Limitar a 40 pts maximo
+  scoreClima = Math.min(scoreClima, 40);
+
+  // Clasificar nivel
+  if (scoreClima >= 25) nivelRiesgo = "muy_alto";
+  else if (scoreClima >= 15) nivelRiesgo = "alto";
+  else if (scoreClima >= 5) nivelRiesgo = "medio";
+  else nivelRiesgo = "bajo";
+
+  estacionCercana = {
+    nombre: mejorEstacion.ESTACION,
+    rio: mejorEstacion.RIO,
+    departamento: mejorEstacion.DEPARTAMENTO,
+    distanciaKm: Math.round(menorDistancia),
+  };
+
+  return {
+    scoreClima,
+    nivelRiesgo,
+    estacionCercana,
+    estadoCaudal,
+    tendencia,
+    periodo: periodoActual,
+    esPuntoCritico,
+    fuente: "ANA_SNIRH",
+    fechaDatos,
+  };
+}
+// Recalcula el índice desde el inventario actual del MTC
+
+vulnerabilidadRouter.post(
+  "/calcular",
+  asyncHandler(async (req, res) => {
+    const { fuente } = req.body?.fuente ? { fuente: req.body.fuente } : { fuente: "MTC_2025" };
+
+    // Obtener todos los terminales del corte más reciente
+    const { rows: terminales } = await pool.query(
+      `SELECT
+         t.codigo_puerto,
+         t.nombre_terminal,
+         t.id_departamento,
+         t.ambito,
+         t.alcance,
+         t.estado_conservacion,
+         t.es_concesionado,
+         t.latitud,
+         t.longitud,
+         t.fecha_corte
+       FROM terminales_portuarios t
+       WHERE t.fecha_corte = (SELECT MAX(fecha_corte) FROM terminales_portuarios)`
+    );
+
+    // Limpiar índice existente para esta fuente
+    await pool.query(
+      `DELETE FROM indice_vulnerabilidad_portuaria WHERE fuente_datos = $1`,
+      [fuente]
+    );
+
+    // Calcular e insertar scores
+    let insertados = 0;
+    const errores: string[] = [];
+
+    for (const t of terminales) {
+      const tieneGeo = t.latitud !== null && t.longitud !== null;
+
+      const { score, componentes } = calcularScoreVulnerabilidad({
+        estadoConservacion: t.estado_conservacion,
+        esConcesionado: t.es_concesionado,
+        alcance: t.alcance,
+        ambito: t.ambito,
+        tieneGeolocalizacion: tieneGeo,
+      });
+
+      try {
+        await pool.query(
+          `INSERT INTO indice_vulnerabilidad_portuaria
+             (codigo_puerto, nombre_terminal, id_departamento, departamento,
+              ambito, alcance, estado_conservacion, es_concesionado,
+              tiene_geolocalizacion, score_vulnerabilidad, componentes,
+              fuente_datos, fecha_corte)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+           ON CONFLICT (codigo_puerto, fuente_datos) DO UPDATE SET
+             nombre_terminal = EXCLUDED.nombre_terminal,
+             id_departamento = EXCLUDED.id_departamento,
+             departamento = EXCLUDED.departamento,
+             ambito = EXCLUDED.ambito,
+             alcance = EXCLUDED.alcance,
+             estado_conservacion = EXCLUDED.estado_conservacion,
+             es_concesionado = EXCLUDED.es_concesionado,
+             tiene_geolocalizacion = EXCLUDED.tiene_geolocalizacion,
+             score_vulnerabilidad = EXCLUDED.score_vulnerabilidad,
+             componentes = EXCLUDED.componentes,
+             fecha_corte = EXCLUDED.fecha_corte,
+             calculado_en = CURRENT_DATE`,
+          [
+            t.codigo_puerto,
+            t.nombre_terminal,
+            t.id_departamento,
+            null, // departamento (nombre) - requiere tabla de lookup
+            t.ambito,
+            t.alcance,
+            t.estado_conservacion,
+            t.es_concesionado,
+            tieneGeo,
+            score,
+            JSON.stringify(componentes),
+            fuente,
+            t.fecha_corte,
+          ]
+        );
+        insertados++;
+      } catch (err) {
+        errores.push(`${t.codigo_puerto}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    res.json({
+      mensaje: `Índice de vulnerabilidad recalculado`,
+      fuente,
+      terminalesProcesados: terminales.length,
+      insertados,
+      errores: errores.length > 0 ? errores : undefined,
+    });
+  })
+);
+
+// ─── Cache simple en memoria para datos ANA (5 min TTL) ────────────────────────
+
+let anaCache: { data: AnaEstacion[]; fecha: string; fetchedAt: number } | null = null;
+const ANA_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
+
+async function fetchDatosAna(fecha: string): Promise<{ estaciones: AnaEstacion[]; fecha: string }> {
+  // Usar cache si es reciente
+  if (anaCache && Date.now() - anaCache.fetchedAt < ANA_CACHE_TTL_MS) {
+    return { estaciones: anaCache.data, fecha: anaCache.fecha };
+  }
+
+  // Llamada real al ANA SNIRH
+  const url = "https://snirh.ana.gob.pe/onrh/ServicioReportes.asmx/ReporteNacionalCaudal";
+  const body = JSON.stringify({
+    pTipoRPT: 1,
+    pFecha: fecha,
+    pCodAAA: "00",
+    pCodALA: "00",
+    pCodUbigeo: "00",
+  });
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json; charset=utf-8", "User-Agent": "Mozilla/5.0" },
+    body,
+    signal: AbortSignal.timeout(20_000), // 20s timeout
+  });
+
+  if (!response.ok) {
+    throw new Error(`ANA SNIRH respondio ${response.status}: ${response.statusText}`);
+  }
+
+  const json = await response.json() as { d: AnaEstacion[] };
+  anaCache = { data: json.d, fecha, fetchedAt: Date.now() };
+
+  return { estaciones: json.d, fecha };
+}
+
+// ─── Endpoint: GET /api/terminales/vulnerabilidad/clima ────────────────────────
+// Devuelve el indice v2: vulnerabilidad estructural + riesgo climatico
+// Llama al ANA SNIRH en tiempo real
+
+const ClimaQuerySchema = z.object({
+  departamento: z.string().min(1).optional().describe("Codigo UBIGEO."),
+  ambito: z.string().min(1).optional().describe("Filtrar por ambito."),
+  fecha: z.string().optional().describe("Fecha de datos ANA (DD/MM/YYYY). Default: hoy."),
+  fuente: z.string().min(1).default("MTC_2025"),
+  limit: z.coerce.number().int().min(1).max(500).default(500),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+vulnerabilidadRouter.get(
+  "/clima",
+  asyncHandler(async (req, res) => {
+    const parsed = parseQuery(ClimaQuerySchema, req.query, res);
+    if (!parsed) return;
+    const { departamento, ambito, fecha, fuente, limit, offset } = parsed;
+
+    // Fecha default: hoy
+    const fechaAna = fecha ?? (() => {
+      const d = new Date();
+      return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+    })();
+
+    // Obtener estaciones del ANA
+    let estacionesAna: AnaEstacion[] = [];
+    let anaFetchedAt: string | null = null;
+    try {
+      const { estaciones, fecha: fechaResp } = await fetchDatosAna(fechaAna);
+      estacionesAna = estaciones;
+      anaFetchedAt = fechaResp;
+    } catch (err) {
+      console.warn("[v2/clima] No se pudo obtener datos ANA:", err instanceof Error ? err.message : String(err));
+      // Continuar sin datos ANA (score climatico bajo)
+    }
+
+    // Obtener terminales del indice v1 existente
+    const conditions: string[] = [`iv.fuente_datos = $1`];
+    const params: unknown[] = [fuente];
+
+    if (departamento) {
+      params.push(departamento);
+      conditions.push(`iv.id_departamento = $${params.length}`);
+    }
+    if (ambito) {
+      params.push(`%${ambito}%`);
+      conditions.push(`iv.ambito ILIKE $${params.length}`);
+    }
+
+    const where = `WHERE ${conditions.join(" AND ")}`;
+
+    // Contar
+    const { rows: countRows } = await pool.query<{ total: string }>(
+      `SELECT COUNT(*) AS total FROM indice_vulnerabilidad_portuaria iv ${where}`,
+      params
+    );
+    const total = Number(countRows[0].total);
+
+    // Obtener terminales
+    const { rows: terminales } = await pool.query(
+      `SELECT
+         iv.*,
+         ROW_NUMBER() OVER (ORDER BY iv.score_vulnerabilidad DESC) AS ranking
+       FROM indice_vulnerabilidad_portuaria iv
+       ${where}
+       ORDER BY iv.score_vulnerabilidad DESC
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
+    );
+
+    // Calcular score v2 para cada terminal
+    const resultados: FilaVulnerabilidadClima[] = terminales.map((t) => {
+      // Obtener lat/lon del inventario original
+      // Para esto necesitamos un join con terminales_portuarios
+      // Ya que el indice guarda id_departamento pero no las coords
+      // Usamos el JSON de componentes + id_departamento para lookup
+      return {
+        ranking: Number(t.ranking),
+        codigoPuerto: t.codigo_puerto,
+        nombreTerminal: t.nombre_terminal,
+        idDepartamento: t.id_departamento,
+        scoreV1: Number(t.score_vulnerabilidad),
+        componentesV1: t.componentes,
+        scoreClima: null,
+        nivelRiesgoClima: null,
+        scoreV2: Number(t.score_vulnerabilidad),
+        estacionCercana: null,
+        estadoCaudal: null,
+        tendenciaCaudal: null,
+        periodoHidrologico: null,
+        esPuntoCritico: null,
+      };
+    });
+
+    // Obtener coords de los puertos
+    const codigos = resultados.map((r) => r.codigoPuerto);
+    if (codigos.length > 0) {
+      const { rows: puertos } = await pool.query(
+        `SELECT codigo_puerto, latitud, longitud FROM terminales_portuarios
+         WHERE codigo_puerto = ANY($1)
+           AND fecha_corte = (SELECT MAX(fecha_corte) FROM terminales_portuarios)`,
+        [codigos]
+      );
+      const coordMap = new Map(puertos.map((p: { codigo_puerto: string; latitud: number | null; longitud: number | null }) =>
+        [p.codigo_puerto, { lat: p.latitud, lon: p.longitud }]));
+
+      for (const r of resultados) {
+        const coords = coordMap.get(r.codigoPuerto);
+        const clima = calcularRiesgoClimatico({
+          latitud: coords?.lat ?? null,
+          longitud: coords?.lon ?? null,
+          departamento: r.idDepartamento,
+          estacionesAna,
+          fechaDatos: fechaAna,
+        });
+        r.scoreClima = clima.scoreClima;
+        r.nivelRiesgoClima = clima.nivelRiesgo;
+        r.scoreV2 = Math.round((r.scoreV1 + clima.scoreClima) * 100) / 100;
+        r.estacionCercana = clima.estacionCercana;
+        r.estadoCaudal = clima.estadoCaudal;
+        r.tendenciaCaudal = clima.tendencia;
+        r.periodoHidrologico = clima.periodo;
+        r.esPuntoCritico = clima.esPuntoCritico;
+      }
+    }
+
+    // Re-ordenar por scoreV2
+    resultados.sort((a: { scoreV2: number }, b: { scoreV2: number }) => b.scoreV2 - a.scoreV2);
+    resultados.forEach((r: { ranking: number }, i: number) => { r.ranking = i + 1 + offset; });
+
+    res.json({
+      total,
+      limit,
+      offset,
+      hasMore: offset + resultados.length < total,
+      fuente,
+      datosAna: anaFetchedAt ? {
+        fuente: "ANA_SNIRH",
+        fecha: anaFetchedAt,
+        estacionesCount: estacionesAna.length,
+        periodo: estacionesAna[0]?.RPT_PERIODO ?? "desconocido",
+      } : {
+        fuente: "ANA_SNIRH",
+        fecha: null,
+        estacionesCount: 0,
+        periodo: "sin_datos",
+        error: "No se pudo obtener datos del ANA. Riesgo climatico calculado sin datos de caudal.",
+      },
+      resultados,
+    });
+  })
+);
