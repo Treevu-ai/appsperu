@@ -1,5 +1,5 @@
 import { pathToFileURL } from "node:url";
-import { ejecucionPool } from "../db/ejecucion-pool.js";
+import { ejecucionPool, EJECUCION_NO_CONFIGURADA } from "../db/ejecucion-pool.js";
 import { pool } from "../db/pool.js";
 
 type Counts = { departamento: string; normalized_records: string; rejected_records: string };
@@ -18,6 +18,11 @@ export async function materializeSeguridadCiudadanaCoverage(
   departamentos: readonly string[],
   batchId?: number
 ): Promise<{ batchId: number; jurisdictions: number }> {
+  // El registro de cobertura vive en la base de radar-ejecucion. Sin esa
+  // variable el job no tiene dónde escribir: se dice explícitamente en vez de
+  // terminar "ok" sin haber materializado nada.
+  if (!ejecucionPool) throw new Error(EJECUCION_NO_CONFIGURADA);
+
   const selectedBatch =
     batchId ?? (await pool.query<{ batch_id: number }>("SELECT MAX(id) AS batch_id FROM raw_sidpol_batches")).rows[0]?.batch_id;
   if (!selectedBatch) throw new Error("No existe un lote SIDPOL persistido para materializar cobertura.");
@@ -83,7 +88,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   materializeSeguridadCiudadanaCoverage(departamentos, batchId)
     .then((summary) => console.log("Cobertura seguridad-ciudadana materializada:", summary))
     .finally(async () => {
-      await Promise.all([pool.end(), ejecucionPool.end()]);
+      await Promise.all([pool.end(), ejecucionPool?.end()]);
     })
     .catch((error) => {
       console.error("No se pudo materializar cobertura seguridad-ciudadana:", error);

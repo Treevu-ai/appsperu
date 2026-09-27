@@ -91,9 +91,11 @@ no técnica. El servidor MCP expone **202 tools** de solo lectura (más 2
 meta-tools de descubrimiento, no contados en ese total) y ya corre **en
 producción** (`mcp.rastro.fyi`, Fly.io, autenticado con API keys
 `sk-rastro-*`) además de la instalación local. El catálogo del repo
-(`mcp-server/src/catalog.ts`) tiene 203 entradas: una tool del branch
-`feat/conectores-reactivos-medicos` aún no está desplegada. La API pública está
-protegida con Cloudflare Access. **Sprints GORE S1/S2/S3 (sep 2026): cerrados** —
+(`mcp-server/src/catalog.ts`) tiene **209 entradas sobre 38 apps**. No cubre las
+40 apps del monorepo: `sunat-aduanas` todavía no está conectada al MCP y
+`territorio-inteligencia` está deliberadamente fuera del catálogo mientras no
+tenga ingesta real (ver `apps/territorio-inteligencia/README.md`). La API
+pública está protegida con Cloudflare Access. **Sprints GORE S1/S2/S3 (sep 2026): cerrados** —
 ficha sectorial del GORE La Libertad, rutas web PV y cruce de proveedores de
 riesgo (CX-01) ya en producción. Desde entonces se sumaron 11 fuentes nuevas
 (INDECI, SERFOR, SENACE, INGEMMET, SERNANP, Congreso, SIAGIE, SíseVe, Poder
@@ -886,7 +888,7 @@ Rastro no cubre:
 - **Sostenibilidad:** un plan de servicios pagados para empresas
   (alertas, datasets premium, integraciones) que financie la capa
   gratuita sin comprometer la apertura.
-- **MCP ampliado:** mantener el catálogo al día (203 tools en el repo;
+- **MCP ampliado:** mantener el catálogo al día (209 tools en el repo;
   última auditoría de sincronización con las rutas Express: 199 tools el
   2026-09-25, pendiente re-ejecutarse) e incorporar alertas/comparaciones
   automáticas.

@@ -5,7 +5,7 @@ un agente Claude, vía **2 meta-tools** — no un tool por endpoint. Ver el plan
 catálogo completo de tools en [`docs/conectores.md`](../docs/conectores.md) (cada `description`
 de tool se deriva de esa ficha técnica).
 
-## Interfaz: 2 meta-tools, no 203
+## Interfaz: 2 meta-tools, no 209
 
 En vez de registrar un tool MCP por cada una de las 203 entradas del catálogo (costo de contexto
 fijo por sesión aunque el cliente use 2 o 3), el servidor expone:
@@ -20,7 +20,7 @@ Onboardear una app nueva es solo agregar filas a `TOOL_CATALOG` (`src/catalog.ts
 cantidad de tools que un cliente MCP carga por adelantado en cada sesión. Ver `src/search.ts`
 (implementación de la búsqueda) y `src/index.ts` (`registerMetaTools`).
 
-Auditoría completada 2026-09-25: **199 tools verificados vs 199 rutas Express reales, cero desincronizaciones** (CX-15 no se repite). Desde entonces el catálogo creció a **203 tools**; la auditoría de sincronización está pendiente de re-ejecutarse sobre el catálogo actual.
+Auditoría completada 2026-09-25: **199 tools verificados vs 199 rutas Express reales, cero desincronizaciones** (CX-15 no se repite). Desde entonces el catálogo creció a **209 tools**; la auditoría de sincronización está pendiente de re-ejecutarse sobre el catálogo actual.
 
 ## Requisito previo
 
@@ -81,11 +81,11 @@ Nombres de env var por app: `RADAR_EJECUCION_API_URL`, `COMPRAS_PUBLICAS_API_URL
 
 ## Catálogo de tools
 
-203 entradas (40 apps) en `src/catalog.ts` — la fuente de verdad, cada una mapea 1:1 a un
+209 entradas (38 apps) en `src/catalog.ts` — la fuente de verdad, cada una mapea 1:1 a un
 `routes/*.ts` existente, sin inventar parámetros. Nombradas `<app>_<recurso>`, ej.
 `radar_ejecucion_execution`, `compras_publicas_suppliers`, `salud_institucional_score`.
 
-Desde la reingeniería del catálogo, esto ya **no** son 203 tools MCP registrados individualmente — son
+Desde la reingeniería del catálogo, esto ya **no** son 209 tools MCP registrados individualmente — son
 filas que `rastro_buscar_tools` busca y `rastro_llamar` ejecuta.
 
 Cada `description` incluye, cuando aplica: si la cobertura ingerida es parcial (ej. La Libertad,
@@ -106,7 +106,7 @@ como si fuera completo.
   ingestas desde un agente es una superficie de riesgo distinta (ejecución de scripts contra
   Postgres) que se dejó fuera de alcance a propósito.
 - Validado manualmente: `tools/list` (expone exactamente `rastro_buscar_tools` + `rastro_llamar`,
-  no 203), `rastro_buscar_tools` con query/app real, `rastro_llamar` con un nombre inexistente
+  no 209), `rastro_buscar_tools` con query/app real, `rastro_llamar` con un nombre inexistente
   (error explícito, no crash), manejo de error de conectividad cuando la app de destino no responde.
   Tests automatizados: `src/__tests__/catalog.test.ts` (detección de tools renombrados/borrados),
   `src/__tests__/routes-vs-catalog.test.ts` (comparación estática contra rutas reales Express).

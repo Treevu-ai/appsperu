@@ -10,7 +10,7 @@ títulos forestales, transporte, infraestructura, supervisión ambiental, **macr
 (tipo de cambio, inflación, PBI, tasas de interés)** — cruzados en un solo
 pipeline con conectores Python estándar, cache local y rate limits respetuosos. La capa de
 lectura pública para humanos y agentes IA es **Rastro** (`apps/rastro-web/`, publicada en
-`rastro.fyi`); el servidor MCP (`mcp-server/`) expone las 40 APIs como tools de solo lectura
+`rastro.fyi`); el servidor MCP (`mcp-server/`) expone 38 de las 40 APIs como tools de solo lectura
 para Claude Code, Claude Desktop, Cursor, Windsurf, Cline y Continue.dev.
 
 ## Apps
@@ -70,7 +70,7 @@ de las otras bases y `npm run dev`.
 
 ## Servidor MCP (Model Context Protocol)
 
-[`mcp-server/`](mcp-server/) expone las 40 apps como **203 tools de solo lectura**, buscables desde
+[`mcp-server/`](mcp-server/) expone las 38 apps del catálogo como **209 tools de solo lectura**, buscables desde
 2 meta-tools (`rastro_buscar_tools` + `rastro_llamar`, no registrados uno por uno) para agentes IA
 vía MCP en producción (`https://rastro.fyi` o `https://treevu-rastro-gw.fly.dev`, transporte Streamable HTTP). Para desarrollo local, usa transporte stdio. Compatible con Claude Code, Claude Desktop, Cursor, Windsurf, Cline y
 Continue.dev. Una vez conectado, el agente busca el tool exacto, lo ejecuta, encadena resultados y

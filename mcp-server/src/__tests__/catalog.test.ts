@@ -287,12 +287,6 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "emergencias_indeci_detalle",
     "emergencias_indeci_preparacion_riesgo",
   ],
-  "territorio-inteligencia": [
-    "territorio_inteligencia_captura_territorio",
-    "territorio_inteligencia_inconsistencia_presupuesto",
-    "territorio_inteligencia_riesgo_eudr",
-    "territorio_inteligencia_titulares_riesgo",
-  ],
   "geo-intersections": [
     "geo_intersections_cruce_punto",
     "geo_intersections_forestal",
@@ -300,7 +294,6 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "geo_intersections_reporte",
     "geo_intersections_stats",
   ],
-  "riesgo-territorial": ["riesgo_territorial_resumen"],
 };
 
 describe("MCP catalog", () => {

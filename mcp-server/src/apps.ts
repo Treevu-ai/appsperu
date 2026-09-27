@@ -41,9 +41,15 @@ export const APP_KEYS = [
   "senace-cartera-proyectos",
   "catastro-forestal",
   "emergencias-indeci",
-  "territorio-inteligencia",
   "geo-intersections",
-  "riesgo-territorial",
+  // `territorio-inteligencia` y la vista compuesta `riesgo-territorial` NO están
+  // en APP_KEYS: la app todavía no tiene ingesta real (consulta
+  // `inhabilitaciones`, `inhabilitaciones_judiciales`, `multas` y
+  // `minam_deforestacion`, que viven en otras bases y todavía no se replican, y
+  // columnas `titular_ruc`/`superficie` que el catastro forestal real no tiene).
+  // Mientras eso siga así, anunciarlas por MCP expondría tools que devuelven
+  // vacío o error presented como "no hay riesgo". Ver
+  // apps/territorio-inteligencia/README.md.
 ] as const;
 
 export type AppKey = (typeof APP_KEYS)[number];
@@ -91,9 +97,7 @@ const DEFAULT_PORTS: Record<AppKey, number> = {
   "senace-cartera-proyectos": 4033,
   "catastro-forestal": 4034,
   "emergencias-indeci": 4035,
-  "territorio-inteligencia": 4036,
   "geo-intersections": 4037,
-  "riesgo-territorial": 4038,
 };
 
 function envVarFor(app: AppKey): string {
