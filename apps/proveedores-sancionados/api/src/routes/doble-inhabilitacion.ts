@@ -9,6 +9,11 @@ export const dobleInhabilitacionRouter = Router();
 
 const QuerySchema = z.object({
   ruc: z.string().min(1).optional().describe("Filtra a un RUC/DNI específico (el de inhabilitaciones o el de inhabilitaciones_judiciales)."),
+  organoJurisdiccional: z
+    .string()
+    .min(1)
+    .optional()
+    .describe("Filtra por nombre de órgano jurisdiccional (keyword ILIKE, case-insensitive). Útil para detectar casos vinculados a Fiscalías Especializadas (ej. narcóticos)."),
 });
 
 /**
@@ -46,7 +51,7 @@ dobleInhabilitacionRouter.get(
   asyncHandler(async (req, res) => {
     const parsed = parseQuery(QuerySchema, req.query, res);
     if (!parsed) return;
-    const { ruc } = parsed;
+    const { ruc, organoJurisdiccional } = parsed;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -57,6 +62,10 @@ dobleInhabilitacionRouter.get(
       // válido, porque el DNI de 8 dígitos nunca calza esas columnas
       // completas, solo las generadas `dni` (hallazgo de Copilot, PR #175).
       conditions.push(`(i.ruc = $${params.length} OR ij.ruc_dni = $${params.length} OR i.dni = $${params.length} OR ij.dni = $${params.length})`);
+    }
+    if (organoJurisdiccional) {
+      params.push(`%${organoJurisdiccional}%`);
+      conditions.push(`ij.organo_jurisdiccional ILIKE $${params.length}`);
     }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
@@ -71,6 +80,7 @@ dobleInhabilitacionRouter.get(
          i.estado AS admin_estado,
          ij.ruc_dni AS ruc_dni_judicial,
          ij.nombre AS nombre_judicial,
+         ij.organo_jurisdiccional,
          ij.numero_resolucion AS resolucion_judicial,
          ij.fecha_inicio AS judicial_desde,
          ij.fecha_fin AS judicial_hasta
@@ -113,6 +123,7 @@ dobleInhabilitacionRouter.get(
           judicial: {
             rucDni: r.ruc_dni_judicial,
             nombre: r.nombre_judicial,
+            organoJurisdiccional: r.organo_jurisdiccional,
             resolucion: r.resolucion_judicial,
             desde: r.judicial_desde,
             hasta: r.judicial_hasta,

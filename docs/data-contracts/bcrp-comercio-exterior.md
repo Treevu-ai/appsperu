@@ -114,6 +114,23 @@ Todas en millones US$, todas de frecuencia mensual (caben las 10 en un solo requ
 límite de 10 series por llamada). Sin desagregación territorial ni por producto/partida —
 solo el agregado nacional.
 
+### Series macro nacionales — Tipo de cambio, inflación, PBI, tasas (mensual, CONFIRMADO FRESCO)
+
+Páginas: https://estadisticas.bcrp.gob.pe/estadisticas/series/mensuales/tipo-de-cambio,
+https://estadisticas.bcrp.gob.pe/estadisticas/series/mensuales/precios,
+https://estadisticas.bcrp.gob.pe/estadisticas/series/mensuales/producto-bruto-interno,
+https://estadisticas.bcrp.gob.pe/estadisticas/series/mensuales/tasas-de-interes
+
+| Código | Serie | Rango | Última actualización | Unidad |
+|---|---|---|---|---|
+| `PN01246PM` | Tipo de cambio - promedio del periodo (S/ por US$) | Ene-1991 a Jun-2026 | 13-08-2026 | S/ por US$ |
+| `PN01271PM` | Índice de precios Lima Metropolitana (var% mensual) | Ene-1991 a Jun-2026 | 13-08-2026 | var% mensual |
+| `PN01770AM` | Producto bruto interno y demanda interna (índice 2007 = 100) | Ene-1992 a Jun-2026 | 13-08-2026 | índice 2007=100 |
+| `PD04722MM` | Tasa de Referencia de la Política Monetaria | Sep-2003 a Jun-2026 | 13-08-2026 | % |
+
+Todas de frecuencia mensual (caben las 4 en un solo request, bajo el límite de 10 series por llamada).
+Sin desagregación territorial — solo el agregado nacional.
+
 ---
 
 ## Cautela principal — frescura del dato (resuelta para el agregado nacional)
@@ -150,28 +167,28 @@ territorial ni transaccional.
 
 ---
 
-## Entidades del modelo canónico (propuesta, no implementada)
+## Entidades del modelo canónico (implementado)
 
 ### `trade_indicators`
-- `id`: UUID
-- `series_code`: VARCHAR — código BCRP (ej. `RD38085BM`)
+- `id`: BIGSERIAL
+- `series_code`: TEXT — código BCRP (ej. `PN38714BM`, `PN01246PM`)
+- `series_key`: TEXT — clave corta (ej. `exportaciones`, `tipo_cambio_promedio`)
 - `series_title`: TEXT — título tal cual lo devuelve la API
-- `ubigeo_departamento`: VARCHAR — FK lógica a `territories.departamento`, derivado del
-  título de la serie (no viene como campo estructurado — requiere parseo del nombre)
-- `category`: VARCHAR — `exportacion_fob` | `importacion` | `producto_tradicional` |
-  `producto_no_tradicional`
-- `period`: DATE — mes/año del dato (`periods[].name`, ej. "Ene.2020")
-- `value`: NUMERIC — millones US$
-- `frequency`: VARCHAR — `mensual` (todas las series confirmadas son mensuales)
-- `ingested_at`: TIMESTAMPTZ
+- `category`: TEXT — `exportacion_fob` | `importacion` | `balanza` | `tipo_cambio` | `inflacion` | `pbi` | `tasas_interes`
+- `unit`: TEXT — `millones_USD` | `Soles_por_USD` | `var_pct` | `indice_2007_100` | `pct`
+- `period_year`: INTEGER
+- `period_month`: SMALLINT (1–12)
+- `value_usd_millions`: NUMERIC(18,6) — valor numérico (unidad según columna `unit`)
+- `source_batch_id`: BIGINT — FK a `raw_bcrp_batches`
+- `UNIQUE (series_code, period_year, period_month)`
 
 ### `raw_bcrp_batches`
-- `id`: SERIAL
-- `series_codes`: VARCHAR — códigos solicitados en el request (hasta 10, separados por guion)
-- `period_start` / `period_end`: VARCHAR
+- `id`: BIGSERIAL
+- `series_codes`: TEXT — códigos solicitados en el request (hasta 10, separados por guion)
+- `period_start` / `period_end`: TEXT — rango BCRP (ej. "2012-1"/"2026-6")
 - `checksum`: TEXT — SHA256 del payload
 - `payload`: JSONB — respuesta cruda de la API
-- `ingested_at`: TIMESTAMPTZ
+- `fetched_at`: TIMESTAMPTZ
 
 ---
 

@@ -1,10 +1,8 @@
 # Rastro
 
-> Rastro convierte señales dispersas en inteligencia clara para decidir mejor.
-> Cada señal deja un rastro. Nosotros lo hacemos visible.
+> El Estado peruano deja más datos abiertos de los que nadie está usando. Nosotros los estamos conectando.
 
-Rastro es una plataforma de trazabilidad sobre datos abiertos del Estado peruano: 3 lectores,
-<!-- COUNT:APP_COUNT -->37<!-- /COUNT --> apps backend y <!-- COUNT:TOOL_COUNT -->190<!-- /COUNT --> tools MCP de solo lectura.
+Rastro es una capa de datos que conecta las fuentes públicas más relevantes del Estado peruano en un solo pipeline: MEF (32M filas DuckDB), INGEMMET (66,823 derechos mineros), SERFOR (5,391 títulos forestales), PNDA (4,647 datasets), OSITRAN, MTC, OEFA y más. Conectores Python estándar, cache local, rate limits respetuosos. JSONs listos para dashboards, modelos predictivos o reportes.
 
 ## URLs públicas
 
