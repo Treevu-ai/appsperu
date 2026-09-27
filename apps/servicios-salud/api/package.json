@@ -10,6 +10,7 @@
     "migrate": "tsx src/db/migrate.ts",
     "ingest:renipress": "tsx src/ingest/renipress-connector.ts",
     "ingest:cenares": "tsx src/ingest/cenares-connector.ts",
+    "ingest:cenares-pecosas": "tsx src/ingest/cenares-pecosas-connector.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

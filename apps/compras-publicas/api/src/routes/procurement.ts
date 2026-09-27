@@ -43,7 +43,7 @@ procurementRouter.get("/", asyncHandler(async (req, res) => {
      JOIN raw_ocds_batches rb ON rb.id = p.source_batch_id
      ${where}
      ORDER BY p.fecha_publicacion DESC
-     LIMIT 500`,
+     LIMIT 10000`,
     params
   );
 
