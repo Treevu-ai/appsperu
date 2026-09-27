@@ -1,11 +1,33 @@
+/**
+ * Tests de integración contra Postgres real: siembran filas en
+ * `raw_batches`/`port_imports` y las borran en `afterAll`. Sin guarda, importar
+ * `createApp()` en el tope del módulo arrastraba el pool y el archivo entero
+ * moría sin `DATABASE_URL` — en local pasaba porque el `.env` de la máquina la
+ * tenía. Ver la nota equivalente en `normalize.test.ts`.
+ */
+import "dotenv/config";
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
+import type { Express } from "express";
+import type { Pool } from "pg";
 import request from "supertest";
-import { createApp } from "../app.js";
-import { pool } from "../db/pool.js";
 
-const app = createApp();
+const CON_DB = Boolean(process.env.DATABASE_URL);
+
+let app: Express;
+let pool: Pool;
 
 beforeAll(async () => {
+  if (!CON_DB) return;
+  const [{ createApp }, { pool: p }] = await Promise.all([
+    import("../app.js"),
+    import("../db/pool.js"),
+  ]);
+  app = createApp();
+  pool = p;
+});
+
+beforeAll(async () => {
+  if (!CON_DB) return;
   // Seed minimal test data
   await pool.query(`
     INSERT INTO raw_batches (source_file, year, checksum, row_count)
@@ -38,13 +60,14 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (!CON_DB) return;
   await pool.query("DELETE FROM port_subpartida_imports WHERE aduana_code = 8");
   await pool.query("DELETE FROM port_imports WHERE aduana_code IN (8, 1)");
   await pool.query("DELETE FROM raw_batches WHERE source_file = 'test_cdro15.xlsx'");
   await pool.end();
 });
 
-describe("GET /api/ports", () => {
+describe.skipIf(!CON_DB)("GET /api/ports", () => {
   it("devuelve todas las aduanas sin filtros", async () => {
     const res = await request(app).get("/api/ports");
     expect(res.status).toBe(200);
@@ -82,7 +105,7 @@ describe("GET /api/ports", () => {
   });
 });
 
-describe("GET /api/ports/subpartidas", () => {
+describe.skipIf(!CON_DB)("GET /api/ports/subpartidas", () => {
   it("devuelve subpartidas para Salaverry", async () => {
     const res = await request(app).get("/api/ports/subpartidas?aduana=salaverry");
     expect(res.status).toBe(200);
@@ -99,7 +122,7 @@ describe("GET /api/ports/subpartidas", () => {
   });
 });
 
-describe("GET /api/ports/top", () => {
+describe.skipIf(!CON_DB)("GET /api/ports/top", () => {
   it("devuelve ranking de aduanas por volumen CIF", async () => {
     const res = await request(app).get("/api/ports/top?anio=2024");
     expect(res.status).toBe(200);
@@ -115,7 +138,7 @@ describe("GET /api/ports/top", () => {
   });
 });
 
-describe("GET /api/meta/freshness", () => {
+describe.skipIf(!CON_DB)("GET /api/meta/freshness", () => {
   it("devuelve metadata de última ingesta", async () => {
     const res = await request(app).get("/api/meta/freshness");
     expect(res.status).toBe(200);
@@ -126,7 +149,7 @@ describe("GET /api/meta/freshness", () => {
   });
 });
 
-describe("Health checks", () => {
+describe.skipIf(!CON_DB)("Health checks", () => {
   it("GET /health", async () => {
     const res = await request(app).get("/health");
     expect(res.status).toBe(200);
