@@ -1,8 +1,6 @@
 import express, { type ErrorRequestHandler } from "express";
 import { denunciasRouter } from "./routes/denuncias.js";
 import { crossrefRouter } from "./routes/crossref.js";
-import { comisariasRouter } from "./routes/comisarias.js";
-import { equipamientoRouter } from "./routes/equipamiento.js";
 import { pool } from "./db/pool.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 
@@ -23,8 +21,6 @@ export function createApp() {
   app.use("/api", apiRateLimit);
   app.use("/api/denuncias", denunciasRouter);
   app.use("/api/crossref", crossrefRouter);
-  app.use("/api/comisarias", comisariasRouter);
-  app.use("/api/equipamiento", equipamientoRouter);
 
   app.use(errorHandler);
 

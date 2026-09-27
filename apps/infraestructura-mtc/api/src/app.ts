@@ -2,7 +2,6 @@ import express, { type ErrorRequestHandler } from "express";
 import { terminalesPortuariosRouter } from "./routes/terminales-portuarios.js";
 import { aerodromosRouter } from "./routes/aerodromos.js";
 import { peajesRouter } from "./routes/peajes.js";
-import { vulnerabilidadRouter } from "./routes/vulnerabilidad-portuaria.js";
 import { pool } from "./db/pool.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 
@@ -31,7 +30,6 @@ export function createApp() {
   app.use("/api/terminales-portuarios", terminalesPortuariosRouter);
   app.use("/api/aerodromos", aerodromosRouter);
   app.use("/api/peajes", peajesRouter);
-  app.use("/api/terminales/vulnerabilidad", vulnerabilidadRouter);
 
   app.use(errorHandler);
 

@@ -1,8 +1,9 @@
 # Cómo citar Rastro
 
-> El Estado peruano deja más datos abiertos de los que nadie está usando. Nosotros los estamos conectando.
+> Rastro convierte señales dispersas en inteligencia clara para decidir mejor.
+> *Cada señal deja un rastro. Nosotros lo hacemos visible.*
 
-**Rastro** es una capa de datos que conecta las fuentes públicas más relevantes del Estado peruano en un solo pipeline. Si usas una cifra en un informe, noticia o trabajo académico, incluye los metadatos que la UI muestra al lado de cada número.
+**Rastro** es una plataforma de trazabilidad sobre datos abiertos del Estado peruano. Si usas una cifra en un informe, noticia o trabajo académico, incluye los metadatos que la UI muestra al lado de cada número.
 
 ## Formato de citación sugerido
 

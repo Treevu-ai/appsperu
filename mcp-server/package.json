@@ -13,7 +13,6 @@
     "test": "vitest run",
     "migrate": "tsx src/db/migrate.ts",
     "create-key": "tsx src/cli/create-key.ts",
-    "generate-keys-batch": "tsx scripts/generate-keys-batch.ts",
     "dev:http": "cross-env MCP_TRANSPORT=http tsx src/index.ts"
   },
   "dependencies": {

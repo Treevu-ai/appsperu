@@ -18,22 +18,17 @@ function read(filePath: string): string | null {
 }
 
 /** Reduce cualquier segmento de parámetro (`:ocid`, `:kind(a|b|c)`, `{ocid}`) a un token fijo —
- *  el nombre del parámetro puede diferir legítimamente entre la ruta Express y el `pathTemplate`
- *  del catálogo (ver `providerId` vs. `:provider_id`), así que no debe afectar la comparación. */
+ * el nombre del parámetro puede diferir legítimamente entre la ruta Express y el `pathTemplate`
+ * del catálogo (ver `providerId` vs. `:provider_id`), así que no debe afectar la comparación. */
 export function normalizeExpressPath(p: string): string {
   let s = p.replace(/:(\w+)\([^)]*\)/g, ":param").replace(/:\w+/g, ":param");
   if (s.length > 1 && s.endsWith("/")) s = s.slice(0, -1);
   return s === "" ? "/" : s;
 }
 
-/** Igual que `normalizeExpressPath` pero para el `pathTemplate` del catálogo: acepta las dos
- *  sintaxis que se usan en `TOOL_CATALOG` — `{ocid}` (la mayoritaria) y `:ocid` (Express). Sin
- *  esto, una entrada escrita en sintaxis Express nunca casaba con su ruta real y CX-15 reportaba
- *  un tool faltante que en realidad ya estaba registrado. */
 export function normalizeCatalogPath(p: string): string {
-  let s = p.replace(/\{[^}]+\}/g, ":param").replace(/:(\w+)\([^)]*\)/g, ":param").replace(/:\w+/g, ":param");
-  if (s.length > 1 && s.endsWith("/")) s = s.slice(0, -1);
-  return s === "" ? "/" : s;
+  const s = p.replace(/\{[^}]+\}/g, ":param");
+  return s.length > 1 && s.endsWith("/") ? s.slice(0, -1) : s;
 }
 
 function joinPath(prefix: string, routePath: string): string {
@@ -77,20 +72,12 @@ export function getRealRoutesForApp(app: AppKey): string[] | null {
   const appTs = read(path.join(appDir, "app.ts"));
   if (!appTs) return null;
 
-  // Acepta `import { aRouter } from "./routes/x.js"` y también varios en la misma
-  // sentencia (`import { aRouter, bRouter } from "./routes/x.js"`), que es como
-  // seguridad-ciudadana monta dos routers desde un mismo archivo. Antes solo
-  // reconocía el primer nombre y la app entera aparecía sin rutas.
-  const importRe = /import\s+(?:\{\s*([^}]*?)\s*\}|(?:\*\s+as\s+)?(\w+))\s+from\s+"\.\/routes\/([\w.-]+)\.js";/g;
+  const importRe = /import\s+(?:\{\s*(\w+)\s*\}|(\w+))\s+from\s+"\.\/routes\/([\w.-]+)\.js";/g;
   const varToFile = new Map<string, string>();
   let m: RegExpExecArray | null;
   while ((m = importRe.exec(appTs))) {
-    const file = m[3];
-    const names = m[1] !== undefined ? m[1].split(",") : [m[2]];
-    for (const raw of names) {
-      const varName = raw.trim().split(/\s+as\s+/).pop()?.trim();
-      if (varName) varToFile.set(varName, file);
-    }
+    const varName = m[1] ?? m[2];
+    if (varName) varToFile.set(varName, m[3]);
   }
 
   const mountRe = /app\.use\(\s*"([^"]+)"\s*,\s*(\w+)\s*\)/g;

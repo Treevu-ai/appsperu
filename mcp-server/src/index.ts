@@ -9,7 +9,6 @@ import { TOOL_CATALOG, type ToolSpec } from "./catalog.js";
 import { buildUrl, callApi } from "./http-client.js";
 import { searchTools } from "./search.js";
 import { serializeToolResponse } from "./tool-output.js";
-import { runRiesgoTerritorial, type RiesgoTerritorialParams } from "./tools/riesgo-territorial.js";
 
 export function buildPath(tool: ToolSpec, args: Record<string, unknown>): string {
   let path = tool.pathTemplate;
@@ -173,33 +172,6 @@ function registerMetaTools(server: McpServer, activeKey: ApiKeyRecord | null): v
     },
     async ({ tool: toolName, args }) => runRastroLlamarWithAuth(activeKey, toolName, args as Record<string, unknown> | undefined)
   );
-
-  // ---- vista compuesta: riesgo-territorial ----
-  server.registerTool(
-    "riesgo_territorial_resumen",
-    {
-      title: "riesgo_territorial_resumen",
-      description:
-        "Vista compuesta territorial: orquesta captura de territorio, superposiciones mineras-forestales, " +
-        "riesgo EUDR y emergencias INDECI para un departamento. Cada fuente puede fallar independientemente.",
-      inputSchema: {
-        departamento: z.string().min(1).describe("Código UBIGEO de 2 dígitos (ej. '13' para La Libertad)."),
-        ruc: z.string().min(1).optional().describe("RUC específico para enriquecimiento en riesgo EUDR."),
-      },
-    },
-    async ({ departamento, ruc }: RiesgoTerritorialParams) => {
-      try {
-        const result = await runRiesgoTerritorial({ departamento, ruc });
-        return {
-          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
-          isError: false,
-        };
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        return { content: [{ type: "text" as const, text: message }], isError: true };
-      }
-    }
-  );
 }
 
 /**
@@ -297,7 +269,7 @@ async function main(): Promise<void> {
   const authNote = activeKey
     ? ` — código activo (grupo=${activeKey.groupId ?? "?"}, ${activeKey.queryLimit - activeKey.queriesUsed}/${activeKey.queryLimit} queries restantes)`
     : "";
-  console.error(`appsperu-mcp-server: 3 tools registrados (2 meta-tools + 1 vista compuesta, catálogo de ${TOOL_CATALOG.length} tools buscable), esperando por stdio${authNote}.`);
+  console.error(`appsperu-mcp-server: 2 meta-tools registrados (catálogo de ${TOOL_CATALOG.length} tools buscable), esperando por stdio${authNote}.`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

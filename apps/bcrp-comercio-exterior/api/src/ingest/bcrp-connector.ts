@@ -4,13 +4,10 @@ import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
 import {
   defaultPeriodRange,
-  defaultMacroPeriodRange,
-  MACRO_SERIES,
   NATIONAL_TRADE_SERIES,
   normalizeBcrpResponse,
-  normalizeMacroBcrpResponse,
   type BcrpApiResponse,
-  type NormalizedBcrpRow,
+  type NormalizedTradeRow,
 } from "./normalize.js";
 
 const API_BASE = "https://estadisticas.bcrp.gob.pe/estadisticas/series/api";
@@ -34,21 +31,6 @@ export async function fetchNationalTradeSeries(periodStart: string, periodEnd: s
   return { rawText, data: JSON.parse(rawText) as BcrpApiResponse, seriesCodes };
 }
 
-export async function fetchMacroSeries(periodStart: string, periodEnd: string): Promise<{
-  rawText: string;
-  data: BcrpApiResponse;
-  seriesCodes: string;
-}> {
-  const seriesCodes = MACRO_SERIES.map((s) => s.code).join("-");
-  const url = `${API_BASE}/${seriesCodes}/json/${periodStart}/${periodEnd}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`BCRP devolvió ${res.status} al pedir series macro nacionales (${url}).`);
-  }
-  const rawText = await res.text();
-  return { rawText, data: JSON.parse(rawText) as BcrpApiResponse, seriesCodes };
-}
-
 async function saveRawBatch(
   client: PoolClient,
   seriesCodes: string,
@@ -65,17 +47,16 @@ async function saveRawBatch(
   return rows[0].id;
 }
 
-async function upsertRows(client: PoolClient, batchId: number, rows: NormalizedBcrpRow[]): Promise<void> {
+async function upsertRows(client: PoolClient, batchId: number, rows: NormalizedTradeRow[]): Promise<void> {
   for (const row of rows) {
     await client.query(
       `INSERT INTO trade_indicators
-         (series_code, series_key, series_title, category, unit, period_year, period_month, value_usd_millions, source_batch_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         (series_code, series_key, series_title, category, period_year, period_month, value_usd_millions, source_batch_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        ON CONFLICT (series_code, period_year, period_month) DO UPDATE SET
          series_key = EXCLUDED.series_key,
          series_title = EXCLUDED.series_title,
          category = EXCLUDED.category,
-         unit = EXCLUDED.unit,
          value_usd_millions = EXCLUDED.value_usd_millions,
          source_batch_id = EXCLUDED.source_batch_id`,
       [
@@ -83,10 +64,9 @@ async function upsertRows(client: PoolClient, batchId: number, rows: NormalizedB
         row.seriesKey,
         row.seriesTitle,
         row.category,
-        row.unit,
         row.periodYear,
         row.periodMonth,
-        row.value,
+        row.valueUsdMillions,
         batchId,
       ]
     );
@@ -127,55 +107,14 @@ export async function ingestNationalTrade(options: {
   }
 }
 
-export async function ingestMacroSeries(options: {
-  periodStart?: string;
-  periodEnd?: string;
-} = {}): Promise<IngestSummary> {
-  const defaults = defaultMacroPeriodRange();
-  const periodStart = options.periodStart ?? process.env.BCRP_MACRO_PERIOD_START ?? defaults.start;
-  const periodEnd = options.periodEnd ?? process.env.BCRP_MACRO_PERIOD_END ?? defaults.end;
-
-  const { rawText, data, seriesCodes } = await fetchMacroSeries(periodStart, periodEnd);
-  const rows = normalizeMacroBcrpResponse(data);
-
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    const batchId = await saveRawBatch(client, seriesCodes, periodStart, periodEnd, rawText);
-    await upsertRows(client, batchId, rows);
-    await client.query("COMMIT");
-    return { batchId, periodStart, periodEnd, rowsInserted: rows.length, isPartial: false };
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-  }
-}
-
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const args = process.argv.slice(2);
-  const mode = args[0] === "macro" ? "macro" : "trade";
-
-  if (mode === "macro") {
-    ingestMacroSeries()
-      .then((summary) => console.log("Ingesta BCRP macro completada:", summary))
-      .finally(async () => {
-        await pool.end();
-      })
-      .catch((error) => {
-        console.error("Ingesta BCRP macro falló:", error);
-        process.exitCode = 1;
-      });
-  } else {
-    ingestNationalTrade()
-      .then((summary) => console.log("Ingesta BCRP comercio exterior completada:", summary))
-      .finally(async () => {
-        await pool.end();
-      })
-      .catch((error) => {
-        console.error("Ingesta BCRP falló:", error);
-        process.exitCode = 1;
-      });
-  }
+  ingestNationalTrade()
+    .then((summary) => console.log("Ingesta BCRP comercio exterior completada:", summary))
+    .finally(async () => {
+      await pool.end();
+    })
+    .catch((error) => {
+      console.error("Ingesta BCRP falló:", error);
+      process.exitCode = 1;
+    });
 }

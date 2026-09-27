@@ -91,7 +91,6 @@ const SearchQuerySchema = z.object({
   especExp: z.string().min(1).optional(),
   condicion: z.string().min(1).optional(),
   estado: z.string().min(1).optional(),
-  dependencia: z.string().min(1).optional().describe("Filtra por nombre de dependencia/juzgado (ILIKE, case-insensitive)."),
   limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -101,7 +100,7 @@ procesosJudicialesRouter.get(
   asyncHandler(async (req, res) => {
     const parsed = parseQuery(SearchQuerySchema, req.query, res);
     if (!parsed) return;
-    const { anio, mes, distritoJudicial, provincia, distrito, tipoOrgano, especExp, condicion, estado, dependencia, limit, offset } =
+    const { anio, mes, distritoJudicial, provincia, distrito, tipoOrgano, especExp, condicion, estado, limit, offset } =
       parsed;
 
     const conditions: string[] = [];
@@ -142,10 +141,6 @@ procesosJudicialesRouter.get(
     if (estado) {
       params.push(estado);
       conditions.push(`estado = $${params.length}`);
-    }
-    if (dependencia) {
-      params.push(`%${dependencia}%`);
-      conditions.push(`dependencia ILIKE $${params.length}`);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
@@ -260,74 +255,14 @@ procesosJudicialesRouter.get(
   asyncHandler(async (_req, res) => {
     const { rows } = await pool.query(
       `SELECT provincia, distrito, COUNT(*)::bigint AS filas
-        FROM procesos_judiciales_jurisdiccional
-        GROUP BY provincia, distrito
-        ORDER BY provincia, distrito`
+       FROM procesos_judiciales_jurisdiccional
+       GROUP BY provincia, distrito
+       ORDER BY provincia, distrito`
     );
 
     res.json({
       total: rows.length,
       territorios: rows.map((r) => ({ provincia: r.provincia, distrito: r.distrito, filas: Number(r.filas) })),
-    });
-  })
-);
-
-const CRIMEN_ORGANIZADO_COLUMNS = ["pendiente", "resuelto", "ingreso_sin", "ingreso_con", "sentencia"] as const;
-
-const CrimenOrganizadoQuerySchema = z.object({
-  anio: z.coerce.number().int().min(2000).max(2100).optional(),
-  distritoJudicial: z.string().min(1).optional(),
-  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
-  offset: z.coerce.number().int().min(0).default(0),
-});
-
-procesosJudicialesRouter.get(
-  "/crimen-organizado",
-  asyncHandler(async (req, res) => {
-    const parsed = parseQuery(CrimenOrganizadoQuerySchema, req.query, res);
-    if (!parsed) return;
-    const { anio, distritoJudicial, limit, offset } = parsed;
-
-    const conditions: string[] = [`dependencia ILIKE '%Crimen Organizado%'`];
-    const params: unknown[] = [];
-
-    if (anio) {
-      params.push(anio);
-      conditions.push(`$${params.length} = anio`);
-    }
-    if (distritoJudicial) {
-      params.push(distritoJudicial);
-      conditions.push(`distrito_judicial = $${params.length}`);
-    }
-
-    const where = `WHERE ${conditions.join(" AND ")}`;
-    const sumCols = CRIMEN_ORGANIZADO_COLUMNS.map((c) => `SUM(${c})::bigint AS ${c}`).join(", ");
-
-    const { rows: countRows } = await pool.query<{ total: string }>(
-      `SELECT COUNT(*) AS total FROM procesos_judiciales_jurisdiccional ${where}`,
-      params
-    );
-
-    const { rows } = await pool.query(
-      `SELECT distrito_judicial, anio, COUNT(*)::bigint AS filas, ${sumCols}
-       FROM procesos_judiciales_jurisdiccional ${where}
-       GROUP BY distrito_judicial, anio
-       ORDER BY distrito_judicial, anio
-       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
-      [...params, limit, offset]
-    );
-
-    res.json({
-      total: Number(countRows[0].total),
-      limit,
-      offset,
-      hasMore: offset + rows.length < Number(countRows[0].total),
-      porDistritoJudicial: rows.map((r) => ({
-        distritoJudicial: r.distrito_judicial,
-        anio: Number(r.anio),
-        filas: Number(r.filas),
-        ...Object.fromEntries(CRIMEN_ORGANIZADO_COLUMNS.map((c) => [c, Number(r[c])])),
-      })),
     });
   })
 );
