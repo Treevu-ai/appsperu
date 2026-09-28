@@ -9,6 +9,7 @@ import { TOOL_CATALOG, type ToolSpec } from "./catalog.js";
 import { buildUrl, callApi } from "./http-client.js";
 import { searchTools } from "./search.js";
 import { serializeToolResponse } from "./tool-output.js";
+import { runHealthCheck } from "./tools/health.js";
 import { runRiesgoTerritorial, type RiesgoTerritorialParams } from "./tools/riesgo-territorial.js";
 
 export function buildPath(tool: ToolSpec, args: Record<string, unknown>): string {
@@ -105,13 +106,14 @@ export async function invokeTool(tool: ToolSpec, args: Record<string, unknown>) 
 }
 
 /**
- * En vez de registrar un tool MCP por cada una de las 142 entradas de
+ * En vez de registrar un tool MCP por cada una de las 209 entradas de
  * `TOOL_CATALOG` (costo de contexto fijo por sesión, aunque el cliente use 2 o 3),
- * se exponen 2 meta-tools: `rastro_buscar_tools` descubre el nombre exacto por
+ * se exponen 3 meta-tools: `rastro_buscar_tools` descubre el nombre exacto por
  * palabra clave/app, `rastro_llamar` ejecuta ese nombre contra la API real vía la
- * misma lógica `buildPath`/`buildQuery`/`callApi` de siempre. Onboardear una app
- * nueva ahora es solo agregar filas a `TOOL_CATALOG` — no crece la superficie que
- * un cliente MCP carga por adelantado.
+ * misma lógica `buildPath`/`buildQuery`/`callApi` de siempre, y `rastro_health`
+ * informa qué apps responden de verdad antes de gastar una consulta en discovering.
+ * Onboardear una app nueva ahora es solo agregar filas a `TOOL_CATALOG` — no crece
+ * la superficie que un cliente MCP carga por adelantado.
  */
 /**
  * Solo se usa cuando el proceso arrancó con `MCP_API_KEY` (ver `main()`).
@@ -172,6 +174,38 @@ function registerMetaTools(server: McpServer, activeKey: ApiKeyRecord | null): v
       },
     },
     async ({ tool: toolName, args }) => runRastroLlamarWithAuth(activeKey, toolName, args as Record<string, unknown> | undefined)
+  );
+
+  // ---- diagnóstico: qué apps responden de verdad ----
+  // Va antes que la vista compuesta y NO consume presupuesto de queries: es
+  // el tool que se usa justo cuando algo está roto, y cobrarle presupuesto a
+  // un cliente por diagnosticar le dejaría sin poder preguntar por qué.
+  server.registerTool(
+    "rastro_health",
+    {
+      title: "rastro_health",
+      description:
+        "Diagnóstico de disponibilidad: consulta GET /health de cada app del catálogo y devuelve " +
+        `cuántas están operativas, cuántas caídas y cuántos de los ${TOOL_CATALOG.length} tools del catálogo ` +
+        "quedan sin backend. Úsalo PRIMERO si un rastro_llamar devuelve 'No se pudo conectar' o si " +
+        "sospechas que una consulta vino vacía: distingue 'la app está caída' de 'no hay datos en la fuente'. " +
+        "Omitir `app` revisa todas; con `app` revisa solo esa.",
+      inputSchema: {
+        app: z
+          .enum(APP_KEYS)
+          .optional()
+          .describe('Revisa solo esta app, ej. "infobras". Omitido revisa las 38 del catálogo.'),
+      },
+    },
+    async ({ app }) => {
+      try {
+        const report = await runHealthCheck(app as AppKey | undefined);
+        return { content: [{ type: "text" as const, text: JSON.stringify(report, null, 2) }], isError: false };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { content: [{ type: "text" as const, text: message }], isError: true };
+      }
+    }
   );
 
   // ---- vista compuesta: riesgo-territorial ----
@@ -297,10 +331,26 @@ async function main(): Promise<void> {
   const authNote = activeKey
     ? ` — código activo (grupo=${activeKey.groupId ?? "?"}, ${activeKey.queryLimit - activeKey.queriesUsed}/${activeKey.queryLimit} queries restantes)`
     : "";
-  console.error(`appsperu-mcp-server: 3 tools registrados (2 meta-tools + 1 vista compuesta, catálogo de ${TOOL_CATALOG.length} tools buscable), esperando por stdio${authNote}.`);
+  console.error(`appsperu-mcp-server: 4 tools registrados (3 meta-tools + 1 vista compuesta, catálogo de ${TOOL_CATALOG.length} tools buscable), esperando por stdio${authNote}.`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  // Cargar `.env` ANTES de leer cualquier variable del entorno, y no confiar en el
+  // `import "dotenv/config"` que vive en `db/pool.ts`.
+  //
+  // Antes el orden era al revés y las dos variables del entry point eran
+  // invisibles: `MCP_TRANSPORT` (abajo) y `MCP_API_KEY` (dentro de
+  // `resolveActiveKey`, vía el `await import("./auth/api-key.js")` que recién
+  // arrastra `db/pool.js` → dotenv). Es decir, `mcp-server/.env` era un archivo
+  // inerte: poner `MCP_API_KEY=sk-rastro-...` ahí no activaba la auth, el
+  // proceso arrancaba sin código activo y sin avisar. Solo funcionaba si
+  // exportabas la variable en el entorno real.
+  //
+  // Va dentro del bloque de entry a propósito (top-level await, ESM): los
+  // tests importan este módulo, y que `import "../index.js"` cargue el `.env`
+  // del developer contaminaría sus `process.env`.
+  await import("dotenv/config");
+
   // Fase 1-D: MCP_TRANSPORT=http arranca el transporte remoto (http-transport.ts) en vez de
   // stdio — default sin la variable sigue siendo stdio, comportamiento intacto.
   const startServer =

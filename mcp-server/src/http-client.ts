@@ -46,7 +46,7 @@ export async function callApi(url: string, options: { timeoutMs?: number } = {})
     if (controller.signal.aborted) {
       throw new McpHttpError("timeout", `La API no respondió dentro del tiempo máximo para ${url}.`);
     }
-    throw new McpHttpError("network", `No se pudo conectar a ${url}. Verifica que la app esté disponible y consulta docs/ESTADO.md.`);
+    throw new McpHttpError("network", `No se pudo conectar a ${url}. Verifica que la app esté disponible y consulta docs/ESTADO.md. Si varias apps fallan a la vez, ejecuta rastro_health para distinguir infraestructura caída de falta de datos.`);
   } finally {
     clearTimeout(timeout);
   }

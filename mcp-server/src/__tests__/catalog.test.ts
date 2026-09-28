@@ -12,7 +12,7 @@ import { APP_KEYS, type AppKey } from "../apps.js";
  * `TOOL_CATALOG` se desincroniza de sí mismo: un tool agregado, renombrado o
  * borrado sin querer.
  *
- * Regenerada desde el `TOOL_CATALOG` real el 2026-09-27 (214 tools, 40 apps)
+ * Regenerada desde el `TOOL_CATALOG` real el 2026-09-27 (209 tools, 38 apps)
  * agrupando por `app` y ordenando alfabéticamente los nombres. Cuando agregas un
  * tool, su nombre va también acá — ese es el punto del test.
  */

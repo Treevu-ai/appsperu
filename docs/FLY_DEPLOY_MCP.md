@@ -1,27 +1,52 @@
 # Despliegue del transporte HTTP del MCP server — `rastro.fyi`
 
-> Endpoints de producción (ambos operativos):
-> - `https://rastro.fyi` — proxy Cloudflare a gateway Fly.io  
-> - `https://treevu-rastro-gw.fly.dev/mcp` — endpoint directo Fly.io
+> **Estado verificado en vivo el 2026-09-27.** Toda la infraestructura Fly.io
+> está detenida (0 máquinas encendidas) por decisión de costo y no se hacen
+> deploys. Para uso local ver `scripts/dev-local.sh`; el MCP corre por stdio con `npm run dev` y no
+> necesita ningún deploy.
+>
+> El que sigue es el mapa de lo que se verificó, no de lo que está operativo hoy.
 
-**DEPRECATED: `https://mcp.rastro.fyi/mcp`** — La app `treevu-rastro-mcp` fue una instancia standalone 
-inicial. Se depreca en favor del gateway compartido `treevu-rastro-gw` que ya gestiona todas las 40 APIs.
+## Endpoints — qué es cada uno de verdad
 
-**DEPRECADO TAMBIÉN: `api.rastro.pe`** — VPS 149.104.66.100 está offline. No usar.
+Verificado contra el servidor, no contra la documentación anterior (que estaba
+equivocada en tres de las cuatro filas):
 
-## Endpoints operativos
+| Endpoint | Qué es realmente | Estado 2026-09-27 |
+|----------|------------------|-------------------|
+| `https://mcp.rastro.fyi/mcp` | **El único que sirve el protocolo MCP** — la app `treevu-rastro-mcp` (Express + MCP SDK). Exige header `x-api-key`; sin él responde `401`. | Apagada (Fly) |
+| `https://rastro.fyi/mcp` | El SPA de Cloudflare Pages. Responde HTML, no MCP. | Sirve HTML |
+| `https://treevu-rastro-gw.fly.dev/mcp` | Responde `200` con **cuerpo vacío**. El `Caddyfile` del gateway no tiene handler `/mcp` (ver `infra/fly/gateway/Caddyfile`), así que no hay MCP detrás. | Apagada (Fly) |
+| `https://api.rastro.pe` | `connection refused` en 443. DNS resuelve a `149.104.66.100` (Fly), pero nada escucha. | Offline |
 
-| Endpoint | Stack | Transport | Status |
-|----------|-------|-----------|--------|
-| `https://rastro.fyi` | Cloudflare → treevu-rastro-gw (Fly.io) | HTTP(S) | ✓ 200 OK |
-| `https://treevu-rastro-gw.fly.dev` | treevu-rastro-gw (Fly.io) directo | HTTP(S) | ✓ 200 OK |
+**Corrección importante:** este doc marcaba `mcp.rastro.fyi` como *deprecado* a
+favor del gateway. Era al revés — `mcp.rastro.fyi` es el único endpoint MCP
+real, y el gateway no expone `/mcp` en absoluto. `rastro.fyi` no es "proxy
+Cloudflare al gateway": es el sitio de Cloudflare Pages, que devuelve el
+`index.html` del SPA para cualquier path.
 
-Ambos resuelven al mismo gateway. Usar **`rastro.fyi`** (con proxy Cloudflare) para cliente externo;
-usar **`treevu-rastro-gw.fly.dev`** para conexiones internas/desarrollo si no necesitas Cloudflare.
+## Autenticación
+
+Header `x-api-key` con un código `sk-rastro-...`, validado **en cada request**
+contra la tabla `mcp_api_keys` de `treevu-rastro-pg` (solo hash SHA-256;
+`mcp-server/src/auth/api-key.ts:70`). Transporte streamable HTTP sobre SSE:
+`initialize` devuelve `mcp-session-id` y las llamadas siguientes lo requieren.
+
+## Envs que faltaban en producción
+
+`mcp-server` resuelve la URL de cada app con `baseUrlFor()`
+(`mcp-server/src/apps.ts`), que lee `<APP>_API_URL` del entorno y cae a
+`http://localhost:<puerto>` si no está. En Fly nunca se seteó ninguna de las 38
+variables, así que **las 169 tools que anunciaba producción fallaban todas** con
+`No se pudo conectar a http://localhost:4000/...`. La appFly tampoco define
+`[env]` para ellas ni el `docker-entrypoint.sh` las genera.
+
+Para diagnosticar ese tipo de problema existe el meta-tool `rastro_health`,
+que reporta qué apps responden de verdad y cuántos tools tienen backend.
 
 ## Ingesta / Scheduler (no implementado)
 
-Este servidor es **pasivo**: solo expone las 40 APIs ya levantadas como tools MCP. No ejecuta ingestas.
+Este servidor es **pasivo**: solo expone las 38 APIs del catálogo como tools MCP. No ejecuta ingestas.
 
 Todas las ingestas son manuales. Dispararlas desde:
 ```bash

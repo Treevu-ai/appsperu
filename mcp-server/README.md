@@ -1,6 +1,7 @@
 # appsperu-mcp-server
 
-Servidor MCP que expone las 40 APIs de este repo (`apps/*/api`) como datos de solo lectura para
+Servidor MCP que expone las 38 APIs del catálogo (`APP_KEYS` en `src/apps.ts`; de los 40 directorios
+`apps/*/api`, `sunat-aduanas` y `territorio-inteligencia` quedan fuera) como datos de solo lectura para
 un agente Claude, vía **2 meta-tools** — no un tool por endpoint. Ver el plan de diseño y el
 catálogo completo de tools en [`docs/conectores.md`](../docs/conectores.md) (cada `description`
 de tool se deriva de esa ficha técnica).
@@ -24,7 +25,7 @@ Auditoría completada 2026-09-25: **199 tools verificados vs 199 rutas Express r
 
 ## Requisito previo
 
-Las 40 APIs deben estar corriendo (ver [`docs/ESTADO.md`](../docs/ESTADO.md) — `docker compose up
+Las 38 APIs del catálogo deben estar corriendo (ver [`docs/ESTADO.md`](../docs/ESTADO.md) — `docker compose up
 -d` + `npm run dev` en cada `apps/<nombre>/api`). Este servidor no las levanta ni las reemplaza,
 solo las agrega detrás de una interfaz MCP. Si una app no está corriendo, sus tools devuelven un
 error de conectividad explícito (`isError: true`) en vez de fallar en silencio o tumbar el
@@ -97,7 +98,7 @@ como si fuera completo.
 ## Alcance actual y lo que falta
 
 - **Transporte**: stdio (default, uso local) y Streamable HTTP (para exposición remota en `https://rastro.fyi` o `https://treevu-rastro-gw.fly.dev`).
-- **Sin autenticación por defecto**: igual que las 40 APIs que agrega (`helmet` + `cors` + rate
+- **Sin autenticación por defecto**: igual que las 38 APIs que agrega (`helmet` + `cors` + rate
   limit, sin auth — confirmado en cada `app.ts`). Aceptable para stdio local; **no exponer este
   servidor ni las APIs subyacentes fuera de `localhost` sin resolver auth primero** (en producción usa Fly.io + Cloudflare proxy).
 - **Códigos de acceso `sk-rastro-...` (Fase 1, deprecated)**: fueron para grupos controlados (talleres) con presupuesto de queries.

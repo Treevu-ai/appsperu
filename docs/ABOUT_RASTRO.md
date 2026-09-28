@@ -87,7 +87,7 @@ y obtiene respuestas estructuradas con citas a la fuente.
 
 **Estado al 2026-09-27.** El monorepo tiene **40 apps backend** operativas.
 La capa web `rastro.fyi` publica un **corte semanal** con tableros de lectura
-no técnica. El servidor MCP expone **202 tools** de solo lectura (más 2
+no técnica. El servidor MCP expone **209 tools** de solo lectura (más 2
 meta-tools de descubrimiento, no contados en ese total) y ya corre **en
 producción** (`mcp.rastro.fyi`, Fly.io, autenticado con API keys
 `sk-rastro-*`) además de la instalación local. El catálogo del repo
@@ -235,8 +235,8 @@ cae** cuando una API del Estado está caída.
 Un servidor que se conecta a Claude Code, Claude Desktop, Cursor,
 Windsurf, Cline y Continue.dev — local o apuntando a la instancia en
 producción (`mcp.rastro.fyi`, con API key `sk-rastro-*`) — y le entrega al
-agente **202 tools** de solo lectura (más 2 meta-tools para buscar e
-invocar) sobre las **40 APIs** backend. Un agente con el MCP conectado puede
+agente **209 tools** de solo lectura (más 2 meta-tools para buscar e
+invocar) sobre las **38 APIs** backend del catálogo. Un agente con el MCP conectado puede
 responder preguntas como:
 
 - "¿Cuál es la inversión del sector Salud en La Libertad este año y cómo
@@ -509,7 +509,7 @@ embeben en el bundle, así que tampoco quedan visibles en DevTools.
 ### 6.8 El servidor MCP
 
 `mcp-server/` es un paquete independiente que usa el SDK oficial de
-MCP. Expone **202 tools** de solo lectura sobre las 40 APIs (más 2
+MCP. Expone **209 tools** de solo lectura sobre las 38 APIs del catálogo (más 2
 meta-tools de descubrimiento). No transforma shapes: la respuesta de un
 tool es la respuesta del endpoint, con la misma metadata de cobertura,
 matcher y corte que devuelve la API. Además de la instalación local,
@@ -549,7 +549,7 @@ con datos: titular, números, fuente, fecha.
 | `/gore/la-libertad/ficha` | Ficha sectorial GORE (presupuesto + CUI + obras + contratos) |
 | `/gore/la-libertad/comparativo` | Comparativo entre sectores verificados |
 | `/gore/la-libertad/benchmark` | Percentil de entidad contra cohorte |
-| `/docs/api` | Catálogo MCP (202 tools, generado desde el repo) |
+| `/docs/api` | Catálogo MCP (209 tools, generado desde el repo) |
 | `/docs/integridad` | Metodología de integridad documental |
 
 ### 7.3 El buscador (`/buscar`)
@@ -593,7 +593,7 @@ pregunte.
 
 ### 8.2 Qué hace el servidor MCP de Rastro
 
-Expone las 40 APIs como **202 tools de solo lectura**, sin transformar
+Expone las 38 APIs del catálogo como **209 tools de solo lectura**, sin transformar
 shapes. Cada tool tiene un nombre semántico (ej.
 `infobras_public_works`, `radar_ejecucion_sector_ficha`,
 `compras_publicas_suppliers`), un input schema (validado con zod) y
@@ -624,7 +624,7 @@ Está pensado para 3 perfiles:
 **Opción local (para desarrollo o correr el backend propio):**
 
 1. Tener Node 22+.
-2. Tener las 40 APIs corriendo (o apuntar `<APP>_API_URL` a
+2. Tener las 38 APIs del catálogo corriendo (o apuntar `<APP>_API_URL` a
    `https://api.rastro.pe/<app>/` con un Service Token válido).
 3. `npx -y @modelcontextprotocol/inspector` o agregar la config en
    `~/.config/claude-code/mcp.json` apuntando a `mcp-server/dist/index.js`.
@@ -718,7 +718,7 @@ cambio).
 - **Comparar entidades.** `/entidad/<code>` muestra el percentil de
   una entidad contra su cohorte. Una entidad que ejecuta mucho menos
   que sus pares es noticia.
-- **Bajar el catálogo.** `/docs/api` lista los 202 tools del MCP con
+- **Bajar el catálogo.** `/docs/api` lista los 209 tools del MCP con
   ejemplos de uso. Si tenés un data journalist en el equipo, el
   MCP server se instala en 5 minutos (o se conecta directo a
   `mcp.rastro.fyi` con una API key, sin instalar nada).
@@ -768,7 +768,7 @@ cambio).
 
 ### 10.5 Para el desarrollador
 
-- **Las 40 APIs están documentadas en `/docs/api`.** Cada endpoint
+- **Las 38 APIs del catálogo MCP están documentadas en `/docs/api`.** Cada endpoint
   con su shape, sus códigos de error, su semántica.
 - **El servidor MCP es open source.** Lo podés forkear, lo podés
   mejorar, lo podés usar en otro agente que no sea Claude o Cursor.

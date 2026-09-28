@@ -83,12 +83,15 @@ const DEFAULT_PORTS: Record<AppKey, number> = {
   "residuos-solidos": 4025,
   "infraestructura-mtc": 4026,
   "riesgo-fiscal-isds": 4027,
-  // NOTA: apps/candidatos-erm/api/.env.example también declara PORT=4027 —
-  // colisiona con riesgo-fiscal-isds en sus .env.example reales (no es un
-  // error de este archivo, ambas apps quedaron configuradas con el mismo
-  // puerto). No se corrige acá; si ambas apps corren localmente a la vez,
-  // hay que sobreescribir una vía CANDIDATOS_ERM_API_URL o PORT en el .env.
-  "candidatos-erm": 4027,
+  // `candidatos-erm` estaba en 4027, el mismo puerto que `riesgo-fiscal-isds`
+  // — una colisión que hacía imposibles de levantar ambas apps a la vez en
+  // local (el health check de `rastro_health` la hizo visible: las dos
+  // reportaban caída). Se movió a 4038, que estaba libre; 4036 quedó reservado
+  // para `territorio-inteligencia` (excluida de APP_KEYS) y 4037 lo usa
+  // `geo-intersections`. `.env.example` de la app se actualizó en el mismo
+  // commit — si tenés un `apps/candidatos-erm/api/.env` local, actualizá el
+  // PORT a mano o regeneralo desde `.env.example`.
+  "candidatos-erm": 4038,
   "poder-judicial": 4028,
   "violencia-escolar": 4029,
   "legislativo-congreso": 4030,

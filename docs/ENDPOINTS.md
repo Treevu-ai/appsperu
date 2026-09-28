@@ -49,7 +49,7 @@ curl -X POST https://treevu-rastro-gw.fly.dev/api/call \
 
 ## Decisión arquitectónica
 
-- **Un gateway compartido** (`treevu-rastro-gw`) expone todas las 40 APIs + MCP
+- **Un gateway compartido** (`treevu-rastro-gw`) expone todas las 38 APIs del catálogo + MCP
 - **Cloudflare proxy** en `rastro.fyi` para caché, DDoS protection, y SSL
 - **Sin VPS** — todo en Fly.io (más confiable, auto-healing, escalable)
 - **Sin MCP server standalone** — simplifica mantenimiento, reduce costos
