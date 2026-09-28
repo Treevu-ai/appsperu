@@ -1,3 +1,0 @@
-# SPA fallback para React Router (Cloudflare Pages lee esto del build output).
-# Equivalente al [[redirects]] de wrangler.toml, que solo aplica en deploys con wrangler CLI.
-/*    /index.html   200
