@@ -61,6 +61,30 @@ DATABASE_URL="postgresql://…@ep-xxx.aws.neon.tech/mcp" npm run migrate
 `salud-institucional` y `territorio-inteligencia` no tienen base propia ni
 migraciones: calculan cruzando otras. No se les crea base.
 
+### Después de migrar `identidad-fiscal`: calcular el cruce entidad ↔ padrón
+
+`identidad_fiscal_crossref_entidades` (tool `identidad_fiscal_crossref_entidades`)
+no calcula el cruce en cada request como hacía el route de Express: lee la tabla
+`entity_padron_crosswalk` (migración `009_entity_padron_crosswalk.sql`). Ese cruce
+salía de un matching difuso por nombre contra el padrón acotado por prefijo UBIGEO
+(~107k contribuyentes en La Libertad), y correrlo por request compite con los
+límites de CPU y memoria del isolate de Workers. Es el mismo patrón que ya usa
+`compras-publicas` con `entity_crosswalk`.
+
+Hay que correr el cálculo a mano una vez tras cargar los datos y cada vez que
+cambien el padrón o el matcher:
+
+```bash
+cd apps/identidad-fiscal/api
+DATABASE_URL="postgresql://…/identidad_fiscal" \
+RADAR_EJECUCION_DATABASE_URL="postgresql://…/radar_ejecucion" \
+  npx tsx src/crossref/build-crosswalk.ts
+```
+
+Imprime un resumen (entidades MEF, filas de padrón, confirmadas, candidatas, sin
+match). Advertencia del propio script: si el departamento no tiene entidades
+ingeridas, el `DELETE` previo es un no-op y pueden quedar filas obsoletas.
+
 ## Fase 3 — Cargar datos
 
 El orden importa por las dependencias de ingesta: `identidad-fiscal` y
@@ -128,16 +152,28 @@ Por cada app, en orden de valor:
    `apps/<app>/api/src/routes/<modulo>.ts` y cambiar `pool.query(sql, [params])`
    por `db.query(sql, [params])`. **El SQL no se toca**: placeholders `$n`,
    `DISTINCT ON`, `ILIKE` y casts `::` funcionan igual.
-3. Probar el tool por el MCP y comparar la respuesta con la del route Express.
+3. `npx vitest run src/__tests__/sql-fidelity.test.ts` — comprueba que cada
+   literal SQL del handler exista en el route de origen. Es la única red contra
+   los errores que sí compilan: renombrar una columna, inventar un alias o
+   cambiar el case de una tabla. Los tres ya ocurrieron y habrían fallado en
+   runtime, no en el typecheck.
+4. **Regenerar el mapa de módulos** (obligatorio, paso 4 de cada app):
+   ```bash
+   cd mcp-server && node scripts/gen-handler-registry.mjs
+   ```
+   `src/handlers/modules.ts` es un archivo GENERADO con imports estáticos de
+   cada módulo. No se edita a mano. Existe porque `resolveHandler` usaba un
+   `import()` de ruta dinámica: esbuild no puede resolverla, la degrada a un
+   glob que no matchea los `.ts`, y el bundle se despliega **sin ningún
+   handler** mientras todos los tests pasan en verde. El typecheck y
+   `src/__tests__/handler-resolution.test.ts` son la red contra esa regresión.
+5. Probar el tool por el MCP y comparar la respuesta con la del route Express.
 
 Prioridad sugerida: las apps que los agentes más consultan —
 `radar-ejecucion` (hecha), `compras-publicas`, `identidad-fiscal`, `infobras`.
 
 ## Pendientes conocidos
 
-- **`wrangler` sigue en v3** y avisa estar desactualizada. Cloudflare recomienda
-  v4. Subirla es un cambio mayor del tool de deploy; conviene hacerlo con calma,
-  no mezclado con la migración.
 - **`salud-institucional` cruza 5 bases** en un solo request. Con 6 conexiones
   simultáneas por invocación hay que secuenciar, no paralelizar.
 - **`rastro_riesgo_territorial` orquesta 4 fuentes** con degradación explícita

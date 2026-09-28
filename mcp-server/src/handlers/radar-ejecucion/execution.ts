@@ -21,6 +21,15 @@ interface BudgetRow extends NeonRow {
   fetched_at: string | null;
 }
 
+interface ResumenRow extends NeonRow {
+  grupo: string;
+  filas: number | string;
+  pia: number | string;
+  pim: number | string;
+  devengado: number | string;
+  anios_fiscales: number[];
+}
+
 function avancePct(pim: number, devengado: number): number | null {
   if (pim <= 0) return null;
   return Math.round((devengado / pim) * 10000) / 100;
@@ -186,7 +195,7 @@ export async function byEntity(ctx: ToolHandlerContext): Promise<HandlerResult> 
   return {
     status: 200,
     body: {
-      entityCode: rows[0].entity_code,
+      entityCode,
       nombre: rows[0].nombre,
       nivelGobierno: rows[0].nivel_gobierno,
       linea_de_tiempo: rows.map((r) => ({
@@ -205,6 +214,100 @@ export async function byEntity(ctx: ToolHandlerContext): Promise<HandlerResult> 
         estado: "PARCIAL" as const,
         cortesUsados: [...new Set(rows.map((r) => String(r.fecha_corte)))].map((fechaCorte) => ({ fechaCorte })),
       },
+    },
+  };
+}
+
+/**
+ * Handler para `radar_ejecucion_execution_resumen` — agregación por función o genérica
+ * (DQ-08, 2026-09-08). `groupBy` es requerido (funcion|generica).
+ * Sin `anio`, los totales agregados pueden mezclar más de un año fiscal — la
+ * respuesta expone `aniosFiscalesUsados`/`advertenciaMultiAnio` (DQ-16).
+ */
+export async function resumen(ctx: ToolHandlerContext): Promise<HandlerResult> {
+  const { db, args } = ctx;
+
+  const groupBy = args.groupBy as string | undefined;
+  const nivel = args.nivel as string | undefined;
+  const anio = args.anio as string | undefined;
+  const ubigeo = args.ubigeo as string | undefined;
+  const departamento = args.departamento as string | undefined;
+  const metaDepartamento = args.metaDepartamento as string | undefined;
+
+  if (!groupBy || !["funcion", "generica"].includes(groupBy)) {
+    return { status: 400, body: { error: "groupBy debe ser 'funcion' o 'generica'" } };
+  }
+
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+
+  if (nivel) {
+    params.push(nivel);
+    conditions.push(`e.nivel_gobierno = $${params.length}`);
+  }
+  if (anio) {
+    params.push(Number(anio));
+    conditions.push(`b.anio_fiscal = $${params.length}`);
+  }
+  if (ubigeo) {
+    params.push(ubigeo);
+    conditions.push(`e.ubigeo = $${params.length}`);
+  }
+  if (departamento) {
+    params.push(departamento.toUpperCase());
+    conditions.push(`t.departamento = $${params.length}`);
+  }
+  if (metaDepartamento) {
+    params.push(metaDepartamento.toUpperCase());
+    conditions.push(`b.meta_departamento = $${params.length}`);
+  }
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  const column = groupBy === "funcion" ? "b.funcion" : "b.generica";
+
+  const { rows } = await db.query<ResumenRow>(
+    `${LATEST_BUDGET_CTE}
+     SELECT ${column} AS grupo,
+            COUNT(*) AS filas,
+            SUM(b.pia) AS pia,
+            SUM(b.pim) AS pim,
+            SUM(b.devengado) AS devengado,
+            ARRAY_AGG(DISTINCT b.anio_fiscal) AS anios_fiscales
+     FROM latest_budget b
+     JOIN entities e ON e.entity_code = b.entity_code
+     LEFT JOIN territories t ON t.ubigeo = e.ubigeo
+     ${where}
+     GROUP BY ${column}
+     ORDER BY devengado DESC`,
+    params
+  );
+
+  const porGrupo = rows.map((r) => ({
+    grupo: r.grupo,
+    filas: Number(r.filas),
+    pia: Number(r.pia),
+    pim: Number(r.pim),
+    devengado: Number(r.devengado),
+    avancePct: avancePct(Number(r.pim), Number(r.devengado)),
+  }));
+
+  const aniosFiscalesUsados = [...new Set(rows.flatMap((r) => r.anios_fiscales as number[]))].sort();
+
+  return {
+    status: 200,
+    body: {
+      groupBy,
+      totalFilas: porGrupo.reduce((acc, g) => acc + g.filas, 0),
+      totalPia: porGrupo.reduce((acc, g) => acc + g.pia, 0),
+      totalPim: porGrupo.reduce((acc, g) => acc + g.pim, 0),
+      totalDevengado: porGrupo.reduce((acc, g) => acc + g.devengado, 0),
+      porGrupo,
+      aniosFiscalesUsados,
+      advertenciaMultiAnio:
+        !anio && aniosFiscalesUsados.length > 1
+          ? `Los totales mezclan ${aniosFiscalesUsados.length} años fiscales (${aniosFiscalesUsados.join(", ")}) porque no se pasó \`anio\`. Cada total está sumado a través de esos años, no de un solo año fiscal.`
+          : null,
+      fuente: { dataset: "MEF - Presupuesto y ejecución de gasto" },
     },
   };
 }

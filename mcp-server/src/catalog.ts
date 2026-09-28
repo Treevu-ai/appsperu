@@ -61,6 +61,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_execution_resumen",
     app: "radar-ejecucion",
+    handler: "execution:resumen",
     description:
       "Agrega PIA/PIM/devengado por función o genérica de gasto (DQ-08, 2026-09-08) sin tener que paginar el " +
       "universo completo y sumar client-side. `groupBy` es requerido (funcion|generica); cualquier otro valor " +
@@ -91,6 +92,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_benchmark",
     app: "radar-ejecucion",
+    handler: "benchmark:byEntityCode",
     description:
       "Compara la ejecución de una entidad contra su cohorte (mismo nivel de gobierno) en un año fiscal dado — " +
       "devuelve 422 si no hay regla de cohorte definida para su nivel_gobierno, en vez de publicar un benchmark sin base. " +
@@ -104,6 +106,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_meta_sources",
     app: "radar-ejecucion",
+    handler: "meta:sources",
     description: "Metadata de los últimos 10 lotes de ingesta del MEF (cuándo se corrió, cuántos registros, checksum).",
     pathTemplate: "/api/meta/sources",
     pathParams: [],
@@ -112,6 +115,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_lluvias_seguimiento",
     app: "radar-ejecucion",
+    handler: "lluvias:seguimiento",
     description:
       "Tablero terminal de seguimiento ante lluvias: actividad MEF con PIA/PIM/devengado y, en una sección separada, proyectos territoriales con CUI verificado. " +
       "No une ambas secciones por similitud de nombre ni inventa PIM, CUI o distrito beneficiado. " +
@@ -127,6 +131,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_sector_inventory",
     app: "radar-ejecucion",
+    handler: "sectors:inventory",
     description:
       "Inventario de entidades MEF presentes para La Libertad: Gobierno Nacional por destino declarado y Gobierno Regional por sede ejecutora. " +
       "Indica si una entidad ya tiene clasificación sectorial verificada; no clasificada no significa ausente del sector. " +
@@ -142,6 +147,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_sector_ficha",
     app: "radar-ejecucion",
+    handler: "sectors:ficha",
     description:
       "Ficha de entidades verificadas de un sector: PIA/PIM/devengado, regla territorial y cortes usados. " +
       "CUI, obra y contratación solo aparecen con claves oficiales exactas; no se infieren por nombre o embeddings. " +
@@ -156,6 +162,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_sector_entidad_ficha",
     app: "radar-ejecucion",
+    handler: "sectors:entidadFicha",
     description:
       "Ficha de UNA entidad específica (por entity_code), distinta de `radar_ejecucion_sector_ficha` (que trae " +
       "todas las entidades verificadas de un sector completo) — mismo detalle (PIA/PIM/devengado, inversiones, " +
@@ -171,6 +178,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_sector_comparativo",
     app: "radar-ejecucion",
+    handler: "sectors:comparativo",
     description:
       "Comparativo descriptivo de entidades sectoriales verificadas. Mantiene separadas la responsabilidad nacional dirigida al departamento " +
       "y la ejecución regional por sede; no genera score ni suma ambos universos como si fueran uno solo. " + SIN_SCHEDULER,
@@ -185,6 +193,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_budget_movement",
     app: "radar-ejecucion",
+    handler: "sectors:budgetMovement",
     description:
       "Explicación determinística de cómo se distribuye PIA, PIM y devengado entre Gobierno Nacional dirigido a La Libertad " +
       "y Gobierno Regional ejecutado por sus unidades. No describe pagos, avance físico, impacto ni calidad, y no suma ambos universos. " + SIN_SCHEDULER,
@@ -199,6 +208,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_care_services",
     app: "radar-ejecucion",
+    handler: "care-services:list",
     description:
       "Registro trazable de servicios que cuidan en La Libertad: infraestructura (CUI y obra INFOBRAS solo por clave exacta) " +
       "y alimentación escolar (cobertura, comités, lotes, proveedores y entregas únicamente cuando una fuente oficial los vincula). " +
@@ -214,6 +224,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_care_service_by_id",
     app: "radar-ejecucion",
+    handler: "care-services:byId",
     description:
       "Detalle de un servicio específico del registro `radar_ejecucion_care_services` por su serviceId — incluye " +
       "proveedores vinculados (RUC, lote) y evidencia de entrega por colegio, cuando existen. Mismo criterio de " +
@@ -226,6 +237,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_food_lots",
     app: "radar-ejecucion",
+    handler: "food:lots",
     description:
       "Lotes de alimentación escolar materializados desde evidencia oficial en La Libertad. " +
       "Expone contrato, comité, proveedor literal y RUC únicamente si fue publicado de forma exacta; una referencia de entrega no equivale a acta de recepción escolar. " +
@@ -240,6 +252,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_food_coverage",
     app: "radar-ejecucion",
+    handler: "food:coverage",
     description:
       "Cobertura escolar verificable de alimentación. Solo muestra colegio, provincia, distrito y entrega cuando existen código modular y acta/evidencia oficial; " +
       "un total regional agregado no se reparte entre distritos. " + SIN_SCHEDULER,
@@ -254,6 +267,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_food_supplier",
     app: "radar-ejecucion",
+    handler: "food:supplierByRuc",
     description:
       "Lotes alimentarios y evidencia de cumplimiento consultables por RUC exacto de 11 dígitos. " +
       "No vincula por nombre de consorcio; 404 significa que no existe un vínculo RUC-lote materializado, no una conclusión sobre el proveedor. " + SIN_SCHEDULER,
@@ -264,6 +278,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_food_integrity",
     app: "radar-ejecucion",
+    handler: "food:integrity",
     description:
       "Control de integridad de la cadena lote-RUC-colegio-entrega. Devuelve BLOQUEADO_POR_EVIDENCIA cuando faltan claves o actas; " +
       "no convierte esos vacíos en un indicador de incumplimiento. Con estricto=true usa HTTP 409 para impedir automatizaciones que requieran la cadena completa. " + SIN_SCHEDULER,
@@ -274,6 +289,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_food_evidence_queue",
     app: "radar-ejecucion",
+    handler: "food:evidenceQueue",
     description:
       "Cola de evidencia faltante para trazabilidad alimentaria: RUC, padrón de colegios, actas o viabilidad de fuente. " +
       "Es una prioridad de revisión humana, no una lista de observados. " + SIN_SCHEDULER,
@@ -284,6 +300,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_supplier_observations",
     app: "radar-ejecucion",
+    handler: "food:observationsByRuc",
     description:
       "Observaciones documentadas sobre un proveedor, únicamente por RUC exacto: sanción formal, denuncia con expediente, proceso en curso o antigüedad del RUC frente a una fecha contractual. " +
       "No genera score ni concluye responsabilidad; una denuncia o proceso no equivale a sanción. " + SIN_SCHEDULER,
@@ -297,6 +314,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_supplier_observations_unlinked",
     app: "radar-ejecucion",
+    handler: "food:observationsUnlinked",
     description:
       "Referencias externas sobre proveedores sin RUC exacto. Se preservan para revisión, pero el sistema prohíbe atribuirlas a un proveedor, lote, contrato o ranking. " + SIN_SCHEDULER,
     pathTemplate: "/api/servicios-cuidados/alimentacion/observaciones-proveedor/pendientes",
@@ -306,6 +324,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_tourism_hospedaje",
     app: "radar-ejecucion",
+    handler: "tourism:hospedaje",
     description:
       "Indicadores MINCETUR de hospedaje (arribos, pernoctaciones) por departamento/mes, fuente Indicadores de Ocupabilidad PNDA. " +
       SIN_SCHEDULER,
@@ -319,6 +338,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_tourism_crossref",
     app: "radar-ejecucion",
+    handler: "tourism:crossref",
     description:
       "Cruce turismo: flujo hospedaje MINCETUR vs gasto función TURISMO (MEF), con PIM/devengado MPT Trujillo y separación sede vs meta departamento. " +
       SIN_SCHEDULER,
@@ -334,6 +354,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_infrastructure_assets",
     app: "radar-ejecucion",
+    handler: "infrastructure:assets",
     description:
       "Activos de infraestructura materializados para La Libertad: CUI/obra cuando existe, y evidencia separada de cierre, operador, mantenimiento, disponibilidad y servicio. " +
       "Avance físico, presupuesto o inauguración no se presentan como operación. " + SIN_SCHEDULER,
@@ -344,6 +365,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_infrastructure_asset",
     app: "radar-ejecucion",
+    handler: "infrastructure:asset",
     description:
       "Ficha completa de un activo: identidad, obra INFOBRAS por CUI exacto, recepción/cierre, operador, mantenimiento, disponibilidad, indicadores y vacíos de evidencia. " +
       "No certifica calidad, seguridad ni impacto. " + SIN_SCHEDULER,
@@ -354,6 +376,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_infrastructure_operation",
     app: "radar-ejecucion",
+    handler: "infrastructure:assetOperation",
     description:
       "Evidencia de recepción, operador y disponibilidad de un activo. La ausencia de estos registros es un vacío de evidencia, no prueba de que el activo no funcione. " + SIN_SCHEDULER,
     pathTemplate: "/api/infraestructura/activos/{assetId}/operacion",
@@ -363,6 +386,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_infrastructure_maintenance",
     app: "radar-ejecucion",
+    handler: "infrastructure:assetMaintenance",
     description:
       "Evidencia de mantenimiento atribuida a un activo. PIM/devengado identifica financiamiento o ejecución registrada, no prueba por sí solo mantenimiento realizado o disponibilidad. " + SIN_SCHEDULER,
     pathTemplate: "/api/infraestructura/activos/{assetId}/mantenimiento",
@@ -372,6 +396,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_infrastructure_integrity",
     app: "radar-ejecucion",
+    handler: "infrastructure:integrity",
     description:
       "Control de integridad de infraestructura: verifica qué activos tienen cierre, operador, mantenimiento, disponibilidad e indicador. " +
       "Con estricto=true devuelve 409 si no existe evidencia mínima para presentarlos como infraestructura que funciona. " + SIN_SCHEDULER,
@@ -382,6 +407,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_infrastructure_evidence_queue",
     app: "radar-ejecucion",
+    handler: "infrastructure:evidenceQueue",
     description:
       "Cola de evidencia faltante por activo: recepción, operador, mantenimiento o disponibilidad. Es una prioridad de revisión, no una lista de infraestructura inoperativa. " + SIN_SCHEDULER,
     pathTemplate: "/api/infraestructura/evidencia-pendiente",
@@ -391,6 +417,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_sector_review_queue",
     app: "radar-ejecucion",
+    handler: "sectors:reviewQueue",
     description:
       "Consulta la cola de candidatos CUI-actividad o entidad-compra pendientes de revisión humana. " +
       "Los candidatos no son vínculos oficiales ni alimentan agregados sectoriales.",
@@ -404,6 +431,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_proyectos",
     app: "radar-ejecucion",
+    handler: "proyectos:list",
     description:
       "Nombre real de proyecto/actividad/obra por entidad+función — el nivel de detalle que responde 'qué " +
       "construye' una entidad, no solo bajo qué función/genérica cae. " + SIN_SCHEDULER,
@@ -419,6 +447,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_personal",
     app: "radar-ejecucion",
+    handler: "personal:list",
     description:
       "Dotación de personal del Estado (MEF/AIRHSP) agregada por pliego/unidad ejecutora/régimen laboral/grupo " +
       "ocupacional — cantidad y costo total anual. Agregación institucional, no personal identificable; sin " +
@@ -433,6 +462,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_patrimonio_bienes_muebles_baja",
     app: "radar-ejecucion",
+    handler: "bienes-muebles-baja:list",
     description:
       "Activos patrimoniales dados de baja (desincorporados) por entidad del Estado (MEF) — resolución, acto de " +
       "baja y bien. Solo activos dados de baja, NO es el inventario completo de bienes muebles del Estado (esa " +
@@ -447,6 +477,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_patrimonio_bienes_muebles_baja_por_distrito",
     app: "radar-ejecucion",
+    handler: "bienes-muebles-baja-por-distrito:list",
     description:
       "Bajas patrimoniales agregadas por distrito, SOLO para municipalidades (el resto del universo — " +
       "ministerios, gobiernos regionales, UGEL, empresas de agua/luz — queda excluido porque su RUC resuelve al " +
@@ -463,6 +494,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_burocracia_inversion",
     app: "radar-ejecucion",
+    handler: "burocracia-inversion:list",
     description:
       "Ratio gasto-en-planilla vs. gasto-en-inversión por entidad/distrito (genérica de gasto '1' = personal, " +
       "'6' = adquisición de activos no financieros). Excluye gasto de Gobierno Nacional dirigido a un " +
@@ -483,6 +515,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_procurement",
     app: "compras-publicas",
+    handler: "procurement:list",
     description:
       "Procesos de contratación pública (releases OCDS) ingeridos desde OECE. " +
       "Cobertura PARCIAL: cada corrida trae hasta 10 páginas más recientes, no el histórico completo. " +
@@ -498,6 +531,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_procurement_by_ocid",
     app: "compras-publicas",
+    handler: "procurement:byOcid",
     description: "Detalle de un proceso de contratación específico por su OCID.",
     pathTemplate: "/api/procurement/{ocid}",
     pathParams: ["ocid"],
@@ -506,6 +540,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_suppliers",
     app: "compras-publicas",
+    handler: "suppliers:list",
     description:
       "Proveedores del Estado agregados por adjudicaciones, entidades distintas y valor total, con índice de " +
       "concentración de mercado. " +
@@ -517,6 +552,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_supplier_by_id",
     app: "compras-publicas",
+    handler: "suppliers:bySupplierId",
     description: "Historial completo de adjudicaciones de un proveedor específico por su supplier_id.",
     pathTemplate: "/api/suppliers/{supplierId}",
     pathParams: ["supplierId"],
@@ -525,6 +561,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_crossref",
     app: "compras-publicas",
+    handler: "crossref:list",
     description:
       "Cruce compras-publicas <-> radar-ejecucion por nombre de entidad (matcher difuso, persistido en " +
       "entity_crosswalk) — trae devengado y compras por entidad ya cruzada. `confidence` filtra confirmada/candidata.",
@@ -535,6 +572,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_crossref_salud",
     app: "compras-publicas",
+    handler: "crossref:salud",
     description:
       "Salud del crossref compras-publicas <-> radar-ejecucion (entity_crosswalk): filas totales, confirmadas, " +
       "candidatas y última construcción. `estado: \"VACIO\"` explícito si no hay filas — usar antes de confiar en " +
@@ -546,6 +584,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_unsuccessful_tenders",
     app: "compras-publicas",
+    handler: "unsuccessful-tenders:list",
     description:
       "Ítems de contratación pública declarados DESIERTO o NULO (dinero convocado, no gastado) — la mitad de " +
       "los procesos OCDS que `compras_publicas_procurement` (adjudicaciones) nunca cubre. No incluye estados " +
@@ -562,6 +601,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_bidders_by_ocid",
     app: "compras-publicas",
+    handler: "bidders:byOcid",
     description:
       "Participantes (postores) de un proceso de contratación específico por su OCID, con el ganador si lo " +
       "hay. 'Participante' significa que figura en el registro OCDS — no equivale por sí solo a una cotización, " +
@@ -573,6 +613,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_bidders_by_provider",
     app: "compras-publicas",
+    handler: "bidders:byProviderId",
     description:
       "Historial de participaciones de un proveedor como postor (no solo como ganador) — total de procesos, " +
       "victorias y win rate. Cobertura parcial de registros OCDS disponibles en las corridas locales; las tasas " +
@@ -584,6 +625,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_bidders_competition",
     app: "compras-publicas",
+    handler: "bidders:competition",
     description:
       "Top 10 proveedores por victorias, con participaciones/victorias/descalificaciones observadas en la " +
       "muestra ingerida. Resumen descriptivo — no mide competencia, desempeño ni irregularidad. " + SIN_SCHEDULER,
@@ -594,6 +636,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_bidders_coparticipation",
     app: "compras-publicas",
+    handler: "bidders:coparticipation",
     description:
       "Pares de proveedores con co-participación repetida (>=3 veces) en los mismos procesos, dentro de la " +
       "muestra disponible. La co-participación puede responder a rubro, zona o periodo compartido — NO " +
@@ -606,6 +649,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_entity_profile",
     app: "compras-publicas",
+    handler: "entity-profiles:byBuyerId",
     description:
       "Ficha transversal de una entidad compradora OCDS: resumen de procesos por categoría, adjudicaciones por " +
       "año/moneda, participación de postores por proceso, estado de reconciliación OCID exacto, y si tiene " +
@@ -619,6 +663,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_identities",
     app: "compras-publicas",
+    handler: "identities:list",
     description:
       "Relaciones de identidad entre RUC/nombres/identificadores vinculados a una entidad o persona " +
       "(`entity_identity_links`) — busca por cualquier identificador (subject_id o valor origen/destino). Una " +
@@ -634,6 +679,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_conformacion_vinculos",
     app: "compras-publicas",
+    handler: "conformacion:vinculos",
     description:
       "Personas naturales (DNI enmascarado a los últimos 3 dígitos) que aparecen como socio/representante en " +
       "más de un RUC distinto, y esos RUCs distintos ganaron adjudicaciones en más de una entidad convocante " +
@@ -647,6 +693,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_conformacion_by_ruc",
     app: "compras-publicas",
+    handler: "conformacion:byRuc",
     description:
       "Conformación societaria de un RUC específico (OSCE — Buscador de Proveedores del Estado): socios, " +
       "representantes y órganos de administración, con DNI/CE enmascarado a los últimos 3 dígitos. Un RUC sin " +
@@ -659,6 +706,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_minor_contracts",
     app: "compras-publicas",
+    handler: "minor-contracts:list",
     description:
       "Contrataciones menores a 8 UIT de municipalidades de La Libertad (SEACE, reconstrucción de evidencia " +
       "pública, no el buscador oficial completo) — objeto, monto estimado/adjudicado, cotizaciones recibidas, " +
@@ -682,6 +730,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_minor_contract_by_id",
     app: "compras-publicas",
+    handler: "minor-contracts:byId",
     description:
       "Detalle completo de una contratación menor SEACE: cotizaciones recibidas, eventos, documentos, " +
       "evidencia recolectada y señales de revisión detectadas, con las versiones de normalizador/modelo que " +
@@ -693,6 +742,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_municipalities",
     app: "compras-publicas",
+    handler: "observatory:municipalities",
     description:
       "Municipalidades de La Libertad con contratos menores SEACE materializados — total de contratos, monto " +
       "y proveedores distintos por municipalidad. Búsqueda parcial por nombre/RUC/distrito con `q`.",
@@ -706,6 +756,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_municipality_by_id",
     app: "compras-publicas",
+    handler: "observatory:municipalityById",
     description:
       "Ficha de una municipalidad: métricas agregadas de contratos menores, desglose por categoría, top 20 " +
       "proveedores y conteo de señales de revisión detectadas. Las señales son patrones para revisión y no " +
@@ -717,6 +768,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_signals",
     app: "compras-publicas",
+    handler: "observatory:signals",
     description:
       "Señales de revisión detectadas sobre contrataciones menores SEACE (S01-S13: patrones de fraccionamiento, " +
       "objetos similares, proveedor recurrente, etc.), de la corrida más reciente salvo que se indique " +
@@ -736,6 +788,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_signal_by_id",
     app: "compras-publicas",
+    handler: "observatory:signalById",
     description:
       "Detalle de una señal de revisión específica: evidencia recolectada y decisiones de revisión humana " +
       "(aprobada/descartada) ya registradas. Identifica un patrón que merece revisión; no determina " +
@@ -747,6 +800,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_semantic_review_queue",
     app: "compras-publicas",
+    handler: "observatory:semanticReviewQueue",
     description:
       "Bandeja de pares de contratos comparables por similitud semántica (señales S12/S13) para revisión " +
       "humana, deduplicada por par y priorizada (S13 antes que S12 porque añade el mismo proveedor). Una " +
@@ -762,6 +816,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_semantic_review_clusters",
     app: "compras-publicas",
+    handler: "observatory:semanticReviewClusters",
     description:
       "Agrupa señales S12/S13 en clusters de contratos relacionados entre sí (unión de pares transitivos), con " +
       "monto total y similitud máxima del cluster. Igual que la cola de revisión: un cluster resume objetos " +
@@ -773,6 +828,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_freshness",
     app: "compras-publicas",
+    handler: "observatory:freshness",
     description:
       "Metadata de frescura por fuente ingerida (OECE/OCDS y SEACE contratos menores): fecha de la última " +
       "corrida, filas totales, id del último batch y filas rechazadas en ese batch. `rejectedInLatestBatch: " +
@@ -785,6 +841,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_analytics_territorial",
     app: "compras-publicas",
+    handler: "observatory:analyticsTerritorial",
     description:
       "Agregados de contratos menores SEACE de La Libertad por provincia y distrito: total de contratos, " +
       "monto, proveedores distintos, y concentración de mercado (CR1/CR3: % del monto que se lleva el " +
@@ -801,6 +858,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "compras_publicas_analytics",
     app: "compras-publicas",
+    handler: "observatory:analyticsKind",
     description:
       "Indicadores descriptivos y reproducibles sobre contratos menores SEACE, según `kind`: " +
       "'concentration' (proveedores distintos y monto por municipalidad), 'competition' (promedio de " +
@@ -879,6 +937,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "infobras_meta_sources",
     app: "infobras",
+    handler: "meta:sources",
     description:
       "Metadata de los últimos lotes de ingesta INFOBRAS (cuándo se corrió, cuántos registros, cobertura). " +
       "Usado por la barra de frescura GORE al mostrar obras vinculadas por CUI. " +
@@ -890,6 +949,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "infobras_public_works",
     app: "infobras",
+    handler: "public-works:list",
     description:
       "Obras públicas monitoreadas por la Contraloría (INFOBRAS) — avance físico/financiero, paralización, " +
       "entidad responsable. Cobertura completa (snapshot nacional del XLSX). " +
@@ -911,6 +971,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "infobras_public_works_resumen",
     app: "infobras",
+    handler: "public-works:resumen",
     description:
       "Resumen agregado: total de obras, % con paralización, % con avance físico reportado, conteo de " +
       "distrito_sospechoso (DQ-14). `groupBy` (DQ-06, 2026-09-08) desglosa por sectorEntidad, " +
@@ -926,6 +987,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "infobras_public_work_by_codigo",
     app: "infobras",
+    handler: "public-works:byCodigo",
     description: "Detalle de una obra específica por su código INFOBRAS.",
     pathTemplate: "/api/public-works/{codigoInfobras}",
     pathParams: ["codigoInfobras"],
@@ -934,6 +996,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "infobras_crossref",
     app: "infobras",
+    handler: "crossref:list",
     description:
       "Cruce infobras <-> radar-inversiones por CUI (clave exacta) — obras de un departamento junto con su " +
       "inversión asociada. Default: LA LIBERTAD.",
@@ -944,6 +1007,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "infobras_crossref_salud",
     app: "infobras",
+    handler: "crossref:salud",
     description:
       "Salud del crossref infobras <-> radar-ejecucion (entity_crosswalk): filas totales, confirmadas, candidatas " +
       "y última construcción. `estado: \"VACIO\"` explícito si no hay filas — usar antes de confiar en " +
@@ -955,6 +1019,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "infobras_crossref_ejecucion",
     app: "infobras",
+    handler: "crossref:ejecucion",
     description:
       "Cruce infobras <-> radar-ejecucion por nombre de entidad (matcher difuso, persistido en " +
       "entity_crosswalk, recalculable con `npm run crossref:build`) — trae devengado, obras y obras " +
@@ -1257,6 +1322,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "identidad_fiscal_contribuyentes",
     app: "identidad-fiscal",
+    handler: "contribuyentes:list",
     description:
       "Busca contribuyentes en el Padrón RUC de SUNAT (personas jurídicas, RUC-20) por razón social, estado o " +
       "ubigeo. Cobertura nacional completa (~2.3M filas) — paginación real: usa `limit`/`offset`; la respuesta " +
@@ -1276,6 +1342,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "identidad_fiscal_contribuyente_by_ruc",
     app: "identidad-fiscal",
+    handler: "contribuyentes:byRuc",
     description: "Detalle de un contribuyente específico por RUC exacto (11 dígitos).",
     pathTemplate: "/api/contribuyentes/{ruc}",
     pathParams: ["ruc"],
@@ -1284,6 +1351,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "identidad_fiscal_crossref_proveedores",
     app: "identidad-fiscal",
+    handler: "crossref:list",
     description:
       "Cruce identidad-fiscal <-> compras-publicas por RUC exacto (extraído de supplier_id, cobertura ~77.3% de " +
       "adjudicaciones) — marca proveedores con estatus tributario irregular (BAJA/NO HABIDO) que ganaron contratos " +
@@ -1298,6 +1366,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "identidad_fiscal_crossref_entidades",
     app: "identidad-fiscal",
+    handler: "crossref:entidades",
     description:
       "Cruce identidad-fiscal <-> radar-ejecucion por nombre de entidad (matcher difuso, confirmada/candidata) — " +
       "resuelve el RUC de cada gobierno/municipalidad para chequear su propio estatus tributario. Default: LA LIBERTAD.",
@@ -1308,6 +1377,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "identidad_fiscal_ficha_ruc",
     app: "identidad-fiscal",
+    handler: "ficha-ruc:list",
     description:
       "Busca en la ficha individual de SUNAT (`ficha_ruc`) por razón social, cultivo (texto libre sobre razón " +
       "social) o si exporta. Cobertura MUY PARCIAL: esta ficha se consulta una por una vía navegador, bloqueada " +
@@ -1327,6 +1397,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "identidad_fiscal_ficha_ruc_by_ruc",
     app: "identidad-fiscal",
+    handler: "ficha-ruc:byRuc",
     description:
       "Detalle completo de la ficha individual de SUNAT para un RUC específico (razón social, fechas, domicilio, " +
       "actividades CIIU, comprobantes electrónicos, representantes legales) — solo si ese RUC ya fue consultado " +
@@ -1338,6 +1409,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "identidad_fiscal_padron_ppa",
     app: "identidad-fiscal",
+    handler: "padron-ppa:list",
     description:
       "Confirma si un RUC está registrado en el Padrón de Productores Agrarios de MIDAGRI — dato de formalidad " +
       "agraria, no tributario ni comercial. Solo el booleano `registrado` + nombre en el padrón es real: el " +
@@ -1357,6 +1429,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "identidad_fiscal_padron_ppa_by_ruc",
     app: "identidad-fiscal",
+    handler: "padron-ppa:byRuc",
     description:
       "Estado de un RUC específico en el Padrón de Productores Agrarios (ver `identidad_fiscal_padron_ppa`). " +
       "404 si ese RUC no fue consultado todavía contra MIDAGRI — distinto de `registrado: false`, que significa " +
@@ -1368,6 +1441,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "identidad_fiscal_oece_ficha",
     app: "identidad-fiscal",
+    handler: "oece-ficha:list",
     description:
       "Ficha de Proveedor del Estado (OECE, ex-OSCE) por RUC — snapshot fresco de datos SUNAT + contacto " +
       "(teléfono/email) + si está realmente inscrito en el RNP. `datosSunat` responde para CUALQUIER RUC válido " +
@@ -1388,6 +1462,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "identidad_fiscal_oece_ficha_by_ruc",
     app: "identidad-fiscal",
+    handler: "oece-ficha:byRuc",
     description:
       "Ficha OECE completa de un RUC, incluida su conformación societaria/directiva (`personas`: " +
       "representantes legales, Consejo de Administración, socios — con DNI, cargo y fecha de ingreso de cada " +
@@ -1400,6 +1475,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "identidad_fiscal_ruc_consulta_masiva",
     app: "identidad-fiscal",
+    handler: "ruc-consulta-masiva:list",
     description:
       "Tercera fuente de SUNAT (`ruc_consulta_masiva`) — hasta 100 RUC por corrida vía el formulario de " +
       "'Consulta Múltiple' (e-consultaruc.sunat.gob.pe), SIN reCAPTCHA a diferencia de la ficha individual. " +
@@ -1425,6 +1501,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "identidad_fiscal_ruc_consulta_masiva_by_ruc",
     app: "identidad-fiscal",
+    handler: "ruc-consulta-masiva:byRuc",
     description:
       "Detalle completo de un RUC en `ruc_consulta_masiva` (ver `identidad_fiscal_ruc_consulta_masiva`). 404 si " +
       "ese RUC no fue consultado todavía por esta vía.",
@@ -1435,6 +1512,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "identidad_fiscal_exportaciones_fob",
     app: "identidad-fiscal",
+    handler: "exportaciones-fob:list",
     description:
       "Valor FOB USD exportado por RUC, agregado por mes/aduana/agente de aduana/país de destino — fuente " +
       "Aduanas-SUNAT (`aduanet.gob.pe`), sin captcha, ingesta automatizada. NO trae kilos ni peso, solo FOB " +
@@ -1457,6 +1535,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "identidad_fiscal_exportaciones_fob_resumen",
     app: "identidad-fiscal",
+    handler: "exportaciones-fob:resumenPorRuc",
     description:
       "FOB total y número de embarques por año para un RUC específico (agregado sobre " +
       "`identidad_fiscal_exportaciones_fob`) — la forma correcta de responder '¿cuánto exportó este RUC en " +
@@ -1488,6 +1567,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "proveedores_sancionados_sanciones",
     app: "proveedores-sancionados",
+    handler: "sanciones:list",
     description:
       "Inhabilitaciones y multas del Tribunal de Contrataciones para un RUC específico (requerido). " +
       "'Vigente hoy' no equivale a 'vigente al momento de la adjudicación' — revisar fechas `desde`/`hasta` de cada " +
@@ -1500,6 +1580,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "proveedores_sancionados_crossref",
     app: "proveedores-sancionados",
+    handler: "crossref:list",
     description:
       "Cruce proveedores-sancionados <-> compras-publicas por RUC exacto — señal más fuerte que el estatus " +
       "tributario: una inhabilitación VIGENTE es prohibición LEGAL de contratar con el Estado. " +
@@ -1521,6 +1602,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "proveedores_sancionados_personas",
     app: "proveedores-sancionados",
+    handler: "personas-sancionadas:list",
     description:
       "Cruce persona-a-persona (2026-09-06): ¿una persona sancionada directamente (RUC-10, persona natural) es " +
       "también socio/representante/miembro del órgano de administración de una empresa activa " +
@@ -1537,6 +1619,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "proveedores_sancionados_candidatos_sancionados",
     app: "proveedores-sancionados",
+    handler: "candidatos-sancionados:list",
     description:
       "Cruce candidato<->sanción (OE-03, 2026-09-10): candidatos de candidatos-erm (por departamento, o una " +
       "lista explícita de DNI separada por comas) contra vínculos societarios (supplier_conformacion, " +
@@ -1555,6 +1638,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "proveedores_sancionados_recurrente",
     app: "proveedores-sancionados",
+    handler: "sancionado-recurrente:list",
     description:
       "Señal de sancionado recurrente (OE-04, 2026-09-10): agrupa inhabilitaciones por RUC y marca los que " +
       "tienen `minResoluciones` o más resoluciones DISTINTAS cuyo rango completo (primera a última fecha " +
@@ -1571,6 +1655,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "proveedores_sancionados_velocidad_sancion_contrato",
     app: "proveedores-sancionados",
+    handler: "velocidad-sancion-contrato:list",
     description:
       "Alerta de velocidad sanción→contrato (2026-09-21, originada en un hallazgo real: LABORATORIOS " +
       "UNIDOS S.A., RUC 20417180134, recibió S/ 600,000 del MINISTERIO DE SALUD el 2026-08-31 con una " +
@@ -1593,6 +1678,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "proveedores_sancionados_redes_proveedores",
     app: "proveedores-sancionados",
+    handler: "redes-proveedores:list",
     description:
       "Proveedores de contrataciones menores (compras-publicas/SEACE) que ganan en varias municipalidades " +
       "distintas de un departamento — señal de red o concentración territorial, NO una conclusión de " +
@@ -1611,6 +1697,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "proveedores_sancionados_inhabilitaciones_judiciales",
     app: "proveedores-sancionados",
+    handler: "inhabilitaciones-judiciales:list",
     description:
       "Inhabilitaciones por mandato judicial vigentes [OECE] (investigado y construido 2026-09-20) — base legal " +
       "DISTINTA a `proveedores_sancionados_sanciones` (esa es sanción administrativa del Tribunal de " +
@@ -1633,6 +1720,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "proveedores_sancionados_doble_inhabilitacion",
     app: "proveedores-sancionados",
+    handler: "doble-inhabilitacion:list",
     description:
       "Cruce dentro de esta misma app (2026-09-21, no un crosswalk fuzzy — JOIN real por RUC/DNI): ¿qué proveedor/persona " +
       "tiene sanción ADMINISTRATIVA (Tribunal de Contrataciones, `proveedores_sancionados_sanciones`) Y orden JUDICIAL " +
@@ -1652,6 +1740,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "proveedores_sancionados_extorsion_duenos_reales",
     app: "proveedores-sancionados",
+    handler: "extorsion-duenos-reales:list",
     description:
       "Extorsión en territorio alto contra los dueños reales de la obra pública (2026-09-26): cruza las " +
       "denuncias policiales de Extorsión por distrito (seguridad-ciudadana) con los ganadores de los contratos " +
@@ -1669,6 +1758,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "proveedores_sancionados_extorsion_sancionados",
     app: "proveedores-sancionados",
+    handler: "extorsion-sancionados:list",
     description:
       "Extorsión en distritos con proveedor sancionado (2026-09-26): para cada distrito con denuncias de " +
       "Extorsión, lista los proveedores sancionados (persona jurídica, con su RUC) con contratos en ese mismo " +
@@ -1684,6 +1774,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "proveedores_sancionados_extorsion_velocidad_sancion",
     app: "proveedores-sancionados",
+    handler: "extorsion-velocidad-sancion:list",
     description:
       "Velocidad sanción→contrato en distritos con denuncias de Extorsión (2026-09-26): a diferencia de los otros " +
       "dos cruces de extorsión, aquí la ventana temporal ES la señal — un proveedor que empieza a contratar pocos " +
@@ -1706,6 +1797,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "proveedores_sancionados_meta_freshness",
     app: "proveedores-sancionados",
+    handler: "meta-freshness:freshness",
     description:
       "Freshness de la fuente de sanciones (TCE/OSCE, clave `tce_osce`): fecha de la última ingesta, días sin " +
       "actualizar y filas ingeridas. Sirve para no presentar una sanción vigente como si reflejara el estado " +
