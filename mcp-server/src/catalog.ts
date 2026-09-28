@@ -3187,7 +3187,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
     app: "geo-intersections",
     description:
       "Superposiciones de un derecho minero específico (por CODIGOU) con títulos forestales. Muestra qué bosques cubre parcialmente ese derecho." + SIN_SCHEDULER,
-    pathTemplate: "/api/cruce/minero/:codigou",
+    pathTemplate: "/api/cruce/minero/{codigou}",
     pathParams: ["codigou"],
     querySchema: {},
   },
@@ -3196,7 +3196,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
     app: "geo-intersections",
     description:
       "Superposiciones de un título forestal específico (por capa + objectid) con derechos mineros. Muestra qué concesiones mineras cubren parcialmente ese bosque." + SIN_SCHEDULER,
-    pathTemplate: "/api/cruce/forestal/:capa/:objectid",
+    pathTemplate: "/api/cruce/forestal/{capa}/{objectid}",
     pathParams: ["capa", "objectid"],
     querySchema: {},
   },

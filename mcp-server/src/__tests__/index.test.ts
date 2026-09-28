@@ -91,6 +91,41 @@ describe("buildPath", () => {
     const tool = makeTool({ pathTemplate: "/api/execution/{entityCode}", pathParams: ["entityCode"] });
     expect(() => buildPath(tool, {})).toThrow(/entityCode/);
   });
+
+  it("geo_intersections_minero sustituye codigou (no deja ':codigou' literal)", () => {
+    const tool = findTool("geo_intersections_minero");
+    expect(tool).toBeDefined();
+    const path = buildPath(tool!, { codigou: "010012345" });
+    expect(path).not.toContain(":codigou");
+    expect(path).toBe("/api/cruce/minero/010012345");
+  });
+
+  it("geo_intersections_forestal sustituye capa y objectid (no deja ':capa'/':objectid' literales)", () => {
+    const tool = findTool("geo_intersections_forestal");
+    expect(tool).toBeDefined();
+    const path = buildPath(tool!, { capa: "concesiones", objectid: "42" });
+    expect(path).not.toContain(":capa");
+    expect(path).not.toContain(":objectid");
+    expect(path).toBe("/api/cruce/forestal/concesiones/42");
+  });
+
+  it("ningún pathTemplate del catálogo usa parámetros estilo Express (/:param) — buildPath solo reemplaza {param}", () => {
+    const offenders = TOOL_CATALOG.filter((t) => /\/:[A-Za-z_]/.test(t.pathTemplate)).map(
+      (t) => `${t.name}: ${t.pathTemplate}`,
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it("todo pathParam declarado aparece como {param} en su pathTemplate, y buildPath no deja placeholders", () => {
+    for (const tool of TOOL_CATALOG) {
+      for (const param of tool.pathParams) {
+        expect(tool.pathTemplate, `${tool.name} debe contener {${param}}`).toContain(`{${param}}`);
+      }
+      const args = Object.fromEntries(tool.pathParams.map((p) => [p, "valor"]));
+      const path = buildPath(tool, args);
+      expect(path, tool.name).not.toMatch(/\{[^}]+\}|\/:[A-Za-z_]/);
+    }
+  });
 });
 
 describe("findTool", () => {
