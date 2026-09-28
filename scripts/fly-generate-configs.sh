@@ -37,18 +37,15 @@ primary_region = "${REGION}"
 EOF
 
 # --- Caddyfile ---
-{
-  echo "# Generado por scripts/fly-generate-configs.sh (prefix: ${FLY_APP_PREFIX})"
-  echo ":8080 {"
-  echo "  handle / {"
-  echo '    respond "{\"status\":\"ok\",\"service\":\"api.rastro.fyi\",\"apps\":14}" 200'
-  echo "  }"
-  while IFS=$'\t' read -r slug _ _ _; do
-    [[ "$slug" =~ ^# ]] && continue
-    [[ -z "$slug" ]] && continue
-    fly_app="${FLY_APP_PREFIX}-${slug}"
-    cat <<EOF
-
+# Las rutas se generan primero para que "apps" en el handler / salga del
+# numero real de bloques handle_path emitidos (sin numeros magicos).
+routes=""
+route_count=0
+while IFS=$'\t' read -r slug _ _ _; do
+  [[ "$slug" =~ ^# ]] && continue
+  [[ -z "$slug" ]] && continue
+  fly_app="${FLY_APP_PREFIX}-${slug}"
+  routes+="
   handle_path /${slug}/* {
     reverse_proxy ${fly_app}.internal:8080 {
       health_uri /health
@@ -56,8 +53,17 @@ EOF
     }
   }
   redir /${slug} /${slug}/
-EOF
-  done < "$TSV"
+"
+  route_count=$((route_count + 1))
+done < "$TSV"
+
+{
+  echo "# Generado por scripts/fly-generate-configs.sh (prefix: ${FLY_APP_PREFIX})"
+  echo ":8080 {"
+  echo "  handle / {"
+  echo '    respond "{\"status\":\"ok\",\"service\":\"api.rastro.fyi\",\"apps\":'"${route_count}"'}" 200'
+  echo "  }"
+  printf '%s' "$routes"
   echo "}"
 } > "${GATEWAY_DIR}/Caddyfile"
 
