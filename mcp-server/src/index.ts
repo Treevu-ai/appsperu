@@ -215,9 +215,16 @@ function registerMetaTools(server: McpServer, activeKey: ApiKeyRecord | null): v
       title: "riesgo_territorial_resumen",
       description:
         "Vista compuesta territorial: orquesta captura de territorio, superposiciones mineras-forestales, " +
-        "riesgo EUDR y emergencias INDECI para un departamento. Cada fuente puede fallar independientemente.",
+        "riesgo EUDR y emergencias INDECI para un departamento. HOY corre con 2 de 4 fuentes como máximo: " +
+        "captura de territorio y riesgo EUDR NO están disponibles (territorio-inteligencia está fuera del " +
+        "catálogo por no tener ingesta real), así que su métrica sale en null. Cada fuente que no responde " +
+        "(fuera del catálogo, HTTP >= 400, ENRIQUECIMIENTO_NO_CONFIGURADO) se lista con su motivo en " +
+        "metadata.fuentesNoDisponibles, con metadata.cobertura 'N/4'. Sin dato (null) no significa sin riesgo.",
       inputSchema: {
-        departamento: z.string().min(1).describe("Código UBIGEO de 2 dígitos (ej. '13' para La Libertad)."),
+        departamento: z
+          .string()
+          .min(1)
+          .describe("UBIGEO de 2 dígitos (ej. '13') o nombre del departamento (ej. 'LA LIBERTAD')."),
         ruc: z.string().min(1).optional().describe("RUC específico para enriquecimiento en riesgo EUDR."),
       },
     },
