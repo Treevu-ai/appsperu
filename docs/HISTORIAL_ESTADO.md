@@ -1,6 +1,21 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-09-22.
+Última actualización: 2026-09-27.
+
+## PRDs de infraestructura de datos para el portafolio — series OR-, WH-, EV- (2026-09-27)
+
+Sesión de documentación (sin implementación): revisión en local de cli-market y Rastro, y creación
+de 3 PRDs con sus TICKETS y BACKLOGS en `docs/` — [`PRD_Orquestacion_y_Frescura_de_Ingesta_v1.md`](PRD_Orquestacion_y_Frescura_de_Ingesta_v1.md)
+(serie **OR-**, 8 tickets, 3 sprints: frescura, contratos ejecutables, piloto de corridas),
+[`PRD_Warehouse_Analitico_y_Capa_de_Metricas_v1.md`](PRD_Warehouse_Analitico_y_Capa_de_Metricas_v1.md)
+(serie **WH-**, 7 tickets, 4 sprints: zona cruda Parquet, dbt, métricas y el índice precios de
+contratación vs. góndola) y [`PRD_Deteccion_de_Cambios_y_Alertas_v1.md`](PRD_Deteccion_de_Cambios_y_Alertas_v1.md)
+(serie **EV-**, 7 tickets, 3 sprints: diff sobre raw batches, SCD2, API de cambios y alertas).
+Cada idea tiene sus tres documentos (los enlaces están en la tabla de la sesión). Todas las series
+fueron verificadas sin colisión con las ya usadas en otros backlogs. Reglas transversales: honestidad
+de frescura y cobertura, scripts `npm run ingest:*` manuales intactos, endpoints aditivos y docs en el
+mismo PR. Todos los tickets en ⬜ Pendiente, sin owner ni fecha. Contexto, decisiones, supuestos y
+pendientes para la próxima sesión: [`SESION_PRDs_Infraestructura_Datos_Portafolio_2026-09-27.md`](SESION_PRDs_Infraestructura_Datos_Portafolio_2026-09-27.md).
 
 ## Dos bugs de pérdida de datos corregidos en `sbn-supervision-connector.ts` (ceplan-geo, 2026-09-22)
 
