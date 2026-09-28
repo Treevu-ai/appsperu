@@ -39,9 +39,9 @@ function readApps() {
     });
 
   // Falla al cargar el config, no en runtime con 20 apps mystery: una colisión
-  // de puertos hace que dos PM2 apps pelen por el mismo socket y la que pierde
+  // de puertos hace que dos PM2 apps peleen por el mismo socket y la que pierde
   // muere en loop de reinicio — un síntoma muy difícil de atribuir. La de
-  // `riesgo-fiscal-isds`/`candidatos-erm` (ambas en 4027) lasted meses por esto.
+  // `riesgo-fiscal-isds`/`candidatos-erm` (ambas en 4027) duró meses por esto.
   const porPuerto = new Map();
   for (const { slug, port } of rows) {
     if (porPuerto.has(port)) {
