@@ -38,7 +38,7 @@ contra la tabla `mcp_api_keys` de `treevu-rastro-pg` (solo hash SHA-256;
 (`mcp-server/src/apps.ts`), que lee `<APP>_API_URL` del entorno y cae a
 `http://localhost:<puerto>` si no está. En Fly nunca se seteó ninguna de las 38
 variables, así que **las 169 tools que anunciaba producción fallaban todas** con
-`No se pudo conectar a http://localhost:4000/...`. La appFly tampoco define
+`No se pudo conectar a http://localhost:4000/...`. La app Fly tampoco define
 `[env]` para ellas ni el `docker-entrypoint.sh` las genera.
 
 Para diagnosticar ese tipo de problema existe el meta-tool `rastro_health`,
