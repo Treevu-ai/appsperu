@@ -1,5 +1,9 @@
 # Despliegue del transporte HTTP del MCP server — `rastro.fyi`
 
+> **Documentación archivada.** Describe el deploy en Fly.io, que está apagado.
+> No aplica al uso local. Para usar el MCP en local (stdio) ver
+> [`docs/ENDPOINTS.md`](ENDPOINTS.md), `scripts/dev-local.sh` y la tool `rastro_health`.
+
 > **Estado verificado en vivo el 2026-09-27.** Toda la infraestructura Fly.io
 > está detenida (0 máquinas encendidas) por decisión de costo y no se hacen
 > deploys. Para uso local ver `scripts/dev-local.sh`; el MCP corre por stdio con `npm run dev` y no
@@ -61,25 +65,33 @@ O batch via script:
 bash scripts/ingest-la-libertad-completo.sh
 ```
 
-## Verificación
+## Verificación (histórico)
+
+> Estos checks eran para el deploy archivado en Fly. Hoy el gateway está
+> apagado y no hay que esperar `200`. Para diagnosticar en local usar
+> `rastro_health` y `scripts/dev-local.sh`.
 
 ```bash
-# Verificar ambos endpoints
+# Histórico: verificación de ambos endpoints cuando el deploy estaba activo
 curl -s https://rastro.fyi/health | jq .
 curl -s https://treevu-rastro-gw.fly.dev/health | jq .
-# Ambos deben responder 200 OK
+# (Con el deploy activo) ambos respondían 200 OK
 ```
 
-## Troubleshooting
+## Troubleshooting (histórico)
+
+> Los comandos `flyctl` de esta tabla eran para el deploy archivado en Fly;
+> **no usarlos hoy**. Para diagnosticar el MCP en local: la tool `rastro_health`
+> (qué apps responden y cuántos tools tienen backend) y `scripts/dev-local.sh`.
 
 | Síntoma | Causa probable | Fix |
 |---|---|---|
 | `https://rastro.fyi` responde 403 o error | Cloudflare bloqueando o DNS fuera de sync | `nslookup rastro.fyi` → debe resolver a Cloudflare IPs (2606:4700:*) |
 | `https://treevu-rastro-gw.fly.dev` responde 502 | Gateway apagado o upstreams down | `flyctl status -a treevu-rastro-gw`, `flyctl logs -a treevu-rastro-gw` |
-| MCP tools no responden | Alguna de las 40 APIs está suspendida en Fly | `flyctl apps list` → verificar estado de todas las `treevu-rastro-*` apps |
+| MCP tools no responden | Alguna de las 38 APIs del catálogo está suspendida en Fly | `flyctl apps list` → verificar estado de todas las `treevu-rastro-*` apps |
 
 ## Referencias
 
-- [`docs/FLY_DEPLOY.md`](FLY_DEPLOY.md) — despliegue del gateway y las 40 APIs en Fly.io
+- [`docs/FLY_DEPLOY.md`](FLY_DEPLOY.md) — despliegue del gateway y las APIs en Fly.io (hay 40 directorios `apps/*/api`; el catálogo MCP cubre 38) — archivado
 - [`mcp-server/README.md`](../mcp-server/README.md) — arquitectura interna del servidor MCP
 - [`mcp-server/FLY_DEPLOY_HTTP.md`](../mcp-server/docs/FLY_DEPLOY_HTTP.md) (si existe) — detalles HTTP del transporte remoto
