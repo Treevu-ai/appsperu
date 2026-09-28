@@ -6,18 +6,9 @@ import { requireApiKey } from "./auth/http-api-key.js";
 import { buildMcpServer } from "./index.js";
 
 /**
- * Fase 1-D: transporte Streamable HTTP, para exponer el MCP server como
- * "conector personalizado" remoto (Claude Desktop exige una URL, stdio no
- * sirve). Sigue el patrón de referencia del propio SDK
- * (`dist/esm/examples/server/simpleStreamableHttp.js`): un mapa de sesiones,
- * una `StreamableHTTPServerTransport` + `McpServer` nueva por sesión (creada
- * en el `initialize`), reutilizada en las llamadas siguientes de esa misma
- * sesión vía el header `mcp-session-id`.
- *
- * A diferencia de stdio (un proceso = un código fijo, validado una sola vez
- * al arrancar), acá un mismo proceso sirve muchas sesiones con códigos
- * distintos a la vez — `requireApiKey()` valida el header `x-api-key` en
- * cada request, no una vez al arrancar.
+ * Fase 1-D: transporte Streamable HTTP sobre Express (Node.js local).
+ * Usa pg Pool (no D1) — los bindings D1 solo están disponibles en el Worker.
+ * La migración a Worker pasa por worker.ts con `Env` tipado.
  */
 const transports: Record<string, StreamableHTTPServerTransport> = {};
 
@@ -30,7 +21,6 @@ async function handleMcpPost(req: Request, res: Response): Promise<void> {
   }
 
   if (!sessionId && isInitializeRequest(req.body)) {
-    // requireApiKey() ya corrió antes de esta ruta; si llegó hasta acá, req.apiKey existe.
     const activeKey = req.apiKey!;
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
@@ -42,7 +32,7 @@ async function handleMcpPost(req: Request, res: Response): Promise<void> {
       if (transport.sessionId) delete transports[transport.sessionId];
     };
 
-    const server = buildMcpServer(activeKey);
+    const server = buildMcpServer(activeKey, undefined);
     await server.connect(transport);
     await transport.handleRequest(req, res, req.body);
     return;

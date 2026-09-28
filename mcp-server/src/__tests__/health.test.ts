@@ -1,96 +1,97 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-const callApiMock = vi.fn();
-vi.mock("../http-client.js", () => ({
-  callApi: (...args: unknown[]) => callApiMock(...args),
-  McpHttpError: class McpHttpError extends Error {},
-}));
+const mockD1Prepare = vi.fn();
+const mockD1First = vi.fn();
+
+function makeMockD1DB() {
+  return {
+    prepare: mockD1Prepare.mockReturnValue({ first: mockD1First }),
+  };
+}
+
+const mockEnv: Record<string, unknown> = {};
+
+function setupEnv(appsOk: Set<string>, appsFallidas: Set<string>) {
+  mockEnv.MCP_DB = makeMockD1DB();
+  for (const app of appsFallidas) {
+    mockEnv[`DB_${app.toUpperCase().replace(/-/g, "_").replace(/"/g, "")}`] = {
+      prepare: () => ({ first: () => Promise.reject(new Error("conexión fallida")) }),
+    };
+  }
+  for (const app of appsOk) {
+    const binding = `DB_${app.toUpperCase().replace(/-/g, "_").replace(/"/g, "")}`;
+    if (!mockEnv[binding]) {
+      mockEnv[binding] = {
+        prepare: mockD1Prepare.mockReturnValue({ first: mockD1First }),
+      };
+    }
+  }
+}
 
 import { runHealthCheck } from "../tools/health.js";
-import { APP_KEYS, baseUrlFor } from "../apps.js";
+import { APP_KEYS } from "../apps.js";
 import { TOOL_CATALOG } from "../catalog.js";
 
-/** URL de /health tal como la arma `checkApp` para esa app. */
-function healthUrl(app: (typeof APP_KEYS)[number]): string {
-  return `${baseUrlFor(app).replace(/\/+$/, "")}/health`;
-}
-
-/** Por defecto todas responden 200; cada test declara sus excepciones. */
-function todasSalen(excepciones: Record<string, () => Promise<{ status: number }>> = {}) {
-  callApiMock.mockImplementation(async (url: string) => {
-    const excepcion = Object.entries(excepciones).find(([app]) => healthUrl(app as (typeof APP_KEYS)[number]) === url);
-    if (excepcion) return excepcion[1]();
-    return { status: 200 };
-  });
-}
-
-describe("runHealthCheck", () => {
-  beforeEach(() => callApiMock.mockReset());
-
-  it("revisa todas las apps del catálogo cuando no se pasa ninguna", async () => {
-    todasSalen();
-    const report = await runHealthCheck();
-
-    expect(report.resumen.appsTotales).toBe(APP_KEYS.length);
-    expect(report.resumen.appsOk).toBe(APP_KEYS.length);
-    expect(report.resumen.appsCaidas).toBe(0);
-    expect(report.catalogo).toEqual({ tools: TOOL_CATALOG.length, apps: APP_KEYS.length });
+describe("runHealthCheck (D1)", () => {
+  beforeEach(() => {
+    mockD1Prepare.mockClear();
+    mockD1First.mockClear();
+    Object.keys(mockEnv).forEach((k) => delete mockEnv[k]);
   });
 
-  it("marca caída la app que no conecta y descuenta sus tools del total operativo", async () => {
-    const caida = "infobras";
-    const toolsInfobras = TOOL_CATALOG.filter((t) => t.app === caida).length;
-    todasSalen({
-      [caida]: async () => {
-        throw new Error("No se pudo conectar.");
-      },
-    });
+  it("marca caída cuando no hay env (modo stdio sin bindings D1)", async () => {
+    const report = await runHealthCheck(undefined, undefined);
 
-    const report = await runHealthCheck();
-
-    const fila = report.apps.find((a) => a.app === caida);
-    expect(fila?.ok).toBe(false);
-    expect(fila?.status).toBeNull();
-    expect(fila?.error).toMatch(/No se pudo conectar/);
-    expect(report.resumen.appsCaidas).toBe(1);
-    expect(report.resumen.toolsSinBackend).toBe(toolsInfobras);
-    expect(report.resumen.toolsOperativos).toBe(TOOL_CATALOG.length - toolsInfobras);
+    const appsFromCatalog = [...new Set(TOOL_CATALOG.map((t) => t.app))];
+    expect(report.resumen.appsTotales).toBe(appsFromCatalog.length);
+    expect(report.resumen.appsOk).toBe(0);
+    expect(report.resumen.appsCaidas).toBe(appsFromCatalog.length);
+    expect(report.resumen.toolsOperativos).toBe(0);
+    expect(report.resumen.toolsSinBackend).toBe(TOOL_CATALOG.length);
   });
 
-  it("cuenta como caída un /health que responde algo distinto de 200", async () => {
-    const trasProxy = "ceplan-geo";
-    todasSalen({ [trasProxy]: async () => ({ status: 502 }) });
+  it("marca caída la app cuyo binding D1 no existe en env", async () => {
+    mockEnv.MCP_DB = makeMockD1DB();
 
-    const report = await runHealthCheck();
-    const fila = report.apps.find((a) => a.app === trasProxy);
+    const report = await runHealthCheck("infobras" as (typeof APP_KEYS)[number], mockEnv);
 
-    expect(fila?.ok).toBe(false);
-    expect(fila?.status).toBe(502);
-    // El status se conserva en el error: "no conecta" y "un proxy contesta por
-    // la app" son diagnósticos distintos y no conviene reportarlos igual.
-    expect(fila?.error).toMatch(/502/);
+    expect(report.resumen.appsTotales).toBe(1);
+    expect(report.resumen.appsOk).toBe(0);
+    const fila = report.apps[0];
+    expect(fila.ok).toBe(false);
+    expect(fila.error).toMatch(/Binding D1/);
+  });
+
+  it("marca OK la app cuyo binding D1 responde SELECT 1", async () => {
+    const catalogApps = [...new Set(TOOL_CATALOG.map((t) => t.app))];
+    setupEnv(new Set(catalogApps), new Set());
+    mockD1First.mockResolvedValue({ alive: 1 });
+
+    const report = await runHealthCheck("infobras" as (typeof APP_KEYS)[number], mockEnv);
+
+    expect(report.resumen.appsOk).toBe(1);
+    expect(report.apps[0].ok).toBe(true);
   });
 
   it("filtra a una sola app cuando se pasa `app`", async () => {
-    todasSalen();
-    const report = await runHealthCheck("mimp");
+    const catalogApps = [...new Set(TOOL_CATALOG.map((t) => t.app))];
+    setupEnv(new Set(catalogApps), new Set());
+    mockD1First.mockResolvedValue({ alive: 1 });
 
+    const report = await runHealthCheck("mimp" as (typeof APP_KEYS)[number], mockEnv);
     expect(report.resumen.appsTotales).toBe(1);
     expect(report.apps).toHaveLength(1);
     expect(report.apps[0]?.app).toBe("mimp");
   });
 
   it("ordena las apps caídas primero para que el diagnóstico empiece por lo que broke", async () => {
-    todasSalen({
-      infobras: async () => {
-        throw new Error("down");
-      },
-      mimp: async () => {
-        throw new Error("down");
-      },
-    });
+    const allApps = [...new Set(TOOL_CATALOG.map((t) => t.app))] as (typeof APP_KEYS)[number][];
+    const okApps = new Set(allApps.slice(0, 5));
+    const failApps = new Set(allApps.slice(5, 7));
+    setupEnv(okApps, failApps);
+    mockD1First.mockResolvedValue({ alive: 1 });
 
-    const report = await runHealthCheck();
+    const report = await runHealthCheck(undefined, mockEnv);
     const primeraCaida = report.apps.findIndex((a) => !a.ok);
     const ultimaSana = report.apps.map((a) => a.ok).lastIndexOf(true);
 
@@ -99,13 +100,15 @@ describe("runHealthCheck", () => {
   });
 
   it("los tools operativos más los sin backend cuadran con el catálogo completo", async () => {
-    todasSalen({
-      radar_ejecucion: async () => {
-        throw new Error("down");
-      },
-    });
+    const allApps = [...new Set(TOOL_CATALOG.map((t) => t.app))] as (typeof APP_KEYS)[number][];
+    const okApps = new Set(allApps);
+    const failApps = new Set<(typeof APP_KEYS)[number]>([allApps[0]]);
+    okApps.delete(allApps[0]);
 
-    const report = await runHealthCheck();
+    setupEnv(okApps, failApps);
+    mockD1First.mockResolvedValue({ alive: 1 });
+
+    const report = await runHealthCheck(undefined, mockEnv);
     expect(report.resumen.toolsOperativos + report.resumen.toolsSinBackend).toBe(TOOL_CATALOG.length);
   });
 });

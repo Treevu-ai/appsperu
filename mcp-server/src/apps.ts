@@ -1,7 +1,8 @@
-/**
- * Puertos por defecto de cada API — copiados de `README.md` (tabla "Apps") y
- * `docs/ESTADO.md`. Cada uno es sobreescribible vía env var para no asumir
- * que las apps siempre corren en localhost con estos puertos exactos.
+/*
+ * Arquitectura MCP Worker + D1: cada app tiene su propia base de datos D1.
+ * Los bindings se declaran en `wrangler.toml` como `DB_<APP_UPPER_SNAKE>`.
+ * La app `territorio-inteligencia` no está en APP_KEYS (sin ingesta real,
+ * ver apps/territorio-inteligencia/README.md).
  */
 export const APP_KEYS = [
   "radar-ejecucion",
@@ -42,18 +43,16 @@ export const APP_KEYS = [
   "catastro-forestal",
   "emergencias-indeci",
   "geo-intersections",
-  // `territorio-inteligencia` y la vista compuesta `riesgo-territorial` NO están
-  // en APP_KEYS: la app todavía no tiene ingesta real (consulta
-  // `inhabilitaciones`, `inhabilitaciones_judiciales`, `multas` y
-  // `minam_deforestacion`, que viven en otras bases y todavía no se replican, y
-  // columnas `titular_ruc`/`superficie` que el catastro forestal real no tiene).
-  // Mientras eso siga así, anunciarlas por MCP expondría tools que devuelven
-  // vacío o error presented como "no hay riesgo". Ver
-  // apps/territorio-inteligencia/README.md.
 ] as const;
 
 export type AppKey = (typeof APP_KEYS)[number];
 
+/** Mapea AppKey → nombre del binding D1 declarado en wrangler.toml (env.DB_<SUFFIX>). */
+export function d1BindingFor(app: AppKey): string {
+  return `DB_${app.toUpperCase().replace(/-/g, "_")}`;
+}
+
+/** Puertos por defecto para fallback HTTP (modo stdio/local). */
 const DEFAULT_PORTS: Record<AppKey, number> = {
   "radar-ejecucion": 4000,
   "compras-publicas": 4001,
@@ -83,14 +82,6 @@ const DEFAULT_PORTS: Record<AppKey, number> = {
   "residuos-solidos": 4025,
   "infraestructura-mtc": 4026,
   "riesgo-fiscal-isds": 4027,
-  // `candidatos-erm` estaba en 4027, el mismo puerto que `riesgo-fiscal-isds`
-  // — una colisión que hacía imposibles de levantar ambas apps a la vez en
-  // local (el health check de `rastro_health` la hizo visible: las dos
-  // reportaban caída). Se movió a 4038, que estaba libre; 4036 quedó reservado
-  // para `territorio-inteligencia` (excluida de APP_KEYS) y 4037 lo usa
-  // `geo-intersections`. `.env.example` de la app se actualizó en el mismo
-  // commit — si tenés un `apps/candidatos-erm/api/.env` local, actualizá el
-  // PORT a mano o regeneralo desde `.env.example`.
   "candidatos-erm": 4038,
   "poder-judicial": 4028,
   "violencia-escolar": 4029,
@@ -108,9 +99,8 @@ function envVarFor(app: AppKey): string {
 }
 
 /**
- * Resuelve la base URL de una app: `<APP>_API_URL` en el entorno si está
- * definida (ej. `RADAR_EJECUCION_API_URL=https://...`), si no
- * `http://localhost:<puerto-default>`.
+ * Resuelve la base URL de una app para fallback HTTP (modo stdio/local).
+ * En el Worker, los handlers usan D1 directamente y no necesitan esta URL.
  */
 export function baseUrlFor(app: AppKey): string {
   const fromEnv = process.env[envVarFor(app)];

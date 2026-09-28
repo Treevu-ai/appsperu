@@ -28,12 +28,6 @@ export function buildQuery(tool: ToolSpec, args: Record<string, unknown>): Recor
   const query: Record<string, string | undefined> = {};
   for (const key of Object.keys(tool.querySchema)) {
     const value = args[key];
-    // Varios querySchema usan z.coerce.number()/z.coerce.boolean() (ej. "anio", "mes") — el
-    // cliente MCP envía el tipo declarado (number/boolean), no un string. Antes esto se
-    // descartaba en silencio (typeof value === "string" fallaba), así que el filtro nunca
-    // llegaba a la API real sin ningún error visible para el agente. Defensa en profundidad:
-    // en el flujo real `invokeTool` ya pasa por `validateArgs` primero, así que `value` llega
-    // acá ya coaccionado/validado por zod.
     query[key] = typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? String(value) : undefined;
   }
   return query;
@@ -42,6 +36,20 @@ export function buildQuery(tool: ToolSpec, args: Record<string, unknown>): Recor
 export interface ArgsValidationError {
   campo: string;
   mensaje: string;
+}
+
+/**
+ * En MCP Worker + D1, el `D1Env` se pasa como contexto de ejecución.
+ * Para stdio (desarrollo local), env es `{}` y solo los tools con handler
+ * pueden ejecutarse; el resto usan HTTP proxy como fallback.
+ */
+export interface InvokeContext {
+  env?: Record<string, unknown>;
+}
+
+export interface ToolResult {
+  content: Array<{ type: "text"; text: string }>;
+  isError: boolean;
 }
 
 /**
@@ -74,11 +82,16 @@ export function findTool(name: string): ToolSpec | undefined {
   return TOOL_CATALOG.find((tool) => tool.name === name);
 }
 
-/** GET de solo lectura contra la API Express real de la app del tool, pass-through 1:1 del `{ status, body }`. */
-export async function invokeTool(tool: ToolSpec, args: Record<string, unknown>) {
+/**
+ * Ejecuta un tool: si tiene `handler`, ejecuta SQL directamente contra D1;
+ * si no, hace HTTP proxy a la app Express (fallback para stdio/local).
+ */
+export async function invokeTool(
+  tool: ToolSpec,
+  args: Record<string, unknown>,
+  ctx?: InvokeContext
+): Promise<ToolResult> {
   try {
-    const path = buildPath(tool, args);
-
     const validated = validateArgs(tool, args);
     if (!validated.ok) {
       return {
@@ -92,6 +105,17 @@ export async function invokeTool(tool: ToolSpec, args: Record<string, unknown>) 
       };
     }
 
+    const handlerKey = tool.handler;
+    if (handlerKey && ctx?.env) {
+      const { executeHandler } = await import("./handlers/registry.js");
+      const { status, body } = await executeHandler(ctx.env as Record<string, unknown>, tool, validated.data);
+      return {
+        content: [{ type: "text" as const, text: serializeToolResponse(status, body) }],
+        isError: status >= 500,
+      };
+    }
+
+    const path = buildPath(tool, args);
     const query = buildQuery(tool, validated.data);
     const url = buildUrl(baseUrlFor(tool.app), path, query);
     const { status, body } = await callApi(url);
@@ -122,18 +146,22 @@ export async function invokeTool(tool: ToolSpec, args: Record<string, unknown>) 
  * definida. El uso normal sin código (la inmensa mayoría, hoy) no debe
  * depender de tener esa variable configurada.
  */
-async function enforceBudgetOrThrow(activeKey: ApiKeyRecord, toolName: string): Promise<void> {
+async function enforceBudgetOrThrow(
+  activeKey: ApiKeyRecord,
+  toolName: string,
+  env?: Record<string, unknown>
+): Promise<void> {
   const { consumeQuery, logUsage } = await import("./auth/rate-limiter.js");
-  const result = await consumeQuery(activeKey.id);
+  const result = await consumeQuery(activeKey.id, env);
   if (!result.allowed) {
-    await logUsage({ keyId: activeKey.id, toolName, success: false, errorMessage: "BUDGET_EXCEEDED" });
+    await logUsage({ keyId: activeKey.id, toolName, success: false, errorMessage: "BUDGET_EXCEEDED" }, env);
     throw new Error(
       `Presupuesto de queries agotado para este código (${activeKey.queryLimit} consultas). Pide un código nuevo al equipo de Rastro.`
     );
   }
 }
 
-function registerMetaTools(server: McpServer, activeKey: ApiKeyRecord | null): void {
+function registerMetaTools(server: McpServer, activeKey: ApiKeyRecord | null, env?: Record<string, unknown>): void {
   server.registerTool(
     "rastro_buscar_tools",
     {
@@ -173,7 +201,10 @@ function registerMetaTools(server: McpServer, activeKey: ApiKeyRecord | null): v
         args: z.object({}).catchall(z.unknown()).optional().describe("Params del tool (path + query) como pares clave-valor."),
       },
     },
-    async ({ tool: toolName, args }) => runRastroLlamarWithAuth(activeKey, toolName, args as Record<string, unknown> | undefined)
+     async ({ tool: toolName, args }) => {
+      const result = await runRastroLlamarWithAuth(activeKey, env, toolName, args as Record<string, unknown> | undefined);
+      return result as { content: Array<{ type: "text"; text: string }>; isError: boolean };
+    }
   );
 
   // ---- diagnóstico: qué apps responden de verdad ----
@@ -187,9 +218,10 @@ function registerMetaTools(server: McpServer, activeKey: ApiKeyRecord | null): v
       description:
         "Diagnóstico de disponibilidad: consulta GET /health de cada app del catálogo y devuelve " +
         `cuántas están operativas, cuántas caídas y cuántos de los ${TOOL_CATALOG.length} tools del catálogo ` +
-        "quedan sin backend. Úsalo PRIMERO si un rastro_llamar devuelve 'No se pudo conectar' o si " +
-        "sospechas que una consulta vino vacía: distingue 'la app está caída' de 'no hay datos en la fuente'. " +
-        "Omitir `app` revisa todas; con `app` revisa solo esa.",
+         "status: " +
+      "quedan sin backend. Úsalo PRIMERO si un rastro_llamar devuelve 'No se pudo conectar' o si " +
+      "sospechas que una consulta vino vacía: distingue 'la app está caída' de 'no hay datos en la fuente'. " +
+      "Omitir `app` revisa todas; con `app` revisa solo esa.",
       inputSchema: {
         app: z
           .enum(APP_KEYS)
@@ -199,7 +231,7 @@ function registerMetaTools(server: McpServer, activeKey: ApiKeyRecord | null): v
     },
     async ({ app }) => {
       try {
-        const report = await runHealthCheck(app as AppKey | undefined);
+        const report = await runHealthCheck(app as AppKey | undefined, env);
         return { content: [{ type: "text" as const, text: JSON.stringify(report, null, 2) }], isError: false };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -228,9 +260,9 @@ function registerMetaTools(server: McpServer, activeKey: ApiKeyRecord | null): v
         ruc: z.string().min(1).optional().describe("RUC específico para enriquecimiento en riesgo EUDR."),
       },
     },
-    async ({ departamento, ruc }: RiesgoTerritorialParams) => {
+         async ({ departamento, ruc }: RiesgoTerritorialParams) => {
       try {
-        const result = await runRiesgoTerritorial({ departamento, ruc });
+        const result = await runRiesgoTerritorial({ departamento, ruc }, env);
         return {
           content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
           isError: false,
@@ -251,18 +283,19 @@ function registerMetaTools(server: McpServer, activeKey: ApiKeyRecord | null): v
  */
 export async function runRastroLlamarWithAuth(
   activeKey: ApiKeyRecord | null,
+  env: Record<string, unknown> | undefined,
   toolName: string,
   args?: Record<string, unknown>
 ) {
   if (activeKey) {
     try {
-      await enforceBudgetOrThrow(activeKey, toolName);
+      await enforceBudgetOrThrow(activeKey, toolName, env);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return { content: [{ type: "text" as const, text: message }], isError: true };
     }
   }
-  const result = await runRastroLlamar(toolName, args);
+  const result = await runRastroLlamar(env, toolName, args);
   if (activeKey) {
     // El logging de uso es best-effort: si falla (ej. blip transitorio de
     // Postgres), no debe tumbar ni enmascarar un resultado real que ya se
@@ -270,7 +303,7 @@ export async function runRastroLlamarWithAuth(
     // devolver el presupuesto gastado.
     try {
       const { logUsage } = await import("./auth/rate-limiter.js");
-      await logUsage({ keyId: activeKey.id, toolName, success: !result.isError });
+      await logUsage({ keyId: activeKey.id, toolName, success: !result.isError }, env);
     } catch (err) {
       console.error("logUsage falló (no bloqueante):", err instanceof Error ? err.message : err);
     }
@@ -279,7 +312,7 @@ export async function runRastroLlamarWithAuth(
 }
 
 /** Cuerpo de `rastro_llamar`, extraído para poder probarlo sin pasar por el registro MCP. */
-export async function runRastroLlamar(toolName: string, args?: Record<string, unknown>) {
+export async function runRastroLlamar(env: Record<string, unknown> | undefined, toolName: string, args?: Record<string, unknown>) {
   const tool = findTool(toolName);
   if (!tool) {
     return {
@@ -287,7 +320,7 @@ export async function runRastroLlamar(toolName: string, args?: Record<string, un
       isError: true,
     };
   }
-  return invokeTool(tool, args ?? {});
+  return invokeTool(tool, args ?? {}, { env });
 }
 
 /**
@@ -323,9 +356,9 @@ export async function resolveActiveKey(): Promise<ApiKeyRecord | null> {
  * proceso HTTP sirve muchas sesiones con códigos distintos a la vez. Extraído
  * para que `http-transport.ts` lo reuse sin duplicar el registro de tools.
  */
-export function buildMcpServer(activeKey: ApiKeyRecord | null): McpServer {
+export function buildMcpServer(activeKey: ApiKeyRecord | null, env?: Record<string, unknown>): McpServer {
   const server = new McpServer({ name: "appsperu-mcp-server", version: "0.1.0" });
-  registerMetaTools(server, activeKey);
+  registerMetaTools(server, activeKey, env);
   return server;
 }
 

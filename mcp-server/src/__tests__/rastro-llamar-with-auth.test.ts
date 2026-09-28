@@ -47,7 +47,7 @@ describe("runRastroLlamarWithAuth", () => {
 
   it("sin activeKey no consume presupuesto ni loguea uso", async () => {
     callApiMock.mockResolvedValueOnce({ status: 200, body: { ok: true } });
-    const result = await runRastroLlamarWithAuth(null, REAL_TOOL, { codigoInfobras: "123" });
+    const result = await runRastroLlamarWithAuth(null, undefined, REAL_TOOL, { codigoInfobras: "123" });
     expect(result.isError).toBeFalsy();
     expect(consumeQueryMock).not.toHaveBeenCalled();
     expect(logUsageMock).not.toHaveBeenCalled();
@@ -55,7 +55,7 @@ describe("runRastroLlamarWithAuth", () => {
 
   it("bloquea la llamada real cuando el presupuesto ya se agotó, sin tocar la API", async () => {
     consumeQueryMock.mockResolvedValueOnce({ allowed: false, reason: "BUDGET_EXCEEDED" });
-    const result = await runRastroLlamarWithAuth(makeActiveKey(), REAL_TOOL, { codigoInfobras: "123" });
+    const result = await runRastroLlamarWithAuth(makeActiveKey(), undefined, REAL_TOOL, { codigoInfobras: "123" });
     expect(result.isError).toBe(true);
     expect(callApiMock).not.toHaveBeenCalled();
   });
@@ -68,7 +68,7 @@ describe("runRastroLlamarWithAuth", () => {
     callApiMock.mockResolvedValueOnce({ status: 200, body: { obra: "real" } });
     logUsageMock.mockRejectedValueOnce(new Error("blip transitorio de Postgres"));
 
-    const result = await runRastroLlamarWithAuth(makeActiveKey(), REAL_TOOL, { codigoInfobras: "123" });
+    const result = await runRastroLlamarWithAuth(makeActiveKey(), undefined, REAL_TOOL, { codigoInfobras: "123" });
 
     expect(result.isError).toBeFalsy();
     expect(result.content[0].text).toContain("real");
@@ -80,9 +80,9 @@ describe("runRastroLlamarWithAuth", () => {
     logUsageMock.mockResolvedValueOnce(undefined);
 
     const activeKey = makeActiveKey();
-    await runRastroLlamarWithAuth(activeKey, REAL_TOOL, { codigoInfobras: "123" });
+    await runRastroLlamarWithAuth(activeKey, undefined, REAL_TOOL, { codigoInfobras: "123" });
 
-    expect(consumeQueryMock).toHaveBeenCalledWith(activeKey.id);
-    expect(logUsageMock).toHaveBeenCalledWith(expect.objectContaining({ keyId: activeKey.id, toolName: REAL_TOOL, success: true }));
+    expect(consumeQueryMock).toHaveBeenCalledWith(activeKey.id, undefined);
+    expect(logUsageMock).toHaveBeenCalledWith(expect.objectContaining({ keyId: activeKey.id, toolName: REAL_TOOL, success: true }), undefined);
   });
 });

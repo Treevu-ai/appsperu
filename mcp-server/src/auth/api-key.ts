@@ -1,5 +1,6 @@
 import { randomBytes, createHash } from "node:crypto";
 import { pool } from "../db/pool.js";
+import type { Env } from "../env.js";
 
 const KEY_PREFIX = "sk-rastro-";
 
@@ -31,33 +32,19 @@ export type ApiKeyValidationResult =
   | { ok: true; key: ApiKeyRecord }
   | { ok: false; reason: "NOT_FOUND" | "INACTIVE" | "REVOKED" | "EXPIRED" | "BUDGET_EXCEEDED" };
 
-interface ApiKeyRow {
-  id: number;
-  key_hash: string;
-  key_prefix: string;
-  tier: string;
-  group_id: string | null;
-  workshop_id: string | null;
-  query_limit: number;
-  queries_used: number;
-  is_active: boolean;
-  expires_at: string | null;
-  revoked_at: string | null;
-}
-
-function toRecord(row: ApiKeyRow): ApiKeyRecord {
+function toRecord(row: Record<string, unknown>): ApiKeyRecord {
   return {
-    id: row.id,
-    keyHash: row.key_hash,
-    keyPrefix: row.key_prefix,
-    tier: row.tier,
-    groupId: row.group_id,
-    workshopId: row.workshop_id,
-    queryLimit: row.query_limit,
-    queriesUsed: row.queries_used,
-    isActive: row.is_active,
-    expiresAt: row.expires_at,
-    revokedAt: row.revoked_at,
+    id: Number(row.id),
+    keyHash: String(row.key_hash),
+    keyPrefix: String(row.key_prefix),
+    tier: String(row.tier),
+    groupId: row.group_id as string | null,
+    workshopId: row.workshop_id as string | null,
+    queryLimit: Number(row.query_limit),
+    queriesUsed: Number(row.queries_used),
+    isActive: Boolean(row.is_active) !== false,
+    expiresAt: row.expires_at as string | null,
+    revokedAt: row.revoked_at as string | null,
   };
 }
 
@@ -66,27 +53,47 @@ function toRecord(row: ApiKeyRow): ApiKeyRecord {
  * presupuesto de queries. No incrementa el contador — eso lo hace
  * `rate-limiter.ts` por cada llamada real a `rastro_llamar`, no en cada
  * arranque del proceso.
+ *
+ * Si se provee `env` con MCP_DB (Worker), usa D1 directamente. Si no, usa
+ * pg Pool (stdio/local con MCP_API_DATABASE_URL).
  */
-export async function validateApiKey(rawKey: string): Promise<ApiKeyValidationResult> {
+export async function validateApiKey(
+  rawKey: string,
+  env?: Env | Record<string, unknown>
+): Promise<ApiKeyValidationResult> {
   const keyHash = hashApiKey(rawKey);
-  const { rows } = await pool.query<ApiKeyRow>(
+
+  if (env && typeof env === "object" && "MCP_DB" in env && env.MCP_DB) {
+    const db = (env as Env).MCP_DB as import("@cloudflare/workers-types").D1Database;
+    const stmt = db.prepare(
+      `SELECT id, key_hash, key_prefix, tier, group_id, workshop_id, query_limit, queries_used, is_active, expires_at, revoked_at
+       FROM mcp_api_keys WHERE key_hash = ?`
+    );
+    const result = await stmt.bind(keyHash).first();
+    if (!result) return { ok: false, reason: "NOT_FOUND" };
+    const record = toRecord(result as Record<string, unknown>);
+    if (!record.isActive) return { ok: false, reason: "INACTIVE" };
+    if (record.revokedAt) return { ok: false, reason: "REVOKED" };
+    if (record.expiresAt && new Date(record.expiresAt).getTime() < Date.now()) {
+      return { ok: false, reason: "EXPIRED" };
+    }
+    if (record.queriesUsed >= record.queryLimit) return { ok: false, reason: "BUDGET_EXCEEDED" };
+    return { ok: true, key: record };
+  }
+
+  const { rows } = await pool.query<Record<string, unknown>>(
     `SELECT id, key_hash, key_prefix, tier, group_id, workshop_id, query_limit, queries_used, is_active, expires_at, revoked_at
      FROM mcp_api_keys WHERE key_hash = $1`,
     [keyHash]
   );
   if (rows.length === 0) return { ok: false, reason: "NOT_FOUND" };
-
   const record = toRecord(rows[0]);
   if (!record.isActive) return { ok: false, reason: "INACTIVE" };
-  // CT-mcp-keys (security review 2026-09-09): `revoked_at` existía en la migración
-  // pero nunca se chequeaba acá — un código "revocado" seteando esta columna en vez
-  // de `is_active=false` habría seguido pasando como válido.
   if (record.revokedAt) return { ok: false, reason: "REVOKED" };
   if (record.expiresAt && new Date(record.expiresAt).getTime() < Date.now()) {
     return { ok: false, reason: "EXPIRED" };
   }
   if (record.queriesUsed >= record.queryLimit) return { ok: false, reason: "BUDGET_EXCEEDED" };
-
   return { ok: true, key: record };
 }
 

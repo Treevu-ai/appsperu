@@ -206,7 +206,7 @@ describe("invokeTool", () => {
 
 describe("runRastroLlamar", () => {
   it("returns an actionable error for a tool name not in the catalog", async () => {
-    const result = await runRastroLlamar("no_existe_este_tool");
+    const result = await runRastroLlamar(undefined, "no_existe_este_tool");
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toMatch(/No existe un tool llamado "no_existe_este_tool"/);
     expect(result.content[0].text).toMatch(/rastro_buscar_tools/);
@@ -218,7 +218,7 @@ describe("runRastroLlamar", () => {
       vi.fn().mockResolvedValue({ status: 200, headers: new Headers({ "content-type": "application/json" }), json: async () => ({ ok: true }) })
     );
     const [first] = TOOL_CATALOG;
-    const result = await runRastroLlamar(first.name, {});
+    const result = await runRastroLlamar(undefined, first.name, {});
     expect(result.isError).toBe(false);
     vi.unstubAllGlobals();
   });

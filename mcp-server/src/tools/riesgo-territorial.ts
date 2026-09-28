@@ -26,7 +26,7 @@
  * límite). Se desempaqueta acá: el status HTTP decide si la fuente respondió.
  */
 
-import { findTool, invokeTool } from "../index.js";
+import { findTool, invokeTool, type InvokeContext } from "../index.js";
 
 export interface RiesgoTerritorialParams {
   departamento: string;
@@ -216,7 +216,7 @@ function metric<T>(result: ToolResult, extract: (body: unknown) => T | null): T 
  * Ejecuta las 4 tools del catálogo en paralelo, clasifica cada fuente como
  * respondida o no disponible (con motivo) y devuelve el response unificado.
  */
-export async function runRiesgoTerritorial(params: RiesgoTerritorialParams): Promise<RiesgoTerritorialResponse> {
+export async function runRiesgoTerritorial(params: RiesgoTerritorialParams, env?: Record<string, unknown>): Promise<RiesgoTerritorialResponse> {
   const { departamento, ruc } = params;
   const departamentoConsultado = resolverDepartamento(departamento);
   if (departamentoConsultado === null) {
@@ -226,11 +226,11 @@ export async function runRiesgoTerritorial(params: RiesgoTerritorialParams): Pro
   }
 
   const [captura, superposiciones, eudr, emergencias] = await Promise.all([
-    invokeToolFor("captura", { departamento: departamentoConsultado }),
+     invokeToolFor("captura", { departamento: departamentoConsultado }, env),
     // `limit` acotado: el resumen usa `total` (conteo real); `resultados` es solo el top por km².
-    invokeToolFor("superposiciones", { departamento: departamentoConsultado, limit: 20 }),
-    invokeToolFor("eudr", { departamento: departamentoConsultado, ...(ruc ? { ruc } : {}) }),
-    invokeToolFor("emergencias", { departamento: departamentoConsultado }),
+    invokeToolFor("superposiciones", { departamento: departamentoConsultado, limit: 20 }, env),
+    invokeToolFor("eudr", { departamento: departamentoConsultado, ...(ruc ? { ruc } : {}) }, env),
+    invokeToolFor("emergencias", { departamento: departamentoConsultado }, env),
   ]);
 
   const results: Record<SummaryKey, { result: ToolResult; noDisponible?: FuenteNoDisponible }> = {
@@ -305,7 +305,8 @@ function errorText(body: unknown): string {
  */
 async function invokeToolFor(
   key: SummaryKey,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  env?: Record<string, unknown>
 ): Promise<{ result: ToolResult; noDisponible?: FuenteNoDisponible }> {
   const tool = TOOL_NAMES[key];
   const fail = (motivo: MotivoNoDisponible, detalle: string, status?: number) => ({
@@ -327,7 +328,7 @@ async function invokeToolFor(
   let text = "";
   let isError = false;
   try {
-    const response = await invokeTool(spec, args);
+    const response = await invokeTool(spec, args, { env });
     const first = Array.isArray(response.content) ? response.content[0] : undefined;
     text = first && typeof first.text === "string" ? first.text : "";
     isError = response.isError === true;

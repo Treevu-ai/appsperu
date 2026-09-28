@@ -21,6 +21,9 @@ export interface ToolSpec {
   pathParams: string[];
   /** Query params opcionales salvo que el schema individual los marque requeridos (ver `sanciones`). */
   querySchema: z.ZodRawShape;
+  /** Identificador del handler en `mcp-server/src/handlers/<app>/<module>.ts` — formato `module:fn`,
+   * p.ej. `"execution:list"`, `"execution:byEntity"`. Si omitido, fallback a HTTP proxy (solo stdio). */
+  handler?: string;
 }
 
 export const TOOL_CATALOG: ToolSpec[] = [
@@ -28,6 +31,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_execution",
     app: "radar-ejecucion",
+    handler: "execution:list",
     description:
       "Ejecución presupuestal (PIA/PIM/Devengado) por entidad + función + año fiscal, agregada desde el CSV nacional del MEF. " +
       "Cobertura PARCIAL: acotada a La Libertad (offsets fijos en el conector), no todo el país. Sin `anio`, " +
@@ -78,6 +82,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   {
     name: "radar_ejecucion_execution_by_entity",
     app: "radar-ejecucion",
+    handler: "execution:byEntity",
     description: "Detalle de ejecución presupuestal de una entidad específica por su entity_code. " + SIN_SCHEDULER,
     pathTemplate: "/api/execution/{entityCode}",
     pathParams: ["entityCode"],
