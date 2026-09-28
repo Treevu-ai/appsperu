@@ -1,6 +1,36 @@
 # Estado del proyecto — Follow the Sol
 
-Última actualización: 2026-09-27.
+Última actualización: 2026-09-28.
+
+## Neon en lugar de D1 como capa de datos del MCP (2026-09-28)
+
+[`adr/0024-neon-en-lugar-de-d1.md`](adr/0024-neon-en-lugar-de-d1.md) — decisión
+tomada tras escanear las 38 apps. **Neon (Postgres 17 serverless)**: un proyecto,
+36 bases, un rol, un solo secret (`NEON_DATABASE_URL`) del que se deriva el
+nombre de base por app.
+
+Se descartó D1 por tres bloqueos medidos: no tiene PostGIS (2 apps), no tiene
+transacciones ni `pg_advisory_lock` (38 y 8 apps) y limita a 6 conexiones
+simultáneas por invocación del Worker contra las 24 conexiones cross-app que ya
+usa el repo. El riesgo de D1 no era el SQL —`DISTINCT ON`, `ILIKE` y `ARRAY_AGG`
+sí tienen conversión— sino esas tres carencias.
+
+Hallazgos que ajustaron el plan: **Hyperdrive queda descartado** (máximo 25
+configuraciones por cuenta, hacen falta 38) y **las 36 bases caben en un solo
+proyecto** (Neon admite 500 por rama), así que no hay 36 proyectos ni 36
+secrets. Y como la ingesta corre en local, no en el Worker, las transacciones y
+locks no se tocan: los 62 conectores siguen usando `pg` sin cambios.
+
+`geo-intersections` y `ceplan-geo` se posponen a una segunda fase (PostGIS).
+`rastro_health` las reporta como `diferida`, no como caída.
+
+Código: `db/neon-pool.ts` y `db/neon-env.ts` reemplazan a las versiones D1;
+los handlers vuelven a SQL Postgres nativo sin traducción de dialecto;
+`wrangler.toml` pasa de 39 bindings a cero. **183 tests, TypeScript limpio,
+bundle de 2.9 MB (644 KB gzip) verificado con `wrangler deploy --dry-run`.**
+De 209 tools, 2 tienen handler; el resto sigue el fallback HTTP, que ya no tiene
+destino con el VPS decommissionado. Procedimiento:
+[`../mcp-server/RUNBOOK_NEON.md`](../mcp-server/RUNBOOK_NEON.md).
 
 ## PRDs de infraestructura de datos para el portafolio — series OR-, WH-, EV- (2026-09-27)
 

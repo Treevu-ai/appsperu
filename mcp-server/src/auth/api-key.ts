@@ -1,5 +1,6 @@
 import { randomBytes, createHash } from "node:crypto";
 import { pool } from "../db/pool.js";
+import { getMcpPool, type NeonEnv } from "../db/neon-env.js";
 import type { Env } from "../env.js";
 
 const KEY_PREFIX = "sk-rastro-";
@@ -54,40 +55,24 @@ function toRecord(row: Record<string, unknown>): ApiKeyRecord {
  * `rate-limiter.ts` por cada llamada real a `rastro_llamar`, no en cada
  * arranque del proceso.
  *
- * Si se provee `env` con MCP_DB (Worker), usa D1 directamente. Si no, usa
- * pg Pool (stdio/local con MCP_API_DATABASE_URL).
+ * Si se provee `env` con NEON_DATABASE_URL (Worker), usa Neon. Si no, usa el
+ * pg Pool de siempre (stdio/local con MCP_API_DATABASE_URL). Ambas rutas
+ * ejecutan el mismo SQL Postgres.
  */
 export async function validateApiKey(
   rawKey: string,
   env?: Env | Record<string, unknown>
 ): Promise<ApiKeyValidationResult> {
   const keyHash = hashApiKey(rawKey);
+  const sql = `SELECT id, key_hash, key_prefix, tier, group_id, workshop_id, query_limit, queries_used, is_active, expires_at, revoked_at
+     FROM mcp_api_keys WHERE key_hash = $1`;
 
-  if (env && typeof env === "object" && "MCP_DB" in env && env.MCP_DB) {
-    const db = (env as Env).MCP_DB as import("@cloudflare/workers-types").D1Database;
-    const stmt = db.prepare(
-      `SELECT id, key_hash, key_prefix, tier, group_id, workshop_id, query_limit, queries_used, is_active, expires_at, revoked_at
-       FROM mcp_api_keys WHERE key_hash = ?`
-    );
-    const result = await stmt.bind(keyHash).first();
-    if (!result) return { ok: false, reason: "NOT_FOUND" };
-    const record = toRecord(result as Record<string, unknown>);
-    if (!record.isActive) return { ok: false, reason: "INACTIVE" };
-    if (record.revokedAt) return { ok: false, reason: "REVOKED" };
-    if (record.expiresAt && new Date(record.expiresAt).getTime() < Date.now()) {
-      return { ok: false, reason: "EXPIRED" };
-    }
-    if (record.queriesUsed >= record.queryLimit) return { ok: false, reason: "BUDGET_EXCEEDED" };
-    return { ok: true, key: record };
-  }
+  const mcp = getMcpPool((env ?? {}) as NeonEnv);
+  const record = mcp
+    ? toRecordOrNull(await mcp.queryRow<Record<string, unknown>>(sql, [keyHash]))
+    : toRecordOrNull((await pool.query<Record<string, unknown>>(sql, [keyHash])).rows[0]);
 
-  const { rows } = await pool.query<Record<string, unknown>>(
-    `SELECT id, key_hash, key_prefix, tier, group_id, workshop_id, query_limit, queries_used, is_active, expires_at, revoked_at
-     FROM mcp_api_keys WHERE key_hash = $1`,
-    [keyHash]
-  );
-  if (rows.length === 0) return { ok: false, reason: "NOT_FOUND" };
-  const record = toRecord(rows[0]);
+  if (!record) return { ok: false, reason: "NOT_FOUND" };
   if (!record.isActive) return { ok: false, reason: "INACTIVE" };
   if (record.revokedAt) return { ok: false, reason: "REVOKED" };
   if (record.expiresAt && new Date(record.expiresAt).getTime() < Date.now()) {
@@ -105,7 +90,18 @@ export interface CreateApiKeyInput {
   expiresAt?: Date;
 }
 
-/** Emite un código nuevo y devuelve el código en texto plano — única vez que existe fuera de la memoria del proceso. */
+function toRecordOrNull(row: Record<string, unknown> | null | undefined): ApiKeyRecord | null {
+  return row ? toRecord(row) : null;
+}
+
+/**
+ * Emite un código nuevo y devuelve el código en texto plano — única vez que
+ * existe fuera de la memoria del proceso.
+ *
+ * Siempre escribe por el pg Pool: emitir una credencial es una tarea
+ * administrativa de consola (`npm run create-key`), no algo que el Worker
+ * tenga que resolver en caliente.
+ */
 export async function createApiKey(input: CreateApiKeyInput): Promise<{ rawKey: string; id: number }> {
   const rawKey = generateApiKey();
   const keyHash = hashApiKey(rawKey);

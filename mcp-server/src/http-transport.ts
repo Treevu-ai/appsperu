@@ -7,7 +7,7 @@ import { buildMcpServer } from "./index.js";
 
 /**
  * Fase 1-D: transporte Streamable HTTP sobre Express (Node.js local).
- * Usa pg Pool (no D1) — los bindings D1 solo están disponibles en el Worker.
+  * Usa pg Pool (no Neon) — el secret de Neon solo está disponible en el Worker.
  * La migración a Worker pasa por worker.ts con `Env` tipado.
  */
 const transports: Record<string, StreamableHTTPServerTransport> = {};

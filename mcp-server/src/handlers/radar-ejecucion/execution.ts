@@ -1,8 +1,8 @@
-import type { D1Pool, D1Row } from "../../db/d1-pool.js";
-import { LATEST_BUDGET_CTE_WHERE } from "../../db/d1-budget-cte.js";
+import type { NeonPool, NeonRow } from "../../db/neon-pool.js";
+import { LATEST_BUDGET_CTE } from "../../db/latest-budget.js";
 import type { ToolHandlerContext, HandlerResult } from "../registry.js";
 
-interface BudgetRow extends D1Row {
+interface BudgetRow extends NeonRow {
   entity_code: string;
   nombre: string;
   nivel_gobierno: string;
@@ -28,14 +28,12 @@ function avancePct(pim: number, devengado: number): number | null {
 
 /**
  * Handler para `radar_ejecucion_execution` — lista de ejecución presupuestal
- * por entidad + función + año fiscal, usando SQL directo contra D1.
+ * por entidad + función + año fiscal.
  *
- * Migrado de apps/radar-ejecucion/api/src/routes/execution.ts (Postgres → D1).
- * Conversiones clave:
- * - DISTINCT ON → ROW_NUMBER() OVER (PARTITION BY ... ORDER BY fecha_corte DESC, id DESC) WHERE rn = 1
- * - $1,$2 → ? (parameter binding de D1)
- * - ARRAY_AGG → GROUP_CONCAT (no usado en este handler específico)
- * - ::int → Number() en JS (SQLite auto-convierte)
+ * El SQL es idéntico al de `apps/radar-ejecucion/api/src/routes/execution.ts`,
+ * con placeholders `$n` de Postgres. La única diferencia es que en vez de un
+ * `pool.query` recibe un `NeonPool`: mismo dialecto, distinto transporte.
+ * Ver docs/adr/0024-neon-en-lugar-de-d1.md.
  */
 export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const { db, args } = ctx;
@@ -55,37 +53,37 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
 
   if (nivel) {
     params.push(nivel);
-    conditions.push(`e.nivel_gobierno = ?`);
+    conditions.push(`e.nivel_gobierno = $${params.length}`);
   }
   if (funcion) {
     params.push(funcion);
-    conditions.push(`b.funcion = ?`);
+    conditions.push(`b.funcion = $${params.length}`);
   }
   if (anio) {
     params.push(Number(anio));
-    conditions.push(`b.anio_fiscal = ?`);
+    conditions.push(`b.anio_fiscal = $${params.length}`);
   }
   if (ubigeo) {
     params.push(ubigeo);
-    conditions.push(`e.ubigeo = ?`);
+    conditions.push(`e.ubigeo = $${params.length}`);
   }
   if (departamento) {
     params.push(departamento.toUpperCase());
-    conditions.push(`t.departamento = ?`);
+    conditions.push(`t.departamento = $${params.length}`);
   }
   if (metaDepartamento) {
     params.push(metaDepartamento.toUpperCase());
-    conditions.push(`b.meta_departamento = ?`);
+    conditions.push(`b.meta_departamento = $${params.length}`);
   }
   if (generica) {
     params.push(generica);
-    conditions.push(`b.generica = ?`);
+    conditions.push(`b.generica = $${params.length}`);
   }
 
   const where = conditions.length > 0 ? `AND ${conditions.join(" AND ")}` : "";
 
   const countQuery = `
-    ${LATEST_BUDGET_CTE_WHERE}
+    ${LATEST_BUDGET_CTE}
     SELECT COUNT(*) AS total
     FROM latest_budget b
     JOIN entities e ON e.entity_code = b.entity_code
@@ -97,7 +95,7 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const total = Number(countResult.rows[0]?.total ?? 0);
 
   const dataQuery = `
-    ${LATEST_BUDGET_CTE_WHERE}
+    ${LATEST_BUDGET_CTE}
     SELECT b.entity_code, e.nombre, e.nivel_gobierno, b.funcion, b.anio_fiscal,
            b.pia, b.pim, b.devengado, b.fecha_corte, b.meta_departamento, rb.resource_id, b.generica, b.generica_nombre,
            t.provincia, t.distrito
@@ -107,7 +105,7 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
     LEFT JOIN territories t ON t.ubigeo = e.ubigeo
     ${where}
     ORDER BY b.devengado DESC
-    LIMIT ? OFFSET ?`;
+    LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
 
   const dataResult = await db.query<BudgetRow>(dataQuery, [...params, limit, offset]);
   const rows = dataResult.rows;
@@ -168,14 +166,14 @@ export async function byEntity(ctx: ToolHandlerContext): Promise<HandlerResult> 
   const entityCode = args.entityCode as string;
 
   const query = `
-    ${LATEST_BUDGET_CTE_WHERE}
+    ${LATEST_BUDGET_CTE}
     SELECT b.entity_code, e.nombre, e.nivel_gobierno, b.funcion, b.anio_fiscal,
            b.pia, b.pim, b.devengado, b.fecha_corte, rb.resource_id, rb.fetched_at,
            b.generica, b.generica_nombre
     FROM latest_budget b
     JOIN entities e ON e.entity_code = b.entity_code
     JOIN raw_mef_batches rb ON rb.id = b.source_batch_id
-    WHERE b.entity_code = ?
+    WHERE b.entity_code = $1
     ORDER BY b.anio_fiscal DESC`;
 
   const result = await db.query<BudgetRow>(query, [entityCode]);

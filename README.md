@@ -11,57 +11,58 @@ Monorepo que conecta datos abiertos del Estado peruano — presupuesto, contrata
 ```
 Agentes IA (Claude Code, Cursor, Claude Desktop)
     → MCP Worker (Cloudflare Workers — rastro.fyi/mcp)
-        → D1 databases (38 bindings, una por app)
+        → Neon: 1 proyecto Postgres, 36 bases (una por app)
                 ↑
-    Scripts de ingestión (locales, on-demand → D1 HTTP API)
+    Scripts de ingestión (locales, on-demand → Neon con pg)
 ```
 
 - **MCP Server** (`mcp-server/`): Worker de Cloudflare que expone **209 tools de solo lectura** vía 3 meta-tools (`rastro_buscar_tools` + `rastro_llamar` + `rastro_health`).
-- **Data layer**: 38 D1 databases (SQLite), una por app backend.
-- **Ingreso de datos**: scripts locales (`apps/<app>/api/src/ingest/*`) que corren a demanda y escriben a D1 vía `wrangler d1 execute` o la D1 HTTP API.
+- **Data layer**: Neon (Postgres 17 serverless) — un proyecto, 36 bases, un rol. Se eligió Neon sobre D1: D1 no tiene PostGIS, ni transacciones, ni advisory locks, y el repo los usa. Ver [`docs/adr/0024-neon-en-lugar-de-d1.md`](docs/adr/0024-neon-en-lugar-de-d1.md).
+- **Ingreso de datos**: scripts locales (`apps/<app>/api/src/ingest/*`) que corren a demanda y escriben a Neon con `pg` de siempre. No cambian.
+- **Provisioning**: [`mcp-server/RUNBOOK_NEON.md`](mcp-server/RUNBOOK_NEON.md).
 
 ## Apps
 
-| App | Dominio | D1 Binding |
+| App | Dominio | Base Neon |
 |---|---|---|
-| `radar-ejecucion` | Presupuesto/ejecución (MEF) + benchmark territorial | `RASTRO_DB_RADAR_EJECUCION` |
-| `compras-publicas` | Contrataciones (OECE/OCDS) + proveedores/concentración | `RASTRO_DB_COMPRAS_PUBLICAS` |
-| `radar-inversiones` | Inversiones (Invierte.pe) | `RASTRO_DB_RADAR_INVERSIONES` |
-| `infobras` | Obras públicas (Contraloría) | `RASTRO_DB_INFOBRAS` |
-| `ceplan-estrategico` | Planificación estratégica (ObservaPerú) | `RASTRO_DB_CEPLAN_ESTRATEGICO` |
-| `ceplan-geo` | GeoServer (capas territoriales/infraestructura) | `RASTRO_DB_CEPLAN_GEO` |
-| `identidad-fiscal` | Padrón RUC (SUNAT) + cruces | `RASTRO_DB_IDENTIDAD_FISCAL` |
+| `radar-ejecucion` | Presupuesto/ejecución (MEF) + benchmark territorial | `radar_ejecucion` |
+| `compras-publicas` | Contrataciones (OECE/OCDS) + proveedores/concentración | `compras_publicas` |
+| `radar-inversiones` | Inversiones (Invierte.pe) | `radar_inversiones` |
+| `infobras` | Obras públicas (Contraloría) | `infobras` |
+| `ceplan-estrategico` | Planificación estratégica (ObservaPerú) | `ceplan_estrategico` |
+| `ceplan-geo` | GeoServer (capas territoriales/infraestructura) | `ceplan_geo` |
+| `identidad-fiscal` | Padrón RUC (SUNAT) + cruces | `identidad_fiscal` |
 | `salud-institucional` | Score compuesto (agrega otras fuentes, sin BD propia) | comparte DBs de otras apps |
-| `proveedores-sancionados` | Inhabilitaciones/multas RNP/OECE | `RASTRO_DB_PROVEEDORES_SANCIONADOS` |
-| `actividad-agraria` | Series MIDAGRI regionales (jornal, tractor, yunta) | `RASTRO_DB_ACTIVIDAD_AGRARIA` |
-| `seguridad-ciudadana` | Denuncias policialas SIDPOL (MININTER) | `RASTRO_DB_SEGURIDAD_CIUDADANA` |
-| `bcrp-comercio-exterior` | Comercio exterior + macro BCRP | `RASTRO_DB_BCRP_COMERCIO_EXTERIOR` |
-| `inversion-privada` | Cartera APP/PA + Obras por Impuestos | `RASTRO_DB_INVERSION_PRIVADA` |
-| `bcrp-la-libertad` | Síntesis económica de La Libertad (BCRP Trujillo) | `RASTRO_DB_BCRP_LA_LIBERTAD` |
-| `servicios-salud` | Establecimientos de salud (RENIPRESS/SUSALUD) | `RASTRO_DB_SERVICIOS_SALUD` |
-| `programas-sociales` | Cobertura de programas sociales (INFOMIDIS/MIDIS) | `RASTRO_DB_PROGRAMAS_SOCIALES` |
-| `actividad-empresarial` | Empresas del sector privado por distrito (MTPE) | `RASTRO_DB_ACTIVIDAD_EMPRESARIAL` |
-| `informes-control` | Informes de control (Contraloría) | `RASTRO_DB_INFORMES_CONTROL` |
-| `mindef` | Convenios offset, capacitación, misiones de paz | `RASTRO_DB_MINDEF` |
-| `mimp` | Violencia contra la mujer (CEM) + Chat 100 | `RASTRO_DB_MIMP` |
-| `renamu` | Capacidad institucional municipal | `RASTRO_DB_RENAMU` |
-| `autoridades-electas` | Autoridades proclamadas (JNE) | `RASTRO_DB_AUTORIDADES_ELECTAS` |
-| `instituciones-educivas` | Padrón nacional de instituciones educativas | `RASTRO_DB_INSTITUCIONES_EDUCATIVAS` |
-| `infracciones-ambientales` | Infractores ambientales sancionados (OEFA/RUIAS) | `RASTRO_DB_INFRACCIONES_AMBIENTALES` |
-| `red-vial-subnacional` | Intervenciones en redes viales (MTC/Provías) | `RASTRO_DB_RED_VIAL_SUBNACIONAL` |
-| `residuos-solidos` | Residuos sólidos por distrito (MINAM/SIGERSOL) | `RASTRO_DB_RESIDUOS_SOLIDOS` |
-| `infraestructura-mtc` | Terminales portuarios, aeródromos, peajes (MTC) | `RASTRO_DB_INFRAESTRUCTURA_MTC` |
-| `riesgo-fiscal-isds` | Pasivos contingentes ISDS/APP (MEF/MMM) | `RASTRO_DB_RIESGO_FISCAL_ISDS` |
-| `candidatos-erm` | Candidatos a Elecciones Regionales/Municipales 2026 (JNE/Datapol) | `RASTRO_DB_CANDIDATOS_ERM` |
-| `poder-judicial` | Estadística jurisdiccional (Poder Judicial) | `RASTRO_DB_PODER_JUDICIAL` |
-| `violencia-escolar` | Casos reportados a SíseVe (MINEDU) | `RASTRO_DB_VIOLENCIA_ESCOLAR` |
-| `legislativo-congreso` | Proyectos de ley del Congreso | `RASTRO_DB_LEGISLATIVO_CONGRESO` |
-| `catastro-minero` | Derechos mineros (INGEMMET) | `RASTRO_DB_CATASTRO_MINERO` |
-| `areas-protegidas` | Áreas naturales protegidas (SERNANP) | `RASTRO_DB_AREAS_PROTEGIDAS` |
-| `senace-cartera-proyectos` | Cartera de proyectos ambientales (SENACE) | `RASTRO_DB_SENACE_CARTERA_PROYECTOS` |
-| `catastro-forestal` | Catastro forestal (SERFOR) | `RASTRO_DB_CATASTRO_FORESTAL` |
-| `emergencias-indeci` | Emergencias y daños (INDECI/SINPAD) | `RASTRO_DB_EMERGENCIAS_INDECI` |
-| `geo-intersections` | Cruce geográfico de capas territoriales | `RASTRO_DB_GEO_INTERSECTIONS` |
+| `proveedores-sancionados` | Inhabilitaciones/multas RNP/OECE | `proveedores_sancionados` |
+| `actividad-agraria` | Series MIDAGRI regionales (jornal, tractor, yunta) | `actividad_agraria` |
+| `seguridad-ciudadana` | Denuncias policialas SIDPOL (MININTER) | `seguridad_ciudadana` |
+| `bcrp-comercio-exterior` | Comercio exterior + macro BCRP | `bcrp_comercio_exterior` |
+| `inversion-privada` | Cartera APP/PA + Obras por Impuestos | `inversion_privada` |
+| `bcrp-la-libertad` | Síntesis económica de La Libertad (BCRP Trujillo) | `bcrp_la_libertad` |
+| `servicios-salud` | Establecimientos de salud (RENIPRESS/SUSALUD) | `servicios_salud` |
+| `programas-sociales` | Cobertura de programas sociales (INFOMIDIS/MIDIS) | `programas_sociales` |
+| `actividad-empresarial` | Empresas del sector privado por distrito (MTPE) | `actividad_empresarial` |
+| `informes-control` | Informes de control (Contraloría) | `informes_control` |
+| `mindef` | Convenios offset, capacitación, misiones de paz | `mindef` |
+| `mimp` | Violencia contra la mujer (CEM) + Chat 100 | `mimp` |
+| `renamu` | Capacidad institucional municipal | `renamu` |
+| `autoridades-electas` | Autoridades proclamadas (JNE) | `autoridades_electas` |
+| `instituciones-educivas` | Padrón nacional de instituciones educativas | `instituciones_educativas` |
+| `infracciones-ambientales` | Infractores ambientales sancionados (OEFA/RUIAS) | `infracciones_ambientales` |
+| `red-vial-subnacional` | Intervenciones en redes viales (MTC/Provías) | `red_vial_subnacional` |
+| `residuos-solidos` | Residuos sólidos por distrito (MINAM/SIGERSOL) | `residuos_solidos` |
+| `infraestructura-mtc` | Terminales portuarios, aeródromos, peajes (MTC) | `infraestructura_mtc` |
+| `riesgo-fiscal-isds` | Pasivos contingentes ISDS/APP (MEF/MMM) | `riesgo_fiscal_isds` |
+| `candidatos-erm` | Candidatos a Elecciones Regionales/Municipales 2026 (JNE/Datapol) | `candidatos_erm` |
+| `poder-judicial` | Estadística jurisdiccional (Poder Judicial) | `poder_judicial` |
+| `violencia-escolar` | Casos reportados a SíseVe (MINEDU) | `violencia_escolar` |
+| `legislativo-congreso` | Proyectos de ley del Congreso | `legislativo_congreso` |
+| `catastro-minero` | Derechos mineros (INGEMMET) | `catastro_minero` |
+| `areas-protegidas` | Áreas naturales protegidas (SERNANP) | `areas_protegidas` |
+| `senace-cartera-proyectos` | Cartera de proyectos ambientales (SENACE) | `senace_cartera_proyectos` |
+| `catastro-forestal` | Catastro forestal (SERFOR) | `catastro_forestal` |
+| `emergencias-indeci` | Emergencias y daños (INDECI/SINPAD) | `emergencias_indeci` |
+| `geo-intersections` | Cruce geográfico de capas territoriales | `geo_intersections` |
 
 ## Uso del MCP Server (Worker)
 
@@ -90,7 +91,7 @@ Configura el cliente MCP (`.mcp.json` o `~/.cursor/mcp.json`):
 
 El MCP server está desplegado como un Worker de Cloudflare en `https://rastro.fyi/mcp` (Streamable HTTP, autenticado con API key `x-api-key`).
 
-Ver [`mcp-server/wrangler.toml`](mcp-server/wrangler.toml) para la configuración D1.
+El secret `NEON_DATABASE_URL` apunta a una base cualquiera del proyecto; el resolver reescribe el nombre por app. Ver [`mcp-server/src/db/neon-env.ts`](mcp-server/src/db/neon-env.ts) y el runbook de provisioning.
 
 ## Ingesta de datos (on-demand)
 

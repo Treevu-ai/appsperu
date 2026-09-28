@@ -1,114 +1,155 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-const mockD1Prepare = vi.fn();
-const mockD1First = vi.fn();
+/**
+ * El health check abre un `Client` de @neondatabase/serverless por app. La
+ * connection string lleva el nombre de la base en el path, así que el mock
+ * decide el comportamiento según ese path: es lo que le permite al test
+ * simular "esta app no tiene base" frente a "esta base está caída".
+ */
+const basesSinRespuesta = new Set<string>();
+const basesCaidas = new Set<string>();
+const consultas: { base: string; sql: string }[] = [];
+let enVuelo = 0;
+let maximoSimultaneo = 0;
 
-function makeMockD1DB() {
-  return {
-    prepare: mockD1Prepare.mockReturnValue({ first: mockD1First }),
-  };
-}
-
-const mockEnv: Record<string, unknown> = {};
-
-function setupEnv(appsOk: Set<string>, appsFallidas: Set<string>) {
-  mockEnv.MCP_DB = makeMockD1DB();
-  for (const app of appsFallidas) {
-    mockEnv[`DB_${app.toUpperCase().replace(/-/g, "_").replace(/"/g, "")}`] = {
-      prepare: () => ({ first: () => Promise.reject(new Error("conexión fallida")) }),
-    };
-  }
-  for (const app of appsOk) {
-    const binding = `DB_${app.toUpperCase().replace(/-/g, "_").replace(/"/g, "")}`;
-    if (!mockEnv[binding]) {
-      mockEnv[binding] = {
-        prepare: mockD1Prepare.mockReturnValue({ first: mockD1First }),
-      };
+vi.mock("@neondatabase/serverless", () => ({
+  Client: class {
+    private connectionString: string;
+    constructor(connectionString: string) {
+      this.connectionString = connectionString;
     }
-  }
-}
+    private get base(): string {
+      return new URL(this.connectionString).pathname.replace(/^\//, "");
+    }
+    async connect(): Promise<void> {}
+    async end(): Promise<void> {}
+    async query(sql: string): Promise<{ rows: unknown[]; rowCount: number }> {
+      const base = this.base;
+      consultas.push({ base, sql });
+      enVuelo++;
+      maximoSimultaneo = Math.max(maximoSimultaneo, enVuelo);
+      try {
+        // Cede el event loop para que las conexiones concurrentes se solapen
+        // de verdad; si el mock fuera síncrono, el contador siempre marcaría 1.
+        await new Promise((resolve) => setTimeout(resolve, 1));
+        if (basesCaidas.has(base)) throw new Error("conexión fallida");
+        if (basesSinRespuesta.has(base)) return { rows: [], rowCount: 0 };
+        return { rows: [{ alive: 1 }], rowCount: 1 };
+      } finally {
+        enVuelo--;
+      }
+    }
+  },
+}));
 
-import { runHealthCheck } from "../tools/health.js";
+import { runHealthCheck, DEFERRED_APPS } from "../tools/health.js";
 import { APP_KEYS } from "../apps.js";
+import { databaseNameFor } from "../db/neon-env.js";
 import { TOOL_CATALOG } from "../catalog.js";
 
-describe("runHealthCheck (D1)", () => {
+const envConSecreto = { NEON_DATABASE_URL: "postgresql://u:p@ep-test.aws.neon.tech/postgres" };
+
+describe("runHealthCheck (Neon)", () => {
   beforeEach(() => {
-    mockD1Prepare.mockClear();
-    mockD1First.mockClear();
-    Object.keys(mockEnv).forEach((k) => delete mockEnv[k]);
+    basesSinRespuesta.clear();
+    basesCaidas.clear();
+    consultas.length = 0;
+    enVuelo = 0;
+    maximoSimultaneo = 0;
   });
 
-  it("marca caída cuando no hay env (modo stdio sin bindings D1)", async () => {
+  it("marca sin_base cuando no hay env (modo stdio, sin secret)", async () => {
     const report = await runHealthCheck(undefined, undefined);
 
-    const appsFromCatalog = [...new Set(TOOL_CATALOG.map((t) => t.app))];
-    expect(report.resumen.appsTotales).toBe(appsFromCatalog.length);
-    expect(report.resumen.appsOk).toBe(0);
-    expect(report.resumen.appsCaidas).toBe(appsFromCatalog.length);
+    expect(report.resumen.ok).toBe(0);
+    expect(report.resumen.caidas).toBe(0);
+    expect(report.resumen.sinBase + report.resumen.diferidas).toBe(APP_KEYS.length);
     expect(report.resumen.toolsOperativos).toBe(0);
     expect(report.resumen.toolsSinBackend).toBe(TOOL_CATALOG.length);
   });
 
-  it("marca caída la app cuyo binding D1 no existe en env", async () => {
-    mockEnv.MCP_DB = makeMockD1DB();
+  it("marca caida cuando el secret no está configurado en el Worker", async () => {
+    const report = await runHealthCheck("infobras", {});
 
-    const report = await runHealthCheck("infobras" as (typeof APP_KEYS)[number], mockEnv);
-
-    expect(report.resumen.appsTotales).toBe(1);
-    expect(report.resumen.appsOk).toBe(0);
-    const fila = report.apps[0];
-    expect(fila.ok).toBe(false);
-    expect(fila.error).toMatch(/Binding D1/);
+    expect(report.apps).toHaveLength(1);
+    expect(report.apps[0].status).toBe("sin_base");
+    expect(report.apps[0].error).toMatch(/NEON_DATABASE_URL/);
   });
 
-  it("marca OK la app cuyo binding D1 responde SELECT 1", async () => {
-    const catalogApps = [...new Set(TOOL_CATALOG.map((t) => t.app))];
-    setupEnv(new Set(catalogApps), new Set());
-    mockD1First.mockResolvedValue({ alive: 1 });
+  it("marca ok la app cuya base responde SELECT 1", async () => {
+    const report = await runHealthCheck("infobras", envConSecreto);
 
-    const report = await runHealthCheck("infobras" as (typeof APP_KEYS)[number], mockEnv);
+    expect(report.resumen.ok).toBe(1);
+    expect(report.apps[0].status).toBe("ok");
+    expect(report.apps[0].base).toBe("infobras");
+    expect(consultas[0]?.base).toBe("infobras");
+    expect(consultas[0]?.sql).toMatch(/SELECT 1/);
+  });
 
-    expect(report.resumen.appsOk).toBe(1);
-    expect(report.apps[0].ok).toBe(true);
+  it("distingue base caída de base vacía", async () => {
+    basesCaidas.add("infobras");
+    basesSinRespuesta.add("mimp");
+
+    const caida = await runHealthCheck("infobras", envConSecreto);
+    const vacia = await runHealthCheck("mimp", envConSecreto);
+
+    expect(caida.apps[0].status).toBe("caida");
+    expect(caida.apps[0].error).toMatch(/conexión fallida/);
+    expect(vacia.apps[0].status).toBe("sin_base");
   });
 
   it("filtra a una sola app cuando se pasa `app`", async () => {
-    const catalogApps = [...new Set(TOOL_CATALOG.map((t) => t.app))];
-    setupEnv(new Set(catalogApps), new Set());
-    mockD1First.mockResolvedValue({ alive: 1 });
+    const report = await runHealthCheck("mimp", envConSecreto);
 
-    const report = await runHealthCheck("mimp" as (typeof APP_KEYS)[number], mockEnv);
-    expect(report.resumen.appsTotales).toBe(1);
     expect(report.apps).toHaveLength(1);
-    expect(report.apps[0]?.app).toBe("mimp");
+    expect(report.apps[0].app).toBe("mimp");
   });
 
-  it("ordena las apps caídas primero para que el diagnóstico empiece por lo que broke", async () => {
-    const allApps = [...new Set(TOOL_CATALOG.map((t) => t.app))] as (typeof APP_KEYS)[number][];
-    const okApps = new Set(allApps.slice(0, 5));
-    const failApps = new Set(allApps.slice(5, 7));
-    setupEnv(okApps, failApps);
-    mockD1First.mockResolvedValue({ alive: 1 });
+  it("reporta como diferidas las apps de PostGIS pospuestas a la segunda fase", async () => {
+    const report = await runHealthCheck(undefined, envConSecreto);
 
-    const report = await runHealthCheck(undefined, mockEnv);
-    const primeraCaida = report.apps.findIndex((a) => !a.ok);
-    const ultimaSana = report.apps.map((a) => a.ok).lastIndexOf(true);
+    for (const app of DEFERRED_APPS) {
+      const fila = report.apps.find((a) => a.app === app);
+      expect(fila?.status).toBe("diferida");
+      expect(fila?.error).toMatch(/PostGIS/);
+    }
+    expect(report.resumen.diferidas).toBe(DEFERRED_APPS.length);
+  });
 
-    expect(primeraCaida).toBeGreaterThanOrEqual(0);
-    expect(primeraCaida).toBeLessThan(ultimaSana);
+  it("ordena caídas y sin base antes que las sanas, para que el diagnóstico empiece por lo que broke", async () => {
+    const todas = APP_KEYS.filter((a) => !DEFERRED_APPS.includes(a));
+    basesCaidas.add(databaseNameFor(todas[2]));
+    basesSinRespuesta.add(databaseNameFor(todas[0]));
+
+    const report = await runHealthCheck(undefined, envConSecreto);
+    const estados = report.apps.map((a) => a.status);
+    const ultimaSana = estados.lastIndexOf("ok");
+    const primeraSana = estados.indexOf("ok");
+
+    expect(primeraSana).toBeGreaterThan(0);
+    expect(ultimaSana).toBe(estados.length - 1);
+    // Una base caída es peor noticia que una nunca provisionada, y ambas van
+    // antes que la postergada a propósito, que es un estado conocido.
+    expect(estados[0]).toBe("caida");
+    expect(estados[1]).toBe("sin_base");
+    expect(estados.indexOf("diferida")).toBeLessThan(primeraSana);
   });
 
   it("los tools operativos más los sin backend cuadran con el catálogo completo", async () => {
-    const allApps = [...new Set(TOOL_CATALOG.map((t) => t.app))] as (typeof APP_KEYS)[number][];
-    const okApps = new Set(allApps);
-    const failApps = new Set<(typeof APP_KEYS)[number]>([allApps[0]]);
-    okApps.delete(allApps[0]);
+    basesCaidas.add(databaseNameFor(APP_KEYS[0]));
 
-    setupEnv(okApps, failApps);
-    mockD1First.mockResolvedValue({ alive: 1 });
+    const report = await runHealthCheck(undefined, envConSecreto);
 
-    const report = await runHealthCheck(undefined, mockEnv);
     expect(report.resumen.toolsOperativos + report.resumen.toolsSinBackend).toBe(TOOL_CATALOG.length);
+  });
+
+  it("no abre más de 4 conexiones a la vez, por debajo del tope de 6 de Workers", async () => {
+    enVuelo = 0;
+    maximoSimultaneo = 0;
+
+    await runHealthCheck(undefined, envConSecreto);
+
+    expect(maximoSimultaneo).toBeGreaterThan(1);
+    expect(maximoSimultaneo).toBeLessThanOrEqual(4);
   });
 });

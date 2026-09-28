@@ -86,9 +86,9 @@ function concatUint8Arrays(chunks: Uint8Array[]): Uint8Array {
 }
 
 async function validateKeyForEnv(rawKey: string, env: Env): Promise<ApiKeyRecord | null> {
-  if (!env.MCP_DB) return null;
+  if (!env.NEON_DATABASE_URL) return null;
   const { validateApiKey } = await import("./auth/api-key.js");
-  const result = await validateApiKey(rawKey, { MCP_DB: env.MCP_DB });
+  const result = await validateApiKey(rawKey, env);
   return result.ok ? result.key : null;
 }
 

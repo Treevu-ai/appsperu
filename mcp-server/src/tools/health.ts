@@ -1,38 +1,47 @@
 /**
  * `rastro_health` — qué apps del catálogo responden de verdad en este momento.
  *
- * En la arquitectura MCP Worker + D1, no hay Express apps que hacer ping a
- * `/health`. En su lugar, verifica que cada binding D1 existe y responde a
- * un `SELECT 1`. Un binding inexistente o una query que falla indica que la
- * app no está disponible en ese entorno.
+ * En la arquitectura MCP Worker + Neon no hay Express apps que hacer ping a
+ * `/health`. En su lugar, abre una conexión a la base de cada app y ejecuta
+ * `SELECT 1`. Una app sin base todavía provisionada, o con la base caída,
+ * aparece como no operativa.
  *
- * Esto separa "la DB está caída/no existe" de "no hay datos en la fuente"
+ * Esto separa "la base no existe o está caída" de "no hay datos en la fuente"
  * — el mismo objetivo que el HTTP health check anterior.
  */
 
 import type { AppKey } from "../apps.js";
-import { d1BindingFor } from "../apps.js";
+import { APP_KEYS } from "../apps.js";
+import { getPoolForApp, databaseNameFor, type NeonEnv } from "../db/neon-env.js";
 import { TOOL_CATALOG } from "../catalog.js";
+
+/**
+ * Apps cuya base se pospone a la segunda fase de la migración: ambas dependen
+ * de PostGIS, que tampoco existe en la alternativa que se descartó, pero cuya
+ *anucia de datos no se quiere reportar como caída.
+ */
+export const DEFERRED_APPS: readonly AppKey[] = ["geo-intersections", "ceplan-geo"];
+
+export type AppStatus = "ok" | "sin_base" | "caida" | "diferida";
 
 export interface AppHealth {
   app: AppKey;
-  ok: boolean;
-  error?: string;
+  status: AppStatus;
   latencyMs: number;
   /** Tools del catálogo que apuntan a esta app — el costo de que esté caída. */
   tools: number;
+  base?: string;
+  error?: string;
 }
 
 export interface HealthReport {
   generadoEn: string;
-  catalogo: {
-    tools: number;
-    apps: number;
-  };
+  catalogo: { tools: number; apps: number };
   resumen: {
-    appsOk: number;
-    appsCaidas: number;
-    appsTotales: number;
+    ok: number;
+    sinBase: number;
+    caidas: number;
+    diferidas: number;
     toolsOperativos: number;
     toolsSinBackend: number;
   };
@@ -43,56 +52,65 @@ function toolsForApp(app: AppKey): number {
   return TOOL_CATALOG.filter((tool) => tool.app === app).length;
 }
 
-async function checkApp(app: AppKey, env?: Record<string, unknown>): Promise<AppHealth> {
+async function checkApp(app: AppKey, env: NeonEnv | undefined): Promise<AppHealth> {
   const tools = toolsForApp(app);
   const startedAt = Date.now();
 
-  if (!env) {
+  if (DEFERRED_APPS.includes(app)) {
     return {
       app,
-      ok: false,
-      latencyMs: Date.now() - startedAt,
+      status: "diferida",
+      latencyMs: 0,
       tools,
-      error: "Sin env de Worker (modo stdio): no hay bindings D1 disponibles.",
+      error: "Postposición a la segunda fase de la migración (requiere PostGIS).",
     };
   }
 
-  const binding = d1BindingFor(app);
-  const db = env[binding];
-  if (!db) {
+  if (!env?.NEON_DATABASE_URL) {
     return {
       app,
-      ok: false,
-      latencyMs: Date.now() - startedAt,
+      status: "sin_base",
+      latencyMs: 0,
       tools,
-      error: `Binding D1 '${binding}' no disponible en este Worker.`,
+      error: "Sin NEON_DATABASE_URL en el entorno (modo stdio, o secret sin configurar).",
     };
+  }
+
+  const db = getPoolForApp(env, app);
+  if (!db) {
+    return { app, status: "sin_base", latencyMs: 0, tools, base: databaseNameFor(app) };
   }
 
   try {
-    const stmt = (db as import("@cloudflare/workers-types").D1Database).prepare("SELECT 1 AS alive");
-    const result = await stmt.first();
-    const ok = result !== null && result !== undefined;
+    const row = await db.queryRow<{ alive: number }>("SELECT 1 AS alive");
+    const ok = row !== null && row !== undefined;
     return {
       app,
-      ok,
+      status: ok ? "ok" : "sin_base",
       latencyMs: Date.now() - startedAt,
       tools,
-      ...(!ok ? { error: "SELECT 1 devolvió null/undefined — la DB está vacía o corrupta." } : {}),
+      base: databaseNameFor(app),
+      ...(!ok ? { error: "SELECT 1 no devolvió fila — la base existe pero está vacía o inaccesible." } : {}),
     };
   } catch (err) {
     return {
       app,
-      ok: false,
+      status: "caida",
       latencyMs: Date.now() - startedAt,
       tools,
+      base: databaseNameFor(app),
       error: err instanceof Error ? err.message : String(err),
     };
   }
 }
 
-/** `map` con techo de concurrencia — evita abrir 38 queries D1 a la vez. */
-const CONCURRENCY = 8;
+/**
+ * Techo de concurrencia deliberadamente bajo (4, no 8): Workers permite 6
+ * conexiones simultáneas por invocación contando las que esperan headers, y
+ * cada chequeo abre un WebSocket a Neon. Bajar de 6 evita que el health check
+ * se auto-limite y reporte falsos `caida`.
+ */
+const CONCURRENCY = 4;
 
 async function mapWithConcurrency<T, R>(items: readonly T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
   const results = new Array<R>(items.length);
@@ -107,28 +125,29 @@ async function mapWithConcurrency<T, R>(items: readonly T[], limit: number, fn: 
   return results;
 }
 
-export async function runHealthCheck(target?: AppKey, env?: Record<string, unknown>): Promise<HealthReport> {
-  const apps = target ? [target] : [...TOOL_CATALOG.map((t) => t.app)];
-  const uniqueApps = [...new Set(apps)] as AppKey[];
-  const results = await mapWithConcurrency(uniqueApps, CONCURRENCY, (app) => checkApp(app, env));
+const RANK: Record<AppStatus, number> = { caida: 0, sin_base: 1, diferida: 2, ok: 3 };
 
-  const appsOk = results.filter((r) => r.ok).length;
-  const toolsOperativos = results.filter((r) => r.ok).reduce((sum, r) => sum + r.tools, 0);
-  const toolsSinBackend = results.filter((r) => !r.ok).reduce((sum, r) => sum + r.tools, 0);
+export async function runHealthCheck(target?: AppKey, env?: Record<string, unknown>): Promise<HealthReport> {
+  const uniqueApps = target ? [target] : [...new Set(APP_KEYS)] as AppKey[];
+  const results = await mapWithConcurrency(uniqueApps, CONCURRENCY, (app) =>
+    checkApp(app, env as NeonEnv | undefined)
+  );
+
+  const count = (status: AppStatus) => results.filter((r) => r.status === status).length;
+  const toolsFor = (status: AppStatus) =>
+    results.filter((r) => r.status === status).reduce((sum, r) => sum + r.tools, 0);
 
   return {
     generadoEn: new Date().toISOString(),
-    catalogo: {
-      tools: TOOL_CATALOG.length,
-      apps: uniqueApps.length,
-    },
+    catalogo: { tools: TOOL_CATALOG.length, apps: uniqueApps.length },
     resumen: {
-      appsOk,
-      appsCaidas: results.length - appsOk,
-      appsTotales: results.length,
-      toolsOperativos,
-      toolsSinBackend,
+      ok: count("ok"),
+      sinBase: count("sin_base"),
+      caidas: count("caida"),
+      diferidas: count("diferida"),
+      toolsOperativos: toolsFor("ok"),
+      toolsSinBackend: toolsFor("caida") + toolsFor("sin_base") + toolsFor("diferida"),
     },
-    apps: [...results].sort((a, b) => Number(a.ok) - Number(b.ok) || a.app.localeCompare(b.app)),
+    apps: [...results].sort((a, b) => RANK[a.status] - RANK[b.status] || a.app.localeCompare(b.app)),
   };
 }

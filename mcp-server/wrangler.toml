@@ -1,176 +1,29 @@
+# MCP Worker de Rastro — Cloudflare Workers.
+#
+# La capa de datos NO es D1 sino Neon (Postgres 17 serverless). Razón en
+# docs/adr/0024-neon-en-lugar-de-d1.md: D1 no tiene PostGIS ni transacciones
+# ni advisory locks, y el repo los usa en 2, 38 y 8 apps respectivamente.
+#
+# Hay un solo secret, no uno por app. Las 36 bases viven en el mismo proyecto
+# Neon, así que comparten host, rol y compute; lo único que cambia es el
+# nombre de la base, y ese se deriva del AppKey en src/db/neon-env.ts.
+#   npx wrangler secret put NEON_DATABASE_URL
+#   →  postgresql://USER:PASS@ep-xxx.<region>.aws.neon.tech/postgres
+# El resolver reescribe el path por app y por la base `mcp` (auth y budgets).
+#
+# nodejs_compat es obligatorio: @neondatabase/serverless y node:crypto
+# dependen de APIs de Node que el runtime no expone sin ese flag.
 name = "rastro-mcp-worker"
 main = "src/worker.ts"
-compatibility_date = "2025-01-01"
+compatibility_date = "2026-09-28"
+compatibility_flags = ["nodejs_compat"]
 
-[vars]
-ENV = "production"
+[observability]
+enabled = true
 
-# D1 database for MCP server's own tables (API keys, usage logs)
-# Create with: npx wrangler d1 create rastro_mcp --local
-# Then add database_id (UUID) for remote deployment.
-[[d1_databases]]
-binding = "MCP_DB"
-database_name = "rastro_mcp"
-migrations_dir = "src/db/migrations"
-
-# 38 app databases — cada app tiene su propia DB D1
-[[d1_databases]]
-binding = "DB_RADAR_EJECUCION"
-database_name = "rastro_radar_ejecucion"
-
-[[d1_databases]]
-binding = "DB_COMPRAS_PUBLICAS"
-database_name = "rastro_compras_publicas"
-
-[[d1_databases]]
-binding = "DB_RADAR_INVERSIONES"
-database_name = "rastro_radar_inversiones"
-
-[[d1_databases]]
-binding = "DB_INFOBRAS"
-database_name = "rastro_infobras"
-
-[[d1_databases]]
-binding = "DB_CEPLAN_ESTRATEGICO"
-database_name = "rastro_ceplan_estrategico"
-
-[[d1_databases]]
-binding = "DB_CEPLAN_GEO"
-database_name = "rastro_ceplan_geo"
-
-[[d1_databases]]
-binding = "DB_IDENTIDAD_FISCAL"
-database_name = "rastro_identidad_fiscal"
-
-[[d1_databases]]
-binding = "DB_SALUD_INSTITUCIONAL"
-database_name = "rastro_salud_institucional"
-
-[[d1_databases]]
-binding = "DB_PROVEEDORES_SANCIONADOS"
-database_name = "rastro_proveedores_sancionados"
-
-[[d1_databases]]
-binding = "DB_ACTIVIDAD_AGRARIA"
-database_name = "rastro_actividad_agraria"
-
-[[d1_databases]]
-binding = "DB_SEGURIDAD_CIUDADANA"
-database_name = "rastro_seguridad_ciudadana"
-
-[[d1_databases]]
-binding = "DB_BCRP_COMERCIO_EXTERIOR"
-database_name = "rastro_bcrp_comercio_exterior"
-
-[[d1_databases]]
-binding = "DB_INVERSION_PRIVADA"
-database_name = "rastro_inversion_privada"
-
-[[d1_databases]]
-binding = "DB_BCRP_LA_LIBERTAD"
-database_name = "rastro_bcrp_la_libertad"
-
-[[d1_databases]]
-binding = "DB_SERVICIOS_SALUD"
-database_name = "rastro_servicios_salud"
-
-[[d1_databases]]
-binding = "DB_PROGRAMAS_SOCIALES"
-database_name = "rastro_programas_sociales"
-
-[[d1_databases]]
-binding = "DB_ACTIVIDAD_EMPRESARIAL"
-database_name = "rastro_actividad_empresarial"
-
-[[d1_databases]]
-binding = "DB_INFORMES_CONTROL"
-database_name = "rastro_informes_control"
-
-[[d1_databases]]
-binding = "DB_MINDEF"
-database_name = "rastro_mindef"
-
-[[d1_databases]]
-binding = "DB_MIMP"
-database_name = "rastro_mimp"
-
-[[d1_databases]]
-binding = "DB_RENAMU"
-database_name = "rastro_renamu"
-
-[[d1_databases]]
-binding = "DB_AUTORIDADES_ELECTAS"
-database_name = "rastro_autoridades_electas"
-
-[[d1_databases]]
-binding = "DB_INSTITUCIONES_EDUCATIVAS"
-database_name = "rastro_instituciones_educativas"
-
-[[d1_databases]]
-binding = "DB_INFRACCIONES_AMBIENTALES"
-database_name = "rastro_infracciones_ambientales"
-
-[[d1_databases]]
-binding = "DB_RED_VIAL_SUBNACIONAL"
-database_name = "rastro_red_vial_subnacional"
-
-[[d1_databases]]
-binding = "DB_RESIDUOS_SOLIDOS"
-database_name = "rastro_residuos_solidos"
-
-[[d1_databases]]
-binding = "DB_INFRAESTRUCTURA_MTC"
-database_name = "rastro_infraestructura_mtc"
-
-[[d1_databases]]
-binding = "DB_RIESGO_FISCAL_ISDS"
-database_name = "rastro_riesgo_fiscal_isds"
-
-[[d1_databases]]
-binding = "DB_CANDIDATOS_ERM"
-database_name = "rastro_candidatos_erm"
-
-[[d1_databases]]
-binding = "DB_PODER_JUDICIAL"
-database_name = "rastro_poder_judicial"
-
-[[d1_databases]]
-binding = "DB_VIOLENCIA_ESCOLAR"
-database_name = "rastro_violencia_escolar"
-
-[[d1_databases]]
-binding = "DB_LEGOSLATIVO_CONGRESO"
-database_name = "rastro_legislativo_congreso"
-
-[[d1_databases]]
-binding = "DB_CATASTRO_MINERO"
-database_name = "rastro_catastro_minero"
-
-[[d1_databases]]
-binding = "DB_AREAS_PROTEGIDAS"
-database_name = "rastro_areas_protegidas"
-
-[[d1_databases]]
-binding = "DB_SENACE_CARTERA_PROYECTOS"
-database_name = "rastro_senace_cartera_proyectos"
-
-[[d1_databases]]
-binding = "DB_CATASTRO_FORESTAL"
-database_name = "rastro_catastro_forestal"
-
-[[d1_databases]]
-binding = "DB_EMERGENCIAS_INDECI"
-database_name = "rastro_emergencias_indeci"
-
-# geo-intersections uses PostGIS in Postgres — D1 does not support PostGIS.
-# This binding points to a D1 DB, but geo-intersections handlers will need
-# spatial functions reimplemented or a Neon fallback.
-[[d1_databases]]
-binding = "DB_GEO_INTERSECTIONS"
-database_name = "rastro_geo_intersections"
+# Neo no expone consultas desde un binding: el secret se carga en runtime.
+# El catálogo de 209 tools se genera en build desde catalog.ts, así que no
+# necesita ir en vars.
 
 [triggers]
 crons = []
-
-[env.production]
-# Production-specific overrides (if needed)

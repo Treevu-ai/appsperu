@@ -1,6 +1,7 @@
 /*
- * Arquitectura MCP Worker + D1: cada app tiene su propia base de datos D1.
- * Los bindings se declaran en `wrangler.toml` como `DB_<APP_UPPER_SNAKE>`.
+ * Catálogo de apps del MCP. Cada una tiene su propia base de datos en el
+ * proyecto Neon; el nombre de la base se deriva del `AppKey` en
+ * `db/neon-env.ts` (no hay un binding ni un secret por app).
  * La app `territorio-inteligencia` no está en APP_KEYS (sin ingesta real,
  * ver apps/territorio-inteligencia/README.md).
  */
@@ -46,11 +47,6 @@ export const APP_KEYS = [
 ] as const;
 
 export type AppKey = (typeof APP_KEYS)[number];
-
-/** Mapea AppKey → nombre del binding D1 declarado en wrangler.toml (env.DB_<SUFFIX>). */
-export function d1BindingFor(app: AppKey): string {
-  return `DB_${app.toUpperCase().replace(/-/g, "_")}`;
-}
 
 /** Puertos por defecto para fallback HTTP (modo stdio/local). */
 const DEFAULT_PORTS: Record<AppKey, number> = {
@@ -100,7 +96,7 @@ function envVarFor(app: AppKey): string {
 
 /**
  * Resuelve la base URL de una app para fallback HTTP (modo stdio/local).
- * En el Worker, los handlers usan D1 directamente y no necesitan esta URL.
+ * En el Worker los handlers hablan Postgres directo vía Neon y no la usan.
  */
 export function baseUrlFor(app: AppKey): string {
   const fromEnv = process.env[envVarFor(app)];

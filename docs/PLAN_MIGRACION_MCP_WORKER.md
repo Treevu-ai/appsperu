@@ -1,4 +1,12 @@
-# Plan de migración — MCP Worker + D1 (sin VPS, sin rastro-web)
+# Plan de migración — MCP Worker (sin VPS, sin rastro-web)
+
+> **Decisión tomada el 2026-09-28: Neon, no D1.** Ver
+> [`adr/0024-neon-en-lugar-de-d1.md`](adr/0024-neon-en-lugar-de-d1.md) para la
+> decisión y su evidencia, y [`../mcp-server/RUNBOOK_NEON.md`](../mcp-server/RUNBOOK_NEON.md)
+> para el procedimiento de provisioning. Este documento se conserva como
+> registro del análisis original; **las secciones 3 y 5 (schema D1, conversión
+> de SQL) quedaron descartadas** y la tabla "Arquitectura objetivo" ya no
+> refleja el estado real. Leyelo como historia, no como guía.
 
 > **Contexto:** El usuario solo consume Rastro desde terminal/agentes IA (Claude Code, Cursor).
 > El VPS está parado (no se usa, no se sabe manejar). Todo es manual/a demanda.
@@ -178,5 +186,13 @@ npx wrangler dev mcp-server/src/worker.ts
 
 ---
 
-**Decisión pendiente del usuario:** ¿D1 (más simple, pero requiere conversión SQL y manejo de limitaciones) o Neon (menos conversión, pero es un servicio externo y pago si supera el free tier)?
-```
+**Decisión del usuario (2026-09-28): Neon.** Ver
+[`adr/0024-neon-en-lugar-de-d1.md`](adr/0024-neon-en-lugar-de-d1.md).
+
+El escaneo de las 38 apps descartó D1 por tres bloqueos: sin PostGIS, sin
+transacciones ni advisory locks, y 6 conexiones simultáneas por invocación
+contra las 24 conexiones cross-app que ya usa el repo. La decisión además
+descartó Hyperdrive como vía de conexión —su tope de 25 configuraciones por
+cuenta no alcanza para 38 bases— y confirmó que las 36 caben en un solo proyecto
+Neon. El procedimiento está en
+[`../mcp-server/RUNBOOK_NEON.md`](../mcp-server/RUNBOOK_NEON.md).

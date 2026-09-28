@@ -39,7 +39,7 @@ export interface ArgsValidationError {
 }
 
 /**
- * En MCP Worker + D1, el `D1Env` se pasa como contexto de ejecución.
+ * En el MCP Worker el env de Neon se pasa como contexto de ejecución.
  * Para stdio (desarrollo local), env es `{}` y solo los tools con handler
  * pueden ejecutarse; el resto usan HTTP proxy como fallback.
  */
@@ -83,7 +83,7 @@ export function findTool(name: string): ToolSpec | undefined {
 }
 
 /**
- * Ejecuta un tool: si tiene `handler`, ejecuta SQL directamente contra D1;
+ * Ejecuta un tool: si tiene `handler`, ejecuta SQL directamente contra Neon;
  * si no, hace HTTP proxy a la app Express (fallback para stdio/local).
  */
 export async function invokeTool(
