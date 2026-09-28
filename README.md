@@ -4,123 +4,115 @@
 
 Repo: https://github.com/Treevu-ai/appsperu
 
-Monorepo de apps backend (APIs Express + Postgres por app) que exponen datos abiertos
-del Estado peruano — presupuesto, contrataciones, inversiones, obras públicas, catastro minero,
-títulos forestales, transporte, infraestructura, supervisión ambiental, **macro BCRP
-(tipo de cambio, inflación, PBI, tasas de interés)** — cruzados en un solo
-pipeline con conectores Python estándar, cache local y rate limits respetuosos. La capa de
-lectura pública para humanos y agentes IA es **Rastro** (`apps/rastro-web/`, publicada en
-`rastro.fyi`); el servidor MCP (`mcp-server/`) expone 38 de las APIs del monorepo como tools de solo lectura
-para Claude Code, Claude Desktop, Cursor, Windsurf, Cline y Continue.dev.
+Monorepo que conecta datos abiertos del Estado peruano — presupuesto, contrataciones, inversiones, obras públicas, catastro minero, títulos forestales, transporte, infraestructura, supervisión ambiental, **macro BCRP (tipo de cambio, inflación, PBI, tasas de interés)** — en un pipeline de ingestión manual con conectores estándar y rate limits respetuosos.
+
+## Arquitectura actual
+
+```
+Agentes IA (Claude Code, Cursor, Claude Desktop)
+    → MCP Worker (Cloudflare Workers — rastro.fyi/mcp)
+        → D1 databases (38 bindings, una por app)
+                ↑
+    Scripts de ingestión (locales, on-demand → D1 HTTP API)
+```
+
+- **MCP Server** (`mcp-server/`): Worker de Cloudflare que expone **209 tools de solo lectura** vía 3 meta-tools (`rastro_buscar_tools` + `rastro_llamar` + `rastro_health`).
+- **Data layer**: 38 D1 databases (SQLite), una por app backend.
+- **Ingreso de datos**: scripts locales (`apps/<app>/api/src/ingest/*`) que corren a demanda y escriben a D1 vía `wrangler d1 execute` o la D1 HTTP API.
 
 ## Apps
 
-| App | Dominio | API |
+| App | Dominio | D1 Binding |
 |---|---|---|
-| `radar-ejecucion` | Presupuesto/ejecución (MEF) + benchmark territorial | 4000 |
-| `compras-publicas` | Contrataciones (OECE/OCDS) + proveedores/concentración | 4001 |
-| `radar-inversiones` | Inversiones (Invierte.pe) | 4002 |
-| `infobras` | Obras públicas (Contraloría) | 4003 |
-| `ceplan-estrategico` | Planificación estratégica (ObservaPerú) | 4004 |
-| `ceplan-geo` | GeoServer (capas territoriales/infraestructura) | 4005 |
-| `identidad-fiscal` | Padrón RUC (SUNAT) + cruces | 4006 |
-| `salud-institucional` | Score compuesto (agrega otras fuentes, sin BD propia) | 4007 |
-| `proveedores-sancionados` | Inhabilitaciones/multas RNP/OECE | 4008 |
-| `actividad-agraria` | Series MIDAGRI regionales (jornal, tractor, yunta) | 4009 |
-| `seguridad-ciudadana` | Denuncias policiales SIDPOL (MININTER) | 4010 |
-| `bcrp-comercio-exterior` | Comercio exterior + macro BCRP (tipo de cambio, inflación, PBI, tasas) | 4011 |
-| `inversion-privada` | Cartera APP/PA + Obras por Impuestos (PROINVERSIÓN/VERTIX) | 4012 |
-| `bcrp-la-libertad` | Síntesis de actividad económica de La Libertad (BCRP Trujillo) | 4013 |
-| `servicios-salud` | Establecimientos de salud (RENIPRESS/SUSALUD) + cruce con inversión | 4014 |
-| `programas-sociales` | Cobertura de programas sociales (INFOMIDIS/MIDIS) + cruce con inversión | 4015 |
-| `actividad-empresarial` | Empresas del sector privado por distrito (MTPE) + cruce con inversión | 4016 |
-| `informes-control` | Informes de servicios de control (Contraloría), sin datos de persona natural | 4017 |
-| `mindef` | Convenios offset, capacitación militar en el exterior y misiones de paz (MINDEF) | 4018 |
-| `mimp` | Casos de violencia contra la mujer (CEM) y consultas Chat 100 — solo agregados (MIMP) | 4019 |
-| `renamu` | Capacidad institucional municipal: vehículos, telefonía e internet (RENAMU/INEI) | 4020 |
-| `autoridades-electas` | Autoridades proclamadas por proceso electoral, sin datos de identidad (JNE) | 4021 |
-| `instituciones-educativas` | Padrón nacional de instituciones educativas, con ubicación (MINEDU/ESCALE) | 4022 |
-| `infracciones-ambientales` | Registro de infractores ambientales sancionados (OEFA/RUIAS) | 4023 |
-| `red-vial-subnacional` | Intervenciones en redes viales departamentales/vecinales (MTC/Provías Descentralizado) | 4024 |
-| `residuos-solidos` | Generación anual de residuos sólidos por distrito, serie 2019-2024 (MINAM/SIGERSOL) | 4025 |
-| `infraestructura-mtc` | Terminales portuarios, aeródromos y peajes de la red vial nacional (MTC) | 4026 |
-| `riesgo-fiscal-isds` | Pasivos contingentes explícitos por ISDS/APP, por año de cierre (MEF, MMM/IAPM) — conector `pdf-parse`, descarga manual | 4027 |
-| `candidatos-erm` | Candidatos a las Elecciones Regionales y Municipales 2026 (JNE/Datapol) | 4027 |
-| `poder-judicial` | Estadística jurisdiccional de procesos judiciales (Poder Judicial) | 4028 |
-| `violencia-escolar` | Casos reportados a SíseVe (MINEDU) | 4029 |
-| `legislativo-congreso` | Proyectos de ley del Congreso de la República | 4030 |
-| `catastro-minero` | Derechos mineros (INGEMMET) | 4031 |
-| `areas-protegidas` | Áreas naturales protegidas (SERNANP) | 4032 |
-| `senace-cartera-proyectos` | Cartera de proyectos de certificación ambiental (SENACE) | 4033 |
-| `catastro-forestal` | Catastro forestal — modalidad de acceso + ordenamiento forestal (SERFOR) | 4034 |
-| `emergencias-indeci` | Emergencias y daños históricos (INDECI/SINPAD) | 4035 |
+| `radar-ejecucion` | Presupuesto/ejecución (MEF) + benchmark territorial | `RASTRO_DB_RADAR_EJECUCION` |
+| `compras-publicas` | Contrataciones (OECE/OCDS) + proveedores/concentración | `RASTRO_DB_COMPRAS_PUBLICAS` |
+| `radar-inversiones` | Inversiones (Invierte.pe) | `RASTRO_DB_RADAR_INVERSIONES` |
+| `infobras` | Obras públicas (Contraloría) | `RASTRO_DB_INFOBRAS` |
+| `ceplan-estrategico` | Planificación estratégica (ObservaPerú) | `RASTRO_DB_CEPLAN_ESTRATEGICO` |
+| `ceplan-geo` | GeoServer (capas territoriales/infraestructura) | `RASTRO_DB_CEPLAN_GEO` |
+| `identidad-fiscal` | Padrón RUC (SUNAT) + cruces | `RASTRO_DB_IDENTIDAD_FISCAL` |
+| `salud-institucional` | Score compuesto (agrega otras fuentes, sin BD propia) | comparte DBs de otras apps |
+| `proveedores-sancionados` | Inhabilitaciones/multas RNP/OECE | `RASTRO_DB_PROVEEDORES_SANCIONADOS` |
+| `actividad-agraria` | Series MIDAGRI regionales (jornal, tractor, yunta) | `RASTRO_DB_ACTIVIDAD_AGRARIA` |
+| `seguridad-ciudadana` | Denuncias policialas SIDPOL (MININTER) | `RASTRO_DB_SEGURIDAD_CIUDADANA` |
+| `bcrp-comercio-exterior` | Comercio exterior + macro BCRP | `RASTRO_DB_BCRP_COMERCIO_EXTERIOR` |
+| `inversion-privada` | Cartera APP/PA + Obras por Impuestos | `RASTRO_DB_INVERSION_PRIVADA` |
+| `bcrp-la-libertad` | Síntesis económica de La Libertad (BCRP Trujillo) | `RASTRO_DB_BCRP_LA_LIBERTAD` |
+| `servicios-salud` | Establecimientos de salud (RENIPRESS/SUSALUD) | `RASTRO_DB_SERVICIOS_SALUD` |
+| `programas-sociales` | Cobertura de programas sociales (INFOMIDIS/MIDIS) | `RASTRO_DB_PROGRAMAS_SOCIALES` |
+| `actividad-empresarial` | Empresas del sector privado por distrito (MTPE) | `RASTRO_DB_ACTIVIDAD_EMPRESARIAL` |
+| `informes-control` | Informes de control (Contraloría) | `RASTRO_DB_INFORMES_CONTROL` |
+| `mindef` | Convenios offset, capacitación, misiones de paz | `RASTRO_DB_MINDEF` |
+| `mimp` | Violencia contra la mujer (CEM) + Chat 100 | `RASTRO_DB_MIMP` |
+| `renamu` | Capacidad institucional municipal | `RASTRO_DB_RENAMU` |
+| `autoridades-electas` | Autoridades proclamadas (JNE) | `RASTRO_DB_AUTORIDADES_ELECTAS` |
+| `instituciones-educivas` | Padrón nacional de instituciones educativas | `RASTRO_DB_INSTITUCIONES_EDUCATIVAS` |
+| `infracciones-ambientales` | Infractores ambientales sancionados (OEFA/RUIAS) | `RASTRO_DB_INFRACCIONES_AMBIENTALES` |
+| `red-vial-subnacional` | Intervenciones en redes viales (MTC/Provías) | `RASTRO_DB_RED_VIAL_SUBNACIONAL` |
+| `residuos-solidos` | Residuos sólidos por distrito (MINAM/SIGERSOL) | `RASTRO_DB_RESIDUOS_SOLIDOS` |
+| `infraestructura-mtc` | Terminales portuarios, aeródromos, peajes (MTC) | `RASTRO_DB_INFRAESTRUCTURA_MTC` |
+| `riesgo-fiscal-isds` | Pasivos contingentes ISDS/APP (MEF/MMM) | `RASTRO_DB_RIESGO_FISCAL_ISDS` |
+| `candidatos-erm` | Candidatos a Elecciones Regionales/Municipales 2026 (JNE/Datapol) | `RASTRO_DB_CANDIDATOS_ERM` |
+| `poder-judicial` | Estadística jurisdiccional (Poder Judicial) | `RASTRO_DB_PODER_JUDICIAL` |
+| `violencia-escolar` | Casos reportados a SíseVe (MINEDU) | `RASTRO_DB_VIOLENCIA_ESCOLAR` |
+| `legislativo-congreso` | Proyectos de ley del Congreso | `RASTRO_DB_LEGISLATIVO_CONGRESO` |
+| `catastro-minero` | Derechos mineros (INGEMMET) | `RASTRO_DB_CATASTRO_MINERO` |
+| `areas-protegidas` | Áreas naturales protegidas (SERNANP) | `RASTRO_DB_AREAS_PROTEGIDAS` |
+| `senace-cartera-proyectos` | Cartera de proyectos ambientales (SENACE) | `RASTRO_DB_SENACE_CARTERA_PROYECTOS` |
+| `catastro-forestal` | Catastro forestal (SERFOR) | `RASTRO_DB_CATASTRO_FORESTAL` |
+| `emergencias-indeci` | Emergencias y daños (INDECI/SINPAD) | `RASTRO_DB_EMERGENCIAS_INDECI` |
+| `geo-intersections` | Cruce geográfico de capas territoriales | `RASTRO_DB_GEO_INTERSECTIONS` |
 
-## Levantar una app
+## Uso del MCP Server (Worker)
+
+### Desarrollo local (stdio)
 
 ```bash
-cd apps/<nombre>/api
-docker compose up -d
-cp .env.example .env
-npm run migrate
-npm run dev
+cd mcp-server
+npm ci
+npm run dev          # transporte stdio — para usar desde Claude Code/Cursor local
 ```
 
-`salud-institucional/api` no tiene Postgres propio — solo `.env` con las connection strings
-de las otras bases y `npm run dev`.
+Configura el cliente MCP (`.mcp.json` o `~/.cursor/mcp.json`):
 
-## Servidor MCP (Model Context Protocol)
+```json
+{
+  "mcpServers": {
+    "rastro": {
+      "command": "node",
+      "args": ["mcp-server/dist/index.js"]
+    }
+  }
+}
+```
 
-[`mcp-server/`](mcp-server/) expone las 38 apps del catálogo como **209 tools de solo lectura**, buscables desde
-2 meta-tools (`rastro_buscar_tools` + `rastro_llamar`, no registrados uno por uno) para agentes IA
-vía MCP en producción (`https://rastro.fyi` o `https://treevu-rastro-gw.fly.dev`, transporte Streamable HTTP). Para desarrollo local, usa transporte stdio. Compatible con Claude Code, Claude Desktop, Cursor, Windsurf, Cline y
-Continue.dev. Una vez conectado, el agente busca el tool exacto, lo ejecuta, encadena resultados y
-entrega respuestas con citas verificables. Requiere que las apps ya estén corriendo — ver
-[`mcp-server/README.md`](mcp-server/README.md).
+### Producción (Cloudflare Worker)
 
-**CLI Market (retail LATAM, proyecto hermano):** MCP remoto en `https://cli-market-api.fly.dev/mcp`
-o cliente stdio `market-mcp` — ver [`docs/MCP_CLI_MARKET.md`](docs/MCP_CLI_MARKET.md) y
-[`.mcp.json.example`](.mcp.json.example).
+El MCP server está desplegado como un Worker de Cloudflare en `https://rastro.fyi/mcp` (Streamable HTTP, autenticado con API key `x-api-key`).
 
-Para conectar Rastro desde un agente: ver [`apps/rastro-web/DEPLOY.md`](apps/rastro-web/DEPLOY.md)
-y la página pública `/docs/api` en [rastro.fyi/docs/api](https://rastro.fyi/docs/api).
+Ver [`mcp-server/wrangler.toml`](mcp-server/wrangler.toml) para la configuración D1.
+
+## Ingesta de datos (on-demand)
+
+Todo es manual — no hay scheduler. Cada conector es un script CLI:
+
+```bash
+# Ingesta completa para La Libertad (MEF + Invierte + INFOBRAS + OECE + ObservaPerú + BCRP)
+bash scripts/ingest-la-libertad-completo.sh
+
+# Ingesta individual por app
+cd apps/<app>/api
+npm run dev          # inicia server local
+# en otra terminal:
+npm run ingest:*      # según los scripts que declare cada app
+```
+
+Ver [`docs/conectores.md`](docs/conectores.md) — ficha técnica por conector.
 
 ## Documentación
 
-- [`docs/ESTADO.md`](docs/ESTADO.md) — estado actual, cruces entre apps, pendientes.
-- [`docs/conectores.md`](docs/conectores.md) — ficha técnica por conector: qué hace, cómo,
-  con qué frecuencia y de qué fuente.
-- [`docs/data-contracts/`](docs/data-contracts/) — un archivo por fuente externa (MEF, OECE,
-  Invierte.pe, INFOBRAS) con lo confirmado en vivo.
-- [`docs/adr/`](docs/adr/) — decisiones arquitectónicas con su razón.
-- [`docs/PRD_Seguimiento_Sectores_y_GORE_La_Libertad_v1.md`](docs/PRD_Seguimiento_Sectores_y_GORE_La_Libertad_v1.md)
-  — seguimiento terminal de ministerios, organismos y Gobierno Regional La Libertad con cortes y vínculos verificables.
-- [`docs/PRD_Consolidacion_Logica_Compartida_y_Rigor_Temporal_v1.md`](docs/PRD_Consolidacion_Logica_Compartida_y_Rigor_Temporal_v1.md)
-  ([tickets](docs/TICKETS_Consolidacion_Logica_Compartida_y_Rigor_Temporal_v1.md)) — consolidar lógica SQL/JS
-  duplicada entre apps y cerrar una asimetría de rigor temporal en el cruce de identidad-fiscal.
-
-## Consultas sectoriales por terminal
-
-```bash
-cd apps/radar-ejecucion/api
-npm run sectors:inventory -- --anio 2026 --limite 50
-npm run ficha:sector -- --sector TRANSPORTE --anio 2026
-npm run ficha:entidad -- --entity-code 831 --anio 2026
-npm run comparativo:sectores -- --sectores SALUD,TRANSPORTE,VIVIENDA --anio 2026
-npm run movimiento:presupuesto -- --anio 2026
-npm run servicios:cuidados -- --tipo ALIMENTACION
-```
-
-Las entidades nacionales se consultan solo por gasto dirigido al departamento
-(`META_DEPARTAMENTO`); las regionales, por la unidad ejecutora con sede en La
-Libertad. CUI, obra y compra requieren una clave oficial exacta: Rastro muestra
-el vacío de vínculo cuando no la tiene.
-
-`servicios:cuidados` es el registro terminal de infraestructura y alimentación: CUI→obra únicamente por igualdad exacta y proveedor→cumplimiento únicamente por RUC documentado. Cuando no existe lote, entrega o RUC oficial, Rastro muestra el vacío en vez de inferirlo.
-
-## Ingesta completa La Libertad
-
-```bash
-bash scripts/ingest-la-libertad-completo.sh
-```
-
-Orquesta MEF (meta departamental), Invierte (CSV nacional), INFOBRAS, OECE segmentado, ObservaPerú y BCRP. Requiere Postgres de cada app levantado y `.env` configurados.
+- [`docs/ESTADO.md`](docs/ESTADO.md) — estado actual, historial de trabajo, pendientes.
+- [`docs/conectores.md`](docs/conectores.md) — qué hace cada conector, cómo, fuente y frecuencia.
+- [`docs/data-contracts/`](docs/data-contracts/) — un archivo por fuente externa.
+- [`docs/adr/`](docs/adr/) — decisiones arquitectónicas.
+- [`mcp-server/README.md`](mcp-server/README.md) — arquitectura interna del servidor MCP.

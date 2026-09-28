@@ -4,7 +4,7 @@ import { asyncHandler } from "../lib/async-handler.js";
 
 export const metaRouter = Router();
 
-/** Trazabilidad de lotes INFOBRAS — mismo contrato `items[]` que usa rastro-web. */
+/** Trazabilidad de lotes INFOBRAS — mismo contrato `items[]` que expone el MCP. */
 metaRouter.get(
   "/sources",
   asyncHandler(async (_req, res) => {

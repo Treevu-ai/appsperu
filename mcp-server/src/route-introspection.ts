@@ -6,9 +6,8 @@ import type { AppKey } from "./apps.js";
 /**
  * CX-15 (docs/PRD_Consolidacion_Logica_Compartida_y_Rigor_Temporal_v1.md): deriva los endpoints
  * `GET` reales de una app directamente de `app.ts` + `routes/*.ts`, en vez de una lista
- * mantenida a mano — mismo patrón de "parsear como texto" que ya usa
- * `apps/rastro-web/scripts/generate-mcp-catalog.mjs` sobre `catalog.ts` (evita arrastrar
- * Express como dependencia de `mcp-server` solo para introspección).
+ * mantenida a mano — mismo patrón de "parsear como texto" que ya usa `mcp-server/src/search.ts`
+ * sobre `catalog.ts` (evita arrastrar Express como dependencia de `mcp-server` solo para introspección).
  */
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../");
