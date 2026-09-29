@@ -1,88 +1,50 @@
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { randomUUID } from "node:crypto";
 import { buildMcpServer } from "./index.js";
 import type { Env } from "./env.js";
 import type { ApiKeyRecord } from "./auth/api-key.js";
 
-const transports: Record<string, StreamableHTTPServerTransport> = {};
-
 /**
- * Pseudo ServerResponse que adapta la Node.js-style API (setHeader, writeHead,
- * write, end, json, status) al modelo Web Streams de Workers.
- * El StreamableHTTPServerTransport necesita este interface para enviar
- * respuestas HTTP al cliente MCP.
+ * Cloudflare Workers habla Web Standards (Request/Response), no los streams de
+ * Node que asume `server/streamableHttp.js`. Por eso se usa el transporte
+ * `webStandardStreamableHttp`, que devuelve un `Response` ya construido.
+ *
+ * Antes se usaba el transporte de Node con un `WorkerResponseAdapter` que
+ * emulaba la mitad del contrato: `write`/`end`/`json` sí, pero no `on` ni
+ * `destroy`. Eso rompía de dos formas distintas al inicializar sesión — primero
+ * `outgoing.on is not a function` (500), y una vez añadidos esos métodos, el
+ * SDK seguía sin ver el `Accept` del request y respondía 406. Ninguna de las
+ * dos era un problema de Neon; era el shim. Con el transporte web no hace falta
+ * adaptar nada.
  */
-class WorkerResponseAdapter {
-  private headers: Record<string, string> = {};
-  private bodyChunks: Uint8Array[] = [];
-  private statusCode: number = 200;
-  private _ended: boolean = false;
-
-  setStatus(code: number): this {
-    this.statusCode = code;
-    return this;
+/**
+ * Cada request crea su propio transport. Un isolate de Workers es efímero y se
+ * atiende en paralelo: guardar sesiones en un `Map` de módulo funciona solo si
+ * las peticiones consecutivas caen en el mismo isolate, y en la práctica no es
+ * garantía — el cliente recibe un `mcp-session-id` válido y la petición
+ * siguiente aterriza en otro isolate con el mapa vacío ("Sesión MCP inválida").
+ *
+ * El modo stateless del SDK (sin `sessionIdGenerator`) elimina ese acoplamiento.
+ * El precio: se reconstruye el server por request y no hay stream SSE abierto,
+ * así que GET/DELETE no tienen sentido sin estado de sesión.
+ */
+async function answerPost(request: Request, env: Env): Promise<Response> {
+  const body = await request.clone().json().catch(() => null);
+  if (body === null) {
+    return jsonResponse({ error: "Cuerpo JSON inválido." }, 400);
   }
 
-  setHeader(name: string, value: string | string[]): this {
-    this.headers[name] = Array.isArray(value) ? value.join(", ") : value;
-    return this;
-  }
+  const transport = new WebStandardStreamableHTTPServerTransport({ enableJsonResponse: true });
+  const activeKey = await validateKeyForEnv(request.headers.get("x-api-key") ?? "", env);
+  const server = buildMcpServer(activeKey, env as Record<string, unknown>);
+  await server.connect(transport);
 
-  writeHead(statusCode: number, headers?: Record<string, string>): this {
-    this.statusCode = statusCode;
-    if (headers) {
-      Object.assign(this.headers, headers);
-    }
-    return this;
+  try {
+    return await transport.handleRequest(request, { parsedBody: body });
+  } finally {
+    await transport.close().catch(() => {});
   }
-
-  write(chunk: string | Uint8Array): this {
-    if (this._ended) return this;
-    if (typeof chunk === "string") {
-      this.bodyChunks.push(new TextEncoder().encode(chunk));
-    } else {
-      this.bodyChunks.push(chunk);
-    }
-    return this;
-  }
-
-  json(data: unknown): this {
-    const jsonStr = JSON.stringify(data);
-    this.setHeader("content-type", "application/json");
-    this.write(jsonStr);
-    this.end();
-    return this;
-  }
-
-  end(): this {
-    this._ended = true;
-    return this;
-  }
-
-  get status(): number {
-    return this.statusCode;
-  }
-
-  get response(): Response {
-    const body = this.bodyChunks.length > 0 ? concatUint8Arrays(this.bodyChunks) : undefined;
-    return new Response(body as BodyInit, { status: this.statusCode, headers: this.headers });
-  }
-
-  flushHeaders(): this {
-    return this;
-  }
-}
-
-function concatUint8Arrays(chunks: Uint8Array[]): Uint8Array {
-  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-  const result = new Uint8Array(totalLength);
-  let offset = 0;
-  for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return result;
 }
 
 async function validateKeyForEnv(rawKey: string, env: Env): Promise<ApiKeyRecord | null> {
@@ -92,18 +54,24 @@ async function validateKeyForEnv(rawKey: string, env: Env): Promise<ApiKeyRecord
   return result.ok ? result.key : null;
 }
 
+function jsonResponse(body: unknown, status: number): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+}
+
 /**
  * Cloudflare Worker handler — reemplaza Express http-transport.ts.
  * Soporta MCP sobre Streamable HTTP (Claude Desktop, Cursor, agents).
  */
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    void ctx;
     const url = new URL(request.url);
 
     if (url.pathname === "/health") {
-      return new Response(JSON.stringify({ status: "ok" }), {
-        headers: { "content-type": "application/json" },
-      });
+      return jsonResponse({ status: "ok" }, 200);
     }
 
     if (url.pathname !== "/mcp") {
@@ -118,66 +86,23 @@ export default {
       if (rawKey) {
         const activeKey = await validateKeyForEnv(rawKey, env);
         if (!activeKey) {
-          return new Response(JSON.stringify({ error: "x-api-key inválida." }), {
-            status: 401,
-            headers: { "content-type": "application/json" },
-          });
+          return jsonResponse({ error: "x-api-key inválida." }, 401);
         }
       }
     }
 
     if (method === "POST") {
-      const body = await request.clone().json().catch(() => null);
-      const sessionId = request.headers.get("mcp-session-id");
-
-      // Existing session — delegate to transport
-      if (sessionId && transports[sessionId]) {
-        const adapter = new WorkerResponseAdapter();
-        await transports[sessionId].handleRequest(request as never, adapter as never, body);
-        return adapter.response;
-      }
-
-      // New session — initialize
-      if (!sessionId && body && isInitializeRequest(body)) {
-        const transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: () => randomUUID(),
-          onsessioninitialized: (newSessionId) => {
-            transports[newSessionId] = transport;
-          },
-        });
-        transport.onclose = () => {
-          if (transport.sessionId) delete transports[transport.sessionId];
-        };
-
-        const activeKey = await validateKeyForEnv(request.headers.get("x-api-key") ?? "", env);
-        const server = buildMcpServer(activeKey, env as Record<string, unknown>);
-        await server.connect(transport);
-
-        const adapter = new WorkerResponseAdapter();
-        await transport.handleRequest(request as never, adapter as never, body);
-        return adapter.response;
-      }
-
-      return new Response(
-        JSON.stringify({
-          error: "Sesión MCP inválida: falta mcp-session-id de una sesión existente, o el request no es un initialize.",
-        }),
-        { status: 400, headers: { "content-type": "application/json" } }
-      );
+      return answerPost(request, env);
     }
 
     if (method === "GET" || method === "DELETE") {
-      const sessionId = request.headers.get("mcp-session-id");
-      const transport = sessionId ? transports[sessionId] : undefined;
-      if (!transport) {
-        return new Response(JSON.stringify({ error: "Sesión MCP inválida o inexistente." }), {
-          status: 400,
-          headers: { "content-type": "application/json" },
-        });
-      }
-      const adapter = new WorkerResponseAdapter();
-      await transport.handleRequest(request as never, adapter as never);
-      return adapter.response;
+      return jsonResponse(
+        {
+          error:
+            "Transporte MCP stateless: sin estado de sesión no hay stream SSE. El protocolo se sirve por POST/JSON.",
+        },
+        405
+      );
     }
 
     return new Response("Method not allowed", { status: 405 });

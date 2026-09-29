@@ -17,5 +17,9 @@
     "apps/informes-control/api",
     "apps/servicios-salud/api",
     "apps/programas-sociales/api"
-  ]
+  ],
+  "dependencies": {
+    "@neon/config": "^1.8.2",
+    "@neon/env": "^1.4.7"
+  }
 }
