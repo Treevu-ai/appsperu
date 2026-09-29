@@ -1,11 +1,7 @@
 # Endpoints de Rastro (2026-09-29)
 
-> El MCP server tiene el código y el deploy listos (209/209 tools con handler
-> contra Neon), pero **sin ruta pública activa todavía**: se publicó
-> brevemente en `rastro.fyi/mcp` y se revirtió el mismo día al confirmar un
-> hallazgo CRITICAL de security-review (el Worker acepta tráfico sin
-> `x-api-key` — "modo abierto" — y quedaba expuesto a internet sin rate
-> limit). Fly.io/VPS fue decommissionado por completo — ver
+> El MCP server está **en producción con endpoint público**, `x-api-key`
+> obligatoria. Fly.io/VPS fue decommissionado por completo — ver
 > [`docs/adr/0024-neon-en-lugar-de-d1.md`](adr/0024-neon-en-lugar-de-d1.md) y
 > [`../mcp-server/RUNBOOK_NEON.md`](../mcp-server/RUNBOOK_NEON.md).
 
@@ -14,51 +10,46 @@
 | Endpoint | Qué es | Stack | Estado 2026-09-29 |
 |----------|--------|-------|-------------------|
 | **https://www.rastro.fyi** | Sitio web (SPA) | Cloudflare Pages | Sirve HTML |
-| `rastro-mcp-worker` | Protocolo MCP (Streamable HTTP), 209 tools vía 3 meta-tools | Cloudflare Worker + Neon | **Desplegado, sin ruta pública** (`routes = []`, `workers_dev = false` en `wrangler.toml`) |
+| **https://www.rastro.fyi/mcp** | Protocolo MCP (Streamable HTTP), 209 tools vía 3 meta-tools | Cloudflare Worker + Neon | **En producción**, `x-api-key` obligatoria |
+| **https://rastro.fyi/mcp** | Mismo Worker — el apex redirige (301) a `www` antes de evaluar routes | Cloudflare Worker + Neon | En producción (vía redirect) |
 | `https://mcp.rastro.fyi` | Subdominio viejo, apuntaba al Fly.io ya decommissionado | — | **502, DNS huérfano, no usar** |
 | `https://api.rastro.pe` | VPS 149.104.66.100 | — | Offline (decommissionado) |
 | `https://treevu-rastro-gw.fly.dev` | Gateway Caddy viejo | Fly.io | Offline (decommissionado) |
 
-## Por qué no hay endpoint público todavía
+## Historial de seguridad (resuelto)
 
-`mcp-server/src/worker.ts` deja pasar requests sin `x-api-key` en "modo
-abierto" (sin rate limit, sin presupuesto, sin log de uso). Mientras el Worker
-no tenía ruta, eso no importaba porque era inalcanzable. En cuanto se le
-asignó `rastro.fyi/mcp*` quedó explotable por cualquiera en internet contra
-las ~38 bases de Neon. Se revirtió apenas se confirmó (borrando las routes
-directamente vía API de Cloudflare, porque `wrangler deploy` con `routes = []`
-no las quitó solo — hay que forzar el diff con la clave `routes` presente y
-vacía, no omitida).
+`mcp-server/src/worker.ts` dejaba pasar requests sin `x-api-key` en "modo
+abierto". Al publicar la ruta el mismo día, `security-reviewer` marcó
+CRITICAL: cualquiera en internet podía llamar a los 209 tools sin límite.
+Se revirtió la ruta, se cerró el modo abierto en el código (`x-api-key`
+ahora obligatoria — 401 si falta o es inválida, tanto en GET como POST) y se
+reactivó. El modo stdio local (`resolveActiveKey` en `index.ts`) no se tocó.
 
-**Antes de reactivar la ruta pública, decidir una de estas dos:**
-1. Aceptar el modo abierto como diseño intencional (datos públicos, sin PII
-   sin enmascarar) y agregar un rate-limit a nivel de Cloudflare como control
-   compensatorio.
-2. Exigir `x-api-key` válida para todo tráfico HTTP público (el modo stdio
-   local no se toca). La propia landing (`rastro-web`) ya asume esto: su
-   flujo de "Solicitar acceso sk-rastro" y el snippet de setup muestran
-   `x-api-key` como obligatorio.
+## Cómo conectar al MCP
 
-## Cómo conectar al MCP hoy
+### Cliente remoto (recomendado)
 
-### Cliente local por stdio (única forma soportada por ahora)
+```
+URL: https://www.rastro.fyi/mcp
+Headers:
+  Accept: application/json, text/event-stream
+  x-api-key: sk-rastro-...
+```
+
+Sin `x-api-key` válida: `401`. Las keys se emiten a mano
+(`npm run create-key -- --group <nombre> --limit <n> --tier <workshop|pilot|internal|admin>`)
+contra la base `mcp` de Neon — no hay autoservicio.
+
+209/209 tools tienen handler contra Neon (todas las 38 apps del catálogo
+responden `ok` en `rastro_health`). `ceplan-geo` y `geo-intersections` tienen
+schema con PostGIS provisionado pero **sin datos todavía** — falta correr la
+ingesta (Fase 3 del runbook) para esas 2 apps.
+
+### Cliente local por stdio (para desarrollo)
 
 ```bash
 cd mcp-server
 npm run dev
-```
-
-El meta-tool `rastro_health` reporta qué apps responden y cuántos tools tienen
-backend. 209/209 tools tienen handler contra Neon. Excepción real (no de
-código): `ceplan-geo` y `geo-intersections` (21 tools) — sus bases en Neon
-todavía no se crearon, ver `RUNBOOK_NEON.md` sección "Pendientes conocidos".
-
-### Reactivar el endpoint público (cuando se resuelva el punto de arriba)
-
-```bash
-cd mcp-server
-# en wrangler.toml: descomentar el bloque `routes` y quitar `routes = []`
-npx wrangler deploy
 ```
 
 ## Verificación
@@ -67,17 +58,27 @@ npx wrangler deploy
 # Sitio web (Cloudflare Pages)
 curl -I https://www.rastro.fyi
 
-# Confirmar que el Worker sigue sin ruta pública (debe responder el landing, no el MCP)
-curl -s https://www.rastro.fyi/mcp | head -c 200
+# MCP sin key — debe dar 401
+curl -s https://www.rastro.fyi/mcp -X POST \
+  -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+
+# MCP con key — handshake
+curl -s https://www.rastro.fyi/mcp -X POST \
+  -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" \
+  -H "x-api-key: sk-rastro-..." \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"probe","version":"0.0.1"}}}'
 ```
 
 ## Decisión arquitectónica
 
-- **Cloudflare Worker + Neon** es la capa del MCP — sin VPS, sin Fly.io, sin
-  gateway aparte. Código y deploy completos.
-- **Cloudflare Pages** en `rastro.fyi`/`www.rastro.fyi` sirve el sitio web.
+- **Cloudflare Worker + Neon** sirve el MCP público — sin VPS, sin Fly.io,
+  sin gateway aparte.
+- **`x-api-key` obligatoria** en el transporte HTTP público (no en stdio).
+- **Cloudflare Pages** en `rastro.fyi`/`www.rastro.fyi` sirve el sitio web;
+  el Worker toma prioridad sobre Pages solo para el path `/mcp*`.
 - **Sin VPS** — `api.rastro.pe` está offline y decommissionado.
-- **Sin ruta pública del Worker** hasta resolver el modo abierto (ver arriba).
 
-**Actualizado:** 2026-09-29, tras completar la migración de handlers a Neon,
-publicar y revertir la ruta pública del Worker por el hallazgo de seguridad.
+**Actualizado:** 2026-09-29, migración completa: 209/209 tools, endpoint
+público con auth obligatoria, `ceplan_geo`/`geo_intersections` provisionadas
+en Neon (schema, sin datos).

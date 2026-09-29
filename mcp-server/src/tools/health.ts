@@ -15,14 +15,7 @@ import { APP_KEYS } from "../apps.js";
 import { getPoolForApp, databaseNameFor, type NeonEnv } from "../db/neon-env.js";
 import { TOOL_CATALOG } from "../catalog.js";
 
-/**
- * Apps cuya base se pospone a la segunda fase de la migración: ambas dependen
- * de PostGIS, que tampoco existe en la alternativa que se descartó, pero cuya
- *anucia de datos no se quiere reportar como caída.
- */
-export const DEFERRED_APPS: readonly AppKey[] = ["geo-intersections", "ceplan-geo"];
-
-export type AppStatus = "ok" | "sin_base" | "caida" | "diferida";
+export type AppStatus = "ok" | "sin_base" | "caida";
 
 export interface AppHealth {
   app: AppKey;
@@ -41,7 +34,6 @@ export interface HealthReport {
     ok: number;
     sinBase: number;
     caidas: number;
-    diferidas: number;
     toolsOperativos: number;
     toolsSinBackend: number;
   };
@@ -55,16 +47,6 @@ function toolsForApp(app: AppKey): number {
 async function checkApp(app: AppKey, env: NeonEnv | undefined): Promise<AppHealth> {
   const tools = toolsForApp(app);
   const startedAt = Date.now();
-
-  if (DEFERRED_APPS.includes(app)) {
-    return {
-      app,
-      status: "diferida",
-      latencyMs: 0,
-      tools,
-      error: "Postposición a la segunda fase de la migración (requiere PostGIS).",
-    };
-  }
 
   if (!env?.NEON_DATABASE_URL) {
     return {
@@ -125,7 +107,7 @@ async function mapWithConcurrency<T, R>(items: readonly T[], limit: number, fn: 
   return results;
 }
 
-const RANK: Record<AppStatus, number> = { caida: 0, sin_base: 1, diferida: 2, ok: 3 };
+const RANK: Record<AppStatus, number> = { caida: 0, sin_base: 1, ok: 2 };
 
 export async function runHealthCheck(target?: AppKey, env?: Record<string, unknown>): Promise<HealthReport> {
   const uniqueApps = target ? [target] : [...new Set(APP_KEYS)] as AppKey[];
@@ -144,9 +126,8 @@ export async function runHealthCheck(target?: AppKey, env?: Record<string, unkno
       ok: count("ok"),
       sinBase: count("sin_base"),
       caidas: count("caida"),
-      diferidas: count("diferida"),
       toolsOperativos: toolsFor("ok"),
-      toolsSinBackend: toolsFor("caida") + toolsFor("sin_base") + toolsFor("diferida"),
+      toolsSinBackend: toolsFor("caida") + toolsFor("sin_base"),
     },
     apps: [...results].sort((a, b) => RANK[a.status] - RANK[b.status] || a.app.localeCompare(b.app)),
   };

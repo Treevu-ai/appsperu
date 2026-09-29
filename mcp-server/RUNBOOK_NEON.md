@@ -138,25 +138,22 @@ Cada app debe salir `ok`. Estados posibles:
 | `ok` | La base responde | — |
 | `sin_base` | La base no existe o el secret falta | Fase 1 / Fase 4 |
 | `caida` | La base existe pero no responde | Revisar compute en el panel de Neon |
-| `diferida` | Pospuesta a la segunda fase | Esperado para `geo-intersections` y `ceplan-geo` |
 
 ## Fase 6 — Portar los handlers (COMPLETA, 2026-09-29)
 
 **209/209 tools tienen handler.** Las 38 apps del catálogo están portadas,
 incluidas `geo-intersections` y `ceplan-geo` (PostGIS) y `salud-institucional`
-(cruza 5 bases, secuencial). El Worker está desplegado con ruta pública
-`rastro.fyi/mcp*` (y `www.rastro.fyi/mcp*`, porque el apex redirige a `www`
-antes de evaluar routes de Worker — ver `wrangler.toml`).
+(cruza 5 bases, secuencial).
 
-**Pendiente real (no de código): las bases `ceplan_geo` y `geo_intersections`
-nunca se crearon en Neon.** `rastro_health` las reporta `diferida` por un gate
-hardcodeado en `src/tools/health.ts` (`DEFERRED_APPS`) — pero se verificó en
-producción que ES la realidad: `rastro_llamar` con `ceplan_geo_territories`
-devuelve `database "ceplan_geo" does not exist`. El handler y el wiring están
-completos y probados (23 + 5 tools); falta correr la Fase 1 de este runbook
-para esas 2 bases específicamente (`CREATE DATABASE`, `CREATE EXTENSION
-postgis`, migraciones, ingesta) y luego quitar esas 2 apps de `DEFERRED_APPS`
-en `src/tools/health.ts`.
+**`ceplan_geo` y `geo_intersections` ya están provisionadas en Neon**
+(2026-09-29): bases creadas, PostGIS habilitado, schema completo (migraciones
+001-011 de `ceplan-geo` y 001-004 de `geo-intersections` aplicadas vía Neon
+MCP). El gate hardcodeado `DEFERRED_APPS` en `src/tools/health.ts` se
+eliminó — `rastro_health` ahora las chequea igual que cualquier otra app.
+**Sin datos todavía** (Fase 3, ingesta, no se corrió): las tablas existen
+vacías, así que `rastro_health` las reporta `ok` (la base responde) pero los
+tools devuelven listas vacías hasta correr los conectores de ingesta de cada
+app (`apps/ceplan-geo/api/src/ingest/*`, `apps/geo-intersections/api/src/ingest/*`).
 
 Lo de abajo queda como referencia del proceso ya aplicado (útil si se agrega
 una app 39 al catálogo en el futuro):
@@ -190,9 +187,10 @@ Prioridad sugerida: las apps que los agentes más consultan —
 
 ## Pendientes conocidos
 
-- **`ceplan_geo` y `geo_intersections` no existen como bases en Neon todavía**
-  — ver nota en la Fase 6 de arriba. Es el único pendiente real de esta
-  migración; todo el código ya está listo.
+- **`ceplan_geo` y `geo_intersections` tienen schema pero sin datos** — falta
+  correr Fase 3 (ingesta) para esas 2 apps. Ver nota en la Fase 6 de arriba.
+- ~~`ceplan_geo`/`geo_intersections` no existían como bases~~ — resuelto
+  2026-09-29, provisionadas vía Neon MCP.
 - ~~`salud-institucional` cruza 5 bases~~ — resuelto: `src/handlers/salud-institucional/score.ts`
   las consulta secuencialmente (radar-ejecucion → infobras → radar-inversiones
   → compras-publicas → identidad-fiscal), nunca en paralelo.

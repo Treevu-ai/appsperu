@@ -42,7 +42,7 @@ vi.mock("@neondatabase/serverless", () => ({
   },
 }));
 
-import { runHealthCheck, DEFERRED_APPS } from "../tools/health.js";
+import { runHealthCheck } from "../tools/health.js";
 import { APP_KEYS } from "../apps.js";
 import { databaseNameFor } from "../db/neon-env.js";
 import { TOOL_CATALOG } from "../catalog.js";
@@ -63,7 +63,7 @@ describe("runHealthCheck (Neon)", () => {
 
     expect(report.resumen.ok).toBe(0);
     expect(report.resumen.caidas).toBe(0);
-    expect(report.resumen.sinBase + report.resumen.diferidas).toBe(APP_KEYS.length);
+    expect(report.resumen.sinBase).toBe(APP_KEYS.length);
     expect(report.resumen.toolsOperativos).toBe(0);
     expect(report.resumen.toolsSinBackend).toBe(TOOL_CATALOG.length);
   });
@@ -105,19 +105,8 @@ describe("runHealthCheck (Neon)", () => {
     expect(report.apps[0].app).toBe("mimp");
   });
 
-  it("reporta como diferidas las apps de PostGIS pospuestas a la segunda fase", async () => {
-    const report = await runHealthCheck(undefined, envConSecreto);
-
-    for (const app of DEFERRED_APPS) {
-      const fila = report.apps.find((a) => a.app === app);
-      expect(fila?.status).toBe("diferida");
-      expect(fila?.error).toMatch(/PostGIS/);
-    }
-    expect(report.resumen.diferidas).toBe(DEFERRED_APPS.length);
-  });
-
   it("ordena caídas y sin base antes que las sanas, para que el diagnóstico empiece por lo que broke", async () => {
-    const todas = APP_KEYS.filter((a) => !DEFERRED_APPS.includes(a));
+    const todas = APP_KEYS;
     basesCaidas.add(databaseNameFor(todas[2]));
     basesSinRespuesta.add(databaseNameFor(todas[0]));
 
@@ -128,11 +117,9 @@ describe("runHealthCheck (Neon)", () => {
 
     expect(primeraSana).toBeGreaterThan(0);
     expect(ultimaSana).toBe(estados.length - 1);
-    // Una base caída es peor noticia que una nunca provisionada, y ambas van
-    // antes que la postergada a propósito, que es un estado conocido.
+    // Una base caída es peor noticia que una nunca provisionada.
     expect(estados[0]).toBe("caida");
     expect(estados[1]).toBe("sin_base");
-    expect(estados.indexOf("diferida")).toBeLessThan(primeraSana);
   });
 
   it("los tools operativos más los sin backend cuadran con el catálogo completo", async () => {

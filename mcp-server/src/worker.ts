@@ -29,14 +29,13 @@ import type { ApiKeyRecord } from "./auth/api-key.js";
  * El precio: se reconstruye el server por request y no hay stream SSE abierto,
  * así que GET/DELETE no tienen sentido sin estado de sesión.
  */
-async function answerPost(request: Request, env: Env): Promise<Response> {
+async function answerPost(request: Request, env: Env, activeKey: ApiKeyRecord): Promise<Response> {
   const body = await request.clone().json().catch(() => null);
   if (body === null) {
     return jsonResponse({ error: "Cuerpo JSON inválido." }, 400);
   }
 
   const transport = new WebStandardStreamableHTTPServerTransport({ enableJsonResponse: true });
-  const activeKey = await validateKeyForEnv(request.headers.get("x-api-key") ?? "", env);
   const server = buildMcpServer(activeKey, env as Record<string, unknown>);
   await server.connect(transport);
 
@@ -80,19 +79,23 @@ export default {
 
     const method = request.method;
 
-    // Auth: valida x-api-key en POST y GET (modo abierto si no se provee)
+    // Auth: x-api-key obligatoria en el transporte HTTP público. El modo
+    // abierto (sin key) se eliminó tras el hallazgo CRITICAL de
+    // security-review 2026-09-29: con la ruta pública activa, cualquiera en
+    // internet podía llamar a los 209 tools sin límite. El modo stdio local
+    // (index.ts:resolveActiveKey) no se toca — solo afecta a este transporte.
     if (method === "POST" || method === "GET") {
       const rawKey = request.headers.get("x-api-key");
-      if (rawKey) {
-        const activeKey = await validateKeyForEnv(rawKey, env);
-        if (!activeKey) {
-          return jsonResponse({ error: "x-api-key inválida." }, 401);
-        }
+      if (!rawKey) {
+        return jsonResponse({ error: "x-api-key requerida." }, 401);
       }
-    }
-
-    if (method === "POST") {
-      return answerPost(request, env);
+      const activeKey = await validateKeyForEnv(rawKey, env);
+      if (!activeKey) {
+        return jsonResponse({ error: "x-api-key inválida." }, 401);
+      }
+      if (method === "POST") {
+        return answerPost(request, env, activeKey);
+      }
     }
 
     if (method === "GET" || method === "DELETE") {
