@@ -18,6 +18,20 @@ main = "src/worker.ts"
 compatibility_date = "2026-09-28"
 compatibility_flags = ["nodejs_compat"]
 
+# Ruta pública REACTIVADA 2026-09-29: el hallazgo CRITICAL de security-review
+# (Worker aceptaba tráfico sin x-api-key, "modo abierto") quedó resuelto en
+# worker.ts — el path HTTP ahora exige x-api-key válida en toda request
+# (401 si falta o es inválida). El apex redirige a www antes de evaluar
+# routes de Worker, así que hace falta el patrón para ambos hosts.
+routes = [
+  { pattern = "rastro.fyi/mcp*", zone_name = "rastro.fyi" },
+  { pattern = "www.rastro.fyi/mcp*", zone_name = "rastro.fyi" }
+]
+
+# Sin binding a workers.dev: el tráfico legítimo entra por rastro.fyi/mcp.
+workers_dev = false
+preview_urls = false
+
 [observability]
 enabled = true
 

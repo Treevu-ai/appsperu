@@ -13,7 +13,7 @@ import { createApiKey } from "../auth/api-key.js";
  *   npm run create-key -- --group "taller-2026-09" --workshop "sesion-1" --limit 200 --expires-days 3
  */
 
-const VALID_TIERS = ["workshop", "pilot", "internal"] as const;
+const VALID_TIERS = ["workshop", "pilot", "internal", "admin"] as const;
 
 const args = process.argv.slice(2);
 function flag(name: string): string | undefined {

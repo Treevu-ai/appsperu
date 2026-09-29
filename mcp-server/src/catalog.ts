@@ -874,6 +874,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- radar-inversiones (Invierte.pe) ----
   {
     name: "radar_inversiones_investments",
+    handler: "investments:list",
     app: "radar-inversiones",
     description:
       "Proyectos de inversión pública (Invierte.pe) — costos, estado, entidad responsable. " +
@@ -886,10 +887,13 @@ export const TOOL_CATALOG: ToolSpec[] = [
       estado: z.string().min(1).optional(),
       situacion: z.string().min(1).optional(),
       funcion: z.string().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(5000).optional().describe("Default 1000, máximo 5000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
   {
     name: "radar_inversiones_investment_by_cui",
+    handler: "investments:byCui",
     app: "radar-inversiones",
     description: "Detalle de un proyecto de inversión específico por su CUI (Código Único de Inversión).",
     pathTemplate: "/api/investments/{cui}",
@@ -898,6 +902,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "radar_inversiones_crossref",
+    handler: "crossref:list",
     app: "radar-inversiones",
     description:
       "Cruce radar-inversiones <-> radar-ejecucion por SEC_EJEC (clave exacta, sin matching difuso) — inversiones " +
@@ -908,6 +913,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "radar_inversiones_investments_desactivadas",
+    handler: "investments-desactivadas:list",
     app: "radar-inversiones",
     description:
       "Inversiones DESACTIVADAS del Banco de Inversiones (MEF) — la mitad del Banco que `radar_inversiones_investments` " +
@@ -926,6 +932,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "radar_inversiones_investment_desactivada_by_cui",
+    handler: "investments-desactivadas:byCui",
     app: "radar-inversiones",
     description: "Detalle de una inversión desactivada específica por su CUI.",
     pathTemplate: "/api/investments-desactivadas/{cui}",
@@ -1032,6 +1039,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- ceplan-estrategico (ObservaPerú/CEPLAN) ----
   {
     name: "ceplan_estrategico_indicators",
+    handler: "indicators:list",
     app: "ceplan-estrategico",
     description:
       "Indicadores priorizados de gestión estratégica del Estado, agregados por nivel de gobierno " +
@@ -1046,6 +1054,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_estrategico_indicators_seg",
+    handler: "indicators-seg:seg",
     app: "ceplan-estrategico",
     description:
       "SEG (Strategic Execution Gap): nacional CEPLAN (CUMP03−CUMP02, GN/GR) o proxy departamental " +
@@ -1060,6 +1069,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_estrategico_indicators_execution_efficiency",
+    handler: "indicators-execution-efficiency:executionEfficiency",
     app: "ceplan-estrategico",
     description:
       "Execution Efficiency: nacional CEPLAN (CUMP02/CUMP03, GN/GR) o proxy departamental " +
@@ -1074,6 +1084,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_estrategico_indicators_plan_budget_alignment",
+    handler: "indicators-plan-budget-alignment:planBudgetAlignment",
     app: "ceplan-estrategico",
     description:
       "Plan–Budget Alignment departamental (mapeo heurístico CEPLAN dimensión → función MEF v1). " +
@@ -1088,6 +1099,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_estrategico_crossref",
+    handler: "crossref:list",
     app: "ceplan-estrategico",
     description:
       "Cruce ceplan-estrategico <-> radar-ejecucion por nivel de gobierno (único bucket exacto entre ambas fuentes: " +
@@ -1099,6 +1111,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_estrategico_crossref_territorial",
+    handler: "crossref-territorial:territorial",
     app: "ceplan-estrategico",
     description:
       "Cruce ceplan-estrategico <-> ceplan-geo por departamento piloto (5 regiones). Adjunta CUMP02/CUMP03 " +
@@ -1110,6 +1123,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_estrategico_meta_aplicativo",
+    handler: "meta:aplicativo",
     app: "ceplan-estrategico",
     description:
       "Estado del Aplicativo CEPLAN V.01 y fuentes alternativas para datos per-entidad (PEI/POI por pliego). " +
@@ -1123,6 +1137,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- ceplan-geo (GeoServer CEPLAN, territorio e infraestructura) ----
   {
     name: "ceplan_geo_layers",
+    handler: "layers:list",
     app: "ceplan-geo",
     description:
       "Catálogo de capas WFS ingeridas desde el GeoServer de CEPLAN (PostGIS). Cobertura nacional en capas MVP " +
@@ -1134,6 +1149,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_geo_layer_by_id",
+    handler: "layers:byId",
     app: "ceplan-geo",
     description: "Metadatos de una capa geoespacial por UUID interno.",
     pathTemplate: "/api/layers/{id}",
@@ -1142,6 +1158,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_geo_layer_features",
+    handler: "layers:features",
     app: "ceplan-geo",
     description: "Features vectoriales de una capa, con bbox y limit opcionales.",
     pathTemplate: "/api/layers/{id}/features",
@@ -1153,6 +1170,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_geo_territories",
+    handler: "territories:list",
     app: "ceplan-geo",
     description:
       "Distrito/territorio oficial por UBIGEO o por tríada departamento/provincia/distrito. Sin coordenadas inventadas. " +
@@ -1168,6 +1186,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_geo_territories_summary",
+    handler: "territories:summary",
     app: "ceplan-geo",
     description:
       "Agregados territoriales por departamento piloto (5 regiones): conteo de distritos e infraestructura " +
@@ -1178,6 +1197,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_geo_territories_bbox",
+    handler: "territories:bbox",
     app: "ceplan-geo",
     description: "Territorios (distritos) que intersectan un bounding box.",
     pathTemplate: "/api/territories/bbox",
@@ -1191,6 +1211,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_geo_infrastructure",
+    handler: "infrastructure:list",
     app: "ceplan-geo",
     description:
       "Infraestructura publicada por CEPLAN: aeropuertos, puertos, red hídrica principal (cb_redhidricaprinx) y " +
@@ -1211,6 +1232,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_geo_infrastructure_near",
+    handler: "infrastructure:near",
     app: "ceplan-geo",
     description:
       "Infraestructura (aeropuertos, puertos, red hídrica principal, proyectos sectoriales agro) dentro de un radio " +
@@ -1228,6 +1250,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_geo_crossref_inversiones",
+    handler: "crossref:inversiones",
     app: "ceplan-geo",
     description:
       "Cruce ceplan-geo <-> radar-inversiones: enriquece inversiones con territorio CEPLAN e infra cercana. " +
@@ -1239,6 +1262,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_geo_crossref_obras",
+    handler: "crossref:obras",
     app: "ceplan-geo",
     description:
       "Cruce ceplan-geo <-> infobras: enriquece obras con territorio CEPLAN sin usar coordenadas (INFOBRAS no las publica). " +
@@ -1250,6 +1274,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_geo_crossref_ejecucion",
+    handler: "crossref:ejecucion",
     app: "ceplan-geo",
     description:
       "Cruce ceplan-geo <-> radar-ejecucion por UBIGEO: ejecución por sede (ubigeo) y gasto nacional dirigido (metaDepartamento) " +
@@ -1261,6 +1286,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_geo_crossref_salud",
+    handler: "crossref:salud",
     app: "ceplan-geo",
     description:
       "Salud del caché de territory_name_crosswalk (audit 2026-09-13): filas/confirmadas/candidatas/sinMatch " +
@@ -1273,6 +1299,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_geo_denominadores_poblacion",
+    handler: "denominadores:poblacion",
     app: "ceplan-geo",
     description:
       "Población por UBIGEO (piloto provincia Trujillo, Censo INEI 2017) para denominadores territoriales. " + SIN_SCHEDULER,
@@ -1285,6 +1312,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_geo_denominadores_tasas",
+    handler: "denominadores:tasas",
     app: "ceplan-geo",
     description:
       "Tasas por distrito dentro de una provincia (ej. denuncias por 1 000 hab.) usando población INEI 2017 y volumen de seguridad-ciudadana. " +
@@ -1301,6 +1329,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_geo_denominadores_benchmark_ejecucion",
+    handler: "denominadores:benchmarkEjecucion",
     app: "ceplan-geo",
     description:
       "Ejecución presupuestal (PIM/devengado, solo GOBIERNOS LOCALES) por distrito dentro de una provincia, junto " +
@@ -1548,6 +1577,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "ceplan_geo_patrimonio_predios",
+    handler: "patrimonio:predios",
     app: "ceplan-geo",
     description:
       "Predios estatales supervisados por SBN (Superintendencia Nacional de Bienes Estatales) — resultado de " +
@@ -1810,6 +1840,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- salud-institucional (agregador, sin base propia) ----
   {
     name: "salud_institucional_score",
+    handler: "score:score",
     app: "salud-institucional",
     description:
       "Score compuesto 0-100 por entidad, calculado EN VIVO combinando ejecución (radar-ejecucion), obras " +
@@ -1828,6 +1859,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "salud_institucional_score_por_provincia",
+    handler: "score:scorePorProvincia",
     app: "salud-institucional",
     description:
       "Promedio de scoreCompuesto por provincia (SI-03, 2026-09-08), solo entidades con score disponible — " +
@@ -1844,6 +1876,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- actividad-agraria (MIDAGRI, jornal agrícola) ----
   {
     name: "actividad_agraria_wage",
+    handler: "wage:list",
     app: "actividad-agraria",
     description:
       "Valor de jornal agrícola (S/.) por departamento/año/mes, fuente MIDAGRI. Serie mensual normalizada; " +
@@ -1859,6 +1892,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "actividad_agraria_regional_outcome",
+    handler: "regional-outcome:list",
     app: "actividad-agraria",
     description:
       "Métricas de resultado agropecuario regional (VBP, superficie, productores) — piloto SIEA La Libertad 2024 " +
@@ -1872,6 +1906,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "actividad_agraria_crossref",
+    handler: "crossref:list",
     app: "actividad-agraria",
     description:
       "Cruce resultado agro (SIEA piloto) + insumos MIDAGRI (jornal/tractor/yunta) vs gasto AGROPECUARIA en radar-ejecucion, " +
@@ -1885,6 +1920,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "actividad_agraria_tractor_rental",
+    handler: "tractor-rental:list",
     app: "actividad-agraria",
     description:
       "Precio de alquiler de tractor agrícola (S/.) por departamento/año/mes, fuente MIDAGRI-03.04. Misma semántica " +
@@ -1899,6 +1935,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "actividad_agraria_yunta_rental",
+    handler: "yunta-rental:list",
     app: "actividad-agraria",
     description:
       "Precio de alquiler de yunta (S/.) por departamento/año/mes, fuente MIDAGRI-03.05. Misma semántica " +
@@ -1915,6 +1952,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- seguridad-ciudadana (SIDPOL, MININTER) ----
   {
     name: "seguridad_ciudadana_denuncias",
+    handler: "denuncias:list",
     app: "seguridad-ciudadana",
     description:
       "Denuncias policiales agregadas (SIDPOL, MININTER) por departamento/provincia/distrito/año/mes/modalidad " +
@@ -1933,6 +1971,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "seguridad_ciudadana_crossref",
+    handler: "crossref:list",
     app: "seguridad-ciudadana",
     description:
       "Cruce seguridad-ciudadana <-> radar-ejecucion por departamento exacto (sin fuzzy) — total de denuncias del " +
@@ -1949,6 +1988,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
 
   {
     name: "seguridad_ciudadana_comisarias",
+    handler: "comisarias:list",
     app: "seguridad-ciudadana",
     description:
       "Comisarías auditadas con hallazgos de Contraloría, con su informe de origen (URL) y el detalle de hallazgos " +
@@ -1968,6 +2008,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "seguridad_ciudadana_comisaria_detalle",
+    handler: "comisarias:detalle",
     app: "seguridad-ciudadana",
     description:
       "Detalle de una comisaría auditada por su `id` interno (el de la fila en `comisarias_auditadas`, no un " +
@@ -1979,6 +2020,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "seguridad_ciudadana_equipamiento",
+    handler: "equipamiento:list",
     app: "seguridad-ciudadana",
     description:
       "Equipamiento PNP adquirido vía SEACE (inversión en vehículos, armamento, comunicaciones y equipo de " +
@@ -1997,6 +2039,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "seguridad_ciudadana_equipamiento_resumen",
+    handler: "equipamiento:resumen",
     app: "seguridad-ciudadana",
     description:
       "Inversión PNP en equipamiento agregada por año (contratos y monto total), para ver la tendencia " +
@@ -2013,6 +2056,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- bcrp-comercio-exterior (BCRP, balanza comercial nacional + series macro) ----
   {
     name: "bcrp_comercio_exterior_trade",
+    handler: "trade:trade",
     app: "bcrp-comercio-exterior",
     description:
       "Comercio exterior agregado nacional (millones US$ FOB) — exportaciones, importaciones y balanza comercial " +
@@ -2031,6 +2075,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "bcrp_comercio_exterior_macro",
+    handler: "trade:macro",
     app: "bcrp-comercio-exterior",
     description:
       "Series macro nacionales del BCRP — tipo de cambio (S/ por US$), inflación (IPC Lima var% mensual), PBI (índice 2007=100), " +
@@ -2049,6 +2094,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "bcrp_comercio_exterior_meta_sources",
+    handler: "meta:sources",
     app: "bcrp-comercio-exterior",
     description: "Metadata de los últimos 10 lotes de ingesta BCRP (series, rango, checksum).",
     pathTemplate: "/api/meta/sources",
@@ -2059,6 +2105,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- inversion-privada (PROINVERSIÓN / VERTIX) ----
   {
     name: "inversion_privada_projects",
+    handler: "projects:list",
     app: "inversion-privada",
     description:
       "Cartera de inversión privada PROINVERSIÓN (VERTIX) — proyectos APP y PA con sector, fase, " +
@@ -2077,6 +2124,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "inversion_privada_project_by_id",
+    handler: "projects:byId",
     app: "inversion-privada",
     description: "Detalle de un proyecto de la cartera VERTIX por su Id interno PROINVERSIÓN.",
     pathTemplate: "/api/projects/{vertixId}",
@@ -2085,6 +2133,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "inversion_privada_meta_sources",
+    handler: "meta:sources",
     app: "inversion-privada",
     description: "Metadata de los últimos lotes de ingesta VERTIX (APP/PA) y OxI, con desglose APP/PA y por fase OxI.",
     pathTemplate: "/api/meta/sources",
@@ -2093,6 +2142,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "inversion_privada_oxi_projects",
+    handler: "oxi:list",
     app: "inversion-privada",
     description:
       "Cartera OxI (Obras por Impuestos) en promoción por PROINVERSIÓN — universo distinto a APP/PA, misma " +
@@ -2111,6 +2161,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "inversion_privada_oxi_by_id",
+    handler: "oxi:byId",
     app: "inversion-privada",
     description: "Detalle de un proyecto OxI específico por su Id numérico interno (`oxiId`).",
     pathTemplate: "/api/oxi/{oxiId}",
@@ -2119,6 +2170,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "inversion_privada_oxi_crossref_invierte",
+    handler: "crossref:oxi",
     app: "inversion-privada",
     description:
       "Cruce OxI <-> radar-inversiones (Invierte.pe) por codigo_snip exacto (sin fuzzy). Solo confirma lo que " +
@@ -2132,6 +2184,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "inversion_privada_gis_geojson",
+    handler: "gis:geojson",
     app: "inversion-privada",
     description:
       "GeoJSON FeatureCollection real y descargable de la cartera VERTIX (endpoint público de " +
@@ -2146,6 +2199,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "inversion_privada_gis_project_geometry",
+    handler: "gis:projectGeometry",
     app: "inversion-privada",
     description: "Geometría(s) GIS de un proyecto APP/PA específico por su vertix_id (mismo Id de vertixService.php).",
     pathTemplate: "/api/gis/projects/{vertixId}",
@@ -2156,6 +2210,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- bcrp-la-libertad (Síntesis de Actividad Económica, BCRP Sucursal Trujillo) ----
   {
     name: "bcrp_la_libertad_indicadores",
+    handler: "indicadores:list",
     app: "bcrp-la-libertad",
     description:
       "Indicadores mensuales de actividad económica de La Libertad (BCRP Sucursal Trujillo): agropecuario, pesca, " +
@@ -2175,6 +2230,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "bcrp_la_libertad_meta_sources",
+    handler: "meta:sources",
     app: "bcrp-la-libertad",
     description:
       "Metadata de los últimos 10 lotes de ingesta manual (PDF por PDF, ver `bcrp_la_libertad_indicadores`) y " +
@@ -2188,6 +2244,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- servicios-salud (RENIPRESS/SUSALUD, establecimientos de salud) ----
   {
     name: "servicios_salud_ipress",
+    handler: "ipress:list",
     app: "servicios-salud",
     description:
       "Establecimientos de salud (RENIPRESS/SUSALUD) con su estado operativo real (`ACTIVO` u otro valor tal cual " +
@@ -2207,6 +2264,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "servicios_salud_crossref",
+    handler: "crossref:list",
     app: "servicios-salud",
     description:
       "Cruce por UBIGEO entre inversión pública en salud (`investments` de radar-inversiones, FUNCION IN ('SALUD', " +
@@ -2225,6 +2283,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- programas-sociales (INFOMIDIS/MIDIS, cobertura de programas sociales) ----
   {
     name: "programas_sociales_cobertura",
+    handler: "cobertura:list",
     app: "programas-sociales",
     description:
       "Cobertura mensual de programas sociales MIDIS (JUNTOS, WASI MIKUNA/ex-QALI WARMA, FONCODES, CUNAMÁS, CONTIGO, " +
@@ -2240,6 +2299,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "programas_sociales_crossref",
+    handler: "crossref:list",
     app: "programas-sociales",
     description:
       "Cruce por UBIGEO entre inversión pública en protección social (`investments` de radar-inversiones, FUNCION IN " +
@@ -2257,6 +2317,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- actividad-empresarial (MTPE, empresas del sector privado por distrito) ----
   {
     name: "actividad_empresarial_empresas",
+    handler: "empresas:list",
     app: "actividad-empresarial",
     description:
       "Conteo mensual de empresas activas del sector privado por distrito, fuente MTPE. Cobertura nacional. " +
@@ -2272,6 +2333,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "actividad_empresarial_crossref",
+    handler: "crossref:list",
     app: "actividad-empresarial",
     description:
       "Cruce descriptivo por UBIGEO entre inversión pública total (`investments` de radar-inversiones, todas las " +
@@ -2290,6 +2352,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- informes-control (Contraloría, informes de servicios de control) ----
   {
     name: "informes_control_informes",
+    handler: "informes:list",
     app: "informes-control",
     description:
       "Informes de auditoría/servicios de control de la Contraloría (entidad, ubicación, fechas, sector, si tiene " +
@@ -2310,6 +2373,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "informes_control_crossref",
+    handler: "crossref:list",
     app: "informes-control",
     description:
       "Cruce por nombre de entidad (fuzzy — la fuente no da un código de entidad compartido) entre informes de " +
@@ -2326,6 +2390,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- mindef (Ministerio de Defensa, datos abiertos) ----
   {
     name: "mindef_offset_agreements",
+    handler: "offset:list",
     app: "mindef",
     description:
       "Convenios Específicos de Compensaciones Industriales y Sociales Offset del MINDEF: obligaciones de " +
@@ -2340,6 +2405,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "mindef_training_abroad",
+    handler: "training-abroad:list",
     app: "mindef",
     description:
       "Personal militar capacitado en el exterior (institución, curso, país, fechas). `personalCantidad` es un " +
@@ -2353,6 +2419,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "mindef_peace_missions",
+    handler: "peace-missions:list",
     app: "mindef",
     description:
       "Personal de las FF.AA. desplegado en Misiones de Paz, Observadores Militares y Contingentes Militares " +
@@ -2369,6 +2436,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- mimp (Ministerio de la Mujer y Poblaciones Vulnerables, datos abiertos) ----
   {
     name: "mimp_cem_casos",
+    handler: "cem:list",
     app: "mimp",
     description:
       "Casos atendidos por violencia contra la mujer e integrantes del grupo familiar, por Centro Emergencia " +
@@ -2385,6 +2453,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "mimp_chat100_consultas",
+    handler: "chat100:list",
     app: "mimp",
     description:
       "Consultas atendidas por el servicio Chat 100 (línea contra la violencia familiar y sexual) — agregado " +
@@ -2399,6 +2468,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- renamu (Registro Nacional de Municipalidades, INEI, datos abiertos) ----
   {
     name: "renamu_municipalidades",
+    handler: "municipalidades:list",
     app: "renamu",
     description:
       "Identificación de municipalidades (RENAMU/INEI, encuesta censal anual, 1,891 municipalidades) — " +
@@ -2420,6 +2490,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "renamu_equipamiento",
+    handler: "equipamiento:get",
     app: "renamu",
     description:
       "Capacidad institucional de una municipalidad por ubigeo (RENAMU/INEI, Módulo II: equipamiento y TIC) — " +
@@ -2437,6 +2508,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "renamu_crossref",
+    handler: "crossref:crossref",
     app: "renamu",
     description:
       "Cruce inversión pública ejecutada POR el gobierno local (radar-inversiones, Invierte.pe/CUI, `nivel=GL`) " +
@@ -2463,6 +2535,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- candidatos-erm (Elecciones Regionales y Municipales 2026, vía Datapol) ----
   {
     name: "candidatos_erm_candidatos",
+    handler: "candidatos:list",
     app: "candidatos-erm",
     description:
       "Candidatos inscritos a Gobernador/Vicegobernador Regional, Consejero Regional, Alcalde y Regidor " +
@@ -2498,6 +2571,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- autoridades-electas (JNE, datos abiertos) ----
   {
     name: "autoridades_electas_autoridades",
+    handler: "autoridades:list",
     app: "autoridades-electas",
     description:
       "Autoridades proclamadas por el JNE (nombre, cargo, organización política, ubigeo, periodo de mandato) — " +
@@ -2525,6 +2599,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- instituciones-educativas (MINEDU/ESCALE, Padrón Web) ----
   {
     name: "instituciones_educativas_instituciones",
+    handler: "instituciones:list",
     app: "instituciones-educativas",
     description:
       "Padrón nacional de instituciones y programas educativos (MINEDU/ESCALE) — nombre, nivel/modalidad, " +
@@ -2553,6 +2628,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "instituciones_educativas_resumen",
+    handler: "resumen:resumen",
     app: "instituciones-educativas",
     description:
       "Cobertura educativa agregada por provincia y distrito de un departamento (total de instituciones y " +
@@ -2567,6 +2643,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "instituciones_educativas_trayectoria",
+    handler: "trayectoria:trayectoria",
     app: "instituciones-educativas",
     description:
       "Matriculación y trayectoria estudiantil por servicio educativo (SIAGIE/MINEDU, Unidad de Estadística), " +
@@ -2596,6 +2673,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- infracciones-ambientales (OEFA, RUIAS) ----
   {
     name: "infracciones_ambientales_infracciones",
+    handler: "infracciones:list",
     app: "infracciones-ambientales",
     description:
       "Registro Único de Infractores Ambientales Sancionados (OEFA) — administrado sancionado, subsector " +
@@ -2618,6 +2696,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "infracciones_ambientales_crossref",
+    handler: "crossref:list",
     app: "infracciones-ambientales",
     description:
       "¿Qué empresas sancionadas por OEFA (RUIAS) siguen contratando activamente con el Estado (compras-publicas)? " +
@@ -2641,6 +2720,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- red-vial-subnacional (MTC/Provías Descentralizado) ----
   {
     name: "red_vial_subnacional_intervenciones",
+    handler: "intervenciones:list",
     app: "red-vial-subnacional",
     description:
       "Intervenciones en redes viales departamentales/vecinales (Provías Descentralizado, MTC) — código de " +
@@ -2665,6 +2745,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- residuos-solidos (MINAM, SIGERSOL) ----
   {
     name: "residuos_solidos_residuos",
+    handler: "residuos:list",
     app: "residuos-solidos",
     description:
       "Generación anual de residuos sólidos domiciliarios y municipales por distrito (MINAM/SIGERSOL) — " +
@@ -2691,6 +2772,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- infraestructura-mtc (MTC: terminales portuarios, aeródromos, peajes) ----
   {
     name: "infraestructura_mtc_terminales_portuarios",
+    handler: "terminales-portuarios:list",
     app: "infraestructura-mtc",
     description:
       "Catálogo de terminales portuarios y embarcaderos (MTC) — ubicación, ámbito (marítimo/fluvial/" +
@@ -2714,6 +2796,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "infraestructura_mtc_aerodromos",
+    handler: "aerodromos:list",
     app: "infraestructura-mtc",
     description:
       "Catálogo de infraestructura aeroportuaria/aeródromos (MTC) — ubicación, tipo, código OACI, escala, " +
@@ -2739,6 +2822,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "infraestructura_mtc_peajes",
+    handler: "peajes:list",
     app: "infraestructura-mtc",
     description:
       "Catálogo de unidades de peaje de la red vial nacional (MTC) — ubicación, código de ruta, km de inicio, " +
@@ -2759,6 +2843,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "infraestructura_mtc_terminales_vulnerabilidad",
+    handler: "vulnerabilidad:list",
     app: "infraestructura-mtc",
     description:
       "Índice de vulnerabilidad estructural de terminales portuarias, ordenadas de mayor a menor score. El score " +
@@ -2778,6 +2863,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "infraestructura_mtc_terminal_vulnerabilidad",
+    handler: "vulnerabilidad:byCodigo",
     app: "infraestructura-mtc",
     description:
       "Índice de vulnerabilidad de UNA terminal portuaria por su código, con el desglose de componentes del " +
@@ -2791,6 +2877,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "infraestructura_mtc_terminales_vulnerabilidad_clima",
+    handler: "vulnerabilidad:clima",
     app: "infraestructura-mtc",
     description:
       "Índice v2 de vulnerabilidad: la parte estructural del score más el riesgo CLIMÁTICO de la terminal " +
@@ -2813,6 +2900,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- riesgo-fiscal-isds (MEF, Marco Macroeconómico Multianual / IAPM) ----
   {
     name: "riesgo_fiscal_isds_pasivos_contingentes",
+    handler: "mmm:pasivosContingentes",
     app: "riesgo-fiscal-isds",
     description:
       "Pasivos contingentes explícitos del Sector Público No Financiero, POR AÑO DE CIERRE (no por " +
@@ -2829,6 +2917,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "riesgo_fiscal_isds_ediciones",
+    handler: "mmm:ediciones",
     app: "riesgo-fiscal-isds",
     description:
       "Metadata de cada documento fuente (MMM o IAPM) registrado: fecha de publicación, fuente oficial, " +
@@ -2843,6 +2932,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "riesgo_fiscal_isds_serie_historica",
+    handler: "mmm:serieHistorica",
     app: "riesgo-fiscal-isds",
     description:
       "Serie histórica 2014/2021/2024 citada por Luis Miguel Castilla (ex-MEF, PERUMIN 37, sept-2025) " +
@@ -2856,6 +2946,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "riesgo_fiscal_isds_meta_sources",
+    handler: "mmm:metaSources",
     app: "riesgo-fiscal-isds",
     description:
       "Metadata de los últimos 10 lotes de ingesta manual (PDF por PDF vía `npm run ingest:pdf`) — " +
@@ -2869,6 +2960,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- poder-judicial (estadística jurisdiccional, Poder Judicial) ----
   {
     name: "poder_judicial_procesos",
+    handler: "procesos-judiciales:list",
     app: "poder-judicial",
     description:
       "Estadística agregada de procesos judiciales (pendientes/ingresados/resueltos) por año, mes y " +
@@ -2903,6 +2995,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
    },
   {
     name: "poder_judicial_crimen_organizado",
+    handler: "procesos-judiciales:crimenOrganizado",
     app: "poder-judicial",
     description:
       "Estadística agregada de casos de Crimen Organizado — filtra `procesos_judiciales_jurisdiccional` " +
@@ -2923,6 +3016,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "poder_judicial_procesos_resumen",
+    handler: "procesos-judiciales:resumen",
     app: "poder-judicial",
     description:
       "Agrega (SUM) las columnas titulares de `poder_judicial_procesos` (`pendiente`, `resuelto`, " +
@@ -2941,6 +3035,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "poder_judicial_territorios",
+    handler: "procesos-judiciales:territorios",
     app: "poder-judicial",
     description:
       "Triadas (provincia, distrito) distintas presentes en `poder_judicial_procesos`, con conteo de " +
@@ -2957,6 +3052,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- violencia-escolar (SíseVe, MINEDU) ----
   {
     name: "violencia_escolar_casos",
+    handler: "casos:list",
     app: "violencia-escolar",
     description:
       "Listado detallado de casos de violencia escolar reportados a SíseVe (MINEDU) — fecha, DRE, UGEL, " +
@@ -2990,6 +3086,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "violencia_escolar_resumen",
+    handler: "resumen:resumen",
     app: "violencia-escolar",
     description:
       "Conteo de casos de violencia escolar por tipo (Psicológica/Física/Sexual), agregado por DRE a nivel " +
@@ -3006,6 +3103,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- legislativo-congreso (Congreso de la República, proyectos de ley) ----
   {
     name: "legislativo_congreso_proyectos",
+    handler: "proyectos:list",
     app: "legislativo-congreso",
     description:
       "Proyectos de ley del Congreso de la República — filtra por periodo parlamentario (`perParId`), estado " +
@@ -3029,6 +3127,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "legislativo_congreso_proyecto_detalle",
+    handler: "proyectos:detalle",
     app: "legislativo-congreso",
     description:
       "Detalle de un proyecto de ley específico por `periodo` (perParId) + `numero` (pleyNum) — no por el " +
@@ -3040,6 +3139,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "legislativo_congreso_periodos",
+    handler: "proyectos:periodos",
     app: "legislativo-congreso",
     description:
       "Lista qué periodos parlamentarios (`perParId`) están disponibles — es decir, se han ingerido con éxito " +
@@ -3055,6 +3155,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- catastro-minero (INGEMMET, derechos mineros) ----
   {
     name: "catastro_minero_derechos",
+    handler: "derechos:list",
     app: "catastro-minero",
     description:
       "Derechos mineros del catastro de INGEMMET — filtra por departamento/provincia/distrito (ej. " +
@@ -3081,6 +3182,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "catastro_minero_derecho_detalle",
+    handler: "derechos:detalle",
     app: "catastro-minero",
     description:
       "Detalle de un derecho minero específico por `codigou` (código único de INGEMMET, ej. '010033716'). " +
@@ -3093,6 +3195,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- areas-protegidas (SERNANP, geoservicios) ----
   {
     name: "areas_protegidas_areas",
+    handler: "areas:list",
     app: "areas-protegidas",
     description:
       "Áreas naturales protegidas y afines de SERNANP — 5 capas: `anp_nacional_definitiva` (Parques/" +
@@ -3120,6 +3223,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "areas_protegidas_area_detalle",
+    handler: "areas:detalle",
     app: "areas-protegidas",
     description:
       "Detalle de un área específica por `capa` + `objectid` (ID interno de ArcGIS, único dentro de cada " +
@@ -3133,6 +3237,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- senace-cartera-proyectos (certificación ambiental, SENACE) ----
   {
     name: "senace_cartera_proyectos",
+    handler: "proyectos:list",
     app: "senace-cartera-proyectos",
     description:
       "Cartera de proyectos de certificación ambiental de SENACE (Clasificación, EIA-d, EIA-sd, MEIA-d, ITS, " +
@@ -3156,6 +3261,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "senace_cartera_proyecto_detalle",
+    handler: "proyectos:detalle",
     app: "senace-cartera-proyectos",
     description:
       "Detalle de un proyecto específico por `senaceId` (ID único de SENACE en este dataset). Responde 404 " +
@@ -3168,6 +3274,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- catastro-forestal (SERFOR, catastro forestal ArcGIS) ----
   {
     name: "catastro_forestal_titulos",
+    handler: "titulos:list",
     app: "catastro-forestal",
     description:
       "Títulos habilitantes y clasificación forestal de SERFOR — 10 capas de 2 servicios ArcGIS: " +
@@ -3209,6 +3316,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "catastro_forestal_titulo_detalle",
+    handler: "titulos:detalle",
     app: "catastro-forestal",
     description:
       "Detalle de un título específico por `capa` + `objectid` (ID interno de ArcGIS, único dentro " +
@@ -3219,6 +3327,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "catastro_forestal_conflicto_uso_suelo",
+    handler: "crossref:conflictoUsoSuelo",
     app: "catastro-forestal",
     description:
       "Cruce territorial (por distrito) entre concesiones forestales vigentes de SERFOR (capa " +
@@ -3243,6 +3352,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- geo-intersections (INGEMMET ∩ SERFOR — cruces geoespaciales) ----
   {
     name: "geo_intersections_cruce_punto",
+    handler: "intersections:crucePunto",
     app: "geo-intersections",
     description:
       "Dado un punto (lat/lon), devuelve los derechos mineros y títulos forestales que lo cubren directamente (punto exacto) o dentro de un radio en km. PostGIS ST_Contains." + SIN_SCHEDULER,
@@ -3256,6 +3366,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "geo_intersections_reporte",
+    handler: "intersections:reporte",
     app: "geo-intersections",
     description:
       "Reporte completo de superposiciones entre derechos mineros y títulos forestales (mining ∩ forest). Filtra por departamento, sustancia, capa forestal y área mínima. Ordenado por km² de intersección descendente." + SIN_SCHEDULER,
@@ -3272,6 +3383,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "geo_intersections_stats",
+    handler: "intersections:stats",
     app: "geo-intersections",
     description:
       "Estadísticas resumen: cuántos derechos mineros y títulos forestales hay con geometría, cuántas intersecciones totales, desglose por departamento, sustancia y capa forestal." + SIN_SCHEDULER,
@@ -3281,6 +3393,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "geo_intersections_minero",
+    handler: "intersections:minero",
     app: "geo-intersections",
     description:
       "Superposiciones de un derecho minero específico (por CODIGOU) con títulos forestales. Muestra qué bosques cubre parcialmente ese derecho." + SIN_SCHEDULER,
@@ -3290,6 +3403,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "geo_intersections_forestal",
+    handler: "intersections:forestal",
     app: "geo-intersections",
     description:
       "Superposiciones de un título forestal específico (por capa + objectid) con derechos mineros. Muestra qué concesiones mineras cubren parcialmente ese bosque." + SIN_SCHEDULER,
@@ -3300,6 +3414,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   // ---- emergencias-indeci (SINPAD, emergencias históricas nacionales) ----
   {
     name: "emergencias_indeci",
+    handler: "emergencias:list",
     app: "emergencias-indeci",
     description:
       "Emergencias y daños históricos a nivel nacional (2003-2025) de INDECI/SINPAD — inundaciones, " +
@@ -3325,6 +3440,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "emergencias_indeci_detalle",
+    handler: "emergencias:detalle",
     app: "emergencias-indeci",
     description:
       "Detalle de una emergencia específica por `id` interno (no por `sinpadId`, que no es único). " +
@@ -3335,6 +3451,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
   },
   {
     name: "emergencias_indeci_preparacion_riesgo",
+    handler: "crossref:preparacionRiesgo",
     app: "emergencias-indeci",
     description:
       "Cruce territorial (por distrito) entre historial de emergencias tipo El Niño (INDECI, peligro " +

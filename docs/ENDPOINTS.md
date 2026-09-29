@@ -1,55 +1,84 @@
-# Endpoints de Rastro (2026-09-27)
+# Endpoints de Rastro (2026-09-29)
 
-> **El MCP server es solo para uso local por stdio.** No hay hosting ni deploy
-> del MCP, y el gateway **no** lo expone. Toda la infraestructura Fly.io está
-> detenida por decisión de costo. Detalle verificado en
-> [`docs/FLY_DEPLOY_MCP.md`](FLY_DEPLOY_MCP.md).
+> El MCP server está **en producción con endpoint público**, `x-api-key`
+> obligatoria. Fly.io/VPS fue decommissionado por completo — ver
+> [`docs/adr/0024-neon-en-lugar-de-d1.md`](adr/0024-neon-en-lugar-de-d1.md) y
+> [`../mcp-server/RUNBOOK_NEON.md`](../mcp-server/RUNBOOK_NEON.md).
 
 ## Estado de cada endpoint
 
-| Endpoint | Qué es | Stack | Estado 2026-09-27 |
+| Endpoint | Qué es | Stack | Estado 2026-09-29 |
 |----------|--------|-------|-------------------|
-| **https://rastro.fyi** | Sitio web (SPA). Devuelve el `index.html` del SPA para cualquier path, incluido `/mcp`; no es MCP ni proxy al gateway | Cloudflare Pages | Sirve HTML |
-| **https://treevu-rastro-gw.fly.dev** | API Gateway (Caddy) que enruta `/<slug>/*` a las APIs del catálogo. No tiene handler `/mcp` (ver `infra/fly/gateway/Caddyfile`) | Fly.io (`treevu-rastro-gw`) | Apagado (Fly) |
-| `https://mcp.rastro.fyi/mcp` | Era el **único** endpoint que servía el protocolo MCP (app `treevu-rastro-mcp`, header `x-api-key`) | Fly.io | Apagado (Fly), sin deploy |
-| `https://api.rastro.pe` | VPS 149.104.66.100; nada escucha en 443 | — | Offline |
+| **https://www.rastro.fyi** | Sitio web (SPA) | Cloudflare Pages | Sirve HTML |
+| **https://www.rastro.fyi/mcp** | Protocolo MCP (Streamable HTTP), 209 tools vía 3 meta-tools | Cloudflare Worker + Neon | **En producción**, `x-api-key` obligatoria |
+| **https://rastro.fyi/mcp** | Mismo Worker — el apex redirige (301) a `www` antes de evaluar routes | Cloudflare Worker + Neon | En producción (vía redirect) |
+| `https://mcp.rastro.fyi` | Subdominio viejo, apuntaba al Fly.io ya decommissionado | — | **502, DNS huérfano, no usar** |
+| `https://api.rastro.pe` | VPS 149.104.66.100 | — | Offline (decommissionado) |
+| `https://treevu-rastro-gw.fly.dev` | Gateway Caddy viejo | Fly.io | Offline (decommissionado) |
+
+## Historial de seguridad (resuelto)
+
+`mcp-server/src/worker.ts` dejaba pasar requests sin `x-api-key` en "modo
+abierto". Al publicar la ruta el mismo día, `security-reviewer` marcó
+CRITICAL: cualquiera en internet podía llamar a los 209 tools sin límite.
+Se revirtió la ruta, se cerró el modo abierto en el código (`x-api-key`
+ahora obligatoria — 401 si falta o es inválida, tanto en GET como POST) y se
+reactivó. El modo stdio local (`resolveActiveKey` en `index.ts`) no se tocó.
 
 ## Cómo conectar al MCP
 
-### Cliente local por stdio (única forma soportada)
+### Cliente remoto (recomendado)
+
+```
+URL: https://www.rastro.fyi/mcp
+Headers:
+  Accept: application/json, text/event-stream
+  x-api-key: sk-rastro-...
+```
+
+Sin `x-api-key` válida: `401`. Las keys se emiten a mano
+(`npm run create-key -- --group <nombre> --limit <n> --tier <workshop|pilot|internal|admin>`)
+contra la base `mcp` de Neon — no hay autoservicio.
+
+209/209 tools tienen handler contra Neon (todas las 38 apps del catálogo
+responden `ok` en `rastro_health`). `ceplan-geo` y `geo-intersections` tienen
+schema con PostGIS provisionado pero **sin datos todavía** — falta correr la
+ingesta (Fase 3 del runbook) para esas 2 apps.
+
+### Cliente local por stdio (para desarrollo)
 
 ```bash
 cd mcp-server
 npm run dev
-# Conexión: stdio local (Claude Desktop, Cursor, Kilo CLI, etc.)
 ```
-
-Para levantar las APIs locales que consume el MCP ver `scripts/dev-local.sh`.
-El meta-tool `rastro_health` reporta qué apps responden y cuántos tools tienen
-backend.
-
-### Cliente remoto
-
-No disponible: el MCP no tiene hosting. El transporte HTTP
-(`MCP_TRANSPORT=http`) existe en el código pero no está desplegado en ningún
-lado.
 
 ## Verificación
 
 ```bash
 # Sitio web (Cloudflare Pages)
-curl -I https://rastro.fyi
+curl -I https://www.rastro.fyi
 
-# Gateway (hoy apagado; cuando esté encendido responde en / y en /<slug>/*)
-curl -I https://treevu-rastro-gw.fly.dev
-curl https://treevu-rastro-gw.fly.dev/radar-ejecucion/health
+# MCP sin key — debe dar 401
+curl -s https://www.rastro.fyi/mcp -X POST \
+  -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+
+# MCP con key — handshake
+curl -s https://www.rastro.fyi/mcp -X POST \
+  -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" \
+  -H "x-api-key: sk-rastro-..." \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"probe","version":"0.0.1"}}}'
 ```
 
 ## Decisión arquitectónica
 
-- **Un gateway compartido** (`treevu-rastro-gw`) expone las APIs del catálogo vía HTTP (`/<slug>/*`); **no** expone el MCP
-- **MCP solo local por stdio** — sin MCP server hosteado, sin deploy; simplifica mantenimiento y reduce costos
-- **Cloudflare Pages** en `rastro.fyi` sirve el sitio web
-- **Sin VPS** — `api.rastro.pe` está offline
+- **Cloudflare Worker + Neon** sirve el MCP público — sin VPS, sin Fly.io,
+  sin gateway aparte.
+- **`x-api-key` obligatoria** en el transporte HTTP público (no en stdio).
+- **Cloudflare Pages** en `rastro.fyi`/`www.rastro.fyi` sirve el sitio web;
+  el Worker toma prioridad sobre Pages solo para el path `/mcp*`.
+- **Sin VPS** — `api.rastro.pe` está offline y decommissionado.
 
-**Actualizado:** 2026-09-27, alineado con `docs/FLY_DEPLOY_MCP.md` (MCP solo local, Fly apagado).
+**Actualizado:** 2026-09-29, migración completa: 209/209 tools, endpoint
+público con auth obligatoria, `ceplan_geo`/`geo_intersections` provisionadas
+en Neon (schema, sin datos).
