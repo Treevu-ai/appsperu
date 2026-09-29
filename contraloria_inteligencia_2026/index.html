@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inteligencia — Informes de Contraloria Peru 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f7f5f0;
+  --surface: #ffffff;
+  --border: #e2ddd5;
+  --text: #14171e;
+  --muted: #6b6660;
+  --accent: #8b3a2f;
+  --accent-light: #f5eeec;
+  --accent2: #2f6f5e;
+  --accent2-light: #edf5f2;
+  --tag-bg: #f0ece6;
+  --tag-text: #5a554e;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.65;
+  font-size: 15px;
+}
+.container { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+
+/* HEADER */
+.header {
+  background: var(--text);
+  color: white;
+  padding: 40px 0 32px;
+  position: relative;
+  overflow: hidden;
+}
+.header::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; width: 40%; height: 100%;
+  background: repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(255,255,255,0.03) 20px, rgba(255,255,255,0.03) 21px);
+}
+.header-top {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 24px;
+}
+.classification {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  background: var(--accent);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 2px;
+}
+.header-date {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  font-family: 'JetBrains Mono', monospace;
+}
+.header h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 36px;
+  font-weight: 400;
+  line-height: 1.2;
+  margin-bottom: 12px;
+  max-width: 700px;
+  position: relative;
+}
+.header-subtitle {
+  font-size: 16px;
+  color: rgba(255,255,255,0.65);
+  max-width: 600px;
+  line-height: 1.5;
+  position: relative;
+}
+.header-meta {
+  display: flex; gap: 24px; margin-top: 20px; flex-wrap: wrap;
+  position: relative;
+}
+.header-meta span {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* SECTION */
+section { padding: 48px 0; border-bottom: 1px solid var(--border); }
+section:last-child { border-bottom: none; }
+.section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 26px;
+  font-weight: 400;
+  margin-bottom: 16px;
+  line-height: 1.25;
+}
+h3 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+/* CARDS */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.card-accent {
+  border-left: 3px solid var(--accent);
+}
+.card-accent2 {
+  border-left: 3px solid var(--accent2);
+}
+.card-alert {
+  background: #fff8f5;
+  border-color: #f0c8be;
+}
+.card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 640px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* TAGS */
+.tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--tag-bg);
+  color: var(--tag-text);
+  font-family: 'JetBrains Mono', monospace;
+  margin-right: 6px;
+  margin-bottom: 4px;
+}
+.tag-red { background: #fde8e4; color: #8b3a2f; }
+.tag-green { background: #e6f4ef; color: #2f6f5e; }
+.tag-dark { background: #e8e6e1; color: #3a3832; }
+
+/* TABLES */
+.data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.data-table th {
+  text-align: left; padding: 10px 14px;
+  background: var(--tag-bg); font-weight: 600;
+  font-size: 11px; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--muted);
+  border-bottom: 2px solid var(--border);
+}
+.data-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: #faf8f4; }
+
+/* BENCH */
+.bench { margin-bottom: 10px; }
+.bench-label {
+  font-size: 13px; font-weight: 500; margin-bottom: 4px;
+  display: flex; justify-content: space-between;
+}
+.bench-track {
+  height: 10px; background: var(--border); border-radius: 6px; overflow: hidden;
+}
+.bench-fill { height: 100%; border-radius: 6px; }
+
+/* TIMELINE */
+.timeline { list-style: none; padding: 0; margin: 0; position: relative; }
+.timeline::before {
+  content: ''; position: absolute; left: 8px; top: 8px; bottom: 8px;
+  width: 2px; background: var(--accent); opacity: 0.3;
+}
+.timeline li { position: relative; padding: 0 0 28px 36px; }
+.timeline li:last-child { padding-bottom: 0; }
+.timeline li::before {
+  content: ''; position: absolute; left: 2px; top: 5px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--surface); border: 2px solid var(--accent);
+}
+.timeline li::after {
+  content: ''; position: absolute; left: 7px; top: 21px;
+  width: 4px; height: calc(100% - 16px);
+  background: var(--bg);
+}
+.timeline li:last-child::after { display: none; }
+.timeline-meta { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--accent); margin-bottom: 4px; }
+
+/* KV */
+.kv-grid {
+  display: grid; grid-template-columns: 160px 1fr;
+  row-gap: 12px; column-gap: 20px;
+}
+.kv-grid dt { color: var(--muted); font-size: 13px; }
+.kv-grid dd { font-size: 14px; font-weight: 500; margin: 0; }
+
+/* PERSON CARD */
+.person-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.person-name { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+.person-role { font-size: 13px; color: var(--muted); }
+.person-detail { font-size: 13px; color: var(--text); margin-top: 4px; }
+.person-badge { flex-shrink: 0; }
+
+/* CHART AREA */
+.chart-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+canvas { max-height: 280px; }
+
+/* FLOWCHART */
+.flow {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap; margin: 12px 0;
+}
+.flow-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 16px; font-size: 13px;
+  font-weight: 500; text-align: center; min-width: 120px;
+}
+.flow-arrow { color: var(--muted); font-size: 18px; }
+
+/* CALLOUT */
+.callout {
+  background: var(--accent-light);
+  border: 1px solid #e8c4bc;
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin: 16px 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.callout strong { color: var(--accent); }
+.callout-2 {
+  background: var(--accent2-light);
+  border: 1px solid #b8d8cf;
+}
+.callout-2 strong { color: var(--accent2); }
+
+/* DIVIDER */
+.divider {
+  height: 1px; background: var(--border); margin: 32px 0;
+}
+.text-muted { color: var(--muted); font-size: 14px; }
+.text-sm { font-size: 13px; }
+.mt-4 { margin-top: 16px; }
+.mt-8 { margin-top: 32px; }
+.mb-4 { margin-bottom: 16px; }
+p + p { margin-top: 12px; }
+ul { padding-left: 20px; margin-top: 8px; }
+li { margin-bottom: 4px; }
+strong { font-weight: 600; }
+
+/* SOURCES */
+.source-item {
+  display: flex; gap: 12px; padding: 10px 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: 13px;
+}
+.source-item:last-child { border-bottom: none; }
+.source-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--accent);
+  font-weight: 600; min-width: 28px;
+}
+.source-text { color: var(--muted); }
+.source-link { color: var(--accent2); text-decoration: none; }
+
+/* FOOTER */
+.footer {
+  background: var(--text); color: rgba(255,255,255,0.4);
+  padding: 32px 0; font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  text-align: center;
+}
+
+/* SECTION DIVIDER ICON */
+.section-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--accent-light);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 16px;
+  color: var(--accent);
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="container">
+    <div class="header-top">
+      <span class="classification">DOCUMENTO DE INTELIGENCIA</span>
+      <span class="header-date">25.09.2026</span>
+    </div>
+    <h1>Informes de la Contraloria General de la Republica: Panorama 2026</h1>
+    <p class="header-subtitle">Hallazgos, actores comprometidos y crisis institucional del organismo de control en el Peru durante el ano electoral 2026</p>
+    <div class="header-meta">
+      <span>FUENTES: 22</span>
+      <span>CATEGORY: CONTROL GUBERNAMENTAL</span>
+      <span>PERU</span>
+    </div>
+  </div>
+</header>
+
+<!-- COVER CARD -->
+<div style="background: var(--surface); border-bottom: 1px solid var(--border); padding: 32px 0;">
+  <div class="container">
+    <div class="card card-accent" style="margin:0; border-radius:10px;">
+      <p style="font-size:15px; line-height:1.7;">
+        La Contraloria General de la Republica del Peru produjo durante 2026 una cascada de informes de alto impacto que comprometen a funcionarios de la ONPE, ministerios, gobiernos regionales y municipales. Sin embargo, la propia institucion enfrenta una crisis simultanea: su contralor general, <strong>Cesar Enrique Aguilar Surichaqui</strong>, esta bajo investigacion del JEE por uso electoral de su imagen, el Congreso impulsa una reincorporacion masiva de personal que superaria en mas del 100% su presupuesto anual, y el MEF le nego recursos operativos basicos. Este documento reconstruye el panorama completo con nombres y apellidos.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 1 -->
+<section>
+  <div class="container">
+    <div class="section-label">I. Contexto Institucional</div>
+    <h2>La Contraloria bajo fuego cruzado</h2>
+
+    <div class="callout">
+      <strong>DATO CLAVE.</strong> Al cierre de agosto de 2026, la Contraloria tiene <strong>4,000 trabajadores menos</strong> que en anos anteriores, un presupuesto de solo S/ 980 millones, y un pasivo potencial de S/ 1,051 millones si el Congreso aprueba la reincorporacion de 6,441 cesados.
+    </div>
+
+    <div class="card-grid" style="margin-top:20px;">
+      <div class="card">
+        <h3>Presupuesto 2026</h3>
+        <div class="kv-grid mt-4">
+          <dt>Asignacion</dt><dd>S/ 980 millones</dd>
+          <dt>Pasivo potencial</dt><dd>S/ 1,051 millones</dd>
+          <dt>Déficit operativo</dt><dd>S/ 56 millones solicitados al MEF</dd>
+          <dt>Personal</dt><dd>~4,000 menos que 2022-2024</dd>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Acciones de control 2026</h3>
+        <div class="kv-grid mt-4">
+          <dt>Control previo</dt><dd>717 servicios</dd>
+          <dt>Control simultaneo</dt><dd>18,400 servicios</dd>
+          <dt>Control posterior</dt><dd>6,054 servicios</dd>
+          <dt>Perjuicio detectado</dt><dd>S/ 722 millones</dd>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-container mt-8">
+      <h3 style="margin-bottom:16px;">Presupuesto vs. pasivo potencial</h3>
+      <div class="bench">
+        <div class="bench-label"><span>Presupuesto 2026</span><span style="color:var(--accent2); font-weight:700;">S/ 980M</span></div>
+        <div class="bench-track"><div class="bench-fill" style="width:93%; background:var(--accent2);"></div></div>
+      </div>
+      <div class="bench">
+        <div class="bench-label"><span>Pasivo potencial (reincorporacion)</span><span style="color:var(--accent); font-weight:700;">S/ 1,051M</span></div>
+        <div class="bench-track"><div class="bench-fill" style="width:100%; background:var(--accent);"></div></div>
+      </div>
+      <p class="text-muted text-sm mt-4">Si se aprueba la reincorporacion de 6,441 trabajadores cesados (2022-2024), el pasivo supera el presupuesto anual en mas de un 100%.</p>
+    </div>
+
+    <h3 style="margin-top:24px;">Las tres presiones simultaneas</h3>
+    <div class="card-grid">
+      <div class="card card-accent">
+        <span class="tag tag-red">JEE</span>
+        <p class="mt-4" style="font-size:14px;">El JEE de Lima Centro 1 abrio procedimiento sancionador contra el propio contralor por 53 publicaciones en Facebook durante la veda electoral.</p>
+      </div>
+      <div class="card card-accent">
+        <span class="tag tag-red">Congreso</span>
+        <p class="mt-4" style="font-size:14px;">Dictamen para reincorporar 6,441 cesados con costo de S/ 1,051M, superior al presupuesto total de la entidad. Provocaria demanda de inconstitucionalidad.</p>
+      </div>
+      <div class="card card-accent">
+        <span class="tag tag-red">MEF</span>
+        <p class="mt-4" style="font-size:14px;">El Ministerio de Economia nego un Decreto de Urgencia por S/ 56 millones para cubrir deficit operativo. La planilla estaria en riesgo.</p>
+      </div>
+      <div class="card card-accent2">
+        <span class="tag tag-green">Directiva 006</span>
+        <p class="mt-4" style="font-size:14px;">La norma que permite reformular informes de oficio abre la puerta a debilitar hallazgos incomod os. criticos lasenalan como mecanismo de autocontrol.</p>
+      </div>
+    </div>
+
+    <div class="callout callout-2">
+      <strong>Opinion del contralor.</strong> Cesar Aguilar manifesto: <em>"No es una oposicion cerrada al retorno de las 6,441 personas, sino que la medida es financieramente inviable. Es inconstitucional: el Congreso no puede crear iniciativa de gasto para el ano en curso. Por eso planteamos la demanda de inconstitucionalidad."</em>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 2 -->
+<section>
+  <div class="container">
+    <div class="section-label">II. Caso Central: ONPE / Elecciones 2026</div>
+    <h2>El mega-informe de 6,578 folios y 14 tomos</h2>
+
+    <p>El <strong>Informe de Control Específico N.° 8536-2026-CG/JUSPE-SCE</strong>, emitido el 22 de mayo de 2026, es el documento de mayor gravitancia del ano. Con una extension de <strong>6,578 folios</strong>, identifico presuntas responsabilidades penales y administrativas en <strong>10 funcionarios</strong> de la ONPE por las fallas logisticas de la primera vuelta electoral del 12 de abril de 2026.</p>
+
+    <div class="callout mt-4">
+      <strong>Perjuicio concreto:</strong> <strong>55,261 electores</strong> no pudieron ejercer su derecho al voto. De estos, 187 mesas de sufragio no llegaron a habilitarse en Lima Metropolitana. La causa raiz: el proceso de contratacion del servicio de transporte y la distribucion de equipos informaticos electorales fueron deficientes desde la formulacion de terminos de referencia.
+    </div>
+
+    <h3 style="margin-top:24px; margin-bottom:16px;">Funcionarios con responsabilidad penal (8)</h3>
+
+    <div class="person-card">
+      <div>
+        <div class="person-name">Piero Alessandro Corvetto Salinas</div>
+        <div class="person-role">Exjefe de la ONPE</div>
+        <div class="person-detail">Responsable por no ejecutar acciones necesarias para garantizar el Plan Operativo Electoral. Hubo inaccion frente a la distribucion inoportuna del material electoral y equipos informaticos.</div>
+      </div>
+      <div class="person-badge"><span class="tag tag-red">Responsabilidad penal</span></div>
+    </div>
+
+    <div class="person-card">
+      <div>
+        <div class="person-name">Jose Edilberto Samame Blas</div>
+        <div class="person-role">Gerente de Gestion Electoral</div>
+        <div class="person-detail">Elaboro terminos de referencia sin cuantificar adecuadamente la necesidad real de vehiculos para el transporte de material electoral. Favorecio presumptamente a la empresa Galaga.</div>
+      </div>
+      <div class="person-badge"><span class="tag tag-red">Responsabilidad penal</span></div>
+    </div>
+
+    <div class="person-card">
+      <div>
+        <div class="person-name">Juan Antonio Phang Sanchez</div>
+        <div class="person-role">Subgerente de Produccion Electoral</div>
+        <div class="person-detail">Igual que Samame Blas: terminos de referencia sin cuantificacion real. Documentos presumidos falsos en la evaluacion de la oferta del postor ganador.</div>
+      </div>
+      <div class="person-badge"><span class="tag tag-red">Responsabilidad penal</span></div>
+    </div>
+
+    <div class="person-card">
+      <div>
+        <div class="person-name">Roberto Carlos Montenegro Vega</div>
+        <div class="person-role">Gerente de Informatica y Tecnologia Electoral</div>
+        <div class="person-detail">Responsabilidad penal y/o administrativa por decisiones vinculadas a la gestion de equipos informaticos y su distribucion.</div>
+      </div>
+      <div class="person-badge"><span class="tag tag-red">Responsabilidad penal/adm.</span></div>
+    </div>
+
+    <div class="person-card">
+      <div>
+        <div class="person-name">Jesus Alberto Felix Atuncar</div>
+        <div class="person-role">Subgerente de Infraestructura y Seguridad Tecnologica</div>
+        <div class="person-detail">Presunta responsabilidad penal y/o administrativa por decisiones en su ambito de competencia.</div>
+      </div>
+      <div class="person-badge"><span class="tag tag-red">Responsabilidad penal/adm.</span></div>
+    </div>
+
+    <div class="person-card">
+      <div>
+        <div class="person-name">Yuvitza Milagros Aquila Ticona</div>
+        <div class="person-role">Subgerenta de Logistica</div>
+        <div class="person-detail">Presunta responsabilidad penal y/o administrativa por la cadena de abastecimiento electoral.</div>
+      </div>
+      <div class="person-badge"><span class="tag tag-red">Responsabilidad penal/adm.</span></div>
+    </div>
+
+    <div class="person-card">
+      <div>
+        <div class="person-name">Juan Enrique Pesaran Uribe</div>
+        <div class="person-role">Gerente de Asesoria Juridica</div>
+        <div class="person-detail">Presunta responsabilidad penal y/o administrativa.</div>
+      </div>
+      <div class="person-badge"><span class="tag tag-red">Responsabilidad penal/adm.</span></div>
+    </div>
+
+    <div class="person-card">
+      <div>
+        <div class="person-name">Edward Eloy Alvarado Gonzalez</div>
+        <div class="person-role">Gerente de Administracion</div>
+        <div class="person-detail">Presunta responsabilidad penal y/o administrativa.</div>
+      </div>
+      <div class="person-badge"><span class="tag tag-red">Responsabilidad penal/adm.</span></div>
+    </div>
+
+    <h3 style="margin-top:24px; margin-bottom:16px;">Funcionarios con responsabilidad administrativa (2)</h3>
+
+    <div class="person-card" style="border-left:3px solid var(--accent2);">
+      <div>
+        <div class="person-name">Lilia Flores Bancho</div>
+        <div class="person-role">Evaluadora en fase de seleccion del proceso de contratacion</div>
+      </div>
+      <div class="person-badge"><span class="tag tag-green">Responsabilidad administrativa</span></div>
+    </div>
+
+    <div class="person-card" style="border-left:3px solid var(--accent2);">
+      <div>
+        <div class="person-name">William Martin Garcia Velasquez</div>
+        <div class="person-role">Evaluador en fase de seleccion del proceso de contratacion</div>
+      </div>
+      <div class="person-badge"><span class="tag tag-green">Responsabilidad administrativa</span></div>
+    </div>
+
+    <h3 style="margin-top:24px; margin-bottom:16px;">La empresa Galaga: el核contractor</h3>
+    <div class="card card-alert">
+      <h3>Servicios Generales Galaga S.A.C.</h3>
+      <p class="mt-4">Empresa que ejecuto el servicio de transporte electoral. Segun la Contraloria:</p>
+      <ul style="margin-top:12px;">
+        <li>Ejecuto el servicio con <strong>437 vehiculos de terceros</strong>, pese a que inicialmente se exigia una flota propia minima.</li>
+        <li>El precio unitario para trasladar equipos informaticos subio de <strong>S/0.60 a S/6 por kilogramo</strong>: un incremento del <strong>900%</strong> sobre lo contratado.</li>
+        <li>El cambio fue aprobado como "prestacion adicional" al contrato original sin sustento tecnico ni documentado.</li>
+        <li>La Contraloria senala que la ONPE aprobo modificaciones que alteraron las condiciones originales y generaron beneficio economico al contratista sin justificacion suficiente.</li>
+      </ul>
+    </div>
+
+    <h3 style="margin-top:24px; margin-bottom:16px;">Destino del informe</h3>
+    <div class="flow">
+      <div class="flow-box" style="background:var(--accent-light); border-color:#e8c4bc;">Bernardo Pachas<br><small>Jefe Interino ONPE</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box" style="background:var(--accent-light); border-color:#e8c4bc;">Maria Teresa Cabrera<br><small>Presidenta, Junta Nacional de Justicia</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box" style="background:var(--accent-light); border-color:#e8c4bc;">Mario Luna Ramos<br><small>Procurador, Delitos de Corrupcion</small></div>
+    </div>
+
+    <h3 style="margin-top:24px;">Estadisticas de alerta electoral</h3>
+    <div class="chart-container">
+      <h3 style="margin-bottom:16px;">601 observaciones en 278 informes de control electoral</h3>
+      <div class="bench">
+        <div class="bench-label"><span>Subsanadas</span><span style="color:var(--accent2); font-weight:700;">23% (138)</span></div>
+        <div class="bench-track"><div class="bench-fill" style="width:23%; background:var(--accent2);"></div></div>
+      </div>
+      <div class="bench">
+        <div class="bench-label"><span>No corregidas</span><span style="color:var(--accent); font-weight:700;">77% (463)</span></div>
+        <div class="bench-track"><div class="bench-fill" style="width:77%; background:var(--accent);"></div></div>
+      </div>
+      <p class="text-muted text-sm mt-4">De 601 observaciones identificadas por la Contraloria en informes de control electoral, el 77% no habia sido corregido al momento de la primera vuelta electoral.</p>
+    </div>
+
+    <div class="callout mt-4">
+      <strong>Nota de verificacion.</strong> Una informacion viral aseguraba que la Contraloria "confirma fraude electoral" y "denuncia penalmente a Corvetto". Segun <strong>PeruCheck</strong> y la revisio n directa del documento, el informe <strong>no menciona la palabra "fraude"</strong> ni concluye manipulacion de resultados. Lo que documenta son irregularidades administrativas, contractuales y logisticas que afectaron la organizacion — no los resultados electorales.
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 3 -->
+<section>
+  <div class="container">
+    <div class="section-label">III. Otros casos relevantes 2026</div>
+    <h2>Funcionarios y entidades bajo la lupa</h2>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Informe</th>
+          <th>Entidad</th>
+          <th>Monto</th>
+          <th>Personas / Caso</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>N.° 111-2026</strong><br><span class="text-muted text-sm">Julio 2026</span></td>
+          <td>Municipalidad de<br>Magdalena del Mar</td>
+          <td style="color:var(--accent); font-weight:600;">> S/ 2.8M en bienes faltantes<br>+ S/ 2M sin sustentar</td>
+          <td><strong>Francis Allison</strong><br>(alcalde) — respondio que el informe corresponde a la administracion anterior y que su gestion "salio impecable"</td>
+        </tr>
+        <tr>
+          <td><strong>N.° 021-2026-2-5304-AC</strong><br><span class="text-muted text-sm">MTC / Loreto</span></td>
+          <td>Ministerio de Transportes<br>y Comunicaciones</td>
+          <td style="color:var(--accent); font-weight:600;">S/ 80 millones<br>(Aerodromo Yurimaguas)</td>
+          <td>Funcionarios del MTC. Se adjudicaron contratos a un consorcio que <strong>no acredito adecuadamente la experiencia</strong> de su personal clave. Se identificaron <strong>3 documentos presumidos falsos</strong>. La Contraloria pidio inversion del Aerodromo de Yurimaguas, Alto Amazonas, Loreto.</td>
+        </tr>
+        <tr>
+          <td><strong>N.° 011-2026-2-0217-AC</strong><br><span class="text-muted text-sm">IPD / Lima-Ayacucho</span></td>
+          <td>Instituto Peruano<br>del Deporte</td>
+          <td style="color:var(--accent); font-weight:600;">S/ 18'878,470<br>(Juegos Bolivarianos)</td>
+          <td><strong>7 funcionarios y servidores</strong> con presunta responsabilidad penal y/o administrativa. Se pagaron precios unitarios diferentes a los contratados, se pago por <strong>43 salas no brindadas</strong> y no se aplicaron penalidades por retrasos. La contratacion se hizo bajo causal de emergencia sin analisis previo. <strong>5 casos remitidos a la Procuradoria Especializada en Delitos de Corrupcion.</strong></td>
+        </tr>
+        <tr>
+          <td><strong>N.° 002-2026-2-5355-AC</strong><br><span class="text-muted text-sm">Marzo 2026</span></td>
+          <td>GORE Callao<br>(Costa Verde)</td>
+          <td style="color:var(--accent); font-weight:600;">> S/ 3 millones<br>en perdidas</td>
+          <td>Funcionarios del Gobierno Regional del Callao. Irregularidades en la obra Costa Verde. Periodo evaluado: 3 de junio de 2021 al 29 de junio de 2025.</td>
+        </tr>
+        <tr>
+          <td><strong>DFOE-FIP-IAA-00005-2026</strong><br><span class="text-muted text-sm">Septiembre 2026</span></td>
+          <td>Estados Financieros<br>del Gobierno Central 2025</td>
+          <td>Opinion adversa<br>(sin cuantificar)</td>
+          <td><strong>Dictamen adverso</strong> de la Contraloria sobre los estados financieros del Gobierno Central al 31 de diciembre de 2025. La informacion no es confiable. Se identificaron diferencias en cuentas por cobrar, activos, deudas, ingresos, y operaciones entre entidades por <strong>S/ 6.9 billones</strong> eliminadas de manera incompleta. Incumplimiento de NICSP.</td>
+        </tr>
+        <tr>
+          <td><strong>N.° 10671-2026-CG/AGR-SOP</strong><br><span class="text-muted text-sm">Agosto 2026</span></td>
+          <td>6 regiones:<br>Loreto, Amazonas, Apurimac,<br>San Martin, Pasco, Huanuco</td>
+          <td>Mas de 1,000<br>intervenciones sin ejecutar</td>
+          <td>Contraloria detecto que mas de <strong>1,000 intervenciones en rios y quebradas</strong> para reducir riesgos frente al Fenomeno El Nino <strong>no cuentan con recursos para su ejecucion</strong>. Las regiones no registran avances a pesar de estar en temporada de prevencion.</td>
+        </tr>
+        <tr>
+          <td><strong>N.° 007-2026-2-5765-AC</strong><br><span class="text-muted text-sm">2024-2025</span></td>
+          <td>Direccion Desconcentrada<br>de Cultura Cusco /<br>Ministerio de Cultura</td>
+          <td>Sobrepase de aforo<br>91,000+ personas</td>
+          <td><strong>3 servidores publicos</strong> de la DDC Cusco con presunta responsabilidad administrativa. Machu Picchu tuvo sobrecarga de hasta <strong>1,138 personas</strong> sobre el limite permitido en temporada baja. Se registro visitantes sin contabilidad en la plataforma TuBoleto.cultura.pe.</td>
+        </tr>
+        <tr>
+          <td><strong>9014-2026-CG/OCE-ADE</strong></td>
+          <td>32 obras publicas<br>(modalidad G2G)</td>
+          <td>Costaron +100%<br>y tardaron +3x</td>
+          <td>Informe de Auditoria de Desempeno. 32 obras ejecutadas bajo modalidad Gobierno a Gobierno (2020-2025) costaron mas del doble y tardaron tres veces mas de lo establecido en sus contratos originales.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- SECTION 4 -->
+<section>
+  <div class="container">
+    <div class="section-label">IV. El Contralor en el banquillo</div>
+    <h2>Cesar Enrique Aguilar Surichaqui: de fiscalizador a investigado</h2>
+
+    <div class="card card-alert">
+      <h3>Investigacion del JEE: 53 publicaciones en plena veda electoral</h3>
+      <p class="mt-4">El <strong>Jurado Electoral Especial de Lima Centro 1</strong> aperturo un procedimiento sancionador contra el contralor general <strong>Cesar Enrique Aguilar Surichaqui</strong> por el presunto uso indebido de publicidad estatal con contenido que lo identifica directamente, en pleno periodo de neutralidad electoral hacia las Elecciones Generales 2026.</p>
+      <div class="kv-grid mt-4">
+        <dt>Fecha de resolucion</dt><dd>18 de noviembre de 2025 (publicada en medios 2026)</dd>
+        <dt>Fiscalizadora del caso</dt><dd>Yessica Chavez Julca</dd>
+        <dt>Numero de publicaciones</dt><dd>53 en Facebook de la Contraloria</dd>
+        <dt>Periodo cuestionado</dt><dd>18 de marzo al 5 de noviembre de 2025</dd>
+        <dt>Contenido</dt><dd>Fotos, videos, menciones con su nombre, imagen, voz y cargo</dd>
+        <dt>Infraccion</dt><dd>Omision de reporte posterior + difusion de contenido que identifica al funcionario</dd>
+        <dt>Sancion posible</dt><dd style="color:var(--accent); font-weight:700;">30 a 100 UIT</dd>
+      </div>
+      <p class="mt-4 text-sm text-muted">El regimen electoral prohibe la difusion de contenido que identifique a funcionarios publicos durante la veda electoral, salvo excepciones debidamente reportadas, lo cual nooccurrio segun el informe de fiscalizacion.</p>
+    </div>
+
+    <h3 style="margin-top:24px;">Línea de tiempo de posicion public a del contralor</h3>
+    <ul class="timeline">
+      <li>
+        <div class="timeline-meta">20 ABR 2026</div>
+        <strong>Aguilar reconoce fallas en elecciones</strong>
+        <p class="text-sm text-muted mt-2">Durante visita a Junin, el contralor expreso su preocupacion por las fallas y califico como "lamentable" que por segunda vez una entidad vinculada al proceso electoral sea cuestionada. Anuncio 601 observaciones registradas, de las cuales solo 94 habian sido subsanadas.</p>
+      </li>
+      <li>
+        <div class="timeline-meta">7 JUN 2026</div>
+        <strong>Aguilar no pudo votar en segunda vuelta</strong>
+        <p class="text-sm text-muted mt-2">El contralor informo que no pudo ejercer su voto porque no se instalo su mesa de sufragio por ausencia de miembros. Horas despues, advertio que la Contraloria ya emitio una alerta oficial al JNE por presunto uso de recursos publicos en la contratacion de fiscalizadores.</p>
+      </li>
+      <li>
+        <div class="timeline-meta">AGO 2026</div>
+        <strong>Comparece ante Comision del Congreso</strong>
+        <p class="text-sm text-muted mt-2">Aguilar informo ante la Comision de Gestion del Estado y Contraloria del Congreso que se detecto un perjuicio economico de <strong>S/ 722 millones</strong> y que la institucion trabaja con casi 4,000 trabajadores menos. Expuso su disconformidad con la propuesta de reincorporacion de cesados.</p>
+      </li>
+      <li>
+        <div class="timeline-meta">AGO 2026</div>
+        <strong>Cumbre Internacional anticorrupcion</strong>
+        <p class="text-sm text-muted mt-2">En la inauguracion de la cumbre con 32 Entidades Fiscalizadoras Superiores (EFS) del exterior, Aguilar manifesto: <em>"La fortaleza de una democracia no se mide por la ausencia de cuestionamientos, sino por la solidez de sus instituciones de control."</em></p>
+      </li>
+      <li>
+        <div class="timeline-meta">SEPT 2026</div>
+        <strong>Alerta maxima por Fenomeno El Nino</strong>
+        <p class="text-sm text-muted mt-2">Aguilar instalo equipos tecnicos de control multisectorial en Arequipa y advirtio que <strong>484 distritos</strong> (2.7 millones de personas) estan en riesgo muy alto por deficit hidrico. Invoco a las autoridades regionales a priorizar la inversion en prevencion.</p>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- SECTION 5 -->
+<section>
+  <div class="container">
+    <div class="section-label">V. La normativa Controversial</div>
+    <h2>Directiva N.° 006-2026-CG/ACAL: revision de oficio y reformulacion</h2>
+
+    <div class="card card-accent">
+      <h3>Que hace esta norma?</h3>
+      <p class="mt-4">La <strong>Resolucion de Contraloria N.° 373-2026-CG</strong>, aprobada en junio de 2026, creo la Directiva N.° 006-2026-CG/ACAL: "Revision de Oficio y Reformulacion de Informes de Control", que permite a la propia Contraloria reformular sus informes de oficio — es decir, sin que medie solicitud del ente auditado.</p>
+    </div>
+
+    <h3 style="margin-top:24px;">Cambios clave</h3>
+    <div class="card-grid">
+      <div class="card" style="border-left:3px solid var(--muted);">
+        <span class="tag tag-dark">ANTES</span>
+        <p class="mt-4 text-sm">La Subgerencia de Aseguramiento de la Calidad, la Gerencia de Asesoria Juridica y la Secretaria General podian emitir recomendaciones de reformulacion que estaban en tramite. Se evaluaba el ambito de aplicacion y la pertinencia.</p>
+      </div>
+      <div class="card card-accent2">
+        <span class="tag tag-green">AHORA</span>
+        <p class="mt-4 text-sm">Se prescinde de la evaluacion del ambito de aplicacion y de la evaluacion de pertinencia. Los procesos pendientes se retrotraen para revision a cargo de la Oficina de Aseguramiento de la Calidad de Servicios de Control. Se pueden reformular informes de control sin tramite previo.</p>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>Riesgo sealado por la comunidad de control.</strong> Organizaciones de sociedad civil y expertos en gestion publica han sealado que esta norma puede funcionar como mecanismo de <strong>autocontrol institucional</strong>: informes que senalan responsabilidades de actores politicamente sensibles podrian ser reformulados o debilitados de oficio, reduciendo la capacidad de la Contraloria como contrapeso democratico. La propia Contraloria producio 278 informes alertando sobre problemas electorales y el 77% de las observaciones no fueron corregidas — lo cual sugui ere que el problema no es la calidad de los informes, sino su falta de atencion.
+    </div>
+
+    <h3 style="margin-top:24px;">Contexto: los 278 informes sobre elecciones</h3>
+    <p>Ante la Comision de Fiscalizacion del Congreso, el vocero de la Contraloria <strong>Guzman Vera</strong> informo que se emitieron <strong>278 informes de control</strong> que alertaron sobre situaciones adversas en el proceso electoral, con <strong>601 observaciones</strong> vinculadas a la gestion de Piero Corvetto. El 77% de esas observaciones no habian sido corregidas al dia de la eleccion. Entre los informes mas criticos:</p>
+    <ul style="margin-top:12px;">
+      <li><strong>Informe de Visita de Control N.° 072-2026-OCI/3599-SVC</strong> (14 de abril de 2026): detecto tres situaciones adversas que podrian afectar el derecho de sufragio en las Elecciones Generales 2026.</li>
+      <li>Auditoria sobre "Implementacion del centro de computo" en Oficinas Descentralizadas.</li>
+      <li>Auditoria sobre "Servicio de despliegue y repliegue del material electoral" en Callao, Pasco, Tacna, Huaura y Mariscal Nieto.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- SECTION 6 -->
+<section>
+  <div class="container">
+    <div class="section-label">VI. Mapa de Actores</div>
+    <h2>Nombres propios mencionados en los informes de 2026</h2>
+
+    <div class="card-grid">
+      <div>
+        <h3 style="color:var(--accent);">ONPE / Elecciones</h3>
+        <div class="person-card" style="border-left:3px solid var(--accent);">
+          <div>
+            <div class="person-name" style="font-size:14px;">Piero Alessandro Corvetto Salinas</div>
+            <div class="person-role" style="font-size:12px;">Exjefe ONPE — responsabilidad penal</div>
+          </div>
+        </div>
+        <div class="person-card" style="border-left:3px solid var(--accent);">
+          <div>
+            <div class="person-name" style="font-size:14px;">Jose Edilberto Samame Blas</div>
+            <div class="person-role" style="font-size:12px;">Gerente Gestion Electoral</div>
+          </div>
+        </div>
+        <div class="person-card" style="border-left:3px solid var(--accent);">
+          <div>
+            <div class="person-name" style="font-size:14px;">Juan Antonio Phang Sanchez</div>
+            <div class="person-role" style="font-size:12px;">Subgerente Produccion Electoral</div>
+          </div>
+        </div>
+        <div class="person-card" style="border-left:3px solid var(--accent);">
+          <div>
+            <div class="person-name" style="font-size:14px;">Roberto Carlos Montenegro Vega</div>
+            <div class="person-role" style="font-size:12px;">Gerente Informatica y Tecnologia</div>
+          </div>
+        </div>
+        <div class="person-card" style="border-left:3px solid var(--accent);">
+          <div>
+            <div class="person-name" style="font-size:14px;">Jesus Alberto Felix Atuncar</div>
+            <div class="person-role" style="font-size:12px;">Subgerente Infraestructura y Seguridad</div>
+          </div>
+        </div>
+        <div class="person-card" style="border-left:3px solid var(--accent);">
+          <div>
+            <div class="person-name" style="font-size:14px;">Yuvitza Milagros Aquila Ticona</div>
+            <div class="person-role" style="font-size:12px;">Subgerenta de Logistica</div>
+          </div>
+        </div>
+        <div class="person-card" style="border-left:3px solid var(--accent);">
+          <div>
+            <div class="person-name" style="font-size:14px;">Juan Enrique Pesaran Uribe</div>
+            <div class="person-role" style="font-size:12px;">Gerente de Asesoria Juridica</div>
+          </div>
+        </div>
+        <div class="person-card" style="border-left:3px solid var(--accent);">
+          <div>
+            <div class="person-name" style="font-size:14px;">Edward Eloy Alvarado Gonzalez</div>
+            <div class="person-role" style="font-size:12px;">Gerente de Administracion</div>
+          </div>
+        </div>
+        <div class="person-card" style="border-left:3px solid var(--accent);">
+          <div>
+            <div class="person-name" style="font-size:14px;">Lilia Flores Bancho</div>
+            <div class="person-role" style="font-size:12px;">Evaluadora — responsabilidad administrativa</div>
+          </div>
+        </div>
+        <div class="person-card" style="border-left:3px solid var(--accent);">
+          <div>
+            <div class="person-name" style="font-size:14px;">William Martin Garcia Velasquez</div>
+            <div class="person-role" style="font-size:12px;">Evaluador — responsabilidad administrativa</div>
+          </div>
+        </div>
+        <div class="person-card" style="border-left:3px solid var(--accent);">
+          <div>
+            <div class="person-name" style="font-size:14px;">Bernardo Pachas</div>
+            <div class="person-role" style="font-size:12px;">Jefe Interino ONPE (destinatario del informe)</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 style="color:var(--accent2);">Contraloria / Estado</h3>
+        <div class="person-card" style="border-left:3px solid var(--accent2);">
+          <div>
+            <div class="person-name" style="font-size:14px;">Cesar Enrique Aguilar Surichaqui</div>
+            <div class="person-role" style="font-size:12px;">Contralor General (investigado por JEE)</div>
+          </div>
+        </div>
+        <div class="person-card" style="border-left:3px solid var(--accent2);">
+          <div>
+            <div class="person-name" style="font-size:14px;">Yessica Chavez Julca</div>
+            <div class="person-role" style="font-size:12px;">Fiscalizadora JEE Lima Centro 1</div>
+          </div>
+        </div>
+        <div class="person-card" style="border-left:3px solid var(--accent2);">
+          <div>
+            <div class="person-name" style="font-size:14px;">Maria Teresa Cabrera</div>
+            <div class="person-role" style="font-size:12px;">Presidenta, Junta Nacional de Justicia</div>
+          </div>
+        </div>
+        <div class="person-card" style="border-left:3px solid var(--accent2);">
+          <div>
+            <div class="person-name" style="font-size:14px;">Mario Luna Ramos</div>
+            <div class="person-role" style="font-size:12px;">Procurador, Delitos de Corrupcion</div>
+          </div>
+        </div>
+        <div class="person-card" style="border-left:3px solid var(--accent2);">
+          <div>
+            <div class="person-name" style="font-size:14px;">Jose Salardi</div>
+            <div class="person-role" style="font-size:12px;">Ministro de Economia y Finanzas</div>
+          </div>
+        </div>
+        <div class="person-card" style="border-left:3px solid var(--accent2);">
+          <div>
+            <div class="person-name" style="font-size:14px;">Guzman Vera</div>
+            <div class="person-role" style="font-size:12px;">Vocabulario de la Contraloria</div>
+          </div>
+        </div>
+
+        <h3 style="color:var(--muted); margin-top:24px;">Gobierno local / regional</h3>
+        <div class="person-card" style="border-left:3px solid var(--muted);">
+          <div>
+            <div class="person-name" style="font-size:14px;">Francis Allison</div>
+            <div class="person-role" style="font-size:12px;">Alcalde de Magdalena del Mar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 7 -->
+<section>
+  <div class="container">
+    <div class="section-label">VII. Analisis</div>
+    <h2>Lectura estrat egica</h2>
+
+    <div class="card-grid">
+      <div class="card card-accent">
+        <h3>Fuerza</h3>
+        <p class="mt-4 text-sm">Los informes son tecnicamente rigurosos. 6,578 folios, 14 tomos, con nombres, montos y plazos definidos. La Contraloria ha identificado con precision a los responsables y ha cuantificado el dano. Su sistema de control simultaneo (18,400 servicios) es el mas activo de la region.</p>
+      </div>
+      <div class="card card-alert">
+        <h3>Debilidad</h3>
+        <p class="mt-4 text-sm">El organismo opera con 4,000 trabajadores menos, sin presupuesto suficiente, bajo presion politica directa del Congreso y del propio Ejecutivo. El contralor es juez y parte: investiga a la ONPE mientras es investigado por el JEE.</p>
+      </div>
+    </div>
+
+    <div class="card card-accent2">
+      <h3>Patron recurrente</h3>
+      <p class="mt-4 text-sm">El ciclo es consistentemente el mismo: la Contraloria identifica el problema con precision, lo documenta, lo notifica a los responsables, y el <strong>77% de las observaciones no se corrigen</strong>. La Directiva 006-2026 no resuelve este problema de cumplimiento — lo institucionaliza al permitir que los propios informes sean reformulados si incomodan.</p>
+    </div>
+
+    <h3 style="margin-top:24px;">Evaluacion de la pregunta inicial: ?son cuestionables los informes?</h3>
+    <p>Los informes en si —su contenido tecnico— no estan cuestionados. Los hallazgos son precisos, documentados y con nombres propios. Lo que esta bajo escrutinio es el <strong>alcance institucional</strong> de la Contraloria como guardian del interes publico:</p>
+    <ul style="margin-top:12px;">
+      <li>El contralor produce informes severos sobre la ONPE mientras el JEE lo investiga por疑似 uso electoral de su imagen.</li>
+      <li>La entidad alerta 278 veces sobre fallas electorales y el 77% de las alertas no se atienden antes de la eleccion.</li>
+      <li>La norma que permite reformular informes de oficio reduce la capacidad de la Contraloria para funcionar como contrapeso democratico automatico.</li>
+      <li>El Congreso y el MEF estan presionando a la Contraloria con decisiones que podrian comprometer su operatividad, no fortalecerla.</li>
+    </ul>
+    <p class="mt-4">La pregunta no es si los informes de la Contraloria son cuestionables —son solidos—. La pregunta es si la Contraloria tiene la autonomia institucional para que esos informes se traduzcan en acciones correctivas, o si es una maquina de documentar problemas sin capacidad de resolverlos.</p>
+  </div>
+</section>
+
+<!-- SECTION 8 -->
+<section>
+  <div class="container">
+    <div class="section-label">VIII. Fuentes</div>
+    <h2>Referencias yDocumentos</h2>
+
+    <div class="source-item">
+      <span class="source-num">01</span>
+      <div>
+        <div class="source-text"><strong>Infobae</strong> — Monica Yaya cuestiona a Francis Allison por informe de Contraloria sobre bienes faltantes en Magdalena del Mar. Informe N.° 111-2026, julio 2026.</div>
+        <a class="source-link" href="https://www.infobae.com/peru/2026/09/23/monica-yaya-cuestiona-a-francis-allison-por-informe-de-contraloria-sobre-bienes-faltantes-durante-su-gestion-en-magdalena-del-mar/">infobae.com</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">02</span>
+      <div>
+        <div class="source-text"><strong>La Republica</strong> — Empresa gano obra de S/80 millones en Loreto pese a no acreditar experiencia exigida de su personal. Informe N.° 021-2026-2-5304-AC.</div>
+        <a class="source-link" href="https://larepublica.pe/sociedad/2026/09/15/empresa-gano-obra-de-s80-millones-en-loreto-pese-a-no-acreditar-experiencia-exigida-de-su-personal-advierte-contraloria-671535">larepublica.pe</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">03</span>
+      <div>
+        <div class="source-text"><strong>Infobae</strong> — ONPE aprobo pago adicional con tarifa 900% mayor para repliegue de equipos tras la primera vuelta. Informe de Control Especifico N.° 8536-2026-CG/JUSPE-SCE.</div>
+        <a class="source-link" href="https://www.infobae.com/peru/2026/05/26/onpe-aprobo-pago-adicional-con-tarifa-900-mayor-para-repliegue-de-equipos-tras-la-primera-vuelta-segun-contraloria/">infobae.com</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">04</span>
+      <div>
+        <div class="source-text"><strong>El Comercio</strong> — Contraloria encuentra responsabilidad en Piero Corvetto y otros 9 funcionarios de la ONPE por irregularidades en la primera vuelta electoral.</div>
+        <a class="source-link" href="https://elcomercio.pe/politica/elecciones/elecciones-2026-contraloria-encuentra-responsabilidad-en-piero-corvetto-y-otros-9-funcionarios-de-la-onpe-por-irregularidades-noticia/">elcomercio.pe</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">05</span>
+      <div>
+        <div class="source-text"><strong>Infobae</strong> — Contraloria sefiala a Piero Corvetto y otros 9 funcionarios de la ONPE por fallas que afectaron el voto de mas de 55 mil electores.</div>
+        <a class="source-link" href="https://www.infobae.com/peru/2026/05/25/contraloria-apunta-a-10-funcionarios-de-la-onpe-por-presuntas-irregularidades-que-afectaron-la-primera-vuelta-electoral-2026/">infobae.com</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">06</span>
+      <div>
+        <div class="source-text"><strong>Diario Correo</strong> — Informes desnudan fallos sistemicos en la ONPE. 278 informes de control, 601 observaciones, 77% no corregidas. Comparecencia del vocero Guzman Vera ante Comision de Fiscalizacion del Congreso.</div>
+        <a class="source-link" href="https://diariocorreo.pe/edicion/piura/informes-desnudan-fallos-sistematicos-en-la-onpe-noticia/">diariocorreo.pe</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">07</span>
+      <div>
+        <div class="source-text"><strong>AFP Factual</strong> — La Contraloria de Peru no confirmo fraude electoral en la primera vuelta de 2026. Verificacion del Informe N.° 8536-2026-CG/JUSPE-SCE.</div>
+        <a class="source-link" href="https://factual.afp.com/doc.afp.com.B6B9264">factual.afp.com</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">08</span>
+      <div>
+        <div class="source-text"><strong>PeruCheck / El Comercio</strong> — No, la Contraloria no confirmo un 'fraude' electoral ni denuncio penalmente a Piero Corvetto. Revision directa del informe.</div>
+        <a class="source-link" href="https://elcomercio.pe/politica/perucheck-no-la-contraloria-no-confirmo-un-fraude-electoral-ni-denuncio-penalmente-a-piero-corvetto-noticia/">elcomercio.pe</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">09</span>
+      <div>
+        <div class="source-text"><strong>RPP</strong> — Machu Picchu registro sobrecarga turistica de mas de 91 mil personas en 2024 y 2025. Informe de Auditoria N.° 007-2026-2-5765-AC.</div>
+        <a class="source-link" href="https://rpp.pe/politica/gobierno/machu-picchu-registro-sobrecarga-turistica-de-mas-de-91-mil-personas-en-2024-y-2025-segun-informe-de-contraloria-noticia-1701250">rpp.pe</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">10</span>
+      <div>
+        <div class="source-text"><strong>Gob.pe / Contraloria</strong> — Portal de informes y publicaciones de la Contraloria General de la Republica. Informes N.° 10671, 9014, 002-2026 y demas.</div>
+        <a class="source-link" href="https://www.gob.pe/institucion/contraloria/informes-publicaciones">gob.pe/institucion/contraloria</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">11</span>
+      <div>
+        <div class="source-text"><strong>Expreso</strong> — Pagos indebidos en IPD generan perjuicio de cerca de S/ 19 millones: Juegos Bolivarianos Ayacucho-Lima 2025. Informe de Auditoria de Cumplimiento N.° 011-2026-2-0217-AC.</div>
+        <a class="source-link" href="https://www.expreso.com.pe/judicial/pagos-indebidos-en-ipd-generan-perjuicio-de-cerca-de-s-19-millones-el-lado-oscuro-de-juegos-bolivarianos-ayacucho-lima-2025-noticia/1316567/">expreso.com.pe</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">12</span>
+      <div>
+        <div class="source-text"><strong>Diario Correo</strong> — Trujillo: Observan contrato de Sedalib por S/ 4.4 millones. Trujillo: Hospitales expuestos ante posibles lluvias.</div>
+        <a class="source-link" href="https://diariocorreo.pe/noticias/contraloria-general-de-la-republica/">diariocorreo.pe</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">13</span>
+      <div>
+        <div class="source-text"><strong>Gestion</strong> — Contraloria observa credito suplementario del MEF por S/ 9.596 millones por falta de sustento tecnico. Opinion del MEF cuestionada por la Contraloria.</div>
+        <a class="source-link" href="https://caretas.pe/politica/contraloria-observa-credito-suplementario-del-mef-por-s-9-596-millones-por-falta-de-sustento-tecnico/">caretas.pe</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">14</span>
+      <div>
+        <div class="source-text"><strong>Gob.pe / Contraloria</strong> — Informes y publicaciones: Contraloria: mas de 1000 intervenciones en rios y quebradas para reducir riesgos frente al Nino no cuentan con recursos para su ejecucion. Informe N.° 10671-2026-CG/AGR-SOP.</div>
+        <a class="source-link" href="https://www.gob.pe/institucion/contraloria/noticias">gob.pe/institucion/contraloria/noticias</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">15</span>
+      <div>
+        <div class="source-text"><strong>La Lupa</strong> — JEE abre proceso al contralor Cesar Aguilar por 53 casos de publicidad estatal que rompen la neutralidad electoral 2026.</div>
+        <a class="source-link" href="https://lalupa.pe/peru/jee-abre-proceso-al-contralor-cesar-aguilar-por-53-casos-de-publicidad-estatal-que-rompen-la-neutralidad-electoral-2026-103864">lalupa.pe</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">16</span>
+      <div>
+        <div class="source-text"><strong>Latinoticias.pe</strong> — Elecciones 2026: Contralor lamenta que entidad vuelva a ser cuestionada. Comparecencia en Junin, 601 observaciones, 94 subsanadas.</div>
+        <a class="source-link" href="https://latinanoticias.pe/politica/elecciones-2026-contralor-lamenta-que-entidad-vuelva-a-ser-cuestionada_20260420/">latinanoticias.pe</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">17</span>
+      <div>
+        <div class="source-text"><strong>Gestion</strong> — Contraloria irla al Tribunal Constitucional por 'culpa' del Congreso: la norma que propone la reincorporacion de 6,441 trabajadores cesados compromete mas del 100% del presupuesto institucional.</div>
+        <a class="source-link" href="https://gestion.pe/economia/contraloria-iria-al-tribunal-constitucional-por-culpa-del-congreso-la-norma-en-cuestion-noticia/">gestion.pe</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">18</span>
+      <div>
+        <div class="source-text"><strong>Gestion</strong> — Contraloria asegura estar cerca de una crisis institucional por falta de presupuesto. Entrevista con el contralor Cesar Aguilar. MEF rechazo DU por S/ 56 millones.</div>
+        <a class="source-link" href="https://gestion.pe/economia/contraloria-asegura-estar-cerca-de-una-crisis-institucional-por-falta-de-presupuesto-cesar-aguilar-mef-jose-salardi-elecciones-2026-nueva-ley-de-contrataciones-noticia/">gestion.pe</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">19</span>
+      <div>
+        <div class="source-text"><strong>Comunicaciones / Congreso.gob.pe</strong> — Comision de Gestion del Estado y Contraloria evala acciones de control frente al Fenomeno El Nino. Comparecencia del contralor Cesar Aguilar, 717 servicios de control previo, 18,400 simultaneos, 6,054 posteriores.</div>
+        <a class="source-link" href="https://comunicaciones.congreso.gob.pe/noticias/comision-de-gestion-del-estado-y-contraloria-evalua-acciones-de-control-frente-al-fenomeno-el-nino/">comunicaciones.congreso.gob.pe</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">20</span>
+      <div>
+        <div class="source-text"><strong>Andina</strong> — Arequipa: equipo tecnico preventivo instalo Contraloria para disminuir efectos del Nino. Contralor advierte que 2.7 millones de personas estan expuestas a riesgo muy alto por deficit hildrico.</div>
+        <a class="source-link" href="https://andina.pe/agencia/noticia-arequipa-equipo-tecnico-preventivo-instalo-contraloria-para-disminuir-efectos-de-nino-1090044.aspx">andina.pe</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">21</span>
+      <div>
+        <div class="source-text"><strong>Gob.pe / Contraloria</strong> — Contralor: el control debe ser objetivo, ajeno a sesgos polticos y centrado en proteger el interes pu blico. Inauguracion de la Cumbre Internacional de Lucha contra la Corrupcion con 32 EFS del exterior.</div>
+        <a class="source-link" href="https://www.gob.pe/institucion/contraloria/noticias/1356256-contralor-el-control-debe-ser-objetivo-ajeno-a-sesgos-politicos-y-centrado-en-proteger-el-interes-publico">gob.pe/institucion/contraloria/noticias</a>
+      </div>
+    </div>
+    <div class="source-item">
+      <span class="source-num">22</span>
+      <div>
+        <div class="source-text"><strong>Infobae</strong> — Contralor no pudo votar por ausencia de miembros de mesa en su local de votacion. Ademas advertio alerta oficial al JNE por contratacion de fiscalizadores sin contrato formal.</div>
+        <a class="source-link" href="https://www.infobae.com/peru/2026/06/07/contralor-no-pudo-votar-por-ausencia-de-miembros-de-mesa-en-su-local-de-votacion-tendre-que-volver/">infobae.com</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <p>DOCUMENTO DE INTELIGENCIA — PERU 2026</p>
+    <p style="margin-top:4px;">Contraloria General de la Republica: informes, actores y crisis institucional</p>
+    <p style="margin-top:4px; opacity:0.5;">22 fuentes // 25 de septiembre de 2026</p>
+  </div>
+</footer>
+
+</body>
+</html>

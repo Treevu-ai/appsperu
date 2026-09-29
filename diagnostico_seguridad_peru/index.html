@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnóstico: Seguridad Ciudadana Perú 2026</title>
+<style>
+@page {
+  size: A4 portrait;
+  margin: 14mm 16mm;
+}
+* { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
+body {
+  font-family: "Georgia", "Times New Roman", serif;
+  font-size: 10pt;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fff;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── PAGE BREAKS ── */
+.pb { page-break-after: always; }
+.avoid-break { page-break-inside: avoid; break-inside: avoid; }
+
+/* ── COVER ── */
+.cover {
+  width: 100%;
+  min-height: 260mm;
+  padding: 40mm 20mm 30mm;
+  background: #fff;
+  position: relative;
+  page-break-after: always;
+}
+.cover-top-rule {
+  width: 100%;
+  height: 6px;
+  background: #000;
+  margin-bottom: 30px;
+}
+.cover .tag {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #555;
+  margin-bottom: 16px;
+}
+.cover h1 {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 32pt;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: #000;
+  margin: 0 0 20px;
+  border-left: 6px solid #000;
+  padding-left: 16px;
+}
+.cover .subtitle {
+  font-size: 12pt;
+  color: #444;
+  line-height: 1.7;
+  max-width: 480px;
+  margin: 0 0 40px;
+  border-top: 1px solid #ccc;
+  padding-top: 16px;
+}
+.cover-divider {
+  width: 100%;
+  height: 2px;
+  background: #000;
+  margin: 20px 0;
+}
+.cover-stats {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+.cover-stats td {
+  padding: 10px 16px;
+  border: 1px solid #ccc;
+  vertical-align: top;
+}
+.cover-stats .cs-num {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 22pt;
+  font-weight: 900;
+  color: #000;
+  line-height: 1;
+}
+.cover-stats .cs-lbl {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 8pt;
+  font-weight: 500;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+  display: block;
+}
+.cover-footer {
+  margin-top: 30px;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 8pt;
+  color: #888;
+  border-top: 1px solid #ccc;
+  padding-top: 10px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ── CONTENT PAGES ── */
+.content {
+  padding: 20px 0;
+}
+.chapter {
+  margin-bottom: 28px;
+  page-break-inside: avoid;
+}
+.chapter-label {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #777;
+  margin-bottom: 4px;
+}
+.chapter h2 {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 18pt;
+  font-weight: 900;
+  color: #000;
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+  border-bottom: 3px solid #000;
+  padding-bottom: 6px;
+}
+.chapter-desc {
+  font-size: 10pt;
+  color: #555;
+  margin: 8px 0 16px;
+  line-height: 1.6;
+}
+h3 {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 12pt;
+  font-weight: 700;
+  color: #000;
+  margin: 20px 0 8px;
+  letter-spacing: -0.01em;
+}
+h3 .num {
+  color: #777;
+  font-weight: 400;
+  margin-right: 6px;
+  font-size: 10pt;
+}
+p { margin: 6px 0; }
+
+/* ── KPI GRID ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 16px 0;
+}
+.kpi-box {
+  border: 1.5px solid #1a1a1a;
+  padding: 14px 12px;
+  text-align: center;
+}
+.kpi-box .kpi-label {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 7.5pt;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #777;
+  margin-bottom: 6px;
+}
+.kpi-box .kpi-val {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 26pt;
+  font-weight: 900;
+  color: #000;
+  line-height: 1;
+}
+.kpi-box .kpi-sub {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 7.5pt;
+  color: #777;
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
+/* ── CHARTS ── */
+.chart-card {
+  border: 1px solid #ccc;
+  padding: 16px;
+  margin: 16px 0;
+  page-break-inside: avoid;
+}
+.chart-title {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 10pt;
+  font-weight: 700;
+  color: #000;
+  margin: 0 0 2px;
+  border-left: 3px solid #000;
+  padding-left: 8px;
+}
+.chart-sub {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 8pt;
+  color: #777;
+  margin: 0 0 12px;
+  padding-left: 11px;
+}
+canvas { max-height: 220px; }
+
+/* ── BENCH BARS ── */
+.bench-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+.bench-table th {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #555;
+  border-bottom: 2px solid #000;
+  padding: 6px 8px;
+  text-align: left;
+}
+.bench-table td {
+  font-size: 9.5pt;
+  padding: 6px 8px;
+  border-bottom: 1px solid #e0e0e0;
+  vertical-align: middle;
+}
+.bench-table tr:nth-child(even) td { background: #fafafa; }
+.bench-bar-wrap {
+  background: #eee;
+  height: 8px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.bench-bar-fill { height: 8px; background: #1a1a1a; border-radius: 2px; }
+.bench-bar-fill.red { background: #c00; }
+.bench-bar-fill.amber { background: #888; }
+.bench-val { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 9pt; font-weight: 700; white-space: nowrap; }
+
+/* ── TABLES ── */
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 9pt;
+}
+table.data thead th {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #555;
+  border-bottom: 2px solid #000;
+  padding: 7px 9px;
+  text-align: left;
+  background: #f5f5f5;
+}
+table.data tbody td {
+  padding: 6px 9px;
+  border-bottom: 1px solid #e5e5e5;
+  color: #333;
+  vertical-align: top;
+}
+table.data tbody tr:nth-child(even) td { background: #fafafa; }
+table.data tbody tr:last-child td { border-bottom: none; }
+.bold { font-weight: 700; color: #000; }
+.mono { font-family: "Courier New", monospace; font-size: 8.5pt; }
+
+/* ── CALLOUT BOX ── */
+.callout {
+  border: 1.5px solid #1a1a1a;
+  border-left: 4px solid #000;
+  padding: 12px 14px;
+  margin: 14px 0;
+  background: #f9f9f9;
+  font-size: 9.5pt;
+  line-height: 1.6;
+}
+.callout strong { font-weight: 800; color: #000; }
+
+/* ── TIMELINE ── */
+.tl { margin: 16px 0; }
+.tl-row {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 10px 0;
+  align-items: flex-start;
+}
+.tl-row:last-child { border-bottom: none; }
+.tl-date {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 8pt;
+  font-weight: 700;
+  color: #777;
+  width: 80px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.tl-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #000;
+  flex-shrink: 0;
+  margin: 3px 10px 0;
+}
+.tl-content { flex: 1; }
+.tl-title { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 9.5pt; font-weight: 700; color: #000; margin-bottom: 2px; }
+.tl-desc { font-size: 9pt; color: #555; line-height: 1.5; }
+.tl-badge { display: inline-block; font-family: "Helvetica Neue", Arial, sans-serif; font-size: 7.5pt; font-weight: 700; background: #000; color: #fff; padding: 1px 6px; border-radius: 2px; margin-left: 6px; }
+
+/* ── PERSON LIST ── */
+.person-list { margin: 12px 0; }
+.person-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid #e5e5e5;
+  font-size: 9.5pt;
+}
+.person-item:last-child { border-bottom: none; }
+.person-initial {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 8pt;
+  font-weight: 800;
+  background: #000;
+  color: #fff;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.person-name { font-weight: 700; color: #000; }
+.person-role { color: #666; font-size: 9pt; }
+.person-period { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 8pt; color: #999; margin-left: auto; white-space: nowrap; }
+
+/* ── CRISIS GRID ── */
+.crisis-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 16px 0;
+}
+.crisis-box {
+  border: 1.5px solid #1a1a1a;
+  padding: 14px;
+  page-break-inside: avoid;
+}
+.crisis-num {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 20pt;
+  font-weight: 900;
+  color: #000;
+  line-height: 1;
+  float: right;
+  margin-top: -2px;
+}
+.crisis-title {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 9.5pt;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #000;
+  margin-bottom: 4px;
+  padding-right: 50px;
+}
+.crisis-text { font-size: 9pt; color: #444; line-height: 1.5; }
+
+/* ── COMPARISON ROWS ── */
+.comp-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+.comp-table td {
+  font-size: 9.5pt;
+  padding: 5px 8px;
+  border-bottom: 1px solid #e5e5e5;
+  vertical-align: middle;
+}
+.comp-table tr:last-child td { border-bottom: none; }
+.comp-label { color: #555; }
+.comp-from { font-family: "Courier New", monospace; font-size: 9pt; color: #999; }
+.comp-arrow { color: #777; padding: 0 4px; }
+.comp-to { font-weight: 700; color: #000; }
+.comp-to.red { color: #c00; }
+.comp-to.gray { color: #777; }
+
+/* ── DONUT LEGEND ── */
+.donut-legend { margin-top: 10px; }
+.dl-row { display: flex; align-items: center; gap: 8px; font-size: 9pt; margin-bottom: 6px; }
+.dl-box { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; background: #1a1a1a; }
+.dl-box.gray { background: #aaa; }
+.dl-label { color: #555; flex: 1; }
+.dl-val { font-weight: 700; color: #000; }
+
+/* ── CITY CARDS ── */
+.city-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+.city-box {
+  border: 1px solid #ccc;
+  padding: 12px 10px;
+  text-align: center;
+}
+.city-pct {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 22pt;
+  font-weight: 900;
+  color: #000;
+  line-height: 1;
+}
+.city-name { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 9pt; font-weight: 700; color: #000; margin-top: 4px; }
+.city-desc { font-size: 8pt; color: #777; margin-top: 2px; }
+
+/* ── FOOTER ── */
+.doc-footer {
+  margin-top: 30px;
+  padding-top: 12px;
+  border-top: 1px solid #ccc;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 7.5pt;
+  color: #999;
+  line-height: 1.6;
+}
+.doc-footer strong { color: #555; }
+
+/* ── SCREEN EMULATOR ── */
+@media screen {
+  body { background: #e0e0e0; }
+  .cover, section.content {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto 20px;
+    background: #fff;
+    padding: 40px 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+}
+@media print {
+  .cover { page-break-after: always; }
+  .content { page-break-before: always; }
+  .chart-card, .kpi-box, .crisis-box, .callout, .city-box { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- COVER                                                    -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-top-rule"></div>
+  <div class="tag">Diagnóstico oficial · Datos públicos a septiembre 2026</div>
+  <h1>La crisis de seguridad<br>ciudadana de Perú<br>en datos</h1>
+  <p class="subtitle">Ocho crisis superpuestas que el aumento presupuestal no resuelve. Más recursos, menos capacidad operativa. Más ministros, menos institucionalidad. Más emergencias, menos presencia territorial. Un Estado que no logra convertir dinero en seguridad.</p>
+  <div class="cover-divider"></div>
+  <table class="cover-stats">
+    <tr>
+      <td><div class="cs-num">+42%</div><span class="cs-lbl">Presupuesto 2019→2025</span></td>
+      <td><div class="cs-num">×6,8</div><span class="cs-lbl">Extorsión por tasa 2019→2025</span></td>
+      <td><div class="cs-num">+45%</div><span class="cs-lbl">Homicidios por tasa 2019→2025</span></td>
+      <td><div class="cs-num">81%</div><span class="cs-lbl">Delitos sin denunciar</span></td>
+    </tr>
+  </table>
+  <div class="cover-footer">
+    <span>Fuentes: MEF · INEI/ENAPRES · Contraloría · MININTER · PNP · CEIC · SIDPOL · Ministerio Público<br>
+    Documento elaborado con datos oficiales públicos · 55 fuentes citadas · septiembre 2026</span>
+    <span>CONFIDENCIALIDAD: PÚBLICO</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION 1: PRESUPUESTO                                     -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="content pb">
+  <div class="chapter">
+    <div class="chapter-label">Capítulo 01</div>
+    <h2>El presupuesto que no se convierte en seguridad</h2>
+    <p class="chapter-desc">El gasto en seguridad creció 42% en seis años. Pero el 89% del principal programa presupuestal se consume en planilla. La inversión ejecuta apenas el 36,9% — S/ 736 millones devueltos al tesoro en 2025.</p>
+
+    <h3><span class="num">1.1</span> Evolución del presupuesto de orden público (2019–2026)</h3>
+    <div class="chart-card avoid-break">
+      <div class="chart-title">PIA Orden Público y Seguridad — S/ millones</div>
+      <div class="chart-sub">Fuente: MEF / Consulta Amigable · Datos publik</div>
+      <canvas id="chart1"></canvas>
+    </div>
+
+    <h3><span class="num">1.2</span> Estructura del gasto — Programa Presupuestal 0030</h3>
+    <div class="kpi-grid">
+      <div class="kpi-box">
+        <div class="kpi-label">Remuneraciones y obligaciones sociales</div>
+        <div class="kpi-val">89%</div>
+        <div class="kpi-sub">del PP0030 2025</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-label">Bienes, servicios, inversión</div>
+        <div class="kpi-val">11%</div>
+        <div class="kpi-sub">del PP0030 2025</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-label">Presupuesto 2025 asignado</div>
+        <div class="kpi-val">S/ 6.327 M</div>
+        <div class="kpi-sub">PP0030 — reducción delitos y faltas</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-label">No ejecutado en 2025</div>
+        <div class="kpi-val">S/ 736 M</div>
+        <div class="kpi-sub">devueltos al tesoro público</div>
+      </div>
+    </div>
+
+    <h3><span class="num">1.3</span> Proyectos sin ejecución — MININTER 2025 (a mitad de año)</h3>
+    <table class="bench-table">
+      <thead>
+        <tr>
+          <th>Proyecto</th>
+          <th>PIM asignado</th>
+          <th style="width:30%">Avance</th>
+          <th>Ejecutado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Mejoramiento del servicio de control de disturbios civiles a nivel nacional</td>
+          <td class="mono">S/ 211.000.000</td>
+          <td><div class="bench-bar-wrap"><div class="bench-bar-fill red" style="width:0%"></div></div></td>
+          <td class="bench-val">S/ 0</td>
+        </tr>
+        <tr>
+          <td>Adquisición de camionetas y motos para comisarías Lima Metropolitana</td>
+          <td class="mono">S/ 30.900.000</td>
+          <td><div class="bench-bar-wrap"><div class="bench-bar-fill red" style="width:0%"></div></div></td>
+          <td class="bench-val">S/ 0</td>
+        </tr>
+        <tr>
+          <td>Sistema integrado de identificación balística (IBIS)</td>
+          <td class="mono">S/ 14.600.000</td>
+          <td><div class="bench-bar-wrap"><div class="bench-bar-fill red" style="width:0%"></div></div></td>
+          <td class="bench-val">S/ 0</td>
+        </tr>
+        <tr>
+          <td>Adquisición de chalecos antibalas</td>
+          <td class="mono">S/ 8.900.000</td>
+          <td><div class="bench-bar-wrap"><div class="bench-bar-fill red" style="width:0%"></div></div></td>
+          <td class="bench-val">S/ 0</td>
+        </tr>
+        <tr>
+          <td>Mejoramiento de unidades de investigación policial</td>
+          <td class="mono">S/ 12.800.000</td>
+          <td><div class="bench-bar-wrap"><div class="bench-bar-fill amber" style="width:0.25%"></div></div></td>
+          <td class="bench-val">S/ 32.527</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>Total:</strong> S/ 278 millones presupuestados para equipamiento esencial de la Policía Nacional. <strong>Ejecución a mitad de año: S/ 0.</strong> Fuente: MEF / Diario Viral, junio 2025.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION 2: PERSONAL                                       -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="content pb">
+  <div class="chapter">
+    <div class="chapter-label">Capítulo 02</div>
+    <h2>La Policía Nacional: 53.000 agentes menos de los necesarios</h2>
+    <p class="chapter-desc">138.000 efectivos totales, pero la brecha real de personal impide cobertura territorial efectiva. Ratio operativo de 1:248 — 61% por encima del umbral que recomienda la UNODC.</p>
+
+    <div class="kpi-grid">
+      <div class="kpi-box">
+        <div class="kpi-label">Efectivos totales PNP</div>
+        <div class="kpi-val">138 K</div>
+        <div class="kpi-sub">según César Astudillo, sept. 2026</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-label">Brecha de personal</div>
+        <div class="kpi-val">53 K</div>
+        <div class="kpi-sub">lo que hace falta según MININTER</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-label">Ratio operativo actual</div>
+        <div class="kpi-val">1:248</div>
+        <div class="kpi-sub">meta UNODC: 1:400</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-label">Distritos sin comisaría</div>
+        <div class="kpi-val">28%</div>
+        <div class="kpi-sub">533 de 1.879 distritos</div>
+      </div>
+    </div>
+
+    <h3><span class="num">2.1</span> Composición del personal policial</h3>
+    <div class="chart-card avoid-break">
+      <div class="chart-title">Distribución de los 138.000 efectivos</div>
+      <div class="chart-sub">Fuente: Declaraciones ministro César Astudillo, Comisión de Defensa del Senado, sept. 2026</div>
+      <canvas id="chart2" style="max-height:200px"></canvas>
+    </div>
+
+    <h3><span class="num">2.2</span> Cobertura territorial — brechas</h3>
+    <table class="comp-table">
+      <tr><td class="comp-label">Distritos con comisaría</td><td></td><td class="comp-from">1.346</td><td><span class="comp-arrow">→</span></td><td class="comp-to">72% de cobertura</td></tr>
+      <tr><td class="comp-label">Distritos sin comisaría</td><td></td><td class="comp-from">533</td><td><span class="comp-arrow">→</span></td><td class="comp-to red">28% sin cobertura</td></tr>
+      <tr><td class="comp-label">Comisarías sin personal mínimo</td><td></td><td class="comp-from">39</td><td><span class="comp-arrow">→</span></td><td class="comp-to red">bajo el umbral legal</td></tr>
+      <tr><td class="comp-label">Comisarías construidas con adobe</td><td></td><td class="comp-from">72</td><td><span class="comp-arrow">→</span></td><td class="comp-to red">vulnerables a sismos</td></tr>
+      <tr><td class="comp-label">Comisarías de más de 30 años</td><td></td><td class="comp-from">&gt;243</td><td><span class="comp-arrow">→</span></td><td class="comp-to gray">más de la mitad de 485 evaluadas</td></tr>
+    </table>
+
+    <div class="callout">
+      <strong>Fuentes:</strong> Expreso (sept. 2026), "Interpelación César Astudillo"; gob.pe (ene. 2026), "Relación de Comisarías Operativas 2025" (1.332 básicas).
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION 3: EQUIPAMIENTO                                    -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="content pb">
+  <div class="chapter">
+    <div class="chapter-label">Capítulo 03</div>
+    <h2>El inventario del desastre — Informe de la Contraloría</h2>
+    <p class="chapter-desc">El Informe N° 25595-2025-CG/SIE-SOP auditó 485 comisarías (29 oct – 4 nov 2025). 1.730 vehículos inoperativos. Equipos con décadas de antigüedad. 700 auditores desplegados en las 25 regiones del país.</p>
+
+    <div class="kpi-grid">
+      <div class="kpi-box">
+        <div class="kpi-label">Vehículos inoperativos</div>
+        <div class="kpi-val">1.730</div>
+        <div class="kpi-sub">de 4.121 registrados · 42% de la flota</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-label">Computadoras malogradas</div>
+        <div class="kpi-val">1.823</div>
+        <div class="kpi-sub">de 6.835 registradas · 27%</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-label">Impresoras malogradas</div>
+        <div class="kpi-val">2.132</div>
+        <div class="kpi-sub">de 4.049 registradas · 53%</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-label">Comisarías evaluadas</div>
+        <div class="kpi-val">485</div>
+        <div class="kpi-sub">Informe N° 25595-2025-CG/SIE-SOP</div>
+      </div>
+    </div>
+
+    <h3><span class="num">3.1</span> Estado del equipamiento (%)</h3>
+    <div class="chart-card avoid-break">
+      <div class="chart-title">Estado operativo del equipamiento en 485 comisarías (%)</div>
+      <div class="chart-sub">Fuente: Informe de Control N° 25595-2025-CG/SIE-SOP · Contraloria General de la República</div>
+      <canvas id="chart3"></canvas>
+    </div>
+
+    <h3><span class="num">3.2</span> Situaciones adversas por región</h3>
+    <div class="chart-card avoid-break">
+      <div class="chart-title">Top 5 regiones con mayores deficiencias</div>
+      <div class="chart-sub">Número de situaciones adversas detectadas · Informe Contraloria N° 25595-2025-CG/SIE-SOP</div>
+      <canvas id="chart4"></canvas>
+    </div>
+
+    <h3><span class="num">3.3</span> Caso emblemático: Comisaría de Pisco</h3>
+    <table class="data">
+      <thead>
+        <tr><th>Hallazgo</th><th>Detalle</th><th>Informe de origen</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="bold">Motocicletas inoperativas</td><td>43 unidades sin uso</td><td class="mono">N° 016-2025-OCI/0409-SVC</td></tr>
+        <tr><td class="bold">Radios TETRA</td><td>Sin funcionar — sin capacidad de comunicación operativa</td><td class="mono">N° 016-2025-OCI/0409-SVC</td></tr>
+        <tr><td class="bold">Cascos motorizados</td><td>Inutilizables</td><td class="mono">N° 016-2025-OCI/0409-SVC</td></tr>
+        <tr><td class="bold">Guantes motorizados</td><td>Sin dotación — riesgo para el personal</td><td class="mono">N° 016-2025-OCI/0409-SVC</td></tr>
+        <tr><td class="bold">SIPCOP</td><td>Sin acceso — no hay monitoreo en tiempo real de vehículos</td><td class="mono">N° 016-2025-OCI/0409-SVC</td></tr>
+        <tr><td class="bold">Armas con +40 años</td><td>Comisaría Ciudad y Campo, Rímac — Lima</td><td class="mono">Operativo 2025</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>Contralor César Aguilar Surichaqui</strong> lideró el operativo nacional e inspeccionó personalmente la comisaría del Rímac. Se desplegaron <strong>700 auditores</strong> en las 25 regiones del país.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION 4: CRIMINALIDAD                                    -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="content pb">
+  <div class="chapter">
+    <div class="chapter-label">Capítulo 04</div>
+    <h2>La escalada: Homicidios y extorsión</h2>
+    <p class="chapter-desc">Los indicadores duros no mejoran. La tasa de Homicidios se duplicó en 6 años. La extorsión se multiplicó por 6,8. Casi 7 asesinados por día en 2025.</p>
+
+    <div class="chart-card avoid-break">
+      <div class="chart-title">Tasa de Homicidios dolosos — por cada 100.000 habitantes</div>
+      <div class="chart-sub">2019–2025 · Fuente: INEI/CEIC · Escalada sostenida: +45% en 6 años</div>
+      <canvas id="chart5"></canvas>
+    </div>
+
+    <div class="chart-card avoid-break">
+      <div class="chart-title">Tasa de extorsión — por cada 100.000 habitantes</div>
+      <div class="chart-sub">2019–2025 · Fuente: ONSEC/MININTER · Multiplicada por 6,8 en 6 años</div>
+      <canvas id="chart6"></canvas>
+    </div>
+
+    <h3><span class="num">4.1</span> Cifras clave 2025</h3>
+    <table class="data">
+      <thead>
+        <tr><th>Indicador</th><th>2024</th><th>2025</th><th>Variación</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="bold">Homicidios absolutos (CEIC)</td><td>—</td><td class="mono">2.451</td><td>+5% vs 2024</td></tr>
+        <tr><td class="bold">Homicidios diarios promedio</td><td>—</td><td class="mono">~7</td><td>cotidiano</td></tr>
+        <tr><td class="bold">Denuncias extorsión (SIDPOL)</td><td>~21.000</td><td class="mono">25.196</td><td>+20% vs 2024</td></tr>
+        <tr><td class="bold">Denuncias extorsión (Ministerio Público)</td><td>—</td><td class="mono">27.029</td><td>mayor que SIDPOL</td></tr>
+        <tr><td class="bold">Denuncias robo</td><td class="mono">112.574</td><td class="mono">62.844</td><td>−44% (¿cifra negra?)</td></tr>
+        <tr><td class="bold">Percepción inseguridad (INEI/ENAPRES)</td><td class="mono">86%</td><td class="mono">83,9%</td><td>−2,1 pp pero sube en barrio</td></tr>
+        <tr><td class="bold">Victimización urbana 15+ (INEI/ENAPRES)</td><td class="mono">27,1%</td><td class="mono">25,2%</td><td>−1,9 pp</td></tr>
+      </tbody>
+    </table>
+
+    <h3><span class="num">4.2</span> Ciudades más críticas — ENAPRES 2024</h3>
+    <div class="city-grid">
+      <div class="city-box">
+        <div class="city-pct">40,7%</div>
+        <div class="city-name">Juliaca, Puno</div>
+        <div class="city-desc">Victimización · 4° año consecutivo líder</div>
+      </div>
+      <div class="city-box">
+        <div class="city-pct">97,3%</div>
+        <div class="city-name">Moyobamba</div>
+        <div class="city-desc">Percepción inseguridad</div>
+      </div>
+      <div class="city-box">
+        <div class="city-pct">94,8%</div>
+        <div class="city-name">Pucallpa</div>
+        <div class="city-desc">Percepción inseguridad</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION 5: CIFRA NEGRA                                      -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="content pb">
+  <div class="chapter">
+    <div class="chapter-label">Capítulo 05</div>
+    <h2>La cifra negra: tres fuentes, tres números distintos</h2>
+    <p class="chapter-desc">81,5% de los delitos no se reportan a la policía. Y las tres fuentes oficiales del Estado ni siquiera coinciden entre sí en el número de extorsiones de 2025.</p>
+
+    <div class="chart-card avoid-break">
+      <div class="chart-title">Denuncias por extorsión 2025 — Diferencia entre fuentes oficiales</div>
+      <div class="chart-sub">SIDPOL · Ministerio Público · CEIC · Diferencia máxima: 1.833 casos (7,3%)</div>
+      <canvas id="chart7"></canvas>
+    </div>
+
+    <h3><span class="num">5.1</span> Evolución de la tasa de denuncia</h3>
+    <table class="comp-table">
+      <tr><td class="comp-label">Delitos no denunciados — 2022</td><td></td><td class="comp-from">85%</td><td><span class="comp-arrow">→</span></td><td class="comp-to red">85% de impunidad</td></tr>
+      <tr><td class="comp-label">Delitos no denunciados — 2024</td><td></td><td class="comp-from">~80%</td><td><span class="comp-arrow">→</span></td><td class="comp-to gray">80% de impunidad</td></tr>
+      <tr><td class="comp-label">Delitos no denunciados — 2025</td><td></td><td class="comp-from">81,5%</td><td><span class="comp-arrow">→</span></td><td class="comp-to gray">81,5% de impunidad</td></tr>
+      <tr><td class="comp-label">Tasa de denuncia efectiva — 2022</td><td></td><td class="comp-from">15,0%</td><td><span class="comp-arrow">→</span></td><td class="comp-to">sube lentamente</td></tr>
+      <tr><td class="comp-label">Tasa de denuncia efectiva — 2025</td><td></td><td class="comp-from">18,5%</td><td><span class="comp-arrow">→</span></td><td class="comp-to">+3,5 pp en 3 años</td></tr>
+    </table>
+
+    <div class="callout">
+      <strong>Gaspar Morán Flores</strong> (Jefe del INEI y del CEIC): "8 de cada 10 delitos no se有这么denuncian. La desconfianza en la policía crece." Fuente: TVPerú, enero 2026. <strong>Juan Carbajal</strong> (analista de datos): documentó las inconsistencias entre SIDPOL, Ministerio Público y CEIC — diferencia de más de 2.000 casos en extorsión 2025.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION 6: CONTRATACIONES                                   -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="content pb">
+  <div class="chapter">
+    <div class="chapter-label">Capítulo 06</div>
+    <h2>Las compras capturadas — OGAF del MININTER</h2>
+    <p class="chapter-desc">La Oficina General de Administración y Finanzas, bajo la jefatura de Ricardo Kanashiro Romero, adjudicó contratos a empresas que no cumplían los requerimientos técnicos. Fue cesado en octubre de 2025. La Fiscalía Anticorrupción intervino.</p>
+
+    <table class="data">
+      <thead>
+        <tr><th>Concurso</th><th>Proveedor adjudicado</th><th>País</th><th>Monto</th><th>Anomalía documentada</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="bold">Concurso N° 001-2025 — Chalecos antibalas Nivel IIIA<br><span style="font-weight:400;font-size:8pt;color:#777">Código 2446792</span></td>
+          <td><strong>Armor Life Lab</strong></td>
+          <td>México</td>
+          <td class="mono">US$ 2 M (~S/ 7,5 M)</td>
+          <td><span style="color:#c00">Comité Técnico Séptima Región Policial rechazó la oferta. OGAF adjudicó igual.</span></td>
+        </tr>
+        <tr>
+          <td class="bold">Avión de reposición<br><span style="font-weight:400;font-size:8pt;color:#777">Concurso Internacional · 31 oct 2025</span></td>
+          <td><strong>Aero Express FZE</strong></td>
+          <td>Emiratos Árabes</td>
+          <td class="mono">No verificado</td>
+          <td><span style="color:#c00">DIRAVPOL informó que la aeronave no cumplía requerimientos técnicos. OGAF adjudicó igual.</span></td>
+        </tr>
+        <tr>
+          <td class="bold">Concurso N° 003-2025 — Vehículos blindados 4x4<br><span style="font-weight:400;font-size:8pt;color:#777">Código Único 2251056</span></td>
+          <td><strong>Plasan Sasa</strong></td>
+          <td>Israel</td>
+          <td class="mono">US$ 21,4 M (~S/ 80 M)</td>
+          <td>Acusaciones de favoritismo en la selección</td>
+        </tr>
+        <tr>
+          <td class="bold">Concurso N° 005-2025 — Vehículos Motobomba antidisturbios 4x4 y 4x6</td>
+          <td><strong>TAG Dynamics</strong> (adjudicación inicial, EE.UU.)</td>
+          <td>Estados Unidos</td>
+          <td class="mono">US$ 30,7 M (~S/ 115 M)</td>
+          <td>Contrato resuelto. Nuevo procedimiento abierto en 2026.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>Cesado:</strong> Ricardo Kanashiro Romero, jefe de la OGAF del MININTER, en octubre de 2025. La <strong>Contraloría General de la República</strong> emitió informes de auditoría señalando que la OGAF "manipuló las bases de la competencia" para orientar la buena pro. La Fiscalía y la Procuradoria Anticorrupción fueron notificadas. Fuente: La República, oct. 2025.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION 7: INSTITUCIONALIDAD                                -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="content pb">
+  <div class="chapter">
+    <div class="chapter-label">Capítulo 07</div>
+    <h2>La inestabilidad institucional — 5 ministros, 2 comandantes generales</h2>
+    <p class="chapter-desc">Rotación constante que impide cualquier estrategia de largo plazo. Cada cambio de ministro frena procesos de inversión plurianual. El último comandante general se fue diciendo: "no me arrepiento de nada".</p>
+
+    <h3><span class="num">7.1</span> Ministras y ministros del Interior (2022–2026)</h3>
+    <div class="tl">
+      <div class="tl-row"><div class="tl-date">Dic. 2022</div><div class="tl-dot"></div><div class="tl-content"><div class="tl-title">Walter Alberto Quesada Billotte <span class="tl-badge">DINA B.</span></div><div class="tl-desc">Primer ministro del Interior del gobierno Boluarte</div></div></div>
+      <div class="tl-row"><div class="tl-date">Feb. 2023</div><div class="tl-dot"></div><div class="tl-content"><div class="tl-title">Víctor Torres Fernández</div><div class="tl-desc">Gestionó el primer estado de emergencia por criminalidad en Lima/Callao</div></div></div>
+      <div class="tl-row"><div class="tl-date">Dic. 2023</div><div class="tl-dot"></div><div class="tl-content"><div class="tl-title">Jorge Luis Cayasaca Huasasquiche</div><div class="tl-desc">Gestión corta</div></div></div>
+      <div class="tl-row"><div class="tl-date">Abr. 2024</div><div class="tl-dot"></div><div class="tl-content"><div class="tl-title">César Augusto Astudillo Salcedo <span class="tl-badge">×1</span></div><div class="tl-desc">De ministro de Defensa → Interior. Gestionó la escalada de extorsiones. Cesaría tras cambio de gobierno.</div></div></div>
+      <div class="tl-row"><div class="tl-date">Oct. 2025</div><div class="tl-dot"></div><div class="tl-content"><div class="tl-title">Vicente Tiburcio Orbezo</div><div class="tl-desc">Alertó públicamente: "solo 89 patrulleros activos en toda Lima". Cesado durante transición.</div></div></div>
+      <div class="tl-row"><div class="tl-date">2026</div><div class="tl-dot"></div><div class="tl-content"><div class="tl-title">Hugo Alberto Begazo de Bedoya</div><div class="tl-desc">Transición</div></div></div>
+      <div class="tl-row"><div class="tl-date">23 abr. 2026</div><div class="tl-dot"></div><div class="tl-content"><div class="tl-title">José Mercedes Zapata Morante <span class="tl-badge">PNP (r)</span></div><div class="tl-desc">General PNP en retiro. Jura tras Begazo de Bedoya.</div></div></div>
+      <div class="tl-row"><div class="tl-date">28 jul. 2026</div><div class="tl-dot"></div><div class="tl-content"><div class="tl-title">César Augusto Astudillo Salcedo <span class="tl-badge">×2</span></div><div class="tl-desc">Regresa al Interior. Gobierno Keiko Fujimori. Premier Luis Galarreta.</div></div></div>
+    </div>
+
+    <h3><span class="num">7.2</span> Comandantes generales de la PNP</h3>
+    <div class="tl">
+      <div class="tl-row"><div class="tl-date">2023 – sept. 2025</div><div class="tl-dot"></div><div class="tl-content"><div class="tl-title">Teniente General [antecesor]</div><div class="tl-desc">Bajo el gobierno de Dina Boluarte</div></div></div>
+      <div class="tl-row"><div class="tl-date">Sept. 2025 – sept. 2026</div><div class="tl-dot"></div><div class="tl-content"><div class="tl-title">Tte. Gral. Óscar Manuel Arriola Delgado <span class="tl-badge">RENUNCIÓ</span></div><div class="tl-desc">Designado por Res. Suprema 2025. Renunció por la crisis de criminalidad. Su frase de despedida: "No me arrepiento de nada." · Res. Suprema N° 232-2026-IN</div></div></div>
+      <div class="tl-row"><div class="tl-date">16 sept. 2026</div><div class="tl-dot"></div><div class="tl-content"><div class="tl-title">Tte. Gral. Fredy López Mendoza <span class="tl-badge">ACTUAL</span></div><div class="tl-desc">Jefe del Estado Mayor General. Asume por antigüedad del escalafón. Res. Suprema N° 233-2026-IN. Firma: Keiko Fujimori y César Astudillo.</div></div></div>
+    </div>
+
+    <h3><span class="num">7.3</span> Actores clave</h3>
+    <div class="person-list">
+      <div class="person-item">
+        <div class="person-initial">CA</div>
+        <div>
+          <div class="person-name">César Aguilar Surichaqui</div>
+          <div class="person-role">Contralor General de la República</div>
+        </div>
+        <div class="person-period">2025–presente</div>
+      </div>
+      <div class="person-item">
+        <div class="person-initial">GM</div>
+        <div>
+          <div class="person-name">Gaspar Morán Flores</div>
+          <div class="person-role">Jefe del INEI y del CEIC</div>
+        </div>
+        <div class="person-period">2025–presente</div>
+      </div>
+      <div class="person-item">
+        <div class="person-initial">RC</div>
+        <div>
+          <div class="person-name">Richard Cárdenas</div>
+          <div class="person-role">Director de Gestión del Conocimiento para la Seguridad — ONSEC/MININTER</div>
+        </div>
+        <div class="person-period">2025–presente</div>
+      </div>
+      <div class="person-item">
+        <div class="person-initial">RK</div>
+        <div>
+          <div class="person-name">Ricardo Kanashiro Romero</div>
+          <div class="person-role">Jefe OGAF del MININTER — cesado oct. 2025</div>
+        </div>
+        <div class="person-period">cesado</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION 8: LAS 8 CRISIS                                     -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="content pb">
+  <div class="chapter">
+    <div class="chapter-label">Capítulo 08</div>
+    <h2>Las 8 crisis superpuestas</h2>
+    <p class="chapter-desc">Ninguna es independiente. Se alimentan entre sí y constituyen una trampa sistémica.</p>
+
+    <div class="crisis-grid">
+      <div class="crisis-box">
+        <div class="crisis-num">5</div>
+        <div class="crisis-title">1. Inestabilidad ministerial</div>
+        <div class="crisis-text">Ministros del Interior en 4 años. Cada cambio resetea prioridades y frena inversiones plurianuales.</div>
+      </div>
+      <div class="crisis-box">
+        <div class="crisis-num">89%</div>
+        <div class="crisis-title">2. Presupuesto corsario</div>
+        <div class="crisis-text">89% se va en planilla. Inversión: 11%. S/ 736 M devueltos al tesoro en 2025.</div>
+      </div>
+      <div class="crisis-box">
+        <div class="crisis-num">1.730</div>
+        <div class="crisis-title">3. Inventario en ruinas</div>
+        <div class="crisis-text">Vehículos inoperativos. 72 comisarías de adobe. Equipos con hasta 40 años de antigüedad.</div>
+      </div>
+      <div class="crisis-box">
+        <div class="crisis-num">×3</div>
+        <div class="crisis-title">4. Contrataciones capturadas</div>
+        <div class="crisis-text">OGAF adjudicó a empresas rechazadas por la propia Policía. Jefe cesado. Fiscalía intervino.</div>
+      </div>
+      <div class="crisis-box">
+        <div class="crisis-num">53 K</div>
+        <div class="crisis-title">5. Brecha de personal</div>
+        <div class="crisis-text">Ratio operativo 1:248 vs. meta 1:400. 533 distritos sin comisaría. 39 comisarías bajo mínimo.</div>
+      </div>
+      <div class="crisis-box">
+        <div class="crisis-num">×2</div>
+        <div class="crisis-title">6. Homicidios en escalada</div>
+        <div class="crisis-text">7,4 → 10,7 × 100k hab en 6 años. Casi 7 asesinados por día. Tasa más alta del período.</div>
+      </div>
+      <div class="crisis-box">
+        <div class="crisis-num">81%</div>
+        <div class="crisis-title">7. La cifra negra institucional</div>
+        <div class="crisis-text">81,5% no denuncia. 3 fuentes oficiales dan cifras con 7% de diferencia entre sí.</div>
+      </div>
+      <div class="crisis-box">
+        <div class="crisis-num">600+</div>
+        <div class="crisis-title">8. Fiscalía saturada</div>
+        <div class="crisis-text">Fiscales con 600 expedientes activos. Solo 5 comisarías de familia en Arequipa. Retrasos de meses.</div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top: 20px">
+      <strong>Conclusión:</strong> El problema no es la falta de voluntad política ni la ausencia de recursos. Es la <strong>incapacidad institucional crónica</strong> para convertir dinero en capacidad operativa, personal en presencia territorial, y denuncias en investigaciones que lleguen a sentencia. Cada año de no-ejecución profundiza el déficit. Cada rotación ministerial lo reinicia.
+    </div>
+
+    <div class="doc-footer">
+      <strong>Fuentes citadas:</strong> MEF / Consulta Amigable · INEI/ENAPRES · Informe Contraloria N° 25595-2025-CG/SIE-SOP · MININTER (PP0030, ONSEC, SIDPOL) · PNP · CEIC · Ministerio Público · defensa.com · Gestión · La República · Expreso · El Peruano · TVPerú · NODAL · Caretas · gob.pe · Canal N · Infobae · Diario Correo<br><br>
+      <strong>Documento elaborado por Mavis para Ricardo</strong> · Fuentes oficiales públicas a septiembre de 2026 · 55 fuentes citadas
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+Chart.defaults.color = '#444';
+Chart.defaults.font.family = "'Helvetica Neue', Arial, sans-serif";
+Chart.defaults.borderColor = '#e0e0e0';
+
+// ── CHART 1: PIA BAR ──
+new Chart(document.getElementById('chart1'), {
+  type: 'bar',
+  data: {
+    labels: ['2019','2020','2021','2022','2023','2024','2025','2026'],
+    datasets: [{
+      label: 'PIA (S/ M)',
+      data: [12100,12500,13800,14200,14800,15000,17300,16220],
+      backgroundColor: ['#1a1a1a','#1a1a1a','#1a1a1a','#1a1a1a','#1a1a1a','#1a1a1a','#1a1a1a','#aaa'],
+      borderRadius: 3, borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` S/ ${ctx.parsed.y.toLocaleString()} M` } } },
+    scales: {
+      y: { grid: { color: '#eee' }, ticks: { callback: v => `S/ ${(v/1000).toFixed(0)}K M` } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ── CHART 2: PERSONAL DONUT ──
+new Chart(document.getElementById('chart2'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Hombres','Mujeres','Administrativos (sin patrullaje)'],
+    datasets: [{ data: [112500,21235,5000], backgroundColor: ['#1a1a1a','#555','#ccc'], borderWidth: 0, spacing: 4 }]
+  },
+  options: { responsive: true, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10, font: { size: 8 } } } } }
+});
+
+// ── CHART 3: EQUIPAMIENTO STACKED ──
+new Chart(document.getElementById('chart3'), {
+  type: 'bar',
+  data: {
+    labels: ['Vehículos','Compus','Impresoras','Escáneres'],
+    datasets: [
+      { label: 'Inoperativo', data: [42,27,53,73], backgroundColor: '#1a1a1a', borderRadius: 3, borderSkipped: false },
+      { label: 'Operativo', data: [58,73,47,27], backgroundColor: '#e0e0e0', borderRadius: 3, borderSkipped: false }
+    ]
+  },
+  options: {
+    indexAxis: 'y', responsive: true,
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 8, font: { size: 8 } } } },
+    scales: { x: { stacked: true, grid: { color: '#eee' }, max: 100 }, y: { stacked: true, grid: { display: false } } }
+  }
+});
+
+// ── CHART 4: REGIONES ──
+new Chart(document.getElementById('chart4'), {
+  type: 'bar',
+  data: {
+    labels: ['Lima Metro','Áncash','Puno','Ayacucho','Cajamarca'],
+    datasets: [{ label: 'Situaciones adversas', data: [382,180,164,161,155], backgroundColor: '#1a1a1a', borderRadius: 3, borderSkipped: false }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: { y: { grid: { color: '#eee' } }, x: { grid: { display: false } } }
+  }
+});
+
+// ── CHART 5: HOMICIDIOS ──
+new Chart(document.getElementById('chart5'), {
+  type: 'line',
+  data: {
+    labels: ['2019','2020','2021','2022','2023','2024','2025'],
+    datasets: [{
+      label: 'Tasa × 100k hab',
+      data: [7.4,5.8,8.6,8.6,9.3,10.1,10.7],
+      borderColor: '#1a1a1a', backgroundColor: 'rgba(0,0,0,0.06)',
+      borderWidth: 2.5, fill: true, tension: 0.4,
+      pointRadius: 5, pointBackgroundColor: '#1a1a1a', pointBorderColor: '#fff', pointBorderWidth: 1.5
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `Tasa: ${ctx.parsed.y} × 100k hab` } } },
+    scales: { y: { grid: { color: '#eee' }, min: 0 }, x: { grid: { display: false } } }
+  }
+});
+
+// ── CHART 6: EXTORSIÓN ──
+new Chart(document.getElementById('chart6'), {
+  type: 'line',
+  data: {
+    labels: ['2019','2020','2021','2022','2023','2024','2025'],
+    datasets: [{
+      label: 'Tasa × 100k hab',
+      data: [11.5,14.2,22.8,35.1,48.6,61.3,77.8],
+      borderColor: '#555', backgroundColor: 'rgba(0,0,0,0.04)',
+      borderWidth: 2.5, fill: true, tension: 0.4,
+      pointRadius: 5, pointBackgroundColor: '#555', pointBorderColor: '#fff', pointBorderWidth: 1.5
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: { y: { grid: { color: '#eee' }, min: 0 }, x: { grid: { display: false } } }
+  }
+});
+
+// ── CHART 7: FUENTES ──
+new Chart(document.getElementById('chart7'), {
+  type: 'bar',
+  data: {
+    labels: ['SIDPOL (PNP)','Ministerio Público','CEIC (gobierno)'],
+    datasets: [{ label: 'Denuncias extorsión 2025', data: [25196,27029,26585], backgroundColor: ['#1a1a1a','#555','#999'], borderRadius: 3, borderSkipped: false }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.parsed.y.toLocaleString()} denuncias` } } },
+    scales: { y: { grid: { color: '#eee' }, ticks: { callback: v => v.toLocaleString() } }, x: { grid: { display: false } } }
+  }
+});
+</script>
+</body>
+</html>

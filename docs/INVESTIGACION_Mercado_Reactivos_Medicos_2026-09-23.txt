@@ -1,0 +1,582 @@
+================================================================================
+INVESTIGACIÓN: EL MERCADO DE REACTIVOS MÉDICOS COMO PROVEEDORES DEL ESTADO PERUANO
+================================================================================
+
+Elaborado por: Ricardo Cuba
+Proyecto: Rastro (appsperu)
+Fecha: 2026-09-23
+Alcance temporal de los datos: 2024-01-01 a 2026-09-23
+Alcance territorial: Nacional (25 regiones representadas en las fuentes consultadas)
+
+
+ÍNDICE
+--------------------------------------------------------------------------------
+1.  Resumen ejecutivo
+2.  Metodología y fuentes de datos
+3.  Corrección metodológica crítica: qué SÍ y qué NO es un "reactivo"
+4.  Concentración de mercado (cifras corregidas y verificadas a nivel de ítem)
+5.  El hallazgo central: dependencia de CENARES como comprador único
+6.  Los programas nacionales detrás de las grandes compras (VPH y tuberculosis)
+7.  Sanciones del Tribunal de Contrataciones del Estado (OSCE)
+8.  Conformación societaria y vínculos entre proveedores
+9.  Fracasos de mercado: procesos DESIERTOS y NULOS a nivel nacional
+10. El caso La Libertad en contexto nacional
+11. Marco técnico-normativo
+12. Limitaciones explícitas de esta investigación
+13. Líneas de investigación pendientes
+14. Fuentes y conectores de Rastro utilizados
+
+
+--------------------------------------------------------------------------------
+1. RESUMEN EJECUTIVO
+--------------------------------------------------------------------------------
+
+El mercado de reactivos médicos de diagnóstico in vitro que vende al Estado
+peruano está altamente concentrado, pero no de forma monolítica: coexisten dos
+capas. A nivel nacional/de grandes contratos, un puñado de multinacionales
+(Roche, ROCHEM BIOCARE, Abbott, Siemens Healthcare) concentra la mayor parte
+del valor adjudicado verificado. A nivel regional, en contratos medianos, hay
+competencia real entre distribuidores locales (verificado con 16 postores
+compitiendo por un solo proceso en La Libertad).
+
+El hallazgo más fuerte de esta investigación es una dependencia de comprador
+único: CENARES (Centro Nacional de Abastecimiento de Recursos Estratégicos en
+Salud, MINSA) concentra el 78% de todo lo que factura el grupo Roche al Estado
+peruano en reactivos, y el 89% de lo que factura ROCHEM BIOCARE. Verificado a
+nivel de ítem, buena parte de esas compras gigantes de CENARES corresponden a
+dos programas nacionales de salud pública específicos: tamizaje de VPH (cáncer
+cervical) y diagnóstico molecular de tuberculosis.
+
+Un segundo hallazgo relevante: 63 procesos de compra de reactivos quedaron
+DESIERTOS o NULOS entre 2024 y 2026, en 33 compradores distintos de 13
+regiones -- incluido un caso de un hospital que convocó una compra de
+emergencia explícitamente "por desabastecimiento" de reactivos para tamizaje
+de donantes de sangre, y esa compra de emergencia también falló.
+
+Un tercer hallazgo, de corrección metodológica: una parte de lo que se
+etiquetaba inicialmente como "reactivos de Roche" (S/ 27.4 millones bajo la
+razón social ROCHE FARMA (PERU) S.A.) resultó ser, verificado a nivel de
+ítem, medicamentos oncológicos (Rituximab, Vemurafenib, Atezolizumab,
+Pertuzumab) -- no reactivos de diagnóstico. Esta corrección se documenta en
+detalle en la sección 3 porque cambia materialmente las cifras de
+concentración reportadas en versiones preliminares de este análisis dentro de
+la misma sesión de trabajo.
+
+
+--------------------------------------------------------------------------------
+2. METODOLOGÍA Y FUENTES DE DATOS
+--------------------------------------------------------------------------------
+
+Esta investigación combinó tres fuentes:
+
+a) Datos ya ingeridos en el monorepo de Rastro (Postgres local de desarrollo,
+   apps/compras-publicas y apps/proveedores-sancionados), alimentados
+   previamente desde la API pública de OECE (Organismo Especializado de las
+   Contrataciones del Estado) y el padrón de sanciones del Tribunal de
+   Contrataciones del Estado (OSCE).
+
+b) El catálogo de tools de producción del MCP de Rastro
+   (mcp__appsperu__rastro_buscar_tools / rastro_llamar) contra el servidor
+   local de compras-publicas (26 tools de esa sola app), que expone datos más
+   frescos y completos que la copia de desarrollo en varios casos (ver
+   sección 5).
+
+c) Consultas en vivo directas a la API pública de OECE
+   (contratacionesabiertas.oece.gob.pe/api/v1), usadas para verificar el
+   contenido real (ítem por ítem) de los procesos de mayor monto, y así
+   confirmar o descartar si un award corresponde genuinamente a un reactivo
+   de diagnóstico.
+
+Un supuesto de trabajo importante: el filtro inicial de "proveedores del
+sector reactivos" se hizo por coincidencia de texto en el nombre del
+proveedor (ILIKE sobre marcas conocidas: ROCHE, ABBOTT, SIEMENS, etc.) contra
+la tabla `awards` (48,761 adjudicaciones nacionales de todo rubro). Este
+método produjo varios falsos positivos que se identificaron y descartaron
+explícitamente durante la investigación (ver sección 3 y 8) -- se documenta
+el proceso de descarte, no solo el resultado final, porque es relevante para
+juzgar la confiabilidad de las cifras que sí se reportan.
+
+
+--------------------------------------------------------------------------------
+3. CORRECCIÓN METODOLÓGICA CRÍTICA: QUÉ SÍ Y QUÉ NO ES UN "REACTIVO"
+--------------------------------------------------------------------------------
+
+La tabla `awards` de compras-publicas no tiene descripción de ítem a nivel de
+fila -- solo tiene proveedor, comprador, monto y fecha. Para saber qué se
+compró realmente en cada adjudicación grande, hubo que consultar
+individualmente el detalle de cada proceso (`tender.description` /
+`tender.items[].description`) contra la API de OECE.
+
+Al hacer esa verificación sobre los 4 awards de ROCHE FARMA (PERU) S.A.
+(RUC 20556799327, S/ 27,397,259.60 en total, el 100% de su facturación
+capturada en esta muestra), el resultado fue:
+
+  - ocds-dgv273-seacev3-1221180 (S/ 380,000)     -> RITUXIMAB 1400mg/11.7mL
+    (producto farmacéutico oncológico, NO PNUME)
+  - ocds-dgv273-seacev3-1219959 (S/ 22,834,176)  -> PERTUZUMAB 420mg/14mL
+    (compra corporativa de oncológicos, contratación directa, NO reactivo)
+  - ocds-dgv273-seacev3-1196155 (S/ 126,243.60)  -> VEMURAFENIB 240mg
+    (producto farmacéutico oncológico, NO PNUME)
+  - ocds-dgv273-seacev3-1191987 (S/ 4,056,840)   -> ATEZOLIZUMAB 60mg/mL
+    (producto farmacéutico oncológico, NO PNUME)
+
+Ninguno de los 4 es un reactivo de diagnóstico. Los cuatro son medicamentos
+oncológicos (anticuerpos monoclonales) adquiridos por CENARES para el
+abastecimiento nacional de tratamiento de cáncer -- un programa distinto,
+igual de importante, pero fuera del alcance de "mercado de reactivos
+médicos" que es el objeto de esta investigación.
+
+CONCLUSIÓN METODOLÓGICA: ROCHE FARMA (PERU) S.A. se excluye por completo de
+las cifras de concentración de la sección 4. Es la misma familia corporativa
+que PRODUCTOS ROCHE Q F S A (domicilio fiscal distinto verificado: ver
+sección 8), pero opera como el brazo farmacéutico-oncológico, no el
+diagnóstico. Confundir ambas razones sociales bajo "Roche = reactivos"
+hubiera inflado la cifra de concentración en S/ 27.4 millones que en
+realidad no pertenecen a este mercado.
+
+Por contraste, se verificó a nivel de ítem una muestra de los awards grandes
+de PRODUCTOS ROCHE Q F S A, ROCHEM BIOCARE DEL PERU S.A.C. y GEN LAB DEL PERU
+S.A.C., y en todos los casos verificados el contenido correspondía
+genuinamente a reactivos de diagnóstico (detalle en secciones 5 y 6). No se
+verificó el 100% de los awards de cada proveedor -- se verificó una muestra
+representativa de los de mayor monto, que es donde el riesgo de
+mala-clasificación tiene más impacto en las cifras agregadas.
+
+
+--------------------------------------------------------------------------------
+4. CONCENTRACIÓN DE MERCADO (CIFRAS CORREGIDAS)
+--------------------------------------------------------------------------------
+
+Tabla de proveedores verificados como genuinamente relevantes al mercado de
+reactivos de diagnóstico (tras aplicar la corrección de la sección 3 y
+descartar los falsos positivos de la sección 8):
+
+  Proveedor                          RUC              Awards   Monto total (S/)
+  ----------------------------------------------------------------------------
+  PRODUCTOS ROCHE Q F S A             20100177341       16        59,955,119.21
+  ROCHEM BIOCARE DEL PERU S.A.C.      20468787360       16        23,006,706.61
+  ABBOTT LABORATORIOS SA              20100096936       26        12,597,023.52
+  ABBOTT RAPID DX INTERNATIONAL LTD   (RUC extranjero)   1           627,480.00
+  INTERSHOPLAB S.A.C. (RUC directo)   20612262587       18         3,500,804.80
+  SIEMENS HEALTHCARE S.A.C            20600756011        6         4,724,495.40
+  GEN LAB DEL PERU S.A.C.             20501262260       14         4,677,341.10
+  CONSORCIO INTERSHOPLAB              (código interno)   1         1,796,700.00
+  DIVCOM S.A.C.                       20502130723        4         1,074,400.00
+  MEDIX GROUP S.A.C.                  20603777183        1           232,182.72
+  TEMEDIX SOCIEDAD ANONIMA CERRADA    20609152681        2           177,484.80
+  ----------------------------------------------------------------------------
+  TOTAL (proveedores confirmados)                                 112,369,738.16
+
+Nota: ROCHE FARMA (PERU) S.A. (S/ 27.4M) se excluye explícitamente por la
+razón explicada en la sección 3 -- no forma parte de este total.
+
+Lectura de concentración:
+  - PRODUCTOS ROCHE Q F S A: 53.4% del total confirmado
+  - ROCHEM BIOCARE DEL PERU S.A.C.: 20.5% del total confirmado
+  - Top 2 (dos empresas DISTINTAS, no relacionadas entre sí -- ver sección 8):
+    73.8% del total confirmado
+  - ABBOTT (ambas entidades): 11.8%
+  - El resto (Intershoplab, Siemens Healthcare, Gen Lab, Divcom, Medix Group,
+    Temedix, consorcios): 14.4% combinado
+
+Interpretación: la concentración es real y alta (73.8% en dos empresas), pero
+más moderada de lo que sugería la cifra preliminar de esta misma
+investigación (que incluía por error los S/27.4M de medicamentos oncológicos
+de Roche Farma bajo "Roche"). La cifra corregida sigue siendo una
+concentración de mercado fuerte para cualquier estándar antimonopolio, solo
+que atribuible a dos empresas competidoras entre sí (Roche vs. ROCHEM
+BIOCARE), no a una sola.
+
+
+--------------------------------------------------------------------------------
+5. EL HALLAZGO CENTRAL: DEPENDENCIA DE CENARES COMO COMPRADOR ÚNICO
+--------------------------------------------------------------------------------
+
+Al desagregar los awards de cada proveedor por comprador, surge el hallazgo
+más fuerte de esta investigación:
+
+PRODUCTOS ROCHE Q F S A (S/ 59,955,119.21 total, 16 awards):
+  - CENARES: S/ 40,653,004.80 (1 solo award, el 2026-08-28)
+  - Resto (15 awards, 13 compradores distintos en Lima, Lambayeque, Arequipa,
+    Cusco, Apurímac): S/ 19,302,114.41
+  - CENARES = 67.8% del total de Roche (diagnóstico)
+
+ROCHEM BIOCARE DEL PERU S.A.C. (S/ 23,006,706.61 total, 16 awards):
+  - CENARES: S/ 8,997,350.00 + S/ 11,485,091.70 = S/ 20,482,441.70 (2 awards)
+  - Resto (14 awards, 12 compradores distintos en Junín, Piura, Lima,
+    Huancavelica, Madre de Dios, Pasco): S/ 2,524,264.91
+  - CENARES = 89.0% del total de ROCHEM BIOCARE
+
+GEN LAB DEL PERU S.A.C. (S/ 4,677,341.10 total, 14 awards):
+  - CENARES: S/ 3,211,256.94 (1 solo award, el 2026-06-17)
+  - CENARES = 68.6% del total de Gen Lab
+
+Combinando solo lo que CENARES compró a estos tres proveedores confirmados:
+S/ 40,653,004.80 + S/ 20,482,441.70 + S/ 3,211,256.94 = S/ 64,346,703.44 --
+el 57.3% de todo el mercado de reactivos confirmado en esta investigación
+(S/ 112.4M) pasa por las manos de un solo comprador: CENARES.
+
+Esto es una dependencia bidireccional real: los tres proveedores principales
+dependen de CENARES para la mayoría de su facturación en este rubro, y
+CENARES (que abastece reactivos a toda la red pública de salud del país, no
+solo a sí mismo) depende de estos mismos tres proveedores para cumplir su
+función. Un cambio de política, un problema presupuestal, o un problema de
+ejecución en CENARES tendría un efecto de cascada desproporcionado sobre todo
+el sector.
+
+
+--------------------------------------------------------------------------------
+6. LOS PROGRAMAS NACIONALES DETRÁS DE LAS GRANDES COMPRAS
+--------------------------------------------------------------------------------
+
+Verificado a nivel de ítem, las compras gigantes de CENARES no son
+reabastecimiento genérico -- corresponden a dos programas específicos de
+salud pública nacional:
+
+TAMIZAJE DE VPH (VIRUS DEL PAPILOMA HUMANO / CÁNCER CERVICAL):
+  - "ADQUISICION DE KIT PCR EN TIEMPO REAL PARA DETECCION DE VIRUS PAPILOMA
+    HUMANO VPH (INCLUYE COMPONENTES Y CONSUMIBLES)"
+  - 487,680 unidades, valor referencial del proceso completo:
+    S/ 60,462,566.40 (el award registrado a Productos Roche fue
+    S/ 40,653,004.80 -- posible adjudicación parcial o valor de award
+    distinto al referencial; no se investigó la diferencia exacta)
+  - Licitación Pública, CENARES/MINSA
+
+DIAGNÓSTICO MOLECULAR DE TUBERCULOSIS:
+  - "ADQUISICIÓN DE KIT PCR EN TIEMPO REAL PARA DETECCIÓN Y RESISTENCIA A
+    RIFAMPICINA DE MYCOBACTERIUM TUBERCULOSIS..." (ROCHEM BIOCARE,
+    S/ 8,997,350)
+  - "Adquisicion de reactivos compatibilizados para el equipo molecular
+    automatizado multiplataforma GeneXpert" (ROCHEM BIOCARE, S/ 11,485,091.70)
+  - "ADQUISICIÓN DE REACTIVOS DE LABORATORIO COMPATIBILIZADO PARA EL
+    SECUENCIAMIENTO DE GENOMA COMPLETO Y DIRIGIDO DE MYCOBACTERIUM
+    TUBERCULOSIS" (Gen Lab, S/ 3,211,256.94)
+
+Interpretación: al menos S/ 64.3M de las compras de CENARES a estos tres
+proveedores corresponden a insumos para 2 programas de vigilancia
+epidemiológica de alta prioridad (cáncer cervical y tuberculosis
+multidrogorresistente). No es evidencia de mal uso de fondos -- al
+contrario, es consistente con prioridades sanitarias reales del país. Pero
+explica POR QUÉ la concentración en pocos proveedores es tan alta: estos son
+insumos moleculares de alta especialización técnica (PCR en tiempo real,
+GeneXpert, secuenciamiento genómico), no reactivos de bioquímica genérica --
+el número de fabricantes capaces de proveerlos a esa escala es
+estructuralmente pequeño a nivel mundial, no solo en Perú.
+
+
+--------------------------------------------------------------------------------
+7. SANCIONES DEL TRIBUNAL DE CONTRATACIONES DEL ESTADO (OSCE)
+--------------------------------------------------------------------------------
+
+Se cruzaron 12 RUC de proveedores relevantes del sector contra las tablas
+reales de sanciones ya ingeridas en Rastro (11,288 filas de inhabilitaciones,
+6,707 filas de multas):
+
+  - GEN LAB DEL PERU S.A.C. (RUC 20501262260):
+      * Inhabilitación, resolución 2924-2015-TCE-S2, motivo "no mantener
+        oferta / no suscripción injustificada del contrato". Estado: NO
+        VIGENTE.
+      * Multa, resolución 3674-2023-TCE-S2, S/ 4,950. Estado: NO VIGENTE.
+      * Verificado explícitamente: sus 14 adjudicaciones reales (todas de
+        2026) NO se solapan en el tiempo con ninguna de las dos sanciones.
+
+  - ABBOTT LABORATORIOS SA (RUC 20100096936):
+      * Multa, resolución 4765-2023-TCE-S3, S/ 12,507. Estado: NO VIGENTE.
+
+  - Los otros 10 proveedores verificados (ambas entidades Roche, ROCHEM
+    BIOCARE, Siemens Healthcare, Intershoplab, Divcom) -- sin sanciones
+    registradas en las tablas consultadas.
+
+  - Se consultó también la tabla `inhabilitaciones_judiciales` (14 filas
+    totales, dataset muy acotado) -- sin coincidencias para ninguno de los
+    12 RUC.
+
+Ningún proveedor relevante tiene sanción vigente hoy. 2 de 12 (17%) tienen
+historial de sanción, ya vencida, sin evidencia de solapamiento con contratos
+posteriores.
+
+
+--------------------------------------------------------------------------------
+8. CONFORMACIÓN SOCIETARIA Y VÍNCULOS ENTRE PROVEEDORES
+--------------------------------------------------------------------------------
+
+VERIFICACIÓN POSITIVA (Roche vs. ROCHEM BIOCARE, confirmado NO relacionados):
+  Se cruzó el domicilio fiscal SUNAT (tabla `contribuyentes`, padrón real) de
+  las dos razones sociales que comparten la palabra "ROCHE":
+    - PRODUCTOS ROCHE Q F S A y ROCHE FARMA (PERU) S.A.: mismo domicilio
+      fiscal exacto (Cal. Dionisio Derteano 144, San Isidro, Lima) --
+      confirmado el mismo grupo corporativo.
+    - ROCHEM BIOCARE DEL PERU S.A.C.: domicilio distinto (Av. Javier Prado
+      Oeste 1520, San Isidro, Lima) -- confirmado NO es el mismo grupo. Es un
+      competidor separado que coincide solo en el nombre.
+
+VERIFICACIÓN NEGATIVA (sin red oculta entre distribuidores medianos):
+  Se consultó la conformación societaria real (fuente: OSCE, Buscador de
+  Proveedores del Estado / perfilprov, vía tool de producción de Rastro
+  `compras_publicas_conformacion_by_ruc`) de GEN LAB DEL PERU S.A.C. e
+  INTERSHOPLAB S.A.C.:
+    - GEN LAB: socios Iparraguirre Paredes Ruth Noemí y Ramírez Melgar Jorge
+      Luis (Gerente General); representante adicional Iparraguirre Paredes
+      David Paul.
+    - INTERSHOPLAB: socios Ossio Zurita Diego Alonso y Zurita Rojas Aymé
+      Yanina (Gerente General); representante adicional Palacios Palacios
+      Thalia Dominique.
+  Sin superposición de personas entre ambas empresas. Se cruzaron además
+  contra `compras_publicas_conformacion_vinculos` (la vista nacional de
+  personas que controlan más de un RUC ganador de adjudicaciones en
+  entidades distintas) -- sin coincidencias para ninguno de los nombres o
+  documentos de identidad de estas dos empresas. Es un hallazgo negativo
+  genuino, no una omisión: no hay evidencia de controladores ocultos
+  compartidos entre estos proveedores ni con el resto del padrón nacional
+  consultado.
+  DIVCOM S.A.C. (RUC 20502130723) todavía no está en el dataset de
+  conformación societaria de Rastro (error 404, "aún no ingerido") -- esto es
+  un vacío de cobertura, no un resultado negativo confirmado.
+
+CONSORCIOS -- FALSOS POSITIVOS DESCARTADOS:
+  La búsqueda inicial por texto ("HUMAN", "MEDIX" como parte de nombres de
+  marca) capturó 4 "consorcios" que parecían del sector. Al verificar el
+  comprador real de cada uno, 3 resultaron ser falsos positivos sin relación
+  con reactivos médicos:
+    - CONSORCIO HUMANTAY JECP -> ganó un contrato de la Municipalidad
+      Distrital de Cielo Punco (no es salud).
+    - CONSORCIO HUMANDI -> ganó un contrato de la Municipalidad Distrital de
+      Torres Causana (no es salud).
+    - CONSORCIO KAMEDIXI -> ganó un contrato del Programa Educación Básica
+      Para Todos (no es salud).
+  Solo CONSORCIO INTERSHOPLAB es genuinamente del sector: ganó
+  S/ 1,796,700.00 de GOBIERNO REGIONAL DE LA LIBERTAD-SALUD UTES TRUJILLO
+  ESTE. Se investigó la lista de postores de ese proceso específico (tabla
+  `bidders`, 636,288 filas ya ingeridas): 16 postores compitieron, entre
+  ellos FABLAB MEDICAL E.I.R.L., DROGUERIA BIOMEDICAL DISTRIBUCION E.I.R.L.,
+  LAB & HEALTH SUPPLY S.A.C., W.P. BIOMED S.A., LABIN PERU S.A., DIAGNOSTIC
+  LAB E & M S.A.C., RAPIDIAGNOSTICS S.A.C., UNILAP SAC, LC BIOCORP S.A.C.,
+  entre otros -- evidencia de un mercado regional fragmentado y competitivo,
+  contrastando con la alta concentración nacional del punto 4.
+
+
+--------------------------------------------------------------------------------
+9. FRACASOS DE MERCADO: PROCESOS DESIERTOS Y NULOS A NIVEL NACIONAL
+--------------------------------------------------------------------------------
+
+Usando la tabla `unsuccessful_tenders` de Rastro (13,481 filas totales de
+todo rubro, capturando `tender.items[].statusDetails IN ('DESIERTO','NULO')`
+de OECE):
+
+TOTAL: 63 procesos de reactivos DESIERTOS (44) o NULOS (19) entre 2024 y
+2026, en 33 compradores distintos de 13 regiones.
+
+Ranking de compradores con más fallos repetidos:
+  Comprador                                          Región      Fallos
+  ------------------------------------------------------------------------
+  SEGURO SOCIAL DE SALUD (sede central)               Lima          6
+  IAFAS DEL EJERCITO DEL PERU (FOSPEME)               Lima          6
+  Instituto Tecnológico de la Producción (*)          Lima          6
+  GORE Ayacucho - Red de Salud Huamanga                Ayacucho      3
+  GORE Ayacucho - Hospital Huamanga                    Ayacucho      3
+  GORE Junín - Red de Salud Valle del Mantaro          Junín         3
+  Dirección de Sanidad de la PNP                       Lima          2
+  Hospital José Casimiro Ulloa                         Lima          2
+  INSN San Borja                                       Lima          2
+  GORE Huánuco - DIRESA                                Huánuco       2
+  GORE Cusco - Red de Servicios de Salud Cusco Norte    Cusco         2
+  IREN Sur (Instituto Regional de Enf. Neoplásicas)     Arequipa      2
+  GORE Puno - Salud San Román                          Puno          2
+  GORE La Libertad - UTES Trujillo Sur Oeste            La Libertad   2
+
+  (*) Instituto Tecnológico de la Producción no es un hospital -- sus
+  reactivos son probablemente de control de calidad alimentario/pesquero,
+  no diagnóstico clínico. Se incluye en la tabla por transparencia del
+  conteo, pero debe leerse aparte del resto.
+
+Advertencia sobre cobertura temporal: la tabla `unsuccessful_tenders`
+completa (todo rubro) tiene solo 31 filas para todo 2025, contra 1,509 en
+2024 y 11,941 en 2026 -- es un hueco real de cobertura de la ingesta, no
+evidencia de que 2025 haya sido un año sin fallos. Normalizando los 63 casos
+de reactivos como porcentaje de todos los fallos del trimestre: pasa de
+~0.20% en 2024 a ~0.49% en 2026 -- una proporción casi el doble, aunque la
+base sigue siendo pequeña (63 casos) para afirmar tendencia con fuerza
+estadística.
+
+CASO DESTACADO -- desabastecimiento con fracaso en cascada:
+  El Hospital Regional Docente de Trujillo (La Libertad) convocó en agosto
+  de 2026 un proceso explícitamente titulado "SUMINISTRO DE REACTIVOS PARA
+  TAMIZAJE DE DONANTES DE SANGRE PARA 3 MESES, POR DESABASTECIMIENTO CON
+  EQUIPO EN CESION DE USO" -- es decir, una compra de emergencia motivada
+  por un desabastecimiento real ya ocurrido. Ese proceso de emergencia
+  terminó en estado NULO. La normativa de contrataciones (Ley 32069, art.
+  55.1, causal de "situación de desabastecimiento") sí habilitaba la vía
+  usada; la causa específica de por qué el proceso de emergencia también
+  falló requeriría revisar el expediente de contratación (acta de nulidad),
+  que no se hizo en esta investigación -- ver sección 12.
+
+
+--------------------------------------------------------------------------------
+10. EL CASO LA LIBERTAD EN CONTEXTO NACIONAL
+--------------------------------------------------------------------------------
+
+La Libertad aparece en esta investigación con:
+  - 2 procesos DESIERTOS/NULOS (empatada con Cusco, Puno, Arequipa; por
+    debajo de Ayacucho y Junín con 3 cada uno, y muy por debajo de Lima con
+    29 de los 63 casos nacionales).
+  - 1 award real verificado a un proveedor del sector: EsSalud - Red
+    Asistencial La Libertad pagó S/ 385,200 a DIVCOM S.A.C. como parte de un
+    proceso cuyo valor referencial total era S/ 12,286,302 -- un award
+    parcial de un lote, no el contrato completo.
+  - 1 consorcio (CONSORCIO INTERSHOPLAB) ganador de S/ 1,796,700 en un
+    proceso con 16 postores compitiendo -- la evidencia más clara de
+    competencia regional real encontrada en toda la investigación.
+
+CONCLUSIÓN EXPLÍCITA: La Libertad no es un caso atípico ni el centro del
+problema nacional de reactivos médicos -- es una región más, con una
+magnitud de fallos de mercado menor que Lima, Ayacucho o Junín, y con
+evidencia de mercado regional competitivo consistente con el patrón nacional
+descrito en la sección 4 (concentración alta a nivel de grandes contratos
+nacionales/CENARES, competencia real a nivel de contratos regionales
+medianos).
+
+
+--------------------------------------------------------------------------------
+11. MARCO TÉCNICO-NORMATIVO
+--------------------------------------------------------------------------------
+
+Resumen del análisis producido por el agente especializado `tecnica-
+legislativa-normativa` del proyecto Rastro (memo completo disponible, no
+transcrito íntegro aquí):
+
+a) El modelo "reactivo + equipo en cesión de uso / comodato" que domina el
+   sector NO es una figura contractual nombrada en la Ley 32069 (vigente
+   desde abril 2025, derogó la Ley 30225) ni en su reglamento (DS
+   009-2025-EF). Se sostiene sobre la categoría genérica de "bienes con
+   prestaciones accesorias", validada caso por caso vía pronunciamientos de
+   la Dirección de Gestión de Riesgos de OSCE (se identificaron 3
+   pronunciamientos reales sobre este tipo de proceso). No existe un umbral
+   normativo que limite cuánto del mercado puede depender de este modelo
+   antes de considerarse barrera de entrada anticompetitiva de facto -- esa
+   función, de existir, correspondería a Indecopi (Ley de Represión de
+   Conductas Anticompetitivas), no a OSCE. No se encontró evidencia de que
+   Indecopi haya investigado este sector.
+
+b) Existe un hueco de fiscalización a nivel de diseño del sistema: el RNP
+   (Registro Nacional de Proveedores, que certifica capacidad de contratar
+   con el Estado) y el registro sanitario DIGEMID (que habilita vender un
+   reactivo específico bajo la Ley 29459) son dos sistemas administrados por
+   entidades distintas (OSCE vs. MINSA/ANM) sin interoperabilidad reportada.
+   La verificación de vigencia del registro sanitario recae en cada comité
+   de selección, sin cruce automático centralizado. Esto es un hallazgo
+   sobre el diseño del sistema, no evidencia de que alguno de los 12
+   proveedores verificados en esta investigación haya vendido con registro
+   sanitario vencido -- eso no se verificó.
+
+c) La causal de "contratación directa por situación de desabastecimiento"
+   (Ley 32069 art. 55.1, reglamento arts. 100-103) sí habilitaba la vía que
+   usó el Hospital Regional Docente de Trujillo en el caso de la sección 9.
+   La normativa de contrataciones no explica por sí sola por qué ese proceso
+   de emergencia terminó NULO -- la causa de nulidad requiere el expediente
+   del proceso específico, no solo el marco legal general.
+
+
+--------------------------------------------------------------------------------
+12. LIMITACIONES EXPLÍCITAS DE ESTA INVESTIGACIÓN
+--------------------------------------------------------------------------------
+
+1. Verificación a nivel de ítem parcial, no exhaustiva. Se verificó el
+   contenido real de los awards más grandes de cada proveedor (los que más
+   pesan en el total agregado), pero no el 100% de los 87 awards que
+   componen la tabla de la sección 4. Podría haber más medicamentos u otros
+   productos no-reactivos mezclados en awards menores que no se revisaron.
+
+2. El listado de proveedores del sector (sección 4) se construyó por
+   coincidencia de nombre/marca conocida contra un texto libre (`ILIKE`), no
+   por una clasificación oficial de rubro. Es posible que existan
+   proveedores relevantes del sector que no comparten ninguna de las marcas
+   buscadas y por tanto no fueron capturados.
+
+3. No se verificó el padrón vigente de registros sanitarios DIGEMID contra
+   los 12 proveedores investigados -- la afirmación de la sección 11.b sobre
+   el hueco RNP-DIGEMID es sobre el diseño del sistema, no un hallazgo de
+   incumplimiento puntual verificado.
+
+4. No se revisó el expediente de contratación del caso de desabastecimiento
+   de Trujillo (sección 9) -- la razón exacta de por qué el proceso de
+   emergencia terminó NULO es una hipótesis razonable, no un hecho
+   verificado documentalmente.
+
+5. La consulta `compras_publicas_bidders_coparticipation` (pares de
+   proveedores que compiten juntos repetidamente, sobre 636,288 filas de
+   postores) no pudo ejecutarse por timeout -- queda como línea pendiente.
+
+6. El cruce con informes de auditoría de la Contraloría
+   (`informes_control_informes`) sobre CENARES no se completó: la base de
+   datos local de esa app estaba vacía y requeriría una ingesta nueva
+   completa que no se justificó dentro del alcance de esta sesión.
+
+7. Los datos de `unsuccessful_tenders` tienen un hueco de cobertura real en
+   2025 (solo 31 filas de todo rubro en el año completo) -- cualquier
+   lectura de tendencia temporal sobre esta tabla debe tratarse con cautela
+   (ver advertencia explícita en la sección 9).
+
+8. Esta investigación no determina causalidad entre el modelo de "cesión de
+   uso" y la concentración de mercado observada -- documenta que ambos
+   coexisten y que es una relación estructuralmente esperable, no que se
+   haya probado el mecanismo causal específico.
+
+
+--------------------------------------------------------------------------------
+13. LÍNEAS DE INVESTIGACIÓN PENDIENTES
+--------------------------------------------------------------------------------
+
+  - Verificar a nivel de ítem el 100% de los awards restantes (no solo los
+    más grandes) para descartar más falsos positivos como el de Roche Farma.
+  - Correr `compras_publicas_bidders_coparticipation` con un timeout mayor o
+    en un entorno con más recursos, para mapear coordinación entre
+    postores del sector a nivel nacional.
+  - Ingerir informes de Contraloría (`apps/informes-control`) y cruzarlos
+    contra CENARES como entidad, dado su rol central como comprador único.
+  - Revisar el expediente de contratación del caso Trujillo (sección 9) para
+    determinar la causa real de la nulidad del proceso de emergencia.
+  - Cruzar el padrón de registro sanitario DIGEMID (si se logra encontrar
+    fuente de datos abiertos o API) contra los proveedores del sector para
+    verificar vigencia real, no solo el diseño normativo del sistema.
+  - Investigar si existe un patrón similar de dependencia de comprador único
+    en otros programas nacionales de salud pública gestionados por CENARES
+    (más allá de VPH y tuberculosis).
+  - Profundizar el análisis de precios unitarios de los reactivos comprados
+    (costo por prueba) para evaluar si la concentración de mercado se
+    traduce en sobreprecios frente a referencias internacionales -- no
+    abordado en esta investigación.
+
+
+--------------------------------------------------------------------------------
+14. FUENTES Y CONECTORES DE RASTRO UTILIZADOS
+--------------------------------------------------------------------------------
+
+  - apps/compras-publicas (OECE, contrataciones abiertas OCDS):
+      tablas `awards`, `procurement_processes`, `unsuccessful_tenders`,
+      `bidders`, `supplier_conformacion`; tools de producción
+      `compras_publicas_supplier_by_id`, `compras_publicas_suppliers`,
+      `compras_publicas_conformacion_by_ruc`,
+      `compras_publicas_conformacion_vinculos`,
+      `compras_publicas_unsuccessful_tenders`,
+      `compras_publicas_bidders_coparticipation` (no completado).
+  - apps/proveedores-sancionados (Tribunal de Contrataciones OSCE):
+      tablas `inhabilitaciones`, `multas`, `inhabilitaciones_judiciales`.
+  - apps/identidad-fiscal (padrón SUNAT):
+      tabla `contribuyentes` (domicilio fiscal, usado para confirmar/
+      descartar vínculo Roche-ROCHEM BIOCARE); tablas `ficha_ruc`,
+      `ruc_oece_ficha`, `ruc_oece_personas` (consultadas, sin coincidencias
+      útiles para los RUC de este sector en la muestra local disponible).
+  - apps/servicios-salud (RENIPRESS/SUSALUD): tool
+      `servicios_salud_ipress` explorado, no aportó valor adicional directo
+      a esta investigación (no filtra por servicio de laboratorio clínico).
+  - Fuente externa directa (no vía conector de Rastro): API pública de OECE
+      (contratacionesabiertas.oece.gob.pe/api/v1), consultada en vivo para
+      verificar el contenido de ítem de los awards individuales citados en
+      las secciones 3, 5 y 6.
+  - Agente especializado del proyecto: `tecnica-legislativa-normativa`,
+      para el marco normativo resumido en la sección 11.
+
+================================================================================
+FIN DEL DOCUMENTO
+Elaborado por Ricardo Cuba -- Rastro / appsperu -- 2026-09-23
+================================================================================

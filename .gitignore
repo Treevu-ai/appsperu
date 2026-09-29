@@ -70,3 +70,4 @@ tools/ckan-indexer/state/
 # Borradores locales de financiamiento — cifras y estrategia institucional,
 # nunca al historial del repo publico (ver docs/financiamiento/README.md)
 docs/financiamiento/
+.neon

@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnóstico: Seguridad Ciudadana Perú 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0d0d12;
+  --card: #13131c;
+  --card-hover: #1a1a26;
+  --border: #23233a;
+  --red: #ff4757;
+  --red-dim: #c0392b;
+  --amber: #ffa502;
+  --green: #2ed573;
+  --blue: #3742fa;
+  --purple: #a55eea;
+  --cyan: #1e90ff;
+  --text: #e8e8f0;
+  --muted: #6b6b8a;
+  --muted2: #4a4a6a;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+.container { max-width: 1200px; margin: 0 auto; padding: 0 24px 80px; }
+
+/* HERO */
+.hero {
+  padding: 80px 0 60px;
+  position: relative;
+}
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,71,87,0.12);
+  border: 1px solid rgba(255,71,87,0.3);
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 100px;
+  margin-bottom: 24px;
+}
+.hero-eyebrow .dot {
+  width: 6px; height: 6px;
+  background: var(--red);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.hero h1 {
+  font-size: clamp(36px, 6vw, 72px);
+  font-weight: 900;
+  line-height: 1.0;
+  letter-spacing: -0.03em;
+  margin-bottom: 24px;
+}
+.hero h1 span { color: var(--red); }
+.hero-sub {
+  font-size: 18px;
+  color: var(--muted);
+  max-width: 640px;
+  margin-bottom: 40px;
+  line-height: 1.7;
+}
+.hero-stats {
+  display: flex;
+  gap: 1px;
+  background: var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  width: fit-content;
+}
+.hero-stat {
+  background: var(--card);
+  padding: 20px 28px;
+}
+.hero-stat:first-child { border-radius: 15px 0 0 15px; }
+.hero-stat:last-child { border-radius: 0 15px 15px 0; }
+.hero-stat strong {
+  display: block;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+}
+.hero-stat span {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* SECTION TITLES */
+.section { padding: 60px 0; }
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--red);
+  margin-bottom: 8px;
+}
+.section-title {
+  font-size: clamp(22px, 3vw, 32px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+.section-desc {
+  font-size: 15px;
+  color: var(--muted);
+  margin-bottom: 32px;
+  max-width: 560px;
+}
+
+/* GRID */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; }
+@media (max-width: 900px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+}
+
+/* CARDS */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px;
+  transition: all 0.2s;
+}
+.card:hover {
+  border-color: rgba(255,71,87,0.3);
+  background: var(--card-hover);
+}
+.card-sm { padding: 20px; border-radius: 14px; }
+
+/* BIG NUMBER */
+.big-num {
+  font-size: 56px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.big-num.red { color: var(--red); }
+.big-num.amber { color: var(--amber); }
+.big-num.green { color: var(--green); }
+.big-num.blue { color: var(--cyan); }
+.big-num-label {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.big-num-sub {
+  font-size: 12px;
+  color: var(--muted2);
+}
+
+/* CHART CONTAINERS */
+.chart-box {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px;
+  position: relative;
+}
+.chart-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.chart-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+canvas { max-height: 280px; }
+
+/* BENCH BARS */
+.bench-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.bench-row:last-child { margin-bottom: 0; }
+.bench-label { width: 140px; font-size: 13px; color: var(--muted); flex-shrink: 0; }
+.bench-bar {
+  flex: 1;
+  height: 10px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.bench-fill { height: 100%; border-radius: 6px; transition: width 1s ease; }
+.bench-val { width: 48px; text-align: right; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+
+/* CRISIS GRID */
+.crisis-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.crisis-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  border-left: 3px solid var(--red);
+}
+.crisis-item .ci-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.crisis-item .ci-text {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.crisis-item .ci-num {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--red);
+  float: right;
+  line-height: 1;
+}
+@media (max-width: 700px) { .crisis-grid { grid-template-columns: 1fr; } }
+
+/* TIMELINE */
+.tl { position: relative; padding-left: 28px; }
+.tl::before {
+  content: '';
+  position: absolute;
+  left: 7px; top: 6px; bottom: 6px;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--red), transparent);
+  opacity: 0.4;
+  border-radius: 2px;
+}
+.tl-item { position: relative; padding-bottom: 20px; }
+.tl-item:last-child { padding-bottom: 0; }
+.tl-item::before {
+  content: '';
+  position: absolute;
+  left: -21px; top: 5px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--red);
+  background: var(--bg);
+}
+.tl-item.active::before { background: var(--red); }
+.tl-date { font-size: 11px; color: var(--muted2); font-weight: 600; margin-bottom: 2px; }
+.tl-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.tl-desc { font-size: 12px; color: var(--muted); }
+
+/* BADGE */
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 100px;
+  background: rgba(255,71,87,0.12);
+  color: var(--red);
+  border: 1px solid rgba(255,71,87,0.2);
+}
+.badge.amber {
+  background: rgba(255,165,2,0.12);
+  color: var(--amber);
+  border-color: rgba(255,165,2,0.2);
+}
+.badge.green {
+  background: rgba(46,213,115,0.12);
+  color: var(--green);
+  border-color: rgba(46,213,115,0.2);
+}
+.badge.blue {
+  background: rgba(30,144,255,0.12);
+  color: var(--cyan);
+  border-color: rgba(30,144,255,0.2);
+}
+
+/* DIVIDER */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 0 0 0;
+}
+
+/* SCROLL REVEAL */
+.reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.6s, transform 0.6s; }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* PERSON ROWS */
+.person-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.person-row:last-child { border-bottom: none; }
+.person-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--red), var(--purple));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.person-name { font-size: 13px; font-weight: 600; }
+.person-role { font-size: 11px; color: var(--muted); }
+.person-period { font-size: 11px; color: var(--muted2); margin-left: auto; flex-shrink: 0; }
+
+/* FOOTER */
+.footer-note {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted2);
+  padding: 40px 0 20px;
+  border-top: 1px solid var(--border);
+}
+
+/* ─── A4 PRINT RULES ─────────────────────────────────────────────── */
+@page {
+  size: A4 portrait;
+  margin: 12mm 10mm;
+}
+@media print {
+  :root {
+    --bg: #0d0d12;
+    --card: #13131c;
+    --border: #23233a;
+  }
+  body {
+    background: var(--bg) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    color-adjust: exact;
+  }
+  .hero, .section, .card, .chart-box, .crisis-item, .hero-stats {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .hero, .section, .sep, .divider {
+    page-break-after: always;
+    break-after: page;
+  }
+  .hero { page-break-after: always; }
+  .sep, .divider { page-break-after: auto; }
+  section.section { page-break-before: always; break-before: page; }
+  .chart-wrap { height: 220px !important; }
+  canvas { max-height: 220px !important; }
+  .reveal { opacity: 1 !important; transform: none !important; }
+  * { overflow: visible !important; }
+}
+
+/* COMPARISON ROW */
+.comp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.comp-row:last-child { border-bottom: none; }
+.comp-label { font-size: 13px; color: var(--muted); }
+.comp-val { font-size: 18px; font-weight: 800; }
+.comp-arrow { color: var(--muted2); font-size: 14px; margin: 0 8px; }
+.comp-from { font-size: 12px; color: var(--muted2); }
+.comp-to { font-size: 13px; font-weight: 700; }
+
+/* SEPARATOR */
+.sep { height: 1px; background: var(--border); margin: 0; }
+
+/* DONUT LEGEND */
+.donut-legend { margin-top: 16px; }
+.dl-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+.dl-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.dl-label { color: var(--muted); flex: 1; }
+.dl-val { font-weight: 700; }
+
+/* ALERT BOX */
+.alert-box {
+  background: rgba(255,71,87,0.06);
+  border: 1px solid rgba(255,71,87,0.2);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.alert-box strong { color: var(--red); }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-eyebrow">
+      <span class="dot"></span>
+      Diagnóstico Oficial — MEF · INEI · Contraloría · MININTER · PNP
+    </div>
+    <h1>La crisis de seguridad<br>de<span> Perú</span> en datos</h1>
+    <p class="hero-sub">Ocho crisis superpuestas. Más presupuesto que nunca. Menos capacidad operativa que nunca. Un Estado que no logra convertir recursos en presencia territorial.</p>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <strong style="color: var(--amber)">+42%</strong>
+        <span>Presupuesto 2019-2025</span>
+      </div>
+      <div class="hero-stat">
+        <strong style="color: var(--red)">×6,8</strong>
+        <span>Extorsión 2019-2025</span>
+      </div>
+      <div class="hero-stat">
+        <strong style="color: var(--red)">+45%</strong>
+        <span>Homicidios 2019-2025</span>
+      </div>
+      <div class="hero-stat">
+        <strong style="color: var(--cyan)">81%</strong>
+        <span>Delitos no denunciar</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="sep"></div>
+
+  <!-- CAP 1: PRESUPUESTO -->
+  <section class="section reveal">
+    <div class="section-label">Capítulo 01</div>
+    <h2 class="section-title">El presupuesto que no se convierte en seguridad</h2>
+    <p class="section-desc">El gasto en seguridad creció 42% en 6 años. Pero el 89% se consume en planilla y la inversión ejecuta apenas el 36,9%.</p>
+
+    <div class="grid-2">
+      <div class="chart-box">
+        <div class="chart-title">PIA Orden Público y Seguridad (S/ millones)</div>
+        <div class="chart-sub">2019–2026 · Fuente: MEF / Gestión</div>
+        <canvas id="chart1"></canvas>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Ejecución del gasto por tipo</div>
+        <div class="chart-sub">PP0030 2025 · 89% planilla vs 11% capacidad</div>
+        <canvas id="chart2" style="max-height:220px"></canvas>
+        <div class="donut-legend">
+          <div class="dl-item">
+            <span class="dl-dot" style="background: var(--red-dim)"></span>
+            <span class="dl-label">Remuneraciones y obligaciones sociales</span>
+            <span class="dl-val" style="color: var(--red)">89%</span>
+          </div>
+          <div class="dl-item">
+            <span class="dl-dot" style="background: var(--amber)"></span>
+            <span class="dl-label">Bienes, servicios, infraestructura, equipos</span>
+            <span class="dl-val" style="color: var(--amber)">11%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height: 16px"></div>
+
+    <div class="card reveal">
+      <div class="section-label" style="margin-bottom:16px">Proyectos sin ejecutar — MININTER 2025</div>
+      <div class="bench-row">
+        <div class="bench-label">Control disturbios civiles</div>
+        <div class="bench-bar"><div class="bench-fill" style="width:0%; background: var(--red)"></div></div>
+        <div class="bench-val" style="color:var(--red)">S/ 0</div>
+        <span style="font-size:11px;color:var(--muted2)">· PIM S/ 211 M</span>
+      </div>
+      <div class="bench-row">
+        <div class="bench-label">Camionetas Lima Metro</div>
+        <div class="bench-bar"><div class="bench-fill" style="width:0%; background: var(--red)"></div></div>
+        <div class="bench-val" style="color:var(--red)">S/ 0</div>
+        <span style="font-size:11px;color:var(--muted2)">· PIM S/ 30,9 M</span>
+      </div>
+      <div class="bench-row">
+        <div class="bench-label">Sistema IBIS (balística)</div>
+        <div class="bench-bar"><div class="bench-fill" style="width:0%; background: var(--red)"></div></div>
+        <div class="bench-val" style="color:var(--red)">S/ 0</div>
+        <span style="font-size:11px;color:var(--muted2)">· PIM S/ 14,6 M</span>
+      </div>
+      <div class="bench-row">
+        <div class="bench-label">Chalecos antibalas</div>
+        <div class="bench-bar"><div class="bench-fill" style="width:0%; background: var(--red)"></div></div>
+        <div class="bench-val" style="color:var(--red)">S/ 0</div>
+        <span style="font-size:11px;color:var(--muted2)">· PIM S/ 8,9 M</span>
+      </div>
+      <div class="bench-row">
+        <div class="bench-label">Investigación policial</div>
+        <div class="bench-bar"><div class="bench-fill" style="width:0.25%; background: var(--amber)"></div></div>
+        <div class="bench-val" style="color:var(--amber)">S/ 32K</div>
+        <span style="font-size:11px;color:var(--muted2)">· PIM S/ 12,8 M · 0,25%</span>
+      </div>
+      <div class="alert-box" style="margin-top:16px">
+        <strong>Total:</strong> S/ 278 millones presupuestados para equipamiento esencial. <strong>0 de ejecución</strong> a mitad del año fiscal 2025.
+      </div>
+    </div>
+  </section>
+
+  <div class="sep"></div>
+
+  <!-- CAP 2: PERSONAL -->
+  <section class="section reveal">
+    <div class="section-label">Capítulo 02</div>
+    <h2 class="section-title">La Policía Nacional: 53.000 agentes menos de los necesarios</h2>
+    <p class="section-desc">138.000 efectivos, pero la brecha real de personal impide cobertura territorial efectiva.</p>
+
+    <div class="grid-4">
+      <div class="card card-sm" style="text-align:center">
+        <div class="big-num red">138K</div>
+        <div class="big-num-label">Efectivos totales</div>
+        <div class="big-num-sub">según César Astudillo, sept. 2026</div>
+      </div>
+      <div class="card card-sm" style="text-align:center">
+        <div class="big-num amber">53K</div>
+        <div class="big-num-label">Brecha de personal</div>
+        <div class="big-num-sub">lo que hace falta según MININTER</div>
+      </div>
+      <div class="card card-sm" style="text-align:center">
+        <div class="big-num blue">1:248</div>
+        <div class="big-num-label">Ratio actual</div>
+        <div class="big-num-sub">vs. meta 1:400 de la UNODC</div>
+      </div>
+      <div class="card card-sm" style="text-align:center">
+        <div class="big-num green">28%</div>
+        <div class="big-num-label">Distritos sin comisaría</div>
+        <div class="big-num-sub">533 de 1.879 distritos</div>
+      </div>
+    </div>
+
+    <div style="height: 16px"></div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px">Composición del personal</div>
+        <canvas id="chart3" style="max-height:200px"></canvas>
+      </div>
+      <div class="card">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px">Cobertura territorial</div>
+        <div class="comp-row">
+          <span class="comp-label">Distritos con comisaría</span>
+          <div>
+            <span class="comp-from">1.346</span>
+            <span class="comp-arrow">→</span>
+            <span class="comp-to" style="color:var(--green)">72%</span>
+          </div>
+        </div>
+        <div class="comp-row">
+          <span class="comp-label">Distritos sin comisaría</span>
+          <div>
+            <span class="comp-from">533</span>
+            <span class="comp-arrow">→</span>
+            <span class="comp-to" style="color:var(--red)">28%</span>
+          </div>
+        </div>
+        <div class="comp-row">
+          <span class="comp-label">Comisarías bajo mínimo</span>
+          <div>
+            <span class="comp-to" style="color:var(--red)">39</span>
+            <span class="comp-arrow">·</span>
+            <span class="comp-from">sin personal suficiente</span>
+          </div>
+        </div>
+        <div class="comp-row">
+          <span class="comp-label">Comisarias de adobe</span>
+          <div>
+            <span class="comp-to" style="color:var(--red)">72</span>
+            <span class="comp-arrow">·</span>
+            <span class="comp-from">vulnerables a sismos</span>
+          </div>
+        </div>
+        <div class="comp-row">
+          <span class="comp-label">Comisarias 30+ años</span>
+          <div>
+            <span class="comp-to" style="color:var(--amber)">>243</span>
+            <span class="comp-arrow">·</span>
+            <span class="comp-from">>50% de 485 evaluadas</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="sep"></div>
+
+  <!-- CAP 3: EQUIPAMIENTO -->
+  <section class="section reveal">
+    <div class="section-label">Capítulo 03</div>
+    <h2 class="section-title">El inventario del desastre — Informe de la Contraloría</h2>
+    <p class="section-desc">El Informe N° 25595-2025-CG/SIE-SOP auditó 485 comisarías. Los números del operativo (29 oct – 4 nov 2025).</p>
+
+    <div class="grid-3">
+      <div class="card" style="border-left: 3px solid var(--red)">
+        <div class="big-num red">1.730</div>
+        <div class="big-num-label">Vehículos inoperativos</div>
+        <div class="big-num-sub">de 4.121 registrados · 42% de la flota</div>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--amber)">
+        <div class="big-num amber">1.823</div>
+        <div class="big-num-label">Computadoras malogradas</div>
+        <div class="big-num-sub">de 6.835 registradas · 27%</div>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--red)">
+        <div class="big-num amber">2.132</div>
+        <div class="big-num-label">Impresoras malogradas</div>
+        <div class="big-num-sub">de 4.049 registradas · 53%</div>
+      </div>
+    </div>
+
+    <div style="height: 16px"></div>
+
+    <div class="grid-2">
+      <div class="chart-box">
+        <div class="chart-title">Estado del equipamiento policial (%)</div>
+        <div class="chart-sub">485 comisarías · Informe Contraloria N° 25595-2025-CG/SIE-SOP</div>
+        <canvas id="chart4"></canvas>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Situaciones adversas por región</div>
+        <div class="chart-sub">Top 5 regiones con mayores deficiencias</div>
+        <canvas id="chart5"></canvas>
+      </div>
+    </div>
+
+    <div style="height: 16px"></div>
+
+    <div class="card reveal">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <div class="badge amber">⚠️ Caso emblemático</div>
+        <span style="font-size:14px;font-weight:600">Comisaría Pisco — Informe N° 016-2025-OCI/0409-SVC</span>
+      </div>
+      <div class="grid-3" style="gap:10px">
+        <div style="background:rgba(255,71,87,0.06);border:1px solid rgba(255,71,87,0.15);border-radius:10px;padding:14px">
+          <div style="font-size:24px;font-weight:900;color:var(--red)">43</div>
+          <div style="font-size:12px;color:var(--muted)">Motocicletas inoperativas</div>
+        </div>
+        <div style="background:rgba(255,71,87,0.06);border:1px solid rgba(255,71,87,0.15);border-radius:10px;padding:14px">
+          <div style="font-size:24px;font-weight:900;color:var(--red)">TETRA</div>
+          <div style="font-size:12px;color:var(--muted)">Radios sin funcionar</div>
+        </div>
+        <div style="background:rgba(255,71,87,0.06);border:1px solid rgba(255,71,87,0.15);border-radius:10px;padding:14px">
+          <div style="font-size:24px;font-weight:900;color:var(--red)">—</div>
+          <div style="font-size:12px;color:var(--muted)">Sin acceso a SIPCOP</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="sep"></div>
+
+  <!-- CAP 4: CRIMINALIDAD -->
+  <section class="section reveal">
+    <div class="section-label">Capítulo 04</div>
+    <h2 class="section-title">La escalada: Homicidios y extorsión</h2>
+    <p class="section-desc">Los indicadores duros no mejoran. La tasa de Homicidios se duplicó en 6 años. La extorsión se multiplicó por 6,8.</p>
+
+    <div class="grid-2">
+      <div class="chart-box">
+        <div class="chart-title">Tasa de Homicidios × 100.000 hab</div>
+        <div class="chart-sub">2019–2025 · Fuente: INEI/CEIC · Escalada de +45% en 6 años</div>
+        <canvas id="chart6"></canvas>
+        <div style="margin-top:12px;padding:12px;background:rgba(255,71,87,0.06);border:1px solid rgba(255,71,87,0.15);border-radius:10px;font-size:12px;color:var(--muted)">
+          <strong style="color:var(--red)">2.451 homicides en 2025</strong> — casi <strong style="color:var(--red)">7 asesinados por día</strong>. En 2019 fueron 7,4 × 100k. En 2025 la estimación llegó a 10,7 × 100k.
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Tasa de extorsión × 100.000 hab</div>
+        <div class="chart-sub">2019–2025 · Fuente: ONSEC/INDAGA · Multiplicado por 6,8 en 6 años</div>
+        <canvas id="chart7"></canvas>
+        <div style="margin-top:12px;padding:12px;background:rgba(255,165,2,0.06);border:1px solid rgba(255,165,2,0.15);border-radius:10px;font-size:12px;color:var(--muted)">
+          De <strong style="color:var(--amber)">11,5 a 77,8 × 100k hab</strong>. En términos absolutos: de ~4.600 víctimas a ~25.700 (solo según SIDPOL, con +20% vs 2024).
+        </div>
+      </div>
+    </div>
+
+    <div style="height: 16px"></div>
+
+    <div class="grid-4">
+      <div class="card card-sm" style="text-align:center">
+        <div class="big-num red">10,7</div>
+        <div class="big-num-label">Homicidios × 100k (2025)</div>
+        <div class="big-num-sub">vs. 7,4 en 2019</div>
+      </div>
+      <div class="card card-sm" style="text-align:center">
+        <div class="big-num amber">77,8</div>
+        <div class="big-num-label">Extorsión × 100k (2025)</div>
+        <div class="big-num-sub">vs. 11,5 en 2019</div>
+      </div>
+      <div class="card card-sm" style="text-align:center">
+        <div class="big-num green">25.196</div>
+        <div class="big-num-label">Denuncias extorsión SIDPOL</div>
+        <div class="big-num-sub">+20% vs 2024</div>
+      </div>
+      <div class="card card-sm" style="text-align:center">
+        <div class="big-num blue">83,9%</div>
+        <div class="big-num-label">Percepción inseguridad</div>
+        <div class="big-num-sub">baja 2,1 pp pero sube en barrio</div>
+      </div>
+    </div>
+
+    <div style="height: 16px"></div>
+
+    <div class="card">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px">Ciudades más críticas — ENAPRES 2024</div>
+      <div class="grid-3" style="gap:10px">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:32px;font-weight:900;color:var(--red)">40,7%</div>
+          <div style="font-size:13px;font-weight:700;margin-top:4px">Juliaca, Puno</div>
+          <div style="font-size:11px;color:var(--muted)">Victimización · 4° año consecutivo líder</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:32px;font-weight:900;color:var(--amber)">97,3%</div>
+          <div style="font-size:13px;font-weight:700;margin-top:4px">Moyobamba</div>
+          <div style="font-size:11px;color:var(--muted)">Percepción inseguridad</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:32px;font-weight:900;color:var(--amber)">94,8%</div>
+          <div style="font-size:13px;font-weight:700;margin-top:4px">Pucallpa</div>
+          <div style="font-size:11px;color:var(--muted)">Percepción inseguridad</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="sep"></div>
+
+  <!-- CAP 5: CIFRA NEGRA -->
+  <section class="section reveal">
+    <div class="section-label">Capítulo 05</div>
+    <h2 class="section-title">La cifra negra: tres fuentes, tres números</h2>
+    <p class="section-desc">81,5% de los delitos no se reportan. Y las tres fuentes oficiales del Estado ni siquiera coinciden entre sí.</p>
+
+    <div class="grid-2">
+      <div class="chart-box">
+        <div class="chart-title">Denuncias por extorsión 2025 — Diferencia entre fuentes</div>
+        <div class="chart-sub">SIDPOL · Ministerio Público · CEIC · Diferencia máxima: 1.833 casos (7,3%)</div>
+        <canvas id="chart8"></canvas>
+      </div>
+      <div class="card">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:20px">Evolución de la denuncia</div>
+        <div class="comp-row">
+          <span class="comp-label">Delitos no denunciados 2022</span>
+          <span class="comp-to" style="color:var(--red)">85%</span>
+        </div>
+        <div class="comp-row">
+          <span class="comp-label">Delitos no denunciados 2024</span>
+          <span class="comp-to" style="color:var(--amber)">~80%</span>
+        </div>
+        <div class="comp-row">
+          <span class="comp-label">Delitos no denunciados 2025</span>
+          <span class="comp-to" style="color:var(--amber)">81,5%</span>
+        </div>
+        <div style="height:12px"></div>
+        <div class="comp-row">
+          <span class="comp-label">Denuncia efectiva 2022</span>
+          <span class="comp-to" style="color:var(--green)">15,0%</span>
+        </div>
+        <div class="comp-row">
+          <span class="comp-label">Denuncia efectiva 2023</span>
+          <span class="comp-to" style="color:var(--green)">15,6%</span>
+        </div>
+        <div class="comp-row">
+          <span class="comp-label">Denuncia efectiva 2024</span>
+          <span class="comp-to" style="color:var(--green)">16,1%</span>
+        </div>
+        <div class="comp-row">
+          <span class="comp-label">Denuncia efectiva 2025</span>
+          <span class="comp-to" style="color:var(--green)">18,5%</span>
+        </div>
+        <div class="alert-box">
+          <strong>Gaspar Morán</strong> (Jefe INEI): "8 de cada 10 delitos no se有这么denuncian. La desconfianza en la policía crece." Fuente: TVPerú, ene. 2026.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="sep"></div>
+
+  <!-- CAP 6: CONTRATACIONES -->
+  <section class="section reveal">
+    <div class="section-label">Capítulo 06</div>
+    <h2 class="section-title">Las compras capturadas — OGAF MININTER</h2>
+    <p class="section-desc">La Oficina de Administración y Finanzas, bajo Ricardo Kanashiro Romero, protagonizó adjudicaciones cuestionadas. Fue cesado en octubre de 2025.</p>
+
+    <div class="grid-3">
+      <div class="card" style="border-left: 3px solid var(--red)">
+        <div class="badge red" style="margin-bottom:12px">⚠️ Anomalía</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:6px">Chalecos antibalas</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Concurso N° 001-2025 · Código 2446792</div>
+        <div class="comp-row" style="border:none;padding:0">
+          <span class="comp-label">Ganador</span>
+          <span class="comp-to" style="color:var(--red);font-size:12px">Armor Life Lab (México)</span>
+        </div>
+        <div class="comp-row" style="border:none;padding:0">
+          <span class="comp-label">Monto</span>
+          <span class="comp-to">US$ 2 M (~S/ 7,5 M)</span>
+        </div>
+        <div style="margin-top:12px;padding:10px;background:rgba(255,71,87,0.06);border:1px solid rgba(255,71,87,0.15);border-radius:8px;font-size:11px;color:var(--muted)">
+          <strong style="color:var(--red)">El Comité Técnico de la Séptima Región Policial rechazó la oferta</strong> por no cumplir requerimientos técnicos. La OGAF adjudicó igual.
+        </div>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--red)">
+        <div class="badge red" style="margin-bottom:12px">⚠️ Anomalía</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:6px">Avión de reposición</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Concurso Internacional · 31 oct 2025</div>
+        <div class="comp-row" style="border:none;padding:0">
+          <span class="comp-label">Ganador</span>
+          <span class="comp-to" style="color:var(--red);font-size:12px">Aero Express FZE (EAU)</span>
+        </div>
+        <div class="comp-row" style="border:none;padding:0">
+          <span class="comp-label">Monto</span>
+          <span class="comp-to">No verificado</span>
+        </div>
+        <div style="margin-top:12px;padding:10px;background:rgba(255,71,87,0.06);border:1px solid rgba(255,71,87,0.15);border-radius:8px;font-size:11px;color:var(--muted)">
+          <strong style="color:var(--red)">DIRAVPOL comunicó que la aeronave no cumplía requerimientos técnicos.</strong> La OGAF adjudicó igual.
+        </div>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--amber)">
+        <div class="badge amber" style="margin-bottom:12px">⚠️ En disputa</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:6px">Vehículos blindados 4x4</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Concurso N° 003-2025 · Código 2251056</div>
+        <div class="comp-row" style="border:none;padding:0">
+          <span class="comp-label">Ganador</span>
+          <span class="comp-to" style="color:var(--amber)">Plasan Sasa (Israel)</span>
+        </div>
+        <div class="comp-row" style="border:none;padding:0">
+          <span class="comp-label">Monto</span>
+          <span class="comp-to">US$ 21,4 M (~S/ 80 M)</span>
+        </div>
+        <div style="margin-top:12px;padding:10px;background:rgba(255,165,2,0.06);border:1px solid rgba(255,165,2,0.15);border-radius:8px;font-size:11px;color:var(--muted)">
+          <strong style="color:var(--amber)">Acusaciones de favoritismo</strong> en la selección. En curso a sept. 2026.
+        </div>
+      </div>
+    </div>
+
+    <div style="height: 16px"></div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <span class="badge" style="background:rgba(55,66,250,0.12);color:var(--blue);border-color:rgba(55,66,250,0.2)">🚨 Cesado</span>
+        <span style="font-size:14px;font-weight:600">Ricardo Kanashiro Romero — Jefe OGAF MININTER</span>
+      </div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.7">
+        La <strong style="color:var(--text)">Contraloría General de la República</strong> emitió informes de auditoría señalando que la OGAF <strong style="color:var(--text)">"manipuló las bases de la competencia"</strong> para orientar la buena pro. La Fiscalía y la Procuraduría Anticorrupción fueron notificadas. <strong style="color:var(--red)">Kanashiro fue cesado en octubre de 2025.</strong>
+      </div>
+    </div>
+  </section>
+
+  <div class="sep"></div>
+
+  <!-- CAP 7: LÍNEA DEL TIEMPO -->
+  <section class="section reveal">
+    <div class="section-label">Capítulo 07</div>
+    <h2 class="section-title">La inestabilidad institucional en números</h2>
+    <p class="section-desc">5 ministros del Interior. 2 comandantes generales de la PNP. Rotación constante que impide cualquier estrategia de largo plazo.</p>
+
+    <div class="grid-2">
+      <div class="card">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:20px">Ministros del Interior (2022–2026)</div>
+        <div class="tl">
+          <div class="tl-item">
+            <div class="tl-date">Dic. 2022</div>
+            <div class="tl-title">Walter Alberto Quesada Billotte</div>
+            <div class="tl-desc">Primer ministro Interior era Boluarte</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-date">Feb. 2023</div>
+            <div class="tl-title">Víctor Torres Fernández</div>
+            <div class="tl-desc">Gestionó estado de emergencia inicial</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-date">Dic. 2023</div>
+            <div class="tl-title">Jorge Luis Cayasaca Huasasquiche</div>
+            <div class="tl-desc">Gestión corta</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-date">Abr. 2024</div>
+            <div class="tl-title">César Astudillo Salcedo</div>
+            <div class="tl-desc">De Defensa → Interior. Gestionó escalada de extorsión.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-date">Oct. 2025</div>
+            <div class="tl-title">Vicente Tiburcio Orbezo</div>
+            <div class="tl-desc">Alertó: 89 patrulleros activos en Lima. Cesado.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-date">2026</div>
+            <div class="tl-title">Hugo Begazo de Bedoya</div>
+            <div class="tl-desc">Transición</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-date">23 abr. 2026</div>
+            <div class="tl-title">José Mercedes Zapata Morante <span class="badge" style="font-size:10px;margin-left:6px">PNP (r)</span></div>
+            <div class="tl-desc">General PNP en retiro</div>
+          </div>
+          <div class="tl-item active">
+            <div class="tl-date">28 jul. 2026</div>
+            <div class="tl-title">César Astudillo Salcedo <span class="badge red" style="font-size:10px;margin-left:6px">×2</span></div>
+            <div class="tl-desc">Regresa. Gobierno Fujimori. Premier Luis Galarreta.</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:20px">Comandantes Generales PNP</div>
+        <div class="tl">
+          <div class="tl-item">
+            <div class="tl-date">2023 – sept. 2025</div>
+            <div class="tl-title">Teniente General [antecesor]</div>
+            <div class="tl-desc">Bajo gobierno Boluarte</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-date">Sept. 2025 – sept. 2026</div>
+            <div class="tl-title">Tte. Gral. Óscar Manuel Arriola Delgado</div>
+            <div class="tl-desc">Res. Suprema 2025. Renunció por crisis de criminalidad. Dijo: "No me arrepiento de nada."</div>
+          </div>
+          <div class="tl-item active">
+            <div class="tl-date">16 sept. 2026</div>
+            <div class="tl-title">Tte. Gral. Fredy López Mendoza</div>
+            <div class="tl-desc">Jefe del Estado Mayor. Asume por antigüedad. Res. Suprema N° 233-2026-IN. Firma: Keiko Fujimori y César Astudillo.</div>
+          </div>
+        </div>
+        <div style="height:20px"></div>
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">Contralor General</div>
+        <div class="person-row">
+          <div class="person-avatar">CA</div>
+          <div>
+            <div class="person-name">César Aguilar Surichaqui</div>
+            <div class="person-role">Contralor General · Líder operativo comisarías 2025</div>
+          </div>
+        </div>
+        <div style="height:12px"></div>
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">Jefe INEI</div>
+        <div class="person-row">
+          <div class="person-avatar" style="background:linear-gradient(135deg,var(--blue),var(--cyan))">GM</div>
+          <div>
+            <div class="person-name">Gaspar Morán Flores</div>
+            <div class="person-role">Jefe INEI y CEIC · Presentó cifras criminalidad 2025</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="sep"></div>
+
+  <!-- CAP 8: LAS 8 CRISIS -->
+  <section class="section reveal">
+    <div class="section-label">Capítulo 08</div>
+    <h2 class="section-title">Las 8 crisis superpuestas</h2>
+    <p class="section-desc">Ninguna es independiente. Se alimentan entre sí.</p>
+
+    <div class="crisis-grid">
+      <div class="crisis-item">
+        <div class="ci-num">5</div>
+        <div class="ci-title">1. Inestabilidad ministerial</div>
+        <div class="ci-text">Ministros del Interior en 4 años. Cada cambio resetea prioridades y frena inversiones plurianuales.</div>
+      </div>
+      <div class="crisis-item">
+        <div class="ci-num">89%</div>
+        <div class="ci-title">2. Presupuesto corsario</div>
+        <div class="ci-text">89% se va en planilla. Inversión: 11%. S/ 736 M devueltos al tesoro en 2025.</div>
+      </div>
+      <div class="crisis-item">
+        <div class="ci-num">1.730</div>
+        <div class="ci-title">3. Inventario en ruinas</div>
+        <div class="ci-text">Vehículos inoperativos. 72 comisarías de adobe. Equipos con hasta 40 años de antigüedad.</div>
+      </div>
+      <div class="crisis-item">
+        <div class="ci-num">×3</div>
+        <div class="ci-title">4. Contrataciones capturadas</div>
+        <div class="ci-text">OGAF adjudicó a empresas rechazadas por la propia Policía. Jefe cesado. Fiscalía intervino.</div>
+      </div>
+      <div class="crisis-item">
+        <div class="ci-num">53K</div>
+        <div class="ci-title">5. Brecha de personal</div>
+        <div class="ci-text">Ratio operativo 1:248 vs. meta 1:400. 533 distritos sin comisaría. 39 bajo mínimo.</div>
+      </div>
+      <div class="crisis-item">
+        <div class="ci-num">×2</div>
+        <div class="ci-title">6. Homicidios en escalada</div>
+        <div class="ci-text">7,4 → 10,7 × 100k hab en 6 años. Casi 7 asesinados por día. Tasa más alta en el período.</div>
+      </div>
+      <div class="crisis-item">
+        <div class="ci-num">81%</div>
+        <div class="ci-title">7. La cifra negra institucional</div>
+        <div class="ci-text">81,5% no denuncia. 3 fuentes oficiales dan cifras con 7% de diferencia entre sí.</div>
+      </div>
+      <div class="crisis-item">
+        <div class="ci-num">600+</div>
+        <div class="ci-title">8. Fiscalía saturada</div>
+        <div class="ci-text">Fiscales con 600 expedientes activos. Solo 5 comisarías de familia en Arequipa. Retrasos de meses.</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer-note">
+    Fuentes: MEF · INEI/ENAPRES · Contraloria (Informe N° 25595-2025-CG/SIE-SOP) · MININTER · PNP · CEIC · SIDPOL · Ministerio Público · defensa.com<br>
+    Documento elaborado con datos oficiales públicos a septiembre 2026 · 55 fuentes citadas
+  </div>
+
+</div>
+
+<script>
+// ─── CHART DEFAULTS ───────────────────────────────────────────────
+const CFG = {
+  color: '#6b6b8a',
+  gridColor: 'rgba(255,255,255,0.04)',
+  font: { family: "'Outfit', sans-serif" }
+};
+Chart.defaults.color = CFG.color;
+Chart.defaults.font.family = CFG.font.family;
+
+// ─── CHART 1: PIA ORDEN PÚBLICO ─────────────────────────────────
+new Chart(document.getElementById('chart1'), {
+  type: 'bar',
+  data: {
+    labels: ['2019','2020','2021','2022','2023','2024','2025','2026'],
+    datasets: [{
+      label: 'PIA (S/ M)',
+      data: [12100, 12500, 13800, 14200, 14800, 15000, 17300, 16220],
+      backgroundColor: ['#ffa502','#ffa502','#ffa502','#ffa502','#ffa502','#ffa502','#ffa502','rgba(55,66,250,0.5)'],
+      borderRadius: 6, borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true, plugins: { legend: { display: false }, tooltip: {
+      callbacks: { label: ctx => `S/ ${ctx.parsed.y.toLocaleString()} M` }
+    }},
+    scales: {
+      y: { grid: { color: CFG.gridColor }, ticks: { callback: v => `S/ ${(v/1000).toFixed(0)}K M` } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ─── CHART 2: DONUT GASTO ────────────────────────────────────────
+new Chart(document.getElementById('chart2'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Remuneraciones y obligaciones sociales', 'Bienes, servicios, inversión'],
+    datasets: [{ data: [89, 11], backgroundColor: ['#c0392b', '#ffa502'], borderWidth: 0, spacing: 4 }]
+  },
+  options: {
+    responsive: true, cutout: '68%',
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed}%` } }
+    }
+  }
+});
+
+// ─── CHART 3: PERSONAL ────────────────────────────────────────────
+new Chart(document.getElementById('chart3'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Hombres','Mujeres','Administrativos (no opera)'],
+    datasets: [{ data: [112500, 21235, 5000], backgroundColor: ['#3742fa','#a55eea','#ff4757'], borderWidth: 0 }]
+  },
+  options: {
+    responsive: true, cutout: '65%',
+    plugins: {
+      legend: {
+        position: 'bottom', labels: { boxWidth: 12, padding: 14, font: { size: 12 } }
+      },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed.toLocaleString()}` } }
+    }
+  }
+});
+
+// ─── CHART 4: EQUIPAMIENTO ────────────────────────────────────────
+new Chart(document.getElementById('chart4'), {
+  type: 'bar',
+  data: {
+    labels: ['Vehículos\ninoperativos','Compus\nmalogradas','Impresoras\nmalogradas','Escáneres\ndisponibles'],
+    datasets: [
+      { label: 'Inoperativo', data: [42, 27, 53, 73], backgroundColor: '#ff4757', borderRadius: 6, borderSkipped: false },
+      { label: 'Operativo', data: [58, 73, 47, 27], backgroundColor: '#2ed573', borderRadius: 6, borderSkipped: false }
+    ]
+  },
+  options: {
+    indexAxis: 'y', responsive: true,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.x}%` } } },
+    scales: {
+      x: { stacked: true, grid: { color: CFG.gridColor }, ticks: { callback: v => `${v}%` }, max: 100 },
+      y: { stacked: true, grid: { display: false } }
+    }
+  }
+});
+
+// ─── CHART 5: REGIONES ─────────────────────────────────────────────
+new Chart(document.getElementById('chart5'), {
+  type: 'bar',
+  data: {
+    labels: ['Lima Metro','Áncash','Puno','Ayacucho','Cajamarca'],
+    datasets: [{
+      label: 'Situaciones adversas',
+      data: [382, 180, 164, 161, 155],
+      backgroundColor: ['#ff4757','#ff6b6b','#ffa502','#ffa502','#ffa502'],
+      borderRadius: 6, borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.parsed.y} situaciones adversas` } } },
+    scales: {
+      y: { grid: { color: CFG.gridColor } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ─── CHART 6: HOMICIDIOS ───────────────────────────────────────────
+new Chart(document.getElementById('chart6'), {
+  type: 'line',
+  data: {
+    labels: ['2019','2020','2021','2022','2023','2024','2025'],
+    datasets: [{
+      label: 'Tasa × 100k hab',
+      data: [7.4, 5.8, 8.6, 8.6, 9.3, 10.1, 10.7],
+      borderColor: '#ff4757', backgroundColor: 'rgba(255,71,87,0.1)',
+      borderWidth: 3, fill: true, tension: 0.4, pointRadius: 6, pointBackgroundColor: '#ff4757'
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `Tasa: ${ctx.parsed.y} × 100k hab` } } },
+    scales: {
+      y: { grid: { color: CFG.gridColor }, min: 0, ticks: { callback: v => `${v}` } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ─── CHART 7: EXTORSIÓN ────────────────────────────────────────────
+new Chart(document.getElementById('chart7'), {
+  type: 'line',
+  data: {
+    labels: ['2019','2020','2021','2022','2023','2024','2025'],
+    datasets: [{
+      label: 'Tasa × 100k hab',
+      data: [11.5, 14.2, 22.8, 35.1, 48.6, 61.3, 77.8],
+      borderColor: '#ffa502', backgroundColor: 'rgba(255,165,2,0.1)',
+      borderWidth: 3, fill: true, tension: 0.4, pointRadius: 6, pointBackgroundColor: '#ffa502'
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `Tasa: ${ctx.parsed.y} × 100k hab` } } },
+    scales: {
+      y: { grid: { color: CFG.gridColor }, min: 0 },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ─── CHART 8: FUENTES ──────────────────────────────────────────────
+new Chart(document.getElementById('chart8'), {
+  type: 'bar',
+  data: {
+    labels: ['SIDPOL (PNP)','Ministerio Público','CEIC (gobierno)'],
+    datasets: [{
+      label: 'Denuncias extorsión 2025',
+      data: [25196, 27029, 26585],
+      backgroundColor: ['#3742fa','#a55eea','#ff4757'],
+      borderRadius: 8, borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => `${ctx.parsed.y.toLocaleString()} denuncias` } },
+      annotation: {}
+    },
+    scales: {
+      y: { grid: { color: CFG.gridColor }, ticks: { callback: v => v.toLocaleString() } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ─── SCROLL REVEAL ────────────────────────────────────────────────
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
