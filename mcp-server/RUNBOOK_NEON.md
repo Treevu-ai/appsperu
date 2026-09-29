@@ -140,10 +140,26 @@ Cada app debe salir `ok`. Estados posibles:
 | `caida` | La base existe pero no responde | Revisar compute en el panel de Neon |
 | `diferida` | Pospuesta a la segunda fase | Esperado para `geo-intersections` y `ceplan-geo` |
 
-## Fase 6 — Portar los handlers
+## Fase 6 — Portar los handlers (COMPLETA, 2026-09-29)
 
-De 209 tools, hoy **2 tienen handler**. El resto sigue el fallback HTTP, que ya
-no tiene destino con el VPS decommissionado.
+**209/209 tools tienen handler.** Las 38 apps del catálogo están portadas,
+incluidas `geo-intersections` y `ceplan-geo` (PostGIS) y `salud-institucional`
+(cruza 5 bases, secuencial). El Worker está desplegado con ruta pública
+`rastro.fyi/mcp*` (y `www.rastro.fyi/mcp*`, porque el apex redirige a `www`
+antes de evaluar routes de Worker — ver `wrangler.toml`).
+
+**Pendiente real (no de código): las bases `ceplan_geo` y `geo_intersections`
+nunca se crearon en Neon.** `rastro_health` las reporta `diferida` por un gate
+hardcodeado en `src/tools/health.ts` (`DEFERRED_APPS`) — pero se verificó en
+producción que ES la realidad: `rastro_llamar` con `ceplan_geo_territories`
+devuelve `database "ceplan_geo" does not exist`. El handler y el wiring están
+completos y probados (23 + 5 tools); falta correr la Fase 1 de este runbook
+para esas 2 bases específicamente (`CREATE DATABASE`, `CREATE EXTENSION
+postgis`, migraciones, ingesta) y luego quitar esas 2 apps de `DEFERRED_APPS`
+en `src/tools/health.ts`.
+
+Lo de abajo queda como referencia del proceso ya aplicado (útil si se agrega
+una app 39 al catálogo en el futuro):
 
 Por cada app, en orden de valor:
 
@@ -174,11 +190,17 @@ Prioridad sugerida: las apps que los agentes más consultan —
 
 ## Pendientes conocidos
 
-- **`salud-institucional` cruza 5 bases** en un solo request. Con 6 conexiones
-  simultáneas por invocación hay que secuenciar, no paralelizar.
-- **`rastro_riesgo_territorial` orquesta 4 fuentes** con degradación explícita
-  cuando alguna falla. Hay que conservar ese contrato al portarlo, no convertirlo
-  en un error duro.
-- **Segunda fase**: `geo-intersections` y `ceplan-geo`. PostGIS sí funciona en
-  Neon; lo que falta es el trabajo de portar sus handlers y decidir qué pasa con
-  las 5 llamadas HTTP entrantes que `ceplan-geo` recibe.
+- **`ceplan_geo` y `geo_intersections` no existen como bases en Neon todavía**
+  — ver nota en la Fase 6 de arriba. Es el único pendiente real de esta
+  migración; todo el código ya está listo.
+- ~~`salud-institucional` cruza 5 bases~~ — resuelto: `src/handlers/salud-institucional/score.ts`
+  las consulta secuencialmente (radar-ejecucion → infobras → radar-inversiones
+  → compras-publicas → identidad-fiscal), nunca en paralelo.
+- ~~`rastro_riesgo_territorial` degradación explícita~~ — resuelto sin cambios:
+  `src/tools/riesgo-territorial.ts` no tiene SQL propio, orquesta
+  `geo_intersections_reporte` y `emergencias_indeci_preparacion_riesgo` vía
+  `invokeTool`, así que la degradación mejora sola en cuanto esos handlers
+  responden real (ya lo hacen, salvo por el pendiente de PostGIS de arriba).
+- ~~5 llamadas HTTP entrantes de `ceplan-geo`~~ — no existían: se verificó que
+  las 16 tools de `ceplan-geo` están respaldadas por tablas PostGIS ya
+  ingeridas, ninguna hace proxy a GeoServer en runtime.

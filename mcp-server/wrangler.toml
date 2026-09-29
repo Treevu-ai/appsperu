@@ -18,6 +18,31 @@ main = "src/worker.ts"
 compatibility_date = "2026-09-28"
 compatibility_flags = ["nodejs_compat"]
 
+# Ruta pública DESACTIVADA por ahora (2026-09-29): el security-reviewer marcó
+# CRITICAL que el Worker acepta tráfico sin x-api-key ("modo abierto", ver
+# worker.ts línea ~83) — con esta route activa cualquiera en internet podía
+# pegarle a los 209 tools sin límite. Publicado unas horas y revertido de
+# inmediato al confirmar el hallazgo. Antes de reactivar: decidir si el modo
+# abierto es aceptable (datos públicos, sin rate limit) o si hay que exigir
+# x-api-key en el path HTTP. Ver docs/ENDPOINTS.md y RUNBOOK_NEON.md.
+# routes = [
+#   { pattern = "rastro.fyi/mcp*", zone_name = "rastro.fyi" },
+#   { pattern = "www.rastro.fyi/mcp*", zone_name = "rastro.fyi" }
+# ]
+#
+# `routes = []` explícito (no solo comentado) — wrangler solo borra rutas ya
+# asignadas en la zona cuando diffea contra una clave `routes` presente;
+# omitirla por completo dejó las 2 rutas anteriores activas en el edge pese a
+# que el deploy dijo "No targets deployed" (verificado: la respuesta seguía
+# viniendo del Worker, no de Pages).
+routes = []
+
+# Sin `routes`, Cloudflare activa por defecto un subdominio workers.dev
+# público — igual de alcanzable desde internet que la route de arriba.
+# Se desactiva explícitamente mientras el modo abierto siga sin resolver.
+workers_dev = false
+preview_urls = false
+
 [observability]
 enabled = true
 
