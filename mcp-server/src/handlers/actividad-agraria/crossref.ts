@@ -107,10 +107,8 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
         ) / 100
       : null;
 
-  const [promedioTractor, promedioYunta] = await Promise.all([
-    promedioMensual(db, "agricultural_tractor_rental", departamento, anio),
-    promedioMensual(db, "agricultural_yunta_rental", departamento, anio),
-  ]);
+  const promedioTractor = await promedioMensual(db, "agricultural_tractor_rental", departamento, anio);
+  const promedioYunta = await promedioMensual(db, "agricultural_yunta_rental", departamento, anio);
 
   return {
     status: 200,

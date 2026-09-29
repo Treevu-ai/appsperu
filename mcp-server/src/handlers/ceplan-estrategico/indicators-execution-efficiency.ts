@@ -179,7 +179,7 @@ export async function executionEfficiency(ctx: ToolHandlerContext): Promise<Hand
       status: 200,
       body: {
         matcher: "mef_infobras_departamento",
-        cobertura: proxy?.executionEfficiency !== null ? "PARCIAL" : "INCOMPLETA",
+        cobertura: proxy != null && proxy.executionEfficiency !== null ? "PARCIAL" : "INCOMPLETA",
         restriccion: proxy?.restriccion ?? "Sin datos MEF/INFOBRAS para calcular proxy departamental.",
         dependencias: proxy?.dependencias ?? [{ app: "radar-ejecucion", ok: false }],
         corte: { generadoEl, anio: proxy?.anio ?? anio ?? null },

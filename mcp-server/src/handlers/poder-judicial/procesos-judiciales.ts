@@ -238,6 +238,9 @@ export async function resumen(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const mes = args.mes as string | undefined;
   const distritoJudicial = args.distritoJudicial as string | undefined;
 
+  if (!Object.prototype.hasOwnProperty.call(GROUP_BY_COLUMNS, groupBy)) {
+    return { status: 400, body: { error: `groupBy inválido: "${groupBy}".` } };
+  }
   const groupCol = GROUP_BY_COLUMNS[groupBy];
   const conditions: string[] = [];
   const params: unknown[] = [];

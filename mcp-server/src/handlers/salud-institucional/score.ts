@@ -35,6 +35,7 @@ const CONDICIONES_REGULARES = new Set(["HABIDO"]);
  * en paralelo porque ahí cada `xxxPool` es una conexión persistente propia,
  * pero ese supuesto no aplica aquí.
  */
+/** `null` señala que falta alguna de las 5 conexiones — el caller decide cómo responder (503), sin exponer qué base falta. */
 async function computeScoresForDepartamento(env: Record<string, unknown>, wantedDepartamento: string, anio: number) {
   const ejecucionPool = getPoolForApp(env as NeonEnv, "radar-ejecucion");
   const infobrasPool = getPoolForApp(env as NeonEnv, "infobras");
@@ -42,7 +43,7 @@ async function computeScoresForDepartamento(env: Record<string, unknown>, wanted
   const comprasPool = getPoolForApp(env as NeonEnv, "compras-publicas");
   const fiscalPool = getPoolForApp(env as NeonEnv, "identidad-fiscal");
   if (!ejecucionPool || !infobrasPool || !inversionesPool || !comprasPool || !fiscalPool) {
-    throw new Error("Falta la conexión a alguna de las 5 bases que salud-institucional cruza (radar-ejecucion, infobras, radar-inversiones, compras-publicas, identidad-fiscal).");
+    return null;
   }
 
   // 1. Universo de entidades + ejecución presupuestal (radar-ejecucion, fuente primaria).
@@ -183,6 +184,8 @@ async function computeScoresForDepartamento(env: Record<string, unknown>, wanted
   return resultados;
 }
 
+const SERVICIO_NO_DISPONIBLE = { status: 503 as const, body: { error: "Servicio no disponible: falta configuración de datos." } };
+
 /** Handler para `salud_institucional_score` — GET /api/score. */
 export async function score(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const { args, env } = ctx;
@@ -190,6 +193,7 @@ export async function score(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const anio = args.anio ? Number(args.anio) : 2026;
 
   const resultados = await computeScoresForDepartamento(env, wantedDepartamento, anio);
+  if (resultados === null) return SERVICIO_NO_DISPONIBLE;
   return { status: 200, body: { departamento: wantedDepartamento, anioFiscal: anio, resultados } };
 }
 
@@ -200,6 +204,7 @@ export async function scorePorProvincia(ctx: ToolHandlerContext): Promise<Handle
   const anio = args.anio ? Number(args.anio) : 2026;
 
   const resultados = await computeScoresForDepartamento(env, wantedDepartamento, anio);
+  if (resultados === null) return SERVICIO_NO_DISPONIBLE;
 
   const porProvincia = new Map<string, { sumaScore: number; conScore: number; sinScore: number }>();
   for (const r of resultados) {

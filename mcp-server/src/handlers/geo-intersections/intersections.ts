@@ -241,30 +241,30 @@ export async function reporte(ctx: ToolHandlerContext): Promise<HandlerResult> {
 export async function stats(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const { db } = ctx;
 
-  const [rightsCount, titlesCount, intersectionsCount, byDepartamento, bySustancia, byCapa, lastBatch] =
-    await Promise.all([
-      db.query<{ count: string }>("SELECT COUNT(*) AS count FROM mining_rights"),
-      db.query<{ count: string }>("SELECT COUNT(*) AS count FROM forest_titles"),
-      db.query<{ count: string }>("SELECT COUNT(*) AS count FROM intersection_results"),
-      db.query<{ departamento: string; count: string }>(
-        `SELECT mining_departamento AS departamento, COUNT(*) AS count
-         FROM intersection_results GROUP BY 1 ORDER BY count DESC LIMIT 10`
-      ),
-      db.query<{ sustancia: string; count: string }>(
-        `SELECT m.sustancia, COUNT(*) AS count
-         FROM intersection_results i
-         JOIN mining_rights m ON m.codigou = i.mining_codigou
-         GROUP BY 1 ORDER BY count DESC LIMIT 10`
-      ),
-      db.query<{ capa: string; count: string }>(
-        `SELECT forest_capa AS capa, COUNT(*) AS count
-         FROM intersection_results GROUP BY 1 ORDER BY count DESC`
-      ),
-      db.query<{ computed_at: string }>(
-        `SELECT computed_at FROM intersection_results
-         ORDER BY computed_at DESC LIMIT 1`
-      ),
-    ]);
+  // Secuencial, no Promise.all: son 7 queries y el Worker tiene tope de
+  // conexiones simultáneas por invocación (cada NeonPool.query abre su propia
+  // conexión).
+  const rightsCount = await db.query<{ count: string }>("SELECT COUNT(*) AS count FROM mining_rights");
+  const titlesCount = await db.query<{ count: string }>("SELECT COUNT(*) AS count FROM forest_titles");
+  const intersectionsCount = await db.query<{ count: string }>("SELECT COUNT(*) AS count FROM intersection_results");
+  const byDepartamento = await db.query<{ departamento: string; count: string }>(
+    `SELECT mining_departamento AS departamento, COUNT(*) AS count
+     FROM intersection_results GROUP BY 1 ORDER BY count DESC LIMIT 10`
+  );
+  const bySustancia = await db.query<{ sustancia: string; count: string }>(
+    `SELECT m.sustancia, COUNT(*) AS count
+     FROM intersection_results i
+     JOIN mining_rights m ON m.codigou = i.mining_codigou
+     GROUP BY 1 ORDER BY count DESC LIMIT 10`
+  );
+  const byCapa = await db.query<{ capa: string; count: string }>(
+    `SELECT forest_capa AS capa, COUNT(*) AS count
+     FROM intersection_results GROUP BY 1 ORDER BY count DESC`
+  );
+  const lastBatch = await db.query<{ computed_at: string }>(
+    `SELECT computed_at FROM intersection_results
+     ORDER BY computed_at DESC LIMIT 1`
+  );
 
   return {
     status: 200,

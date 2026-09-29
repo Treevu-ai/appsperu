@@ -405,7 +405,7 @@ let anaCache: { data: AnaEstacion[]; fecha: string; fetchedAt: number } | null =
 const ANA_CACHE_TTL_MS = 5 * 60 * 1000;
 
 async function fetchDatosAna(fecha: string): Promise<{ estaciones: AnaEstacion[]; fecha: string }> {
-  if (anaCache && Date.now() - anaCache.fetchedAt < ANA_CACHE_TTL_MS) {
+  if (anaCache && anaCache.fecha === fecha && Date.now() - anaCache.fetchedAt < ANA_CACHE_TTL_MS) {
     return { estaciones: anaCache.data, fecha: anaCache.fecha };
   }
 

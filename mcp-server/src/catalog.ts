@@ -887,6 +887,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
       estado: z.string().min(1).optional(),
       situacion: z.string().min(1).optional(),
       funcion: z.string().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(5000).optional().describe("Default 1000, máximo 5000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
   {

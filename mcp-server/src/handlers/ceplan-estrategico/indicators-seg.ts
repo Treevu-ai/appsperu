@@ -177,7 +177,7 @@ export async function seg(ctx: ToolHandlerContext): Promise<HandlerResult> {
       status: 200,
       body: {
         matcher: "mef_infobras_departamento",
-        cobertura: proxy?.segPp !== null ? "PARCIAL" : "INCOMPLETA",
+        cobertura: proxy != null && proxy.segPp !== null ? "PARCIAL" : "INCOMPLETA",
         restriccion: proxy?.restriccion ?? "Sin datos MEF/INFOBRAS para calcular proxy departamental.",
         dependencias: proxy?.dependencias ?? [{ app: "radar-ejecucion", ok: false }],
         corte: { generadoEl, anio: proxy?.anio ?? anio ?? null },
