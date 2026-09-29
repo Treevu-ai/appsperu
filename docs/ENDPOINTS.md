@@ -40,10 +40,10 @@ Sin `x-api-key` válida: `401`. Las keys se emiten a mano
 (`npm run create-key -- --group <nombre> --limit <n> --tier <workshop|pilot|internal|admin>`)
 contra la base `mcp` de Neon — no hay autoservicio.
 
-209/209 tools tienen handler contra Neon (todas las 38 apps del catálogo
-responden `ok` en `rastro_health`). `ceplan-geo` y `geo-intersections` tienen
-schema con PostGIS provisionado pero **sin datos todavía** — falta correr la
-ingesta (Fase 3 del runbook) para esas 2 apps.
+209/209 tools tienen handler contra Neon. `rastro_health`: **38/38 apps `ok`,
+209/209 tools operativos** — con datos reales, incluidas `ceplan-geo` y
+`geo-intersections` (5831 intersecciones minería∩bosque calculadas, ver
+`RUNBOOK_NEON.md`).
 
 ### Cliente local por stdio (para desarrollo)
 
@@ -81,4 +81,4 @@ curl -s https://www.rastro.fyi/mcp -X POST \
 
 **Actualizado:** 2026-09-29, migración completa: 209/209 tools, endpoint
 público con auth obligatoria, `ceplan_geo`/`geo_intersections` provisionadas
-en Neon (schema, sin datos).
+y con datos reales en Neon.

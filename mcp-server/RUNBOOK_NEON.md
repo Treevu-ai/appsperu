@@ -145,15 +145,27 @@ Cada app debe salir `ok`. Estados posibles:
 incluidas `geo-intersections` y `ceplan-geo` (PostGIS) y `salud-institucional`
 (cruza 5 bases, secuencial).
 
-**`ceplan_geo` y `geo_intersections` ya están provisionadas en Neon**
-(2026-09-29): bases creadas, PostGIS habilitado, schema completo (migraciones
-001-011 de `ceplan-geo` y 001-004 de `geo-intersections` aplicadas vía Neon
-MCP). El gate hardcodeado `DEFERRED_APPS` en `src/tools/health.ts` se
-eliminó — `rastro_health` ahora las chequea igual que cualquier otra app.
-**Sin datos todavía** (Fase 3, ingesta, no se corrió): las tablas existen
-vacías, así que `rastro_health` las reporta `ok` (la base responde) pero los
-tools devuelven listas vacías hasta correr los conectores de ingesta de cada
-app (`apps/ceplan-geo/api/src/ingest/*`, `apps/geo-intersections/api/src/ingest/*`).
+**`ceplan_geo` y `geo_intersections` provisionadas y con datos reales**
+(2026-09-29): bases creadas, PostGIS habilitado, schema completo, Fase 3
+(ingesta) corrida contra Neon vía `DATABASE_URL` inline (no se tocaron los
+`.env` locales, que siguen apuntando a Postgres local para dev). El gate
+hardcodeado `DEFERRED_APPS` en `src/tools/health.ts` se eliminó.
+
+- `ceplan-geo`: 83 capas descubiertas, 1874 distritos, 227 infraestructura,
+  1744 red hídrica, 24 proyectos sectoriales, 1762 predios SBN supervisados.
+- `geo-intersections`: 66953 derechos mineros + 5390 títulos forestales
+  replicados, **5831 intersecciones minería∩bosque** calculadas (top:
+  Madre de Dios 3543, Cusco 835, San Martín 428).
+
+**Nota de la migración 004** (`geometry_valid` poblada con `ST_MakeValid`):
+como se corrió en la Fase 1/2 con las tablas vacías, `geometry_valid` quedó
+`NULL` para todo lo ingerido después. Hubo que repetir el `UPDATE ...
+SET geometry_valid = ST_MakeValid(geometry) WHERE geometry_valid IS NULL`
+tras la ingesta — si se reingiere desde cero en el futuro, no olvidar este
+paso o `compute-intersections.ts` reporta 0 intersecciones en silencio (no
+es un error, simplemente no encuentra nada porque compara contra `NULL`).
+
+`rastro_health` en producción: **38/38 apps `ok`, 209/209 tools operativos.**
 
 Lo de abajo queda como referencia del proceso ya aplicado (útil si se agrega
 una app 39 al catálogo en el futuro):
