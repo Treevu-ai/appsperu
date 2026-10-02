@@ -2,12 +2,9 @@
  * Tests de CONTRATO para el endpoint /api/denuncias/termometro.
  * PRD-002 · Épica 2, Historia 2.2 — SID-05 a SID-09
  *
- * El endpoint NO EXISTE AÚN. Estos tests definen el contrato
- * que la implementación debe cumplir (TDD).
+ * Implementado en ../routes/termometro.ts.
  *
  * Corte: z > 3 → CRÍTICO | z > 2 → ALERTA | z > 1 → NORMAL | else → BAJO
- *
- * Una vez implementado el endpoint, quitar el .skip de cada test.
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import request from "supertest";
@@ -37,7 +34,7 @@ const SPIKE_ACTUAL = {
   z_score: 7.47, nivel: "CRÍTICO", percentil: 98,
 };
 
-describe.skip("GET /api/denuncias/termometro — CONTRATO", () => {
+describe("GET /api/denuncias/termometro — CONTRATO", () => {
   it("devuelve 400 cuando falta el parámetro requerido departamento", async () => {
     const res = await request(createApp()).get("/api/denuncias/termometro");
     expect(res.status).toBe(400);
