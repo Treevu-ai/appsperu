@@ -21,6 +21,7 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const { db, args } = ctx;
   const departamento = args.departamento as string | undefined;
   const provincia = args.provincia as string | undefined;
+  const ubigeo = args.ubigeo as string | undefined;
   const anio = args.anio as string | undefined;
   const modalidad = args.modalidad as string | undefined;
 
@@ -34,6 +35,10 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
   if (provincia) {
     values.push(provincia.toUpperCase());
     conditions.push(`provincia = $${values.length}`);
+  }
+  if (ubigeo) {
+    values.push(ubigeo);
+    conditions.push(`ubigeo = $${values.length}`);
   }
   if (anio) {
     values.push(Number(anio));

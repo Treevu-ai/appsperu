@@ -1193,6 +1193,74 @@ Investigado y construido 2026-09-22 (ticket ADS-05, `docs/BACKLOG_Organismos_Ads
 
 ---
 
+<a id="reniec-padron"></a>
+## reniec-padron — Padrón electoral (RENIEC)
+
+### `reniec-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Padrón electoral 2026 de RENIEC — conteos por ubigeo/departamento/provincia/distrito, sexo, rango de edad, caducidad de DNI, discapacidad, educación, estado civil, tipo de DNI. Es población civil 18+ años con DNI vigente (excluye menores y extranjeros residentes), no el censo INEI de población total. |
+| **Uso real en Rastro** | Fuente del denominador poblacional de `seguridad-ciudadana` (`poblacion_departamental`, ver ficha de esa app) para calcular tasas por 100k habitantes en el Termómetro SIDPOL — es la única fuente de población por departamento ya ingerida con datos reales. |
+| **Frecuencia** | Manual (`npm run ingest` o equivalente en `apps/reniec-padron/api`, ver package.json). Sin scheduler. |
+| **Fuente de datos** | `datosabiertos.gob.pe` (RENIEC), CSV directo. |
+| **Resiliencia de ingesta** | Commits por lote de 1,000 filas (no una sola transacción de 153 lotes) -- un corte de conexión a mitad de camino revierte solo el lote en curso, confirmado en vivo 2026-09-30. Serializado por `pg_advisory_lock(hashtext(checksum))` durante toda la ingesta -- corridas concurrentes duplicaron datos en vivo antes de este fix (confirmado 2026-10-02). |
+| **Hallazgo real — comillas RFC4180 con `,` embebido** | El `split(",")` ingenuo desalineaba columnas en filas con residencia "Extranjero" cuyo país trae `,` dentro de comillas (ej. `"Egipto, República Árabe"`). Corregido con un splitter que respeta comillas (mismo patrón que `osinergmin-connector.ts`, con `,` en vez de `;`). |
+
+---
+
+<a id="osinergmin-combustibles"></a>
+## osinergmin-combustibles — Grifos/estaciones y precios de combustibles (OSINERGMIN)
+
+Investigado y construido 2026-10-01/02.
+
+### `osinergmin-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Registro nacional de grifos y estaciones de servicio de OSINERGMIN — expediente, código OSINERGMIN, RUC, razón social, ubicación, tipo de establecimiento, capacidad de almacenamiento, vigencia. |
+| **Hallazgo real — comillas RFC4180 con `;` embebido** | El `split(";")` ingenuo inicial desalineaba columnas en filas cuya `DIRECCION OPERATIVA` trae `;` dentro de comillas (ej. `"AV. ... LOTES 01; 02; 03"`, direcciones con varios lotes). Corregido con un splitter que respeta comillas y `""` (escape doble). |
+| **Hallazgo real — `ON CONFLICT DO UPDATE` incompleto** | El upsert original solo refrescaba 4 de 14 columnas; filas mal parseadas por el bug anterior nunca se corregían al reintentar la ingesta. Corregido para actualizar todas las columnas. |
+| **Frecuencia** | Manual (`npm run ingest:grifos` en `apps/osinergmin-combustibles/api`). Sin scheduler. |
+| **Fuente de datos** | `datosabiertos.gob.pe` (OSINERGMIN), CSV directo. |
+| **Cobertura real ingerida** | Verificado en vivo 2026-10-02: **3,429/3,429 filas, 0 desalineadas** tras el fix del parser. |
+| **API expuesta** | `GET /api/grifos` (filtros `departamento`/`provincia`/`distrito`/`ruc`/`tipoEstablecimiento`, paginado). Registrada como tool MCP `osinergmin_combustibles_grifos`. |
+
+### `precios-combustibles-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Reporte diario SCOP de precios registrados por Distribuidores Minoristas de Combustibles Líquidos — diesel, petróleo industrial, gasohol, precio mín/máx en soles por RUC del distribuidor minorista (NO precio al consumidor final en grifo). |
+| **Fuente pública sin auth** | `osinergmin.gob.pe/.../CL-Registro-precios-DMIN.csv` (SharePoint), ~21MB, actualizado a diario. |
+| **Formato real** | CSV delimitado por `;`, columnas con padding de espacios fijo, decimales con coma (`"11,8"` → `11.8`). |
+| **Append por batch, idempotente por checksum** | Cada corrida con contenido nuevo (checksum distinto) agrega un batch nuevo (histórico, no reemplaza el anterior). Reingestar el mismo archivo (mismo checksum) se omite e inserta 0 filas — el claim del batch es atómico vía `INSERT ... ON CONFLICT (dataset, checksum) DO NOTHING` contra un índice único parcial (`003_unique_batch_checksum.sql`), no un SELECT-luego-INSERT con ventana de carrera. |
+| **Frecuencia** | Manual (`npm run ingest:precios` en `apps/osinergmin-combustibles/api`). Sin scheduler — la fuente se actualiza a diario, candidato para RCC-10 (ver `docs/BACKLOG_Scheduler_Ingesta_Diseno_v1.md`). |
+| **Fuente de datos** | `osinergmin.gob.pe` (OSINERGMIN, sistema SCOP). |
+| **Cobertura real ingerida** | Verificado en vivo 2026-10-01: **1,034/1,034 filas, 0 rechazadas**, incluye cobertura de La Libertad (14 filas). |
+| **API expuesta** | `GET /api/precios` (filtros `departamento`/`provincia`/`producto`/`ruc`, paginado). Registrada como tool MCP `osinergmin_combustibles_precios`. |
+
+---
+
+<a id="ositran-reclamos"></a>
+## ositran-reclamos — Reclamos, tráfico y recaudación en carreteras concesionadas (OSITRAN)
+
+Investigado y construido 2026-10-01/02.
+
+### `ositran-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Tres datasets de OSITRAN sobre carreteras concesionadas: reclamos de usuarios, tráfico vehicular por peaje, y recaudación por peaje — todos agregados por año/mes/concesión. |
+| **Hallazgo real — formatos de comillas distintos entre datasets** | `reclamos` viene con toda la línea envuelta en comillas y `""` como separador doblemente escapado; `trafico`/`recaudacion` usan comillas estándar por campo. El conector usa parsers distintos para cada caso (confirmado en vivo). |
+| **Hallazgo real — inserción fila-por-fila era ~500x más lenta de lo necesario** | La versión inicial insertaba una fila por sentencia SQL contra el host directo de Neon (~130ms/fila por el round-trip de red). Con cortes de conexión intermitentes, dos corridas en vivo terminaron truncadas a mitad de camino (55,000/68,391 y 54,500/59,820 filas) sin que el batch registrado lo reflejara. Reemplazado por `INSERT` multi-fila (una sola sentencia por lote de 500), bajando los round-trips ~500x — de proyectado >2h a segundos. |
+| **`clearTable()` antes de cada ingesta** | Cada corrida es un snapshot completo (mismo criterio que `catastro-forestal`): sin esto, una corrida interrumpida dejaría datos incompletos que una corrida posterior solo duplicaría en vez de completar, porque estas tablas no tienen `ON CONFLICT` ni clave natural. |
+| **Frecuencia** | Manual, cada fase por separado (`tsx src/ingest/ositran-connector.ts reclamos\|trafico\|recaudacion`) — un proceso largo corriendo las 3 fases seguidas terminó en `ECONNRESET` en vivo. Sin scheduler. |
+| **Fuente de datos** | `datosabiertos.gob.pe` (OSITRAN), 3 CSV directos. |
+| **Cobertura real ingerida** | Verificado en vivo 2026-10-02 tras el fix de inserción multi-fila: **3,978 reclamos / 68,391 tráfico / 59,820 recaudación**, un único batch consistente por tabla. |
+| **API expuesta** | `GET /api/reclamos`, `GET /api/trafico`, `GET /api/recaudacion` (filtros `anio`/`mes`/`siglasConcesion`/etc., paginado). Registradas como tools MCP `ositran_reclamos_reclamos`/`ositran_reclamos_trafico`/`ositran_reclamos_recaudacion`. |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada

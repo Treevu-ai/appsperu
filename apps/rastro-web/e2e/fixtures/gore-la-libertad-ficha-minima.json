@@ -1,0 +1,11 @@
+{
+  "sector": { "id": "TRANSPORTE", "nombre": "Transporte" },
+  "anio": 2026,
+  "departamento": "LA LIBERTAD",
+  "entidades": [],
+  "inversiones": { "estado": "SIN_VINCULO_OFICIAL", "resultados": [] },
+  "obras": { "estado": "SIN_CUI_CON_VINCULO_OFICIAL", "resultados": [] },
+  "contrataciones": { "estado": "SIN_ENTIDADES_VERIFICADAS", "resultados": [] },
+  "advertenciaGasto": "No sumar entidades con reglaTerritorial META_DEPARTAMENTO y SEDE_EJECUTORA: miden gasto nacional dirigido vs ejecución con sede regional.",
+  "limitation": "CUI, obra y contratación aparecen solo mediante claves exactas verificadas. La ausencia de un puente no equivale a ausencia de inversión, obra o contratación."
+}

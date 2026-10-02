@@ -1,0 +1,1200 @@
+{
+  "generated_at": "2026-09-02T02:58:36.612558+00:00",
+  "count": 36,
+  "datasets": [
+    {
+      "name": "minsa-salud-mental",
+      "title": "MINSA - SALUD MENTAL",
+      "notes": "Mucha gente, cuando escucha el término de salud mental, piensa en enfermedad mental. Pero la salud mental es mucho más que la ausencia de enfermedad mental.\nTiene relación con la vida cotidiana de tod",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Ministerio de Salud"
+      },
+      "tags": [
+        "SALUD MENTAL",
+        "TAMIZAJE"
+      ],
+      "resources": [
+        {
+          "id": "d920b7ad-4c75-43d7-9c8c-67b7dba4ce35",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/09/DAT%20SALUD%20MENTAL%20-%20ATENDIDOS.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Atenciones de Salud Mental entre enero y la quincena de setiembre del 2017 "
+        },
+        {
+          "id": "9adb4667-c841-46ff-924c-ef1dccd3926c",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/09/DAT%20SALUD%20MENTAL%20-%20MAMIS.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Módulos de Atención al Maltrato Infantil - MAMIS es una estrategia de respuesta institucional calificada para abordar la"
+        },
+        {
+          "id": "dbe339ce-be3c-47e9-bf13-06ae8af50415",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/09/DAT%20SALUD%20MENTAL%20-%20TAMIZAJE.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Tamizaje son mediciones para establecer quién puede padecer cierta enfermedad y quién no."
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/minsa-salud-mental",
+      "modified": "Jue, 08/07/2025 - 10:12",
+      "num_resources": 9
+    },
+    {
+      "name": "minsa-salud-mental",
+      "title": "MINSA - SALUD MENTAL",
+      "notes": "Mucha gente, cuando escucha el término de salud mental, piensa en enfermedad mental. Pero la salud mental es mucho más que la ausencia de enfermedad mental.\nTiene relación con la vida cotidiana de tod",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Ministerio de Salud"
+      },
+      "tags": [
+        "SALUD MENTAL",
+        "TAMIZAJE"
+      ],
+      "resources": [
+        {
+          "id": "d920b7ad-4c75-43d7-9c8c-67b7dba4ce35",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/09/DAT%20SALUD%20MENTAL%20-%20ATENDIDOS.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Atenciones de Salud Mental entre enero y la quincena de setiembre del 2017 "
+        },
+        {
+          "id": "9adb4667-c841-46ff-924c-ef1dccd3926c",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/09/DAT%20SALUD%20MENTAL%20-%20MAMIS.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Módulos de Atención al Maltrato Infantil - MAMIS es una estrategia de respuesta institucional calificada para abordar la"
+        },
+        {
+          "id": "dbe339ce-be3c-47e9-bf13-06ae8af50415",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/09/DAT%20SALUD%20MENTAL%20-%20TAMIZAJE.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Tamizaje son mediciones para establecer quién puede padecer cierta enfermedad y quién no."
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/minsa-salud-mental",
+      "modified": "Jue, 08/07/2025 - 10:12",
+      "num_resources": 9
+    },
+    {
+      "name": "minsa-adulto-mayor",
+      "title": "MINSA - ADULTO MAYOR",
+      "notes": "",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Ministerio de Salud"
+      },
+      "tags": [
+        "salud",
+        "adulto mayor",
+        "VACAM",
+        "PAI",
+        "HC DEL ADULTO MAYOR"
+      ],
+      "resources": [
+        {
+          "id": "40a5e017-ce5b-4bf4-9087-293b1c2e2f53",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/09/DAT%20Adulto_Mayor_01_Vacam.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "La Valoración Clínica del Adulto Mayor - VACAM, es la evaluación del estado de salud del adulto mayor.\nEste recurso cons"
+        },
+        {
+          "id": "6a3f08a7-d384-4183-a1b7-6f6d3c6a1862",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/09/DAT%20Adulto_Mayor_02_Pai.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "El Plan de Atención Integral (PAI)  es el resultado de la evaluación inicial del adulto mayor, en el se especifican la p"
+        },
+        {
+          "id": "1e37f5c8-de2b-48f3-92e5-de32e18af111",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/09/DAT%20Adulto_Mayor_04_Nutricional.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Diagnóstico nutricional del adulto mayor por grupos de edad. Desde enero a la quincena de setiembre del 2017."
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/minsa-adulto-mayor",
+      "modified": "Jue, 08/07/2025 - 10:12",
+      "num_resources": 7
+    },
+    {
+      "name": "minsa-adulto-mayor",
+      "title": "MINSA - ADULTO MAYOR",
+      "notes": "",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Ministerio de Salud"
+      },
+      "tags": [
+        "salud",
+        "adulto mayor",
+        "VACAM",
+        "PAI",
+        "HC DEL ADULTO MAYOR"
+      ],
+      "resources": [
+        {
+          "id": "40a5e017-ce5b-4bf4-9087-293b1c2e2f53",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/09/DAT%20Adulto_Mayor_01_Vacam.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "La Valoración Clínica del Adulto Mayor - VACAM, es la evaluación del estado de salud del adulto mayor.\nEste recurso cons"
+        },
+        {
+          "id": "6a3f08a7-d384-4183-a1b7-6f6d3c6a1862",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/09/DAT%20Adulto_Mayor_02_Pai.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "El Plan de Atención Integral (PAI)  es el resultado de la evaluación inicial del adulto mayor, en el se especifican la p"
+        },
+        {
+          "id": "1e37f5c8-de2b-48f3-92e5-de32e18af111",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/09/DAT%20Adulto_Mayor_04_Nutricional.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Diagnóstico nutricional del adulto mayor por grupos de edad. Desde enero a la quincena de setiembre del 2017."
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/minsa-adulto-mayor",
+      "modified": "Jue, 08/07/2025 - 10:12",
+      "num_resources": 7
+    },
+    {
+      "name": "minsa-adolescentes",
+      "title": "MINSA - ADOLESCENTES",
+      "notes": "Cifras con relación a la morbilidad, tamizaje y riesgo en los adolescentes.",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Ministerio de Salud"
+      },
+      "tags": [
+        "ADOLESCENTES",
+        "morbilidad",
+        "riesgo",
+        "TAMIZAJE"
+      ],
+      "resources": [
+        {
+          "id": "b4b5d0e6-4619-46fe-9f4d-22c4ec20547e",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/09/DAT%20Morbilidad_Adolescente.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "MORBILIDAD .- Cantidad de personas que enferman en un lugar y un período de tiempo determinados en relación con el total"
+        },
+        {
+          "id": "ec5732b0-75c7-4370-a473-d6d58db10a62",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/09/DIC%20Morbilidad_Adolescente.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Diccionario de datos de ADOLESCENTE - MORBILIDAD DAT"
+        },
+        {
+          "id": "44cbeaea-ac9d-42a3-b2e9-288444685cfc",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/09/DAT%20Riesgo_Adolescente.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Riesgos identificados en los casos atendidos en los adolescentes de acuerdo al rango de edad."
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/minsa-adolescentes",
+      "modified": "Jue, 08/07/2025 - 10:13",
+      "num_resources": 6
+    },
+    {
+      "name": "minsa-planificación-familiar",
+      "title": "MINSA - PLANIFICACIÓN FAMILIAR",
+      "notes": "Información respecto a la Estratégia de Salud de Planificación Familiar del Ministerio de Salud",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Ministerio de Salud"
+      },
+      "tags": [
+        "Planificación Familiar",
+        "Anticoncepción",
+        "Consejería"
+      ],
+      "resources": [
+        {
+          "id": "50f80f61-b933-4149-a20c-e8b65acbf18f",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/09/DAT%20PlaniFamiliar_01_Metodo.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": ""
+        },
+        {
+          "id": "4520a75c-45fd-4583-b961-c09044e86a4e",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/09/DAT%20PlaniFamiliar_04_Anticoncepcion.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": ""
+        },
+        {
+          "id": "f3a41dc2-07e4-436a-a339-196f1d027d52",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/09/DAT%20PlaniFamiliar_08_Consejeria.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": ""
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/minsa-planificaci%C3%B3n-familiar",
+      "modified": "Jue, 08/07/2025 - 10:13",
+      "num_resources": 6
+    },
+    {
+      "name": "informe-estadístico-de-hidrocarburos",
+      "title": "Informe Estadístico de Hidrocarburos",
+      "notes": "Informe Estadístico de Hidrocarburos\nhttp://www.minem.gob.pe/_estadisticaSector.php?idSector=5",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Ministerio de Energía y Minas"
+      },
+      "tags": [
+        "hidrocarburos"
+      ],
+      "resources": [
+        {
+          "id": "f6f09e56-fbba-4a24-9281-c662d9d0010b",
+          "url": "http://www.minem.gob.pe/minem/archivos/4_%20PRODUCCION%20DE%20HC-ABR%2017.pdf",
+          "format": "PDF",
+          "size_kb": null,
+          "description": "Producción Fiscalizada de Hidrocarburos - ABRIL 2017"
+        },
+        {
+          "id": "5b9e22f9-57d3-4b3a-9cd8-792c14051597",
+          "url": "http://www.minem.gob.pe/minem/archivos/5_%20PROD%20PETROLEO-ABR%2017.pdf",
+          "format": "PDF",
+          "size_kb": null,
+          "description": "Producción Fiscalizada de Petróleo - ABRIL 2017"
+        },
+        {
+          "id": "22e5b48b-f952-4943-b5fc-c16c5f4a9c84",
+          "url": "http://www.minem.gob.pe/minem/archivos/6_%20PROD%20LIQ%20DE%20GN-ABR%2017.pdf",
+          "format": "PDF",
+          "size_kb": null,
+          "description": "Producción Fiscalizada de Líquidos de Gas Natural - ABRIL 2017"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/informe-estad%C3%ADstico-de-hidrocarburos",
+      "modified": "Vie, 02/22/2019 - 19:03",
+      "num_resources": 7
+    },
+    {
+      "name": "informe-estadístico-de-hidrocarburos",
+      "title": "Informe Estadístico de Hidrocarburos",
+      "notes": "Informe Estadístico de Hidrocarburos\nhttp://www.minem.gob.pe/_estadisticaSector.php?idSector=5",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Ministerio de Energía y Minas"
+      },
+      "tags": [
+        "hidrocarburos"
+      ],
+      "resources": [
+        {
+          "id": "f6f09e56-fbba-4a24-9281-c662d9d0010b",
+          "url": "http://www.minem.gob.pe/minem/archivos/4_%20PRODUCCION%20DE%20HC-ABR%2017.pdf",
+          "format": "PDF",
+          "size_kb": null,
+          "description": "Producción Fiscalizada de Hidrocarburos - ABRIL 2017"
+        },
+        {
+          "id": "5b9e22f9-57d3-4b3a-9cd8-792c14051597",
+          "url": "http://www.minem.gob.pe/minem/archivos/5_%20PROD%20PETROLEO-ABR%2017.pdf",
+          "format": "PDF",
+          "size_kb": null,
+          "description": "Producción Fiscalizada de Petróleo - ABRIL 2017"
+        },
+        {
+          "id": "22e5b48b-f952-4943-b5fc-c16c5f4a9c84",
+          "url": "http://www.minem.gob.pe/minem/archivos/6_%20PROD%20LIQ%20DE%20GN-ABR%2017.pdf",
+          "format": "PDF",
+          "size_kb": null,
+          "description": "Producción Fiscalizada de Líquidos de Gas Natural - ABRIL 2017"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/informe-estad%C3%ADstico-de-hidrocarburos",
+      "modified": "Vie, 02/22/2019 - 19:03",
+      "num_resources": 7
+    },
+    {
+      "name": "accidentes-mortales-en-mina",
+      "title": "Accidentes Mortales en Mina",
+      "notes": "El reporte contiene infomación preliminar elaborado por la Dirección de Técnica Minera de la Dirección General de Minería, respecto a los accidentes mortales reportados en nuestro país.",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Ministerio de Energía y Minas"
+      },
+      "tags": [
+        "MINERIA"
+      ],
+      "resources": [
+        {
+          "id": "05690805-7102-482e-a471-89564abdc0fd",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/05/2016.xls",
+          "format": "EXCEL",
+          "size_kb": null,
+          "description": "El reporte contiene infomación preliminar elaborado por la Dirección de Técnica Minera de la Dirección General de Minerí"
+        },
+        {
+          "id": "85b718bc-29ea-46e8-aa6d-ede1df352f6b",
+          "url": "http://www.minem.gob.pe/minem/archivos/file/Mineria/ESTADISTICA/FATALES/2017.xls",
+          "format": "EXCEL",
+          "size_kb": null,
+          "description": "<p>Accidentes Mortales en Mina 2017</p>\n"
+        },
+        {
+          "id": "a74f64a3-120c-45b2-84d6-681c7725b351",
+          "url": "http://www.minem.gob.pe/minem/archivos/file/Mineria/ESTADISTICA/FATALES/2018.xls",
+          "format": "EXCEL",
+          "size_kb": null,
+          "description": "<p>Accidentes Mortales en Mina 2018</p>\n"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/accidentes-mortales-en-mina",
+      "modified": "Vie, 06/12/2026 - 10:42",
+      "num_resources": 4
+    },
+    {
+      "name": "accidentes-mortales-en-mina",
+      "title": "Accidentes Mortales en Mina",
+      "notes": "El reporte contiene infomación preliminar elaborado por la Dirección de Técnica Minera de la Dirección General de Minería, respecto a los accidentes mortales reportados en nuestro país.",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Ministerio de Energía y Minas"
+      },
+      "tags": [
+        "MINERIA"
+      ],
+      "resources": [
+        {
+          "id": "05690805-7102-482e-a471-89564abdc0fd",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/05/2016.xls",
+          "format": "EXCEL",
+          "size_kb": null,
+          "description": "El reporte contiene infomación preliminar elaborado por la Dirección de Técnica Minera de la Dirección General de Minerí"
+        },
+        {
+          "id": "85b718bc-29ea-46e8-aa6d-ede1df352f6b",
+          "url": "http://www.minem.gob.pe/minem/archivos/file/Mineria/ESTADISTICA/FATALES/2017.xls",
+          "format": "EXCEL",
+          "size_kb": null,
+          "description": "<p>Accidentes Mortales en Mina 2017</p>\n"
+        },
+        {
+          "id": "a74f64a3-120c-45b2-84d6-681c7725b351",
+          "url": "http://www.minem.gob.pe/minem/archivos/file/Mineria/ESTADISTICA/FATALES/2018.xls",
+          "format": "EXCEL",
+          "size_kb": null,
+          "description": "<p>Accidentes Mortales en Mina 2018</p>\n"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/accidentes-mortales-en-mina",
+      "modified": "Vie, 06/12/2026 - 10:42",
+      "num_resources": 4
+    },
+    {
+      "name": "directorios-mineros",
+      "title": " Directorios Mineros",
+      "notes": "Directorio de Empresas Mineras",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Ministerio de Energía y Minas"
+      },
+      "tags": [
+        "MINERIA"
+      ],
+      "resources": [
+        {
+          "id": "93dd978a-595b-4eed-967f-78fcdea8a92d",
+          "url": "http://www.minem.gob.pe/minem/archivos/file/Mineria/REGISTROS/DIRECTORIO/Directorio.XLS",
+          "format": "APPLICATION/VND",
+          "size_kb": null,
+          "description": "Directorio de Empresas Mineras a la fecha\nhttp://www.minem.gob.pe/_detalle.php?idSector=1&idTitular=162&idMenu=sub150&id"
+        },
+        {
+          "id": "44062b13-95e0-4b22-a78d-590469164023",
+          "url": "http://www.minem.gob.pe/minem/archivos/file/Mineria/REGISTROS/CONTRATISTAS/CONTRATISTA.xls",
+          "format": "APPLICATION/VND",
+          "size_kb": null,
+          "description": "Directorio de Empresas Contratistas Mineras\nhttp://www.minem.gob.pe/_detalle.php?idSector=1&idTitular=4019&idMenu=sub150"
+        },
+        {
+          "id": "e350b2ec-2d6b-4ea8-937e-84c7919a15f1",
+          "url": "https://www.juntos.gob.pe/ciudadanos/padron-actual-de-usuarios/",
+          "format": "",
+          "size_kb": null,
+          "description": "<p>Padrón de Abonados del programa Juntos al IV Bimestre 2019.&nbsp;</p>\n"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/directorios-mineros",
+      "modified": "Mar, 06/02/2020 - 23:52",
+      "num_resources": 3
+    },
+    {
+      "name": "estadística-de-enfermedades-ocupacionales-en-minería",
+      "title": "Estadística de Enfermedades Ocupacionales en Minería ",
+      "notes": "Estadística de Enfermedades Ocupacionales en Minería \nhttp://www.minem.gob.pe/_estadisticaSector.php?idSector=1&idCategoria=109",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Ministerio de Energía y Minas"
+      },
+      "tags": [
+        "MINERIA",
+        "MINEM"
+      ],
+      "resources": [
+        {
+          "id": "2693b765-8cbf-424f-8ae2-7d8d53bcdd58",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/recursos/2017/05/EOT2015.ZIP",
+          "format": "ZIP",
+          "size_kb": null,
+          "description": "Estadística de Enfermedades Ocupacionales en Minería 2015"
+        },
+        {
+          "id": "4906aa2e-e390-4c01-9fdd-e50b0e86928e",
+          "url": "http://www.minem.gob.pe/minem/archivos/file/Mineria/ESTADISTICA/ENFERMEDADES/EOT2016.ZIP",
+          "format": "ZIP",
+          "size_kb": null,
+          "description": "<p>Estadística de Enfermedades Ocupacionales en Minería 2016</p>\n"
+        },
+        {
+          "id": "c1d05af9-e7c0-4c4a-ad2c-dfd60ba2fad6",
+          "url": "http://www.minem.gob.pe/minem/archivos/file/Mineria/ESTADISTICA/ENFERMEDADES/EOT2017.zip",
+          "format": "ZIP",
+          "size_kb": null,
+          "description": "<p>Estadística de Enfermedades Ocupacionales en Minería 2017</p>\n"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/estad%C3%ADstica-de-enfermedades-ocupacionales-en-miner%C3%ADa",
+      "modified": "Vie, 02/22/2019 - 19:03",
+      "num_resources": 3
+    },
+    {
+      "name": "archivo-particular-del-presidente-augusto-b-leguia",
+      "title": "Archivo Particular del Presidente Augusto B. Leguia",
+      "notes": "Datos familiares y de la gestión personal del Presidente Leguía durante su mandato vinculados a la política exterior peruana",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Ministerio de Relaciones Exteriores"
+      },
+      "tags": [],
+      "resources": [
+        {
+          "id": "155eb5cd-222b-414f-9060-5dca2929a6d0",
+          "url": "http://apps.rree.gob.pe/portal/cleguia/colleguia.nsf/",
+          "format": "URL",
+          "size_kb": null,
+          "description": "Datos familiares y de la gestión personal del Presidente Leguía durante su mandato vinculados a la política exterior per"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/archivo-particular-del-presidente-augusto-b-leguia",
+      "modified": "Jue, 08/10/2017 - 17:59",
+      "num_resources": 1
+    },
+    {
+      "name": "archivo-particular-del-presidente-augusto-b-leguia",
+      "title": "Archivo Particular del Presidente Augusto B. Leguia",
+      "notes": "Datos familiares y de la gestión personal del Presidente Leguía durante su mandato vinculados a la política exterior peruana",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Ministerio de Relaciones Exteriores"
+      },
+      "tags": [],
+      "resources": [
+        {
+          "id": "155eb5cd-222b-414f-9060-5dca2929a6d0",
+          "url": "http://apps.rree.gob.pe/portal/cleguia/colleguia.nsf/",
+          "format": "URL",
+          "size_kb": null,
+          "description": "Datos familiares y de la gestión personal del Presidente Leguía durante su mandato vinculados a la política exterior per"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/archivo-particular-del-presidente-augusto-b-leguia",
+      "modified": "Jue, 08/10/2017 - 17:59",
+      "num_resources": 1
+    },
+    {
+      "name": "catálogo-sobre-la-guerra-de-las-fuerzas-aliadas-contra-la-republica-de-españa",
+      "title": "Catálogo sobre la guerra de las fuerzas aliadas contra la Republica de España",
+      "notes": "Documentos sobre la Guerra con España  Antecedente, el incidente en Talambo y el  Combate del 2 de mayo",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Ministerio de Relaciones Exteriores"
+      },
+      "tags": [],
+      "resources": [
+        {
+          "id": "bb64e321-ae02-43bb-b15d-3d082b0a3590",
+          "url": "http://apps.rree.gob.pe/portal/catalogoradi.nsf",
+          "format": "URL",
+          "size_kb": null,
+          "description": "Documentos sobre la Guerra con España  Antecedente, el incidente en Talambo y el  Combate del 2 de mayo"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/cat%C3%A1logo-sobre-la-guerra-de-las-fuerzas-aliadas-contra-la-republica-de-espa%C3%B1a",
+      "modified": "Mié, 02/12/2025 - 18:34",
+      "num_resources": 1
+    },
+    {
+      "name": "correspondencia-de-la-cancillería",
+      "title": "Correspondencia de la Cancillería",
+      "notes": "Información extraida de los documentos intercambiados por la Cancillería con el sector público, las misiones diplomáticas acreditadas en el Perú, las misiones diplomáticas del Perú en el exterior y lo",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Ministerio de Relaciones Exteriores"
+      },
+      "tags": [],
+      "resources": [
+        {
+          "id": "55f2e958-4462-49d3-8461-61cc74dde2e5",
+          "url": "http://apps.rree.gob.pe/portal/ArchivoCentral/Catalogo/ACInvent.nsf/",
+          "format": "URL",
+          "size_kb": null,
+          "description": "Información extraida de los documentos intercambiados por la Cancillería con el sector público, las misiones diplomática"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/correspondencia-de-la-canciller%C3%ADa",
+      "modified": "Jue, 08/17/2017 - 09:31",
+      "num_resources": 1
+    },
+    {
+      "name": "correspondencia-de-la-cancillería",
+      "title": "Correspondencia de la Cancillería",
+      "notes": "Información extraida de los documentos intercambiados por la Cancillería con el sector público, las misiones diplomáticas acreditadas en el Perú, las misiones diplomáticas del Perú en el exterior y lo",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Ministerio de Relaciones Exteriores"
+      },
+      "tags": [],
+      "resources": [
+        {
+          "id": "55f2e958-4462-49d3-8461-61cc74dde2e5",
+          "url": "http://apps.rree.gob.pe/portal/ArchivoCentral/Catalogo/ACInvent.nsf/",
+          "format": "URL",
+          "size_kb": null,
+          "description": "Información extraida de los documentos intercambiados por la Cancillería con el sector público, las misiones diplomática"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/correspondencia-de-la-canciller%C3%ADa",
+      "modified": "Jue, 08/17/2017 - 09:31",
+      "num_resources": 1
+    },
+    {
+      "name": "inventario-de-cuadernos-copiadores",
+      "title": "Inventario de cuadernos copiadores",
+      "notes": "Registros de la correspondencia ingresada y remitida por la Cancillería entre  1822 a 1914",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Ministerio de Relaciones Exteriores"
+      },
+      "tags": [],
+      "resources": [
+        {
+          "id": "b36695f4-9164-425b-b053-f00c1bfe3d5a",
+          "url": "http://www.rree.gob.pe/servicioalciudadano/Documents/cuadernos_Copiadores.pdf",
+          "format": "PDF",
+          "size_kb": null,
+          "description": "<p>Registros de la correspondencia ingresada y remitida por la Cancillería entre  1822 a 1914</p>\n"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/inventario-de-cuadernos-copiadores",
+      "modified": "Mié, 09/20/2017 - 15:26",
+      "num_resources": 1
+    },
+    {
+      "name": "sunarp-1-registro-de-propiedad-inmueble",
+      "title": "SUNARP | 1. REGISTRO DE PROPIEDAD INMUEBLE",
+      "notes": "SUNARP | 1. REGISTRO DE PROPIEDAD INMUEBLE\n\n[1.1 Inmatriculaciones (primera inscripción de una propiedad)](https://www.sunarp.gob.pe/estadisticas/file.axd?file=/1.%20REGISTRO%20DE%20PROPIEDAD%20INMUEB",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Superintendencia Nacional de los Registros Públicos"
+      },
+      "tags": [
+        "Inmatriculaciones",
+        "Transferencia de propiedad",
+        "hipotecas",
+        "Inmovilización",
+        "compraventa",
+        "declaratoria de fabrica"
+      ],
+      "resources": [
+        {
+          "id": "41c807c0-ef72-443f-b9f7-7dad3222d869",
+          "url": "https://www.gob.pe/institucion/sunarp/informes-publicaciones/1433948-1-registro-de-propiedad-inmueble-ogpp",
+          "format": "DATA",
+          "size_kb": null,
+          "description": "1.1 Inmatriculaciones (primera inscripción de una propiedad)\n1.2 Transferencias de propiedad\n1.3 Hipotecas\n1.4 Inmoviliz"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/sunarp-1-registro-de-propiedad-inmueble",
+      "modified": "Mié, 01/21/2026 - 17:55",
+      "num_resources": 1
+    },
+    {
+      "name": "sunarp-2-registro-de-bienes-muebles",
+      "title": "SUNARP | 2. REGISTRO DE BIENES MUEBLES",
+      "notes": "[2.1 Primera de Dominio (primera inscripción de vehículo)](https://www.sunarp.gob.pe/estadisticas/file.axd?file=/2.%20REGISTRO%20DE%20BIENES%20MUEBLES/2.1%20Primera%20de%20Dominio%20(primera%20inscrip",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Superintendencia Nacional de los Registros Públicos"
+      },
+      "tags": [
+        "Primera de dominio",
+        "compraventa",
+        "Total de Inscripciones RPV",
+        "Compraventa Vehicular SID"
+      ],
+      "resources": [
+        {
+          "id": "408dac41-af2f-415f-9367-30eef10d7bbc",
+          "url": "https://www.gob.pe/institucion/sunarp/informes-publicaciones/1433955-2-registro-de-bienes-muebles-ogpp",
+          "format": "",
+          "size_kb": null,
+          "description": "2.1 Primera de Dominio (primera inscripción de vehículo)\n2.2 Compra - Venta\n2.3 Total de Inscripciones en el RPV\n2.4 Com"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/sunarp-2-registro-de-bienes-muebles",
+      "modified": "Mié, 01/21/2026 - 17:55",
+      "num_resources": 1
+    },
+    {
+      "name": "sunarp-3-registro-de-personas-naturales",
+      "title": "SUNARP | 3. REGISTRO DE PERSONAS NATURALES",
+      "notes": "[3.1 Inscripción de poderes (inscritos a través del Sistema de Intermediación Digital)](https://www.sunarp.gob.pe/estadisticas/file.axd?file=/3.%20REGISTRO%20DE%20PERSONAS%20NATURALES/3.1%20Inscripci%",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Superintendencia Nacional de los Registros Públicos"
+      },
+      "tags": [
+        "Inscripción de poderes",
+        "divorcios",
+        "separación de patrimonios y sustitución",
+        "sucesiones intestadas",
+        "testamentos"
+      ],
+      "resources": [
+        {
+          "id": "2db34bc1-10e4-4ed2-8786-3b5aeba46ccf",
+          "url": "https://www.gob.pe/institucion/sunarp/informes-publicaciones/1433961-3-registro-de-personas-naturales-ogpp",
+          "format": "",
+          "size_kb": null,
+          "description": "3.1 Inscripción de poderes (inscritos a través del Sistema de Intermediación Digital)\n3.2 Registro Personal - Divorcios\n"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/sunarp-3-registro-de-personas-naturales",
+      "modified": "Mié, 01/21/2026 - 17:56",
+      "num_resources": 1
+    },
+    {
+      "name": "sunarp-4-registro-de-personas-jurídicas",
+      "title": "SUNARP | 4. REGISTRO DE PERSONAS JURÍDICAS",
+      "notes": "[4.1 Rondas campesinas](https://www.sunarp.gob.pe/estadisticas/file.axd?file=/4.%20REGISTRO%20DE%20PERSONAS%20JUR%C3%8DDICAS/4.1%20Rondas%20campesinas/4.1archivo.xlsx)\n[4.2 Comedores populares](https:",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Superintendencia Nacional de los Registros Públicos"
+      },
+      "tags": [
+        "Rondas Campesinas",
+        "Comedores Populares",
+        "Comités de Vaso de Leche",
+        "Constitución MYPEs"
+      ],
+      "resources": [
+        {
+          "id": "823e9fb4-80f0-42d4-8b97-d1e0cab8353d",
+          "url": "https://www.gob.pe/institucion/sunarp/informes-publicaciones/1433963-4-registro-de-personas-juridicas-ogpp",
+          "format": "",
+          "size_kb": null,
+          "description": "4.1 Rondas campesinas\n4.2 Comedores populares\n4.3 Comités de vaso de leche\n4.4 Constitución de MYPEs (inscritas a través"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/sunarp-4-registro-de-personas-jur%C3%ADdicas",
+      "modified": "Mié, 01/21/2026 - 17:57",
+      "num_resources": 1
+    },
+    {
+      "name": "sunarp-6-servicios-registrales",
+      "title": "SUNARP | 6. SERVICIOS REGISTRALES",
+      "notes": "[6.1 Alerta Registral](https://www.sunarp.gob.pe/estadisticas/file.axd?file=/6.%20SERVICIOS%20REGISTRALES/6.1%20Alerta%20Registral/6.1archivo.xlsx)",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Superintendencia Nacional de los Registros Públicos"
+      },
+      "tags": [
+        "Alerta Registral"
+      ],
+      "resources": [
+        {
+          "id": "bfac64d6-fee7-41fb-a0d2-612b8333bb95",
+          "url": "https://www.gob.pe/institucion/sunarp/informes-publicaciones/1433966-6-servicios-registrales-ogpp",
+          "format": "",
+          "size_kb": null,
+          "description": "6.1 Alerta Registral"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/sunarp-6-servicios-registrales",
+      "modified": "Mié, 01/21/2026 - 17:58",
+      "num_resources": 1
+    },
+    {
+      "name": "sunarp-7-títulos-presentados-e-inscritos-consolidado-de-los-cuatro-registros",
+      "title": "SUNARP | 7. TÍTULOS PRESENTADOS E INSCRITOS (CONSOLIDADO DE LOS CUATRO REGISTROS)",
+      "notes": "[7.1 Títulos presentados (de los cuatro registros)](https://www.sunarp.gob.pe/estadisticas/file.axd?file=/7.%20T%C3%8DTULOS%20PRESENTADOS%20E%20INSCRITOS%20(CONSOLIDADO%20DE%20LOS%20CUATRO%20REGISTROS",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Superintendencia Nacional de los Registros Públicos"
+      },
+      "tags": [
+        "Títulos presentados",
+        "Títulos inscritos"
+      ],
+      "resources": [
+        {
+          "id": "3012ebc0-5da8-4e72-a571-09ab0582ae91",
+          "url": "https://www.gob.pe/institucion/sunarp/informes-publicaciones/1433973-7-titulos-presentados-e-inscritos-consolidados-de-los-cuatro-registros-ogpp",
+          "format": "",
+          "size_kb": null,
+          "description": "7.1 Títulos presentados (de los cuatro registros)\n7.2 Títulos inscritos (de los cuatro registros)"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/sunarp-7-t%C3%ADtulos-presentados-e-inscritos-consolidado-de-los-cuatro-registros",
+      "modified": "Mié, 01/21/2026 - 17:53",
+      "num_resources": 1
+    },
+    {
+      "name": "registro-de-instaladores-habilitados-de-gas-natural-organismo-supervisor-de-la-inversión-en",
+      "title": "Registro de instaladores habilitados de gas natural - [Organismo Supervisor de la Inversión en Energía y Minería - OSINERGMIN]",
+      "notes": "REGISTRO DE INSTALADORES HABILITADOS DE GAS NATURAL CATEGORÍAS:\n1.  IG-1: Habilita a construir, reparar y mantener cualquier tipo de instalaciones internas residenciales y/o comerciales de gas natural",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Otros relevantes (por tags)"
+      },
+      "tags": [
+        "Acceso Abierto"
+      ],
+      "resources": [
+        {
+          "id": "34f3e980-e622-46d3-8bc5-697a7aec53fe",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/PersonaJuridica.pdf",
+          "format": "PDF",
+          "size_kb": null,
+          "description": ""
+        },
+        {
+          "id": "b9f8e124-5acf-48b5-b211-806b0b6014c5",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/PersonaNaturalIG-1.pdf",
+          "format": "PDF",
+          "size_kb": null,
+          "description": ""
+        },
+        {
+          "id": "c28b3555-f966-44a3-9614-c14a7fabce59",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/PersonaNaturalIG-2.pdf",
+          "format": "PDF",
+          "size_kb": null,
+          "description": ""
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/registro-de-instaladores-habilitados-de-gas-natural-organismo-supervisor-de-la-inversi%C3%B3n-en",
+      "modified": "Vie, 07/24/2026 - 10:37",
+      "num_resources": 4
+    },
+    {
+      "name": "registro-de-instaladores-habilitados-de-gas-natural-organismo-supervisor-de-la-inversión-en",
+      "title": "Registro de instaladores habilitados de gas natural - [Organismo Supervisor de la Inversión en Energía y Minería - OSINERGMIN]",
+      "notes": "REGISTRO DE INSTALADORES HABILITADOS DE GAS NATURAL CATEGORÍAS:\n1.  IG-1: Habilita a construir, reparar y mantener cualquier tipo de instalaciones internas residenciales y/o comerciales de gas natural",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Otros relevantes (por tags)"
+      },
+      "tags": [
+        "Acceso Abierto"
+      ],
+      "resources": [
+        {
+          "id": "34f3e980-e622-46d3-8bc5-697a7aec53fe",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/PersonaJuridica.pdf",
+          "format": "PDF",
+          "size_kb": null,
+          "description": ""
+        },
+        {
+          "id": "b9f8e124-5acf-48b5-b211-806b0b6014c5",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/PersonaNaturalIG-1.pdf",
+          "format": "PDF",
+          "size_kb": null,
+          "description": ""
+        },
+        {
+          "id": "c28b3555-f966-44a3-9614-c14a7fabce59",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/PersonaNaturalIG-2.pdf",
+          "format": "PDF",
+          "size_kb": null,
+          "description": ""
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/registro-de-instaladores-habilitados-de-gas-natural-organismo-supervisor-de-la-inversi%C3%B3n-en",
+      "modified": "Vie, 07/24/2026 - 10:37",
+      "num_resources": 4
+    },
+    {
+      "name": "ordenes-de-entidades",
+      "title": "Ordenes de entidades",
+      "notes": "Ordenes de entidades",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "MEF · Portal de Transparencia"
+      },
+      "tags": [
+        "Orden",
+        "entidades",
+        "Transparencia",
+        "Acceso a la información",
+        "Poder ejecutivo"
+      ],
+      "resources": [
+        {
+          "id": "5e1b009a-33f3-4086-b120-84b12b09ed42",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/ds_orden_entidades_2015.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Ordenes de entidades del estado 2015"
+        },
+        {
+          "id": "2ec964d2-1997-4c9b-a33e-881928d30188",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/ds_orden_entidades_2016.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Ordenes de entidades del estado 2016"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/ordenes-de-entidades",
+      "modified": "Mié, 03/15/2017 - 13:58",
+      "num_resources": 2
+    },
+    {
+      "name": "personal-de-entidades",
+      "title": "Personal de entidades",
+      "notes": "Personal de entidades",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "MEF · Portal de Transparencia"
+      },
+      "tags": [
+        "Personal",
+        "entidades",
+        "Transparencia",
+        "Acceso a la información",
+        "Poder ejecutivo"
+      ],
+      "resources": [
+        {
+          "id": "5dd375dc-8230-420c-abc8-c95bdeabeb24",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/ds_personal_entidades_2015.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Personal de entidades del estado 2015"
+        },
+        {
+          "id": "28086044-3ab8-438d-8ad9-2612046fd7e6",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/ds_personal_entidades_2016.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Personal de entidades del estado 2016"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/personal-de-entidades",
+      "modified": "Mié, 03/15/2017 - 13:58",
+      "num_resources": 2
+    },
+    {
+      "name": "publicidad-de-entidades",
+      "title": "Publicidad de entidades",
+      "notes": "Publicidad de entidades",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "MEF · Portal de Transparencia"
+      },
+      "tags": [
+        "Publicidad",
+        "entidades",
+        "Transparencia",
+        "Acceso a la información",
+        "Poder ejecutivo"
+      ],
+      "resources": [
+        {
+          "id": "fc4a10ac-924f-49c5-9cb7-0d2c532a9e4e",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/ds_publicidad_entidades_2015.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Publicidad de entidades del estado  2015"
+        },
+        {
+          "id": "9c3802e3-86f6-4274-bb38-f7b56cbb7eb7",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/ds_publicidad_entidades_2016.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Publicidad de entidades del estado 2016"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/publicidad-de-entidades",
+      "modified": "Mié, 03/15/2017 - 13:58",
+      "num_resources": 2
+    },
+    {
+      "name": "teléfonos-de-entidades",
+      "title": "Teléfonos de entidades",
+      "notes": "Teléfonos de entidades",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "MEF · Portal de Transparencia"
+      },
+      "tags": [
+        "Teléfonos",
+        "entidades",
+        "Transparencia",
+        "Acceso a la información",
+        "Poder ejecutivo"
+      ],
+      "resources": [
+        {
+          "id": "3b18afcf-4de3-4137-ba25-dc8c5a2bd893",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/ds_telefono_entidades_2015.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Teléfonos de entidades del estado 2015"
+        },
+        {
+          "id": "e72519f9-4711-42e2-9d18-5d7475a77766",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/ds_telefono_entidades_2016.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Teléfonos de entidades del estado 2016"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/tel%C3%A9fonos-de-entidades",
+      "modified": "Mié, 03/15/2017 - 13:58",
+      "num_resources": 2
+    },
+    {
+      "name": "vehículos-de-entidades",
+      "title": "Vehículos de entidades",
+      "notes": "Vehículos de entidades",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "MEF · Portal de Transparencia"
+      },
+      "tags": [
+        "Vehículos",
+        "entidades",
+        "Transparencia",
+        "Acceso a la información",
+        "Poder ejecutivo"
+      ],
+      "resources": [
+        {
+          "id": "4a2de365-69c0-4af8-9000-c2702577314b",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/ds_vehiculo_entidades_2015.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Vehículos de entidades del estado 2015 "
+        },
+        {
+          "id": "aaf39721-6af3-45bc-a640-8c335652c122",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/ds_vehiculo_entidades_2016.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Vehículos de entidades del estado 2016"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/veh%C3%ADculos-de-entidades",
+      "modified": "Mié, 03/15/2017 - 13:58",
+      "num_resources": 2
+    },
+    {
+      "name": "vehículos-de-entidades",
+      "title": "Vehículos de entidades",
+      "notes": "Vehículos de entidades",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "MEF · Portal de Transparencia"
+      },
+      "tags": [
+        "Vehículos",
+        "entidades",
+        "Transparencia",
+        "Acceso a la información",
+        "Poder ejecutivo"
+      ],
+      "resources": [
+        {
+          "id": "4a2de365-69c0-4af8-9000-c2702577314b",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/ds_vehiculo_entidades_2015.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Vehículos de entidades del estado 2015 "
+        },
+        {
+          "id": "aaf39721-6af3-45bc-a640-8c335652c122",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/ds_vehiculo_entidades_2016.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Vehículos de entidades del estado 2016"
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/veh%C3%ADculos-de-entidades",
+      "modified": "Mié, 03/15/2017 - 13:58",
+      "num_resources": 2
+    },
+    {
+      "name": "entidades-carreras-y-áreas-participantes-en-crédito-18-del-pronabec",
+      "title": "Entidades, Carreras y Áreas participantes en Crédito 18 del Pronabec",
+      "notes": "Entidades, carreras, áreas de estudio y tipo de entidad participantes en el programa Crédito 18 del Pronabec del 2016.",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Otros relevantes (por tags)"
+      },
+      "tags": [
+        "crédito 18",
+        "carreras",
+        "entidades estudio",
+        "áreas de estudio"
+      ],
+      "resources": [
+        {
+          "id": "cb7e3bd8-1164-4b53-afc9-27e5eda6d535",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/entidad-carrera-area-credito18.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Entidades, carreras, áreas de estudio, tipo de entidad participantes en el programa Crédito 18 del Pronabec 2016."
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/entidades-carreras-y-%C3%A1reas-participantes-en-cr%C3%A9dito-18-del-pronabec",
+      "modified": "Vie, 06/12/2026 - 10:37",
+      "num_resources": 1
+    },
+    {
+      "name": "entidades-carreras-y-áreas-participantes-en-crédito-18-del-pronabec",
+      "title": "Entidades, Carreras y Áreas participantes en Crédito 18 del Pronabec",
+      "notes": "Entidades, carreras, áreas de estudio y tipo de entidad participantes en el programa Crédito 18 del Pronabec del 2016.",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Otros relevantes (por tags)"
+      },
+      "tags": [
+        "crédito 18",
+        "carreras",
+        "entidades estudio",
+        "áreas de estudio"
+      ],
+      "resources": [
+        {
+          "id": "cb7e3bd8-1164-4b53-afc9-27e5eda6d535",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/entidad-carrera-area-credito18.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Entidades, carreras, áreas de estudio, tipo de entidad participantes en el programa Crédito 18 del Pronabec 2016."
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/entidades-carreras-y-%C3%A1reas-participantes-en-cr%C3%A9dito-18-del-pronabec",
+      "modified": "Vie, 06/12/2026 - 10:37",
+      "num_resources": 1
+    },
+    {
+      "name": "procesos-de-adquisición-y-contratación-del-pronabec",
+      "title": "Procesos de Adquisición y Contratación del Pronabec",
+      "notes": "Procesos de Adquisición y Contratación del Pronabec, según TDR o EET, registrados en el Seace, en todas sus modalidades.",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Otros relevantes (por tags)"
+      },
+      "tags": [
+        "seace",
+        "tdr",
+        "eett",
+        "adquisiciones"
+      ],
+      "resources": [
+        {
+          "id": "bad6ce33-ea0d-4d09-a61c-6c32de1e7b5e",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/procesos-de-adquisicion-y-contratacion.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Procesos de Adquisición y Contratación del Pronabec, según TDR o EET, registrados en el Seace, en todas sus modalidades."
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/procesos-de-adquisici%C3%B3n-y-contrataci%C3%B3n-del-pronabec",
+      "modified": "Vie, 06/12/2026 - 10:35",
+      "num_resources": 1
+    },
+    {
+      "name": "procesos-de-adquisición-y-contratación-del-pronabec",
+      "title": "Procesos de Adquisición y Contratación del Pronabec",
+      "notes": "Procesos de Adquisición y Contratación del Pronabec, según TDR o EET, registrados en el Seace, en todas sus modalidades.",
+      "organization": {
+        "id": null,
+        "name": null,
+        "title": "Otros relevantes (por tags)"
+      },
+      "tags": [
+        "seace",
+        "tdr",
+        "eett",
+        "adquisiciones"
+      ],
+      "resources": [
+        {
+          "id": "bad6ce33-ea0d-4d09-a61c-6c32de1e7b5e",
+          "url": "https://www.datosabiertos.gob.pe/sites/default/files/procesos-de-adquisicion-y-contratacion.csv",
+          "format": "CSV",
+          "size_kb": null,
+          "description": "Procesos de Adquisición y Contratación del Pronabec, según TDR o EET, registrados en el Seace, en todas sus modalidades."
+        }
+      ],
+      "url": "https://www.datosabiertos.gob.pe/dataset/procesos-de-adquisici%C3%B3n-y-contrataci%C3%B3n-del-pronabec",
+      "modified": "Vie, 06/12/2026 - 10:35",
+      "num_resources": 1
+    }
+  ]
+}

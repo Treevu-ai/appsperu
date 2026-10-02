@@ -81,6 +81,11 @@ import * as mimp_chat100 from "./mimp/chat100.js";
 import * as mindef_offset from "./mindef/offset.js";
 import * as mindef_peace_missions from "./mindef/peace-missions.js";
 import * as mindef_training_abroad from "./mindef/training-abroad.js";
+import * as osinergmin_combustibles_grifos from "./osinergmin-combustibles/grifos.js";
+import * as osinergmin_combustibles_precios from "./osinergmin-combustibles/precios.js";
+import * as ositran_reclamos_recaudacion from "./ositran-reclamos/recaudacion.js";
+import * as ositran_reclamos_reclamos from "./ositran-reclamos/reclamos.js";
+import * as ositran_reclamos_trafico from "./ositran-reclamos/trafico.js";
 import * as poder_judicial_procesos_judiciales from "./poder-judicial/procesos-judiciales.js";
 import * as programas_sociales_cobertura from "./programas-sociales/cobertura.js";
 import * as programas_sociales_crossref from "./programas-sociales/crossref.js";
@@ -126,6 +131,7 @@ import * as seguridad_ciudadana_comisarias from "./seguridad-ciudadana/comisaria
 import * as seguridad_ciudadana_crossref from "./seguridad-ciudadana/crossref.js";
 import * as seguridad_ciudadana_denuncias from "./seguridad-ciudadana/denuncias.js";
 import * as seguridad_ciudadana_equipamiento from "./seguridad-ciudadana/equipamiento.js";
+import * as seguridad_ciudadana_termometro from "./seguridad-ciudadana/termometro.js";
 import * as senace_cartera_proyectos_proyectos from "./senace-cartera-proyectos/proyectos.js";
 import * as servicios_salud_crossref from "./servicios-salud/crossref.js";
 import * as servicios_salud_ipress from "./servicios-salud/ipress.js";
@@ -208,6 +214,11 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "mindef/offset": mindef_offset,
   "mindef/peace-missions": mindef_peace_missions,
   "mindef/training-abroad": mindef_training_abroad,
+  "osinergmin-combustibles/grifos": osinergmin_combustibles_grifos,
+  "osinergmin-combustibles/precios": osinergmin_combustibles_precios,
+  "ositran-reclamos/recaudacion": ositran_reclamos_recaudacion,
+  "ositran-reclamos/reclamos": ositran_reclamos_reclamos,
+  "ositran-reclamos/trafico": ositran_reclamos_trafico,
   "poder-judicial/procesos-judiciales": poder_judicial_procesos_judiciales,
   "programas-sociales/cobertura": programas_sociales_cobertura,
   "programas-sociales/crossref": programas_sociales_crossref,
@@ -253,6 +264,7 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "seguridad-ciudadana/crossref": seguridad_ciudadana_crossref,
   "seguridad-ciudadana/denuncias": seguridad_ciudadana_denuncias,
   "seguridad-ciudadana/equipamiento": seguridad_ciudadana_equipamiento,
+  "seguridad-ciudadana/termometro": seguridad_ciudadana_termometro,
   "senace-cartera-proyectos/proyectos": senace_cartera_proyectos_proyectos,
   "servicios-salud/crossref": servicios_salud_crossref,
   "servicios-salud/ipress": servicios_salud_ipress,

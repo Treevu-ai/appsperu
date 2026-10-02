@@ -172,6 +172,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "seguridad_ciudadana_comisarias",
     "seguridad_ciudadana_crossref",
     "seguridad_ciudadana_denuncias",
+    "seguridad_ciudadana_denuncias_termometro",
     "seguridad_ciudadana_equipamiento",
     "seguridad_ciudadana_equipamiento_resumen",
   ],
@@ -294,6 +295,15 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "geo_intersections_minero",
     "geo_intersections_reporte",
     "geo_intersections_stats",
+  ],
+  "osinergmin-combustibles": [
+    "osinergmin_combustibles_grifos",
+    "osinergmin_combustibles_precios",
+  ],
+  "ositran-reclamos": [
+    "ositran_reclamos_reclamos",
+    "ositran_reclamos_trafico",
+    "ositran_reclamos_recaudacion",
   ],
 };
 

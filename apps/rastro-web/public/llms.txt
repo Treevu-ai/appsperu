@@ -1,0 +1,128 @@
+# Rastro
+
+> El Estado peruano deja más datos abiertos de los que nadie está usando. Nosotros los estamos conectando.
+
+Rastro es una capa de datos que conecta las fuentes públicas más relevantes del Estado peruano en un solo pipeline: MEF (32M filas DuckDB), INGEMMET (66,823 derechos mineros), SERFOR (5,391 títulos forestales), PNDA (4,647 datasets), OSITRAN, MTC, OEFA y más. Conectores Python estándar, cache local, rate limits respetuosos. JSONs listos para dashboards, modelos predictivos o reportes.
+
+## URLs públicas
+
+- Inicio: https://www.rastro.fyi/
+- Lector GORE La Libertad: https://www.rastro.fyi/gore/la-libertad
+- Perfil de proveedor (RUC de 11 dígitos): https://www.rastro.fyi/proveedor/{ruc}
+- Obras y activos de un distrito (UBIGEO de 6 dígitos): https://www.rastro.fyi/distrito/{ubigeo}
+- Estado del producto (APIs en vivo monitoreadas desde el frontend hoy — ver /estado para el detalle exacto): https://www.rastro.fyi/estado
+- Documentación de la API y setup MCP: https://www.rastro.fyi/docs/api
+- Buscar (RUC, CUI, UBIGEO): https://www.rastro.fyi/buscar
+- Cómo citar: https://www.rastro.fyi/citar-rastro.md
+- LLM-friendly manifest: https://www.rastro.fyi/llms.txt (este archivo)
+
+## Para agentes IA (MCP)
+
+Rastro expone un servidor MCP (Model Context Protocol) con **<!-- COUNT:TOOL_COUNT -->209<!-- /COUNT --> tools de solo lectura** sobre inversión pública, identidad y sanciones, justicia, educación, legislativo, medio ambiente, recursos territoriales y emergencias del Estado peruano. Compatible con:
+
+- Claude Code (`claude mcp add rastro -- node /ruta/al/repo/mcp-server/dist/index.js`)
+- Claude Desktop (`claude_desktop_config.json`)
+- Cursor (Settings → MCP → Add)
+- Windsurf
+- Cline / Continue.dev
+
+En producción, el servidor usa transporte **Streamable HTTP** en `https://mcp.rastro.fyi/mcp` y requiere el header **`x-api-key`**. Para desarrollo local, usa transporte **stdio**. Expone solo 2 tools MCP —
+**`rastro_buscar_tools(query?, app?, limit?)`** busca por palabra clave/app entre las <!-- COUNT:TOOL_COUNT -->209<!-- /COUNT -->
+entradas del catálogo, **`rastro_llamar(tool, args?)`** ejecuta el nombre exacto encontrado — en vez de registrar
+los tools individualmente (ver `mcp-server/README.md`). El agente busca, encadena resultados, razona sobre
+ellos y entrega respuestas con citas verificables por RUC, OCID, CUI, UBIGEO, SEC_EJEC.
+
+### Ejemplo · una sola query
+
+Tu usuario escribe:
+
+> "Para los últimos 12 meses: lista proveedores sancionados por la OECE que también ganaron contratos del GORE La Libertad en el sector transporte, con valor total adjudicado y % de concentración. Cita cada RUC y cada OCID."
+
+El agente orquesta internamente:
+1. `rastro_buscar_tools({ query: "sanciones proveedores" })` → encuentra `proveedores_sancionados_sanciones`
+2. `rastro_llamar({ tool: "proveedores_sancionados_sanciones", args: { estado: "VIGENTE" } })`
+3. `rastro_buscar_tools({ query: "compras publicas suppliers" })` → encuentra los tools de `compras-publicas`
+4. `rastro_llamar` sobre `compras_publicas_suppliers` (filtrado por departamento=LA LIBERTAD), luego
+   `compras_publicas_supplier_by_id` por cada RUC y `compras_publicas_procurement_by_ocid` por cada OCID
+5. Recalcula concentración con los resultados ya obtenidos
+
+Y devuelve una tabla con citas (RUC, OCID, fuente, corte) sin que el usuario haya tocado la terminal.
+
+## Lo que Rastro SÍ hace
+
+- Convierte señales dispersas (presupuesto, contrataciones, inversiones, obras, sanciones, etc.) en una vista con citas verificables.
+- Muestra cifras con metadatos: fuente (app + tool MCP), corte (fecha del dato), cobertura (COMPLETA / PARCIAL / BLOQUEADA / NO_APLICA), matcher (cómo se vinculó).
+- Sirve 3 lectores: GORE (ficha, comparativo, benchmark de sectores), Prensa (perfil de proveedor), Auditoría (obras y activos por distrito).
+- Expone los <!-- COUNT:TOOL_COUNT -->209<!-- /COUNT --> tools MCP en `/docs/api` para que agentes IA los orquesten (vía 2 meta-tools de búsqueda/ejecución, `rastro_buscar_tools` + `rastro_llamar` — no registrados uno por uno).
+- Muestra en `/estado` el estado de las 14 APIs con dashboard visual propio (de las <!-- COUNT:APP_COUNT -->38<!-- /COUNT --> apps backend reales) — decisión de alcance deliberada, no una brecha por cerrar: Rastro es agentic-first, las 23 restantes ya están cubiertas hoy vía MCP (`rastro_buscar_tools` + `rastro_llamar`, ver `/docs/api`), un dashboard visual por app no es el patrón que escala.
+
+## Lo que Rastro NO hace
+
+- No edita ni publica datos. Es solo lectura.
+- No infiere. La ausencia de un dato se muestra como "404 = no vínculo materializado, no conclusión" (texto literal del backend).
+- No es un buscador nacional. Solo La Libertad en v1.
+- No tiene login. No captura leads. No usa cookies de marketing.
+- No entrena un modelo de lenguaje ni usa uno para responder (la búsqueda es keyword en v1).
+- No se despliega en Vercel. Solo en Cloudflare Pages.
+
+## Fuentes de datos (appsperu)
+
+Rastro NO genera ni infiere datos. Cada cifra viene verbatim de una API del repositorio `Treevu-ai/appsperu`. Las <!-- COUNT:APP_COUNT -->38<!-- /COUNT --> apps backend (14 con dashboard visual propio en este sitio, las 23 restantes vía MCP — decisión de alcance, no brecha; ver `src/lib/types.ts`):
+
+- radar-ejecucion (MEF, presupuesto/ejecución)
+- compras-publicas (OECE/OCDS, contrataciones)
+- radar-inversiones (Invierte.pe, proyectos de inversión)
+- infobras (Contraloría, obras públicas)
+- ceplan-estrategico (CEPLAN, indicadores estratégicos)
+- ceplan-geo (CEPLAN, capas geoespaciales)
+- identidad-fiscal (SUNAT, padrón RUC)
+- salud-institucional (score compuesto, sin BD propia)
+- proveedores-sancionados (RNP/OECE, inhabilitaciones)
+- actividad-agraria (MIDAGRI, jornal y alquiler)
+- seguridad-ciudadana (MININTER/SIDPOL, denuncias)
+- bcrp-comercio-exterior (BCRP, comercio nacional)
+- inversion-privada (PROINVERSIÓN, APP/PA)
+- bcrp-la-libertad (BCRP Trujillo, síntesis regional)
+- servicios-salud (SUSALUD, prestadores de salud)
+- programas-sociales (MIDIS, programas sociales)
+- actividad-empresarial (MTPE, actividad empresarial)
+- informes-control (Contraloría, informes de control)
+- mindef (MINDEF, defensa)
+- mimp (MIMP, mujer y poblaciones vulnerables)
+- renamu (INEI, registro nacional de municipalidades)
+- autoridades-electas (JNE, autoridades electas)
+- instituciones-educativas (MINEDU, instituciones educativas)
+- infracciones-ambientales (OEFA/MINAM, infracciones ambientales)
+- red-vial-subnacional (MTC, red vial subnacional)
+- residuos-solidos (MINAM, residuos sólidos)
+- infraestructura-mtc (MTC, infraestructura de transportes)
+- riesgo-fiscal-isds (MEF, pasivos contingentes ISDS/APP)
+- candidatos-erm (JNE/Datapol, candidatos ERM 2026)
+- poder-judicial (Poder Judicial, estadística jurisdiccional)
+- violencia-escolar (MINEDU/SíseVe, casos reportados)
+- legislativo-congreso (Congreso, proyectos de ley)
+- catastro-minero (INGEMMET, derechos mineros)
+- areas-protegidas (SERNANP, áreas naturales protegidas)
+- senace-cartera-proyectos (SENACE, certificación ambiental)
+- catastro-forestal (SERFOR, catastro forestal)
+- emergencias-indeci (INDECI/SINPAD, emergencias históricas)
+
+## Persona y proyecto
+
+- Autor formal: Ricardo Cuba Alván
+- Repositorio: https://github.com/Treevu-ai/appsperu
+- Documentos clave del proyecto:
+  - PRD: https://github.com/Treevu-ai/appsperu/blob/master/docs/PRD_Rastro_Capa_Lectura_v1.md
+  - Tickets: https://github.com/Treevu-ai/appsperu/blob/master/docs/TICKETS_Rastro_Capa_Lectura_v1.md
+  - Backlog: https://github.com/Treevu-ai/appsperu/blob/master/docs/BACKLOG_Rastro_Capa_Lectura_v1.md
+  - Estado del backend: https://github.com/Treevu-ai/appsperu/blob/master/docs/ESTADO.md
+  - Conectores: https://github.com/Treevu-ai/appsperu/blob/master/docs/conectores.md
+  - MCP server (código): https://github.com/Treevu-ai/appsperu/tree/master/mcp-server
+
+## Cita sugerida
+
+```
+Rastro v0.1.0 · La Libertad · [fuente app/tool] · corte [YYYY-MM-DD] · cobertura [COMPLETA|PARCIAL|BLOQUEADA] · https://www.rastro.fyi/[ruta]
+```
+
+Rastro no debe usarse como fuente de declaraciones causales (fraude, favorecimiento, abandono). Las cifras son descriptivas; las conclusiones requieren consulta a la fuente oficial primaria (MEF, OECE, INFOBRAS, etc.).

@@ -1994,8 +1994,32 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: {
       departamento: z.string().min(1).optional(),
       provincia: z.string().min(1).optional(),
+      ubigeo: z.string().regex(/^\d{6}$/).optional(),
       anio: z.string().regex(/^\d{4}$/).optional().describe("Año de 4 dígitos."),
       modalidad: z.string().min(1).optional(),
+    },
+  },
+  {
+    name: "seguridad_ciudadana_denuncias_termometro",
+    handler: "termometro:get",
+    app: "seguridad-ciudadana",
+    description:
+      "Termómetro de denuncias: compara el mes más reciente disponible de un departamento (y opcionalmente " +
+      "modalidad) contra el mismo mes en años anteriores (2018-2026) usando z-score (CRÍTICO z>3, ALERTA z>2, " +
+      "NORMAL z>1, si no BAJO; SIN_HISTORIAL si no hay desviación calculable). tasa_100k usa como denominador el " +
+      "padrón electoral RENIEC 2026 (población civil 18+ registrada), NO el censo INEI de población total — " +
+      "subestima la población real, aceptable para comparar un departamento consigo mismo en el tiempo, no para " +
+      "reportar población absoluta. variacion_mensual_pct compara contra el promedio histórico del mismo mes " +
+      "(no contra el mes calendario anterior). 400 si falta departamento, 404 si no hay datos en SIDPOL para la " +
+      "combinación pedida (departamento, o departamento + anio/modalidad si se filtran) — no solo cuando el " +
+      "departamento en sí carece de datos. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/denuncias/termometro",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).describe("Requerido."),
+      modalidad: z.string().min(1).optional().describe("Ej. 'Extorsión', 'Robo'. Sin filtro, agrega todas las modalidades."),
+      anio: z.string().regex(/^\d{4}$/).optional().describe("Evalúa ese año como \"actual\" en vez del más reciente disponible."),
     },
   },
   {
@@ -3510,6 +3534,110 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: {
       departamento: z.string().min(1).optional().describe("Default LA LIBERTAD."),
       peligros: z.string().min(1).optional().describe("Lista separada por comas; reemplaza el set default."),
+    },
+  },
+
+  // ---- osinergmin-combustibles (OSINERGMIN) ----
+  {
+    name: "osinergmin_combustibles_grifos",
+    handler: "grifos:list",
+    app: "osinergmin-combustibles",
+    description:
+      "Registro de grifos y estaciones de servicio (OSINERGMIN) — expediente, código OSINERGMIN, RUC, razón " +
+      "social, ubicación, tipo de establecimiento, capacidad de almacenamiento, vigencia de registro. " +
+      "3,429 filas nacionales verificadas. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y " +
+      "`hasMore`. " + SIN_SCHEDULER,
+    pathTemplate: "/api/grifos",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+      ruc: z.string().regex(/^\d{11}$/).optional(),
+      tipoEstablecimiento: z.string().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "osinergmin_combustibles_precios",
+    handler: "precios:list",
+    app: "osinergmin-combustibles",
+    description:
+      "Reporte diario SCOP de precios registrados por Distribuidores Minoristas de Combustibles Líquidos " +
+      "(OSINERGMIN) — diesel, petróleo industrial, gasohol. Precio mínimo/máximo en soles por el RUC del " +
+      "distribuidor minorista, NO precio al consumidor final en grifo. 1,034 filas nacionales verificadas, " +
+      "incluye La Libertad. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/precios",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      producto: z.string().min(1).optional().describe("Ej. 'DIESEL B5', 'GASOHOL REGULAR'."),
+      ruc: z.string().regex(/^\d{11}$/).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+
+  // ---- ositran-reclamos (OSITRAN) ----
+  {
+    name: "ositran_reclamos_reclamos",
+    handler: "reclamos:list",
+    app: "ositran-reclamos",
+    description:
+      "Reclamos de usuarios sobre carreteras concesionadas (OSITRAN) — por concesión, medio de presentación, " +
+      "motivo, materia y estado del reclamo, agregado por año/mes. 3,978 filas verificadas. Paginación real: " +
+      "usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. " + SIN_SCHEDULER,
+    pathTemplate: "/api/reclamos",
+    pathParams: [],
+    querySchema: {
+      anio: z.coerce.number().int().min(2000).max(2100).optional(),
+      mes: z.coerce.number().int().min(1).max(12).optional(),
+      entidadPrestadora: z.string().min(1).optional(),
+      siglasConcesion: z.string().min(1).optional(),
+      estadoReclamo: z.string().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "ositran_reclamos_trafico",
+    handler: "trafico:list",
+    app: "ositran-reclamos",
+    description:
+      "Tráfico vehicular por peaje en carreteras concesionadas (OSITRAN) — cantidad de vehículos por clase, " +
+      "tipo de tarifa, tipo de eje, agregado por año/mes. 41,000 filas verificadas. Paginación real: usa " +
+      "`limit`/`offset`; la respuesta trae `total` y `hasMore`. " + SIN_SCHEDULER,
+    pathTemplate: "/api/trafico",
+    pathParams: [],
+    querySchema: {
+      anio: z.coerce.number().int().min(2000).max(2100).optional(),
+      mes: z.coerce.number().int().min(1).max(12).optional(),
+      siglasConcesion: z.string().min(1).optional(),
+      peaje: z.string().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "ositran_reclamos_recaudacion",
+    handler: "recaudacion:list",
+    app: "ositran-reclamos",
+    description:
+      "Recaudación por peaje en carreteras concesionadas (OSITRAN) — importe en soles por tipo de " +
+      "recaudación/tarifa/vehículo, agregado por año/mes. 40,500 filas verificadas. Paginación real: usa " +
+      "`limit`/`offset`; la respuesta trae `total` y `hasMore`. " + SIN_SCHEDULER,
+    pathTemplate: "/api/recaudacion",
+    pathParams: [],
+    querySchema: {
+      anio: z.coerce.number().int().min(2000).max(2100).optional(),
+      mes: z.coerce.number().int().min(1).max(12).optional(),
+      siglasConcesion: z.string().min(1).optional(),
+      peaje: z.string().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
 ];

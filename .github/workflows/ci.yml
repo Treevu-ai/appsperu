@@ -37,6 +37,8 @@ jobs:
           - apps/legislativo-congreso/api
           - apps/mindef/api
           - apps/mimp/api
+          - apps/osinergmin-combustibles/api
+          - apps/ositran-reclamos/api
           - apps/poder-judicial/api
           - apps/programas-sociales/api
           - apps/proveedores-sancionados/api
@@ -44,6 +46,7 @@ jobs:
           - apps/radar-inversiones/api
           - apps/red-vial-subnacional/api
           - apps/renamu/api
+          - apps/reniec-padron/api
           - apps/residuos-solidos/api
           - apps/riesgo-fiscal-isds/api
           - apps/salud-institucional/api
