@@ -55,8 +55,10 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.SEGURIDAD_CIUDADANA_DATABASE_URL }}
         run: npx tsx src/ingest/sidpol-connector.ts
-      # Si falla, GitHub ya notifica por correo a quien tenga watch en el
-      # repo -- no hace falta un paso extra de alerta para la v1.
+      # Si falla, GitHub ya notifica por correo al usuario asociado al workflow
+      # (quien hizo el commit/push que lo disparó) si tiene activadas las
+      # notificaciones de fallo -- no depende de "Watch" al repo, no hace
+      # falta un paso extra de alerta para la v1.
 ```
 
 ## Qué falta para que esto sea seguro de activar (no es "solo pegar el YAML")
@@ -74,9 +76,12 @@ jobs:
 3. **Registro de la corrida.** `proveedores-sancionados` ya tiene `ingestion_log` (RCC-01/02, con
    endpoint `/api/meta/freshness`) — ese es el patrón a replicar en las apps que se agreguen al
    cron, para que "¿cuándo corrió por última vez?" sea una consulta, no una suposición.
-4. **Qué pasa si falla.** GitHub Actions notifica por correo a quien tenga "Watch" en el repo
-   cuando un workflow falla — suficiente para v1, pero decisión del usuario si eso basta o si hace
-   falta algo más (Slack, PagerDuty). RCC-12 ("alerta si la ingesta no corre en 48h") necesitaría
+4. **Qué pasa si falla.** GitHub Actions notifica por correo al usuario asociado al workflow (quien
+   disparó la ejecución, ej. el autor del commit/push) si tiene habilitadas las notificaciones de
+   fallo de Actions en su cuenta — no es una notificación genérica a todos los que tengan "Watch"
+   en el repo (hallazgo de CodeRabbit en PR #224, corregido). Suficiente para v1, pero decisión del
+   usuario si eso basta o si hace falta algo más (Slack, PagerDuty). RCC-12 ("alerta si la ingesta
+   no corre en 48h") necesitaría
    además un chequeo activo (ej. un segundo workflow que lea `ingestion_log`/`raw_*_batches` y
    falle si el `MAX(created_at)` es demasiado viejo), no solo depender de que el cron se dispare.
 

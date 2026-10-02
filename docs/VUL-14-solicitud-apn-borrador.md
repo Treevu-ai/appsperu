@@ -11,7 +11,7 @@ seguimiento posterior (VUL-15/16) son acciones del usuario, no de este asistente
 
 Autoridad Portuaria Nacional (APN)
 Oficina de Acceso a la Información Pública
-Vía Plataforma Nacional de Transparencia Estándar: https://www.gob.pe/transparencia
+Vía formulario de solicitud de la APN: https://portalweb.apn.gob.pe/formulario-solicitud/
 
 ## Asunto
 
@@ -25,7 +25,7 @@ portuaria, periodo 2018-2025
 > Al amparo del derecho de acceso a la información pública reconocido en el artículo 2, inciso 5
 > de la Constitución Política del Perú y regulado por el Texto Único Ordenado de la Ley N° 27806,
 > Ley de Transparencia y Acceso a la Información Pública (Decreto Supremo N° 021-2019-JUS), y su
-> Reglamento (Decreto Supremo N° 093-2003-PCM), solicito a la Autoridad Portuaria Nacional (APN)
+> Reglamento (Decreto Supremo N° 007-2024-JUS), solicito a la Autoridad Portuaria Nacional (APN)
 > se sirva proporcionar la siguiente información:
 >
 > 1. Volumen de carga movilizada (en toneladas métricas, TM) por terminal portuario a nivel
@@ -71,6 +71,12 @@ portuaria, periodo 2018-2025
   No se investigó a fondo la causa de la discrepancia (podría deberse a una modificación
   normativa posterior al TUO consultado, o a una variación de la propia APN) — si esto importa,
   verificar directamente con la APN antes de enviar.
+- **Nota de verificación (reglamento y canal de envío):** esta sesión citó inicialmente el
+  Decreto Supremo N° 093-2003-PCM como Reglamento de la Ley N° 27806 — cita incorrecta, ese
+  decreto no guarda relación con la Ley de Transparencia. El Reglamento vigente es el Decreto
+  Supremo N° 007-2024-JUS (hallazgo de CodeRabbit en PR #224, corregido). También se reemplazó
+  el enlace genérico al portal de transparencia por el formulario específico de la APN
+  (https://portalweb.apn.gob.pe/formulario-solicitud/), que es el canal real de presentación.
 - Guardar el cargo/constancia de presentación (la Plataforma de Transparencia genera un número de
   expediente), y ese número es lo que se necesita para reclamar si no hay respuesta dentro del
   plazo.

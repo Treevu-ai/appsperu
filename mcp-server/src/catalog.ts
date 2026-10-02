@@ -1981,8 +1981,9 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "padrón electoral RENIEC 2026 (población civil 18+ registrada), NO el censo INEI de población total — " +
       "subestima la población real, aceptable para comparar un departamento consigo mismo en el tiempo, no para " +
       "reportar población absoluta. variacion_mensual_pct compara contra el promedio histórico del mismo mes " +
-      "(no contra el mes calendario anterior). 400 si falta departamento, 404 si el departamento no tiene datos " +
-      "en SIDPOL. " +
+      "(no contra el mes calendario anterior). 400 si falta departamento, 404 si no hay datos en SIDPOL para la " +
+      "combinación pedida (departamento, o departamento + anio/modalidad si se filtran) — no solo cuando el " +
+      "departamento en sí carece de datos. " +
       SIN_SCHEDULER,
     pathTemplate: "/api/denuncias/termometro",
     pathParams: [],
