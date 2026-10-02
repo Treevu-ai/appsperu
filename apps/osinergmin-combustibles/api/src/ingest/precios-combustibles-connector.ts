@@ -106,23 +106,32 @@ async function ingestPreciosCombustibles(): Promise<{
   try {
     // Idempotencia por checksum: el reporte diario a veces se vuelve a
     // descargar sin haber cambiado (mismo contenido exacto). Esta tabla no
-    // tiene clave natural para un ON CONFLICT por fila, así que sin este
-    // chequeo una corrida repetida duplicaría las 1,034 filas -- hallazgo de
-    // CodeRabbit en PR #223, confirmado.
-    const { rows: existente } = await client.query<{ id: number }>(
-      `SELECT id FROM raw_osinergmin_batches WHERE dataset = $1 AND checksum = $2 LIMIT 1`,
-      [DATASET, checksum]
-    );
-    if (existente.length > 0) {
-      return { batchId: existente[0].id, filasInsertadas: 0, filasRechazadas: rejected };
-    }
-
+    // tiene clave natural para un ON CONFLICT por fila, así que sin esto una
+    // corrida repetida duplicaría las 1,034 filas -- hallazgo de CodeRabbit
+    // en PR #223, confirmado. Un SELECT de existencia seguido de un INSERT
+    // aparte deja una ventana real: dos corridas que arrancan a la vez
+    // pueden ambas ver "no existe" antes de que la otra termine de
+    // insertar (segundo hallazgo de CodeRabbit, confirmado). El claim del
+    // batch es una sola sentencia atómica contra el índice único parcial de
+    // 003_unique_batch_checksum.sql -- si ya existe, `ON CONFLICT DO
+    // NOTHING` no inserta nada y la siguiente SELECT recupera el id real.
     await client.query("BEGIN");
-    const { rows: batchRows } = await client.query<{ id: number }>(
-      `INSERT INTO raw_osinergmin_batches (dataset, source_url, checksum, record_count) VALUES ($1, $2, $3, $4) RETURNING id`,
+    const { rows: claimRows } = await client.query<{ id: number }>(
+      `INSERT INTO raw_osinergmin_batches (dataset, source_url, checksum, record_count)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (dataset, checksum) WHERE dataset = 'osinergmin_precios_combustibles_dmin' DO NOTHING
+       RETURNING id`,
       [DATASET, SOURCE_URL, checksum, rows.length + rejected]
     );
-    const batchId = batchRows[0].id;
+    if (claimRows.length === 0) {
+      await client.query("COMMIT");
+      const { rows: existente } = await pool.query<{ id: number }>(
+        `SELECT id FROM raw_osinergmin_batches WHERE dataset = $1 AND checksum = $2 LIMIT 1`,
+        [DATASET, checksum]
+      );
+      return { batchId: existente[0].id, filasInsertadas: 0, filasRechazadas: rejected };
+    }
+    const batchId = claimRows[0].id;
 
     for (const row of rows) {
       await client.query(

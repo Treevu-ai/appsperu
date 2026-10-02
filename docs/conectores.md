@@ -1214,10 +1214,10 @@ Investigado y construido 2026-10-01/02.
 
 | | |
 |---|---|
-| **Descripción** | Reporte diario SCOP de precios registrados por Distribuidores Minoristas de Combustibles Líquidos — diesel, petróleo industrial, gasohol, precio mín/máx en soles por RUC del distribuidor mayorista (NO precio al consumidor final en grifo). |
+| **Descripción** | Reporte diario SCOP de precios registrados por Distribuidores Minoristas de Combustibles Líquidos — diesel, petróleo industrial, gasohol, precio mín/máx en soles por RUC del distribuidor minorista (NO precio al consumidor final en grifo). |
 | **Fuente pública sin auth** | `osinergmin.gob.pe/.../CL-Registro-precios-DMIN.csv` (SharePoint), ~21MB, actualizado a diario. |
 | **Formato real** | CSV delimitado por `;`, columnas con padding de espacios fijo, decimales con coma (`"11,8"` → `11.8`). |
-| **Sin clave estable → append por batch** | Reporte diario sin ON CONFLICT; cada corrida inserta un nuevo batch (histórico, no reemplaza el anterior). |
+| **Append por batch, idempotente por checksum** | Cada corrida con contenido nuevo (checksum distinto) agrega un batch nuevo (histórico, no reemplaza el anterior). Reingestar el mismo archivo (mismo checksum) se omite e inserta 0 filas — el claim del batch es atómico vía `INSERT ... ON CONFLICT (dataset, checksum) DO NOTHING` contra un índice único parcial (`003_unique_batch_checksum.sql`), no un SELECT-luego-INSERT con ventana de carrera. |
 | **Frecuencia** | Manual (`npm run ingest:precios` en `apps/osinergmin-combustibles/api`). Sin scheduler — la fuente se actualiza a diario, candidato para RCC-10 (ver `docs/BACKLOG_Scheduler_Ingesta_Diseno_v1.md`). |
 | **Fuente de datos** | `osinergmin.gob.pe` (OSINERGMIN, sistema SCOP). |
 | **Cobertura real ingerida** | Verificado en vivo 2026-10-01: **1,034/1,034 filas, 0 rechazadas**, incluye cobertura de La Libertad (14 filas). |
