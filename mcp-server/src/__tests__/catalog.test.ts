@@ -171,6 +171,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "seguridad_ciudadana_comisarias",
     "seguridad_ciudadana_crossref",
     "seguridad_ciudadana_denuncias",
+    "seguridad_ciudadana_denuncias_termometro",
     "seguridad_ciudadana_equipamiento",
     "seguridad_ciudadana_equipamiento_resumen",
   ],

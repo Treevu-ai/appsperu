@@ -1970,6 +1970,28 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
   {
+    name: "seguridad_ciudadana_denuncias_termometro",
+    handler: "termometro:get",
+    app: "seguridad-ciudadana",
+    description:
+      "Termómetro de denuncias: compara el mes más reciente disponible de un departamento (y opcionalmente " +
+      "modalidad) contra el mismo mes en años anteriores (2018-2026) usando z-score (CRÍTICO z>3, ALERTA z>2, " +
+      "NORMAL z>1, si no BAJO; SIN_HISTORIAL si no hay desviación calculable). tasa_100k usa como denominador el " +
+      "padrón electoral RENIEC 2026 (población civil 18+ registrada), NO el censo INEI de población total — " +
+      "subestima la población real, aceptable para comparar un departamento consigo mismo en el tiempo, no para " +
+      "reportar población absoluta. variacion_mensual_pct compara contra el promedio histórico del mismo mes " +
+      "(no contra el mes calendario anterior). 400 si falta departamento, 404 si el departamento no tiene datos " +
+      "en SIDPOL. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/denuncias/termometro",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).describe("Requerido."),
+      modalidad: z.string().min(1).optional().describe("Ej. 'Extorsión', 'Robo'. Sin filtro, agrega todas las modalidades."),
+      anio: z.string().regex(/^\d{4}$/).optional().describe("Evalúa ese año como \"actual\" en vez del más reciente disponible."),
+    },
+  },
+  {
     name: "seguridad_ciudadana_crossref",
     handler: "crossref:list",
     app: "seguridad-ciudadana",

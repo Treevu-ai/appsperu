@@ -125,6 +125,7 @@ import * as seguridad_ciudadana_comisarias from "./seguridad-ciudadana/comisaria
 import * as seguridad_ciudadana_crossref from "./seguridad-ciudadana/crossref.js";
 import * as seguridad_ciudadana_denuncias from "./seguridad-ciudadana/denuncias.js";
 import * as seguridad_ciudadana_equipamiento from "./seguridad-ciudadana/equipamiento.js";
+import * as seguridad_ciudadana_termometro from "./seguridad-ciudadana/termometro.js";
 import * as senace_cartera_proyectos_proyectos from "./senace-cartera-proyectos/proyectos.js";
 import * as servicios_salud_crossref from "./servicios-salud/crossref.js";
 import * as servicios_salud_ipress from "./servicios-salud/ipress.js";
@@ -251,6 +252,7 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "seguridad-ciudadana/crossref": seguridad_ciudadana_crossref,
   "seguridad-ciudadana/denuncias": seguridad_ciudadana_denuncias,
   "seguridad-ciudadana/equipamiento": seguridad_ciudadana_equipamiento,
+  "seguridad-ciudadana/termometro": seguridad_ciudadana_termometro,
   "senace-cartera-proyectos/proyectos": senace_cartera_proyectos_proyectos,
   "servicios-salud/crossref": servicios_salud_crossref,
   "servicios-salud/ipress": servicios_salud_ipress,
