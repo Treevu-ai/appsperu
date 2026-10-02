@@ -38,12 +38,18 @@ function parseDecimalComa(value: string): number | null {
   return Number.isNaN(n) ? null : n;
 }
 
+/**
+ * La fuente entrega la fecha sin zona horaria, pero es hora local de Perú
+ * (UTC-05:00, sin horario de verano). Marcarla como `Z` (UTC) desplazaría el
+ * instante 5 horas al guardarlo en una columna `TIMESTAMPTZ` -- hallazgo de
+ * CodeRabbit en PR #223, confirmado.
+ */
 function parseFechaRegistro(value: string): string | null {
   const v = nanToNull(value);
   if (!v) return null;
   const m = v.match(/^(\d{4})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
   if (!m) return null;
-  return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}Z`;
+  return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}-05:00`;
 }
 
 function parseCsv(text: string): { rows: Row[]; rejected: number } {
@@ -98,10 +104,23 @@ async function ingestPreciosCombustibles(): Promise<{
 
   const client = await pool.connect();
   try {
+    // Idempotencia por checksum: el reporte diario a veces se vuelve a
+    // descargar sin haber cambiado (mismo contenido exacto). Esta tabla no
+    // tiene clave natural para un ON CONFLICT por fila, así que sin este
+    // chequeo una corrida repetida duplicaría las 1,034 filas -- hallazgo de
+    // CodeRabbit en PR #223, confirmado.
+    const { rows: existente } = await client.query<{ id: number }>(
+      `SELECT id FROM raw_osinergmin_batches WHERE dataset = $1 AND checksum = $2 LIMIT 1`,
+      [DATASET, checksum]
+    );
+    if (existente.length > 0) {
+      return { batchId: existente[0].id, filasInsertadas: 0, filasRechazadas: rejected };
+    }
+
     await client.query("BEGIN");
     const { rows: batchRows } = await client.query<{ id: number }>(
       `INSERT INTO raw_osinergmin_batches (dataset, source_url, checksum, record_count) VALUES ($1, $2, $3, $4) RETURNING id`,
-      [DATASET, SOURCE_URL, checksum, rows.length]
+      [DATASET, SOURCE_URL, checksum, rows.length + rejected]
     );
     const batchId = batchRows[0].id;
 

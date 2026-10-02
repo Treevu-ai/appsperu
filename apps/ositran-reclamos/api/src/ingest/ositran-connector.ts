@@ -65,42 +65,47 @@ function buildMultiRowInsert(table: string, columns: string[], rows: unknown[][]
   };
 }
 
-const MAX_REINTENTOS_POR_LOTE = 4;
+const MAX_REINTENTOS = 4;
 
 /**
- * Un lote individual puede fallar por `ECONNRESET`/"Connection terminated
- * unexpectedly" de forma intermitente (confirmado en vivo 2026-10-01).
- * Reintenta el mismo lote con backoff antes de propagar el error.
+ * Todos los lotes de una tabla en UNA sola transacción (no un commit por
+ * lote de 500): con el insert fila-por-fila original, un commit por lote
+ * era la única forma de no perder TODO el progreso si una conexión
+ * sostenida por horas se caía a mitad de camino -- pero eso dejaba, cuando
+ * un lote tardío fallaba tras agotar reintentos, todos los lotes previos ya
+ * confirmados en la tabla con un `record_count` que seguía afirmando el
+ * total completo (hallazgo P1 de CodeRabbit en PR #223, confirmado en vivo:
+ * exactamente eso pasó, trafico/recaudacion quedaron truncados a 55,000/
+ * 68,391 y 54,500/59,820 sin que el batch lo reflejara). Con el insert
+ * multi-fila (~500x menos round-trips, tabla completa en segundos) ya no
+ * hace falta ese compromiso: si algo falla, se reintenta la transacción
+ * completa desde cero -- o todas las filas quedan, o ninguna.
  */
-async function insertChunkConReintento(sql: string, params: unknown[]): Promise<void> {
+async function insertTodoConReintento(table: string, columns: string[], rows: unknown[][]): Promise<number> {
   let ultimoError: unknown;
-  for (let intento = 1; intento <= MAX_REINTENTOS_POR_LOTE; intento++) {
+  for (let intento = 1; intento <= MAX_REINTENTOS; intento++) {
     const client = await pool.connect();
     try {
-      await client.query(sql, params);
-      return;
+      await client.query("BEGIN");
+      for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+        const slice = rows.slice(i, i + BATCH_SIZE);
+        const { sql, params } = buildMultiRowInsert(table, columns, slice);
+        await client.query(sql, params);
+      }
+      await client.query("COMMIT");
+      return rows.length;
     } catch (error) {
+      await client.query("ROLLBACK").catch(() => {});
       ultimoError = error;
       const esErrorDeConexion = /ECONNRESET|Connection terminated/i.test(String((error as Error).message));
-      if (!esErrorDeConexion || intento === MAX_REINTENTOS_POR_LOTE) throw error;
-      console.error(`  [reintento ${intento}/${MAX_REINTENTOS_POR_LOTE}] lote falló por error de conexión, reintentando en ${intento * 2}s...`);
+      if (!esErrorDeConexion || intento === MAX_REINTENTOS) throw error;
+      console.error(`  [reintento ${intento}/${MAX_REINTENTOS}] transacción falló por error de conexión, reintentando en ${intento * 2}s...`);
       await new Promise((r) => setTimeout(r, intento * 2000));
     } finally {
       client.release();
     }
   }
   throw ultimoError;
-}
-
-async function insertInBatches(table: string, columns: string[], rows: unknown[][]): Promise<number> {
-  let inserted = 0;
-  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-    const slice = rows.slice(i, i + BATCH_SIZE);
-    const { sql, params } = buildMultiRowInsert(table, columns, slice);
-    await insertChunkConReintento(sql, params);
-    inserted += slice.length;
-  }
-  return inserted;
 }
 
 /**
@@ -129,7 +134,7 @@ async function ingestReclamos(): Promise<{ batchId: number; filasInsertadas: num
   const values = rows.map((r) => [
     Number(r[0]), Number(r[1]), r[2], r[3], r[4], r[5], r[6] || null, r[7] || null, r[8], Number(r[9]) || 0, batchId,
   ]);
-  const inserted = await insertInBatches(
+  const inserted = await insertTodoConReintento(
     "reclamos_carreteras",
     [
       "anio", "mes", "entidad_prestadora", "concesion", "siglas_concesion", "medio_presentacion",
@@ -142,14 +147,14 @@ async function ingestReclamos(): Promise<{ batchId: number; filasInsertadas: num
 
 async function ingestTrafico(): Promise<{ batchId: number; filasInsertadas: number }> {
   const text = await fetchText(TRAFICO_URL);
-  const rows = parseStandardCsv(text).filter((r) => r.length >= 11);
+  const rows = parseStandardCsv(text).filter((r) => r.length >= 12);
   await clearTable("trafico_vehicular_carreteras");
   const batchId = await saveBatch("trafico_vehicular_carreteras", TRAFICO_URL, text, rows.length);
   const values = rows.map((r) => [
     Number(r[0]), Number(r[1]), r[2], r[3], r[4], r[5] || null, r[6] || null, r[7] || null,
     r[8] || null, r[9] || null, r[10] || null, Number(r[11]?.replace(/,/g, "")) || 0, batchId,
   ]);
-  const inserted = await insertInBatches(
+  const inserted = await insertTodoConReintento(
     "trafico_vehicular_carreteras",
     [
       "anio", "mes", "entidad_prestadora", "concesion", "siglas_concesion", "peaje", "clase_vehiculo",
@@ -162,14 +167,14 @@ async function ingestTrafico(): Promise<{ batchId: number; filasInsertadas: numb
 
 async function ingestRecaudacion(): Promise<{ batchId: number; filasInsertadas: number }> {
   const text = await fetchText(RECAUDACION_URL);
-  const rows = parseStandardCsv(text).filter((r) => r.length >= 11);
+  const rows = parseStandardCsv(text).filter((r) => r.length >= 12);
   await clearTable("recaudacion_carreteras");
   const batchId = await saveBatch("recaudacion_carreteras", RECAUDACION_URL, text, rows.length);
   const values = rows.map((r) => [
     Number(r[0]), Number(r[1]), r[2], r[3], r[4], r[5] || null, r[6] || null, r[7] || null,
     r[8] || null, r[9] || null, r[10] || null, Number(r[11]?.replace(/,/g, "")) || 0, batchId,
   ]);
-  const inserted = await insertInBatches(
+  const inserted = await insertTodoConReintento(
     "recaudacion_carreteras",
     [
       "anio", "mes", "entidad_prestadora", "concesion", "siglas_concesion", "peaje", "tipo_recaudacion",
@@ -190,9 +195,19 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   // las 3 en secuencia (comportamiento original).
   const fase = process.argv[2];
   const fn = fase === "reclamos" ? ingestReclamos : fase === "trafico" ? ingestTrafico : fase === "recaudacion" ? ingestRecaudacion : null;
+  // Secuencial, no Promise.all: el comentario de arriba documenta que
+  // sostener varios flujos de ingesta concurrentes contra el mismo host
+  // es precisamente el escenario que causó ECONNRESET en vivo -- correr
+  // las 3 fases en paralelo aquí contradecía esa misma nota (hallazgo de
+  // CodeRabbit en PR #223, confirmado).
   const run = fn
     ? fn().then((r) => ({ [fase as string]: r }))
-    : Promise.all([ingestReclamos(), ingestTrafico(), ingestRecaudacion()]).then(([reclamos, trafico, recaudacion]) => ({ reclamos, trafico, recaudacion }));
+    : (async () => {
+        const reclamos = await ingestReclamos();
+        const trafico = await ingestTrafico();
+        const recaudacion = await ingestRecaudacion();
+        return { reclamos, trafico, recaudacion };
+      })();
 
   run
     .then((summary) => {

@@ -3513,7 +3513,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
     description:
       "Reporte diario SCOP de precios registrados por Distribuidores Minoristas de Combustibles Líquidos " +
       "(OSINERGMIN) — diesel, petróleo industrial, gasohol. Precio mínimo/máximo en soles por el RUC del " +
-      "distribuidor mayorista, NO precio al consumidor final en grifo. 1,034 filas nacionales verificadas, " +
+      "distribuidor minorista, NO precio al consumidor final en grifo. 1,034 filas nacionales verificadas, " +
       "incluye La Libertad. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. " +
       SIN_SCHEDULER,
     pathTemplate: "/api/precios",

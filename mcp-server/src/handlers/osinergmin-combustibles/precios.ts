@@ -91,7 +91,7 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
       })),
       fuente: {
         dataset: "OSINERGMIN - SCOP, Registro de precios de Distribuidores Minoristas de Combustibles Líquidos",
-        nota: "Precio registrado por el propio distribuidor mayorista, no precio al consumidor final en grifo.",
+        nota: "Precio registrado por el propio distribuidor minorista, no precio al consumidor final en grifo.",
       },
     },
   };

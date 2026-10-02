@@ -30,6 +30,19 @@ function nanToNull(value: string): string | null {
   return v === "" || v.toLowerCase() === "nan" ? null : v;
 }
 
+/**
+ * `Number("1.234,5")` o cualquier texto no numérico da `NaN`, y el driver
+ * `pg` lo envía como el string `'NaN'` -- Postgres lo acepta en una columna
+ * `NUMERIC` en vez de rechazarlo, así que un valor corrupto entraba en
+ * silencio. Hallazgo de CodeRabbit en PR #223, confirmado.
+ */
+function parseNumeric(value: string): number | null {
+  const v = nanToNull(value);
+  if (v === null) return null;
+  const n = Number(v);
+  return Number.isNaN(n) ? null : n;
+}
+
 function parseFechaDdMmYyyy(value: string): string | null {
   const v = nanToNull(value);
   if (!v) return null;
@@ -103,7 +116,7 @@ function parseCsv(text: string): { rows: Row[]; rejected: number } {
       provincia: nanToNull(cols[8]),
       distrito: nanToNull(cols[9]),
       tipoEstablecimiento: nanToNull(cols[10]),
-      capacidadTotalClGln: nanToNull(cols[21]) !== null ? Number(cols[21]) : null,
+      capacidadTotalClGln: parseNumeric(cols[21]),
       fechaEmision: parseFechaDdMmYyyy(cols[22]),
       terminoVigencia: nanToNull(cols[23]),
       representante: nanToNull(cols[24]),
@@ -126,7 +139,7 @@ async function ingestOsinergmin(): Promise<{ batchId: number; filasInsertadas: n
     await client.query("BEGIN");
     const { rows: batchRows } = await client.query<{ id: number }>(
       `INSERT INTO raw_osinergmin_batches (dataset, source_url, checksum, record_count) VALUES ($1, $2, $3, $4) RETURNING id`,
-      [DATASET, SOURCE_URL, checksum, rows.length]
+      [DATASET, SOURCE_URL, checksum, rows.length + rejected]
     );
     const batchId = batchRows[0].id;
 
