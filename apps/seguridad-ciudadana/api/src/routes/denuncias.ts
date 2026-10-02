@@ -9,6 +9,7 @@ export const denunciasRouter = Router();
 const DenunciasQuerySchema = z.object({
   departamento: z.string().min(1).optional(),
   provincia: z.string().min(1).optional(),
+  ubigeo: z.string().regex(/^\d{6}$/, "ubigeo debe tener 6 dígitos").optional(),
   anio: z
     .string()
     .regex(/^\d{4}$/, "anio debe ser un año de 4 dígitos")
@@ -38,6 +39,10 @@ denunciasRouter.get(
     if (parsed.provincia) {
       values.push(parsed.provincia.toUpperCase());
       conditions.push(`provincia = $${values.length}`);
+    }
+    if (parsed.ubigeo) {
+      values.push(parsed.ubigeo);
+      conditions.push(`ubigeo = $${values.length}`);
     }
     if (parsed.anio) {
       values.push(Number(parsed.anio));

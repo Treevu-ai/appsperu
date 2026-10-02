@@ -1193,6 +1193,22 @@ Investigado y construido 2026-09-22 (ticket ADS-05, `docs/BACKLOG_Organismos_Ads
 
 ---
 
+<a id="reniec-padron"></a>
+## reniec-padron — Padrón electoral (RENIEC)
+
+### `reniec-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Padrón electoral 2026 de RENIEC — conteos por ubigeo/departamento/provincia/distrito, sexo, rango de edad, caducidad de DNI, discapacidad, educación, estado civil, tipo de DNI. Es población civil 18+ años con DNI vigente (excluye menores y extranjeros residentes), no el censo INEI de población total. |
+| **Uso real en Rastro** | Fuente del denominador poblacional de `seguridad-ciudadana` (`poblacion_departamental`, ver ficha de esa app) para calcular tasas por 100k habitantes en el Termómetro SIDPOL — es la única fuente de población por departamento ya ingerida con datos reales. |
+| **Frecuencia** | Manual (`npm run ingest` o equivalente en `apps/reniec-padron/api`, ver package.json). Sin scheduler. |
+| **Fuente de datos** | `datosabiertos.gob.pe` (RENIEC), CSV directo. |
+| **Resiliencia de ingesta** | Commits por lote de 1,000 filas (no una sola transacción de 153 lotes) -- un corte de conexión a mitad de camino revierte solo el lote en curso, confirmado en vivo 2026-09-30. Serializado por `pg_advisory_lock(hashtext(checksum))` durante toda la ingesta -- corridas concurrentes duplicaron datos en vivo antes de este fix (confirmado 2026-10-02). |
+| **Hallazgo real — comillas RFC4180 con `,` embebido** | El `split(",")` ingenuo desalineaba columnas en filas con residencia "Extranjero" cuyo país trae `,` dentro de comillas (ej. `"Egipto, República Árabe"`). Corregido con un splitter que respeta comillas (mismo patrón que `osinergmin-connector.ts`, con `,` en vez de `;`). |
+
+---
+
 <a id="osinergmin-combustibles"></a>
 ## osinergmin-combustibles — Grifos/estaciones y precios de combustibles (OSINERGMIN)
 
