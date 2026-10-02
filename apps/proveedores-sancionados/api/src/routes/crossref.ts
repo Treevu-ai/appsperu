@@ -49,8 +49,15 @@ type ContractRow = {
  * en compras-publicas -- combinarlos con `origen` evita colisiones entre
  * ambas tablas sin depender de un ID adicional que hoy no se selecciona.
  */
-function referenciaContrato(row: Pick<ContractRow, "origen" | "ocid" | "awardId">): string {
+export function referenciaContrato(row: Pick<ContractRow, "origen" | "ocid" | "awardId">): string {
   return `${row.origen}:${row.ocid ?? ""}:${row.awardId ?? ""}`;
+}
+
+export interface CrossrefParams {
+  departamento?: string;
+  soloInhabilitados?: boolean;
+  soloNuevos?: boolean;
+  soloLectura?: boolean;
 }
 
 /**
@@ -62,13 +69,19 @@ function referenciaContrato(row: Pick<ContractRow, "origen" | "ocid" | "awardId"
  * extraccion. Cubre tanto adjudicaciones OCDS (`awards`) como contratos
  * menores (`minor_contracts`, campo `origen` distingue cada fila -- CX-01).
  */
-crossrefRouter.get("/", asyncHandler(async (req, res) => {
-  const parsed = parseQuery(CrossrefQuerySchema, req.query, res);
-  if (!parsed) return;
+/**
+ * Núcleo de `/api/crossref`, extraído para que `/api/radar` (RCC-05 a
+ * RCC-09, docs/prd/PRD-001-radar-captura-contractual.md) pueda reusar el
+ * mismo cruce sin duplicar la lógica ni hacer una llamada HTTP interna.
+ * Devuelve el mismo shape que el endpoint, más el campo `ruc` en cada
+ * resultado (antes solo expuesto como `rucValido: boolean`) — `/api/radar`
+ * necesita el RUC real para agrupar top5Proveedores.
+ */
+export async function computeCrossref(parsed: CrossrefParams): Promise<{ departamento: string; resultados: unknown[] }> {
   const wantedDepartamento = parsed.departamento?.toUpperCase().trim() ?? "LA LIBERTAD";
-  const soloInhabilitados = parsed.soloInhabilitados === "true";
-  const soloNuevos = parsed.soloNuevos === "true";
-  const soloLectura = parsed.soloLectura === "true";
+  const soloInhabilitados = parsed.soloInhabilitados ?? false;
+  const soloNuevos = parsed.soloNuevos ?? false;
+  const soloLectura = parsed.soloLectura ?? false;
   const ambitoNacional = wantedDepartamento === "TODOS";
 
   const [{ rows: awardRows }, { rows: minorContractRows }] = await Promise.all([
@@ -233,6 +246,7 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
       ocid: row.ocid,
       awardId: row.awardId,
       supplierId,
+      ruc,
       supplierName: row.supplierName,
       buyerName: row.buyerName,
       valorMonto: row.valorMonto,
@@ -265,8 +279,17 @@ crossrefRouter.get("/", asyncHandler(async (req, res) => {
     .filter((r) => !soloInhabilitados || r.tieneInhabilitacionVigente)
     .filter((r) => !soloNuevos || r.esNuevoDesdeUltimaCorrida);
 
-  res.json({
-    departamento: wantedDepartamento,
-    resultados: filtrados,
+  return { departamento: wantedDepartamento, resultados: filtrados };
+}
+
+crossrefRouter.get("/", asyncHandler(async (req, res) => {
+  const parsed = parseQuery(CrossrefQuerySchema, req.query, res);
+  if (!parsed) return;
+  const resultado = await computeCrossref({
+    departamento: parsed.departamento,
+    soloInhabilitados: parsed.soloInhabilitados === "true",
+    soloNuevos: parsed.soloNuevos === "true",
+    soloLectura: parsed.soloLectura === "true",
   });
+  res.json(resultado);
 }));

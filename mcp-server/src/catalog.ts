@@ -1630,6 +1630,28 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
   {
+    name: "proveedores_sancionados_radar",
+    app: "proveedores-sancionados",
+    handler: "radar:get",
+    description:
+      "Radar de Captura Contractual consolidado (RCC-05 a RCC-09, docs/prd/PRD-001-radar-captura-contractual.md) " +
+      "— resumen nacional de proveedores con inhabilitación vigente y contratos activos en una sola llamada: " +
+      "totalProveedores, totalContratosMonto (en PEN; contratosEnOtraMoneda/montoEnOtraMoneda separa ~15 " +
+      "adjudicaciones reales en USD), top5Proveedores, top5Entidades, frescura por fuente (proveedoresSancionados " +
+      "vía ingestion_log, compras-publicas vía raw_ocds_batches), proveedoresDobleInhabilitacion (sanción " +
+      "administrativa Y judicial simultánea) y alertas de contratos vistos por primera vez en `ventanaDiasNuevos` " +
+      "días (default 7). `nuevosDesdeUltimaCorrida`/alertas se leen de `sanciones_contratos_vistos` sin volver a " +
+      "correr el cruce — si `proveedores_sancionados_crossref` (con `soloNuevos`) no se ha ejecutado en esa " +
+      "ventana, da 0 aunque existan sanciones nuevas sin detectar todavía: significa \"nadie corrió la " +
+      "detección\", no \"no hay novedades\" (sin scheduler, ver docs/BACKLOG_Scheduler_Ingesta_Diseno_v1.md). " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/radar",
+    pathParams: [],
+    querySchema: {
+      ventanaDiasNuevos: z.coerce.number().int().min(1).max(90).optional().describe("Default 7."),
+    },
+  },
+  {
     name: "proveedores_sancionados_personas",
     app: "proveedores-sancionados",
     handler: "personas-sancionadas:list",
