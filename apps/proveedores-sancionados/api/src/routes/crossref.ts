@@ -70,12 +70,16 @@ export interface CrossrefParams {
  * menores (`minor_contracts`, campo `origen` distingue cada fila -- CX-01).
  */
 /**
- * Núcleo de `/api/crossref`, extraído para que `/api/radar` (RCC-05 a
- * RCC-09, docs/prd/PRD-001-radar-captura-contractual.md) pueda reusar el
- * mismo cruce sin duplicar la lógica ni hacer una llamada HTTP interna.
+ * Núcleo de `/api/crossref`, extraído para que el propio router de abajo no
+ * mezcle parseo de query con la lógica del cruce. `/api/radar` (RCC-05 a
+ * RCC-08, docs/prd/PRD-001-radar-captura-contractual.md) NO llama a esta
+ * función -- corre su propia copia literal de las mismas queries (ver
+ * docblock de `routes/radar.ts`), porque el handler MCP equivalente no
+ * podría importar esta función de todas formas (bundle de Workers distinto)
+ * y `sql-fidelity.test.ts` exige que el SQL de cada handler sea rastreable
+ * a SU propio route homónimo.
  * Devuelve el mismo shape que el endpoint, más el campo `ruc` en cada
- * resultado (antes solo expuesto como `rucValido: boolean`) — `/api/radar`
- * necesita el RUC real para agrupar top5Proveedores.
+ * resultado (antes solo expuesto como `rucValido: boolean`).
  */
 export async function computeCrossref(parsed: CrossrefParams): Promise<{ departamento: string; resultados: unknown[] }> {
   const wantedDepartamento = parsed.departamento?.toUpperCase().trim() ?? "LA LIBERTAD";

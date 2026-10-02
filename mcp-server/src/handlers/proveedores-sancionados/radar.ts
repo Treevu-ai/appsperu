@@ -1,6 +1,6 @@
 import type { NeonRow } from "../../db/neon-pool.js";
 import type { ToolHandlerContext, HandlerResult } from "../registry.js";
-import { extractRuc, referenciaContrato, crossAppPool, crossAppUnavailable, type ContractRow } from "./_helpers.js";
+import { extractRuc, referenciaContrato, vigenteEnFecha, crossAppPool, crossAppUnavailable, type ContractRow } from "./_helpers.js";
 
 interface AwardRow extends NeonRow {
   ocid: string | null;
@@ -26,13 +26,24 @@ interface MinorContractRow extends NeonRow {
 interface InhabRow extends NeonRow {
   ruc: string;
   estado: string | null;
+  desde: string | Date | null;
+  hasta: string | Date | null;
+}
+
+interface DobleInhabRow extends NeonRow {
+  dni_comun: string | null;
+  ruc_administrativo: string;
+  admin_desde: string | Date | null;
+  admin_hasta: string | Date | null;
+  judicial_desde: string | Date | null;
+  judicial_hasta: string | Date | null;
 }
 
 /**
  * Handler para `proveedores_sancionados_radar` — GET /api/radar.
- * SQL idéntico a apps/proveedores-sancionados/api/src/routes/radar.ts, que a
- * su vez reusa (vía import local, no posible acá) las mismas queries de
- * crossref.ts para construir el cruce ámbito nacional + soloInhabilitados.
+ * SQL idéntico a apps/proveedores-sancionados/api/src/routes/radar.ts (copia
+ * literal, no una llamada compartida -- ver docblock de ese archivo).
+ * RCC-09 (signals/redes) queda fuera, mismo criterio que el route.
  */
 export async function get(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const { db, args, env } = ctx;
@@ -43,6 +54,7 @@ export async function get(ctx: ToolHandlerContext): Promise<HandlerResult> {
   if (!Number.isInteger(ventanaDias) || ventanaDias < 1 || ventanaDias > 90) {
     return { status: 400, body: { error: "ventanaDiasNuevos debe ser un entero entre 1 y 90." } };
   }
+  const hoy = new Date().toISOString().slice(0, 10);
 
   const [{ rows: awardRows }, { rows: minorContractRows }, comprasFreshnessRows] = await Promise.all([
     comprasDb.query<AwardRow>(
@@ -96,7 +108,7 @@ export async function get(ctx: ToolHandlerContext): Promise<HandlerResult> {
   }
   const rucs = [...new Set(rucBySupplierId.values())];
 
-  const inhabByRuc = new Map<string, boolean>();
+  const sancionVigenteDesdeRuc = new Map<string, string | Date>();
   if (rucs.length > 0) {
     const { rows: inhabRows } = await db.query<InhabRow>(
       `SELECT i.ruc, i.estado, i.periodo_inhabilitacion, i.resolucion, i.desde, i.hasta, b.fetched_at
@@ -106,7 +118,12 @@ export async function get(ctx: ToolHandlerContext): Promise<HandlerResult> {
       [rucs]
     );
     for (const r of inhabRows) {
-      if ((r.estado ?? "").toUpperCase() === "VIGENTE") inhabByRuc.set(r.ruc, true);
+      if ((r.estado ?? "").toUpperCase() !== "VIGENTE") continue;
+      if (vigenteEnFecha(hoy, r.desde, r.hasta) !== true) continue;
+      const actual = sancionVigenteDesdeRuc.get(r.ruc);
+      if (!actual || (r.desde && new Date(r.desde).getTime() < new Date(actual).getTime())) {
+        sancionVigenteDesdeRuc.set(r.ruc, r.desde as string | Date);
+      }
     }
   }
 
@@ -121,40 +138,59 @@ export async function get(ctx: ToolHandlerContext): Promise<HandlerResult> {
        ORDER BY primera_vez_visto DESC`,
       [ventanaDias]
     ),
-    db.query<{ total: string }>(
-      `SELECT COUNT(DISTINCT COALESCE(ij.dni, i.dni, i.ruc)) AS total
+    db.query<DobleInhabRow>(
+      `SELECT COALESCE(ij.dni, i.dni) AS dni_comun, i.ruc AS ruc_administrativo,
+              i.desde AS admin_desde, i.hasta AS admin_hasta,
+              ij.fecha_inicio AS judicial_desde, ij.fecha_fin AS judicial_hasta
        FROM inhabilitaciones_judiciales ij
        JOIN inhabilitaciones i ON (ij.dni IS NOT NULL AND i.dni = ij.dni) OR i.ruc = ij.ruc_dni`
     ),
   ]);
 
-  const diasDesdeIngesta = (fecha: string | Date | null | undefined) =>
+  const diasDesdeFecha = (fecha: string | Date | null | undefined) =>
     fecha ? Math.floor((Date.now() - new Date(fecha).getTime()) / 86_400_000) : null;
+
+  const identificadoresDobleVigente = new Set<string>();
+  for (const r of dobleInhabRows.rows) {
+    const administrativaVigente = vigenteEnFecha(hoy, r.admin_desde, r.admin_hasta);
+    const judicialVigente = vigenteEnFecha(hoy, r.judicial_desde, r.judicial_hasta);
+    if (administrativaVigente === true && judicialVigente === true) {
+      identificadoresDobleVigente.add(r.dni_comun ?? r.ruc_administrativo);
+    }
+  }
 
   const resultadosConSancion = contractRows
     .map((row) => {
       const ruc = row.supplierId ? rucBySupplierId.get(row.supplierId) ?? null : null;
-      if (!ruc || !inhabByRuc.get(ruc)) return null;
+      if (!ruc || !sancionVigenteDesdeRuc.has(ruc)) return null;
       return { ...row, ruc };
     })
     .filter((r): r is ContractRow & { ruc: string } => r !== null);
 
-  const porProveedor = new Map<string, { ruc: string; supplierName: string | null; montoTotal: number; contratos: number }>();
-  const porEntidad = new Map<string, { buyerName: string; montoTotal: number; contratos: number }>();
+  const contratosUnicosVistos = new Set<string>();
   let totalContratosMonto = 0;
   let contratosConMontoDesconocido = 0;
   let contratosEnOtraMoneda = 0;
-  let montoEnOtraMoneda = 0;
+  const montoPorOtraMoneda = new Map<string, number>();
+
+  const porProveedor = new Map<string, { ruc: string; supplierName: string | null; montoTotal: number; contratos: number }>();
+  const porEntidad = new Map<string, { buyerName: string; montoTotal: number; contratos: number }>();
 
   for (const r of resultadosConSancion) {
     const esOtraMoneda = r.valorMoneda !== null && r.valorMoneda !== "PEN";
-    if (r.valorMonto === null) {
-      contratosConMontoDesconocido++;
-    } else if (esOtraMoneda) {
-      contratosEnOtraMoneda++;
-      montoEnOtraMoneda += r.valorMonto;
-    } else {
-      totalContratosMonto += r.valorMonto;
+    const claveContrato = referenciaContrato(r);
+
+    if (!contratosUnicosVistos.has(claveContrato)) {
+      contratosUnicosVistos.add(claveContrato);
+      if (r.valorMonto === null) {
+        contratosConMontoDesconocido++;
+      } else if (esOtraMoneda) {
+        contratosEnOtraMoneda++;
+        const moneda = r.valorMoneda as string;
+        montoPorOtraMoneda.set(moneda, (montoPorOtraMoneda.get(moneda) ?? 0) + r.valorMonto);
+      } else {
+        totalContratosMonto += r.valorMonto;
+      }
     }
 
     const prov = porProveedor.get(r.ruc) ?? { ruc: r.ruc, supplierName: r.supplierName, montoTotal: 0, contratos: 0 };
@@ -180,6 +216,7 @@ export async function get(ctx: ToolHandlerContext): Promise<HandlerResult> {
     .map((r) => {
       const clave = `${r.ruc} ${referenciaContrato(r)}`;
       const primeraVezVisto = primeraVezPorClave.get(clave) ?? null;
+      const sancionDesde = sancionVigenteDesdeRuc.get(r.ruc) ?? null;
       return {
         tipo: "NUEVO_CONTRATO_SANCIONADO",
         ruc: r.ruc,
@@ -189,7 +226,8 @@ export async function get(ctx: ToolHandlerContext): Promise<HandlerResult> {
         moneda: r.valorMoneda,
         fecha: r.fecha,
         primeraVezVisto,
-        diasDesdeDeteccion: diasDesdeIngesta(primeraVezVisto),
+        diasDesdeSancion: diasDesdeFecha(sancionDesde),
+        diasDesdeDeteccion: diasDesdeFecha(primeraVezVisto),
       };
     });
 
@@ -200,12 +238,12 @@ export async function get(ctx: ToolHandlerContext): Promise<HandlerResult> {
       frescura: {
         proveedoresSancionados: {
           ultimaIngesta: freshnessRows.rows[0]?.ultima_ejecucion ?? null,
-          diasSinActualizar: diasDesdeIngesta(freshnessRows.rows[0]?.ultima_ejecucion),
+          diasSinActualizar: diasDesdeFecha(freshnessRows.rows[0]?.ultima_ejecucion),
           filasIngeridas: freshnessRows.rows[0]?.filas_ingeridas ?? null,
         },
         comprasPublicas: {
           ultimaIngesta: comprasFreshnessRows.rows[0]?.fetched_at ?? null,
-          diasSinActualizar: diasDesdeIngesta(comprasFreshnessRows.rows[0]?.fetched_at),
+          diasSinActualizar: diasDesdeFecha(comprasFreshnessRows.rows[0]?.fetched_at),
         },
       },
       resumen: {
@@ -214,23 +252,28 @@ export async function get(ctx: ToolHandlerContext): Promise<HandlerResult> {
         moneda: "PEN",
         contratosConMontoDesconocido,
         contratosEnOtraMoneda,
-        montoEnOtraMoneda,
+        montoPorOtraMoneda: Object.fromEntries(montoPorOtraMoneda),
         top5Proveedores,
         top5Entidades,
         nuevosDesdeUltimaCorrida: recientesRows.rows.length,
         ventanaDiasNuevos: ventanaDias,
-        proveedoresDobleInhabilitacion: Number(dobleInhabRows.rows[0]?.total ?? 0),
+        proveedoresDobleInhabilitacion: identificadoresDobleVigente.size,
       },
       alertas,
       fuente: {
         dataset: "Cruce TCE/OSCE (inhabilitaciones) x OCDS/SEACE (compras-publicas), ámbito nacional",
         nota:
-          "totalContratosMonto (moneda=PEN) excluye contratos en otra moneda (hoy: 15 en USD, ver " +
-          "contratosEnOtraMoneda/montoEnOtraMoneda) y los sin monto conocido (contratosConMontoDesconocido). " +
+          "totalContratosMonto (moneda=PEN) cuenta cada contrato una sola vez (un award compartido por varios " +
+          "proveedores sancionados no se suma más de una vez), excluye contratos en otra moneda " +
+          "(contratosEnOtraMoneda/montoPorOtraMoneda, desglosado por moneda) y los sin monto conocido " +
+          "(contratosConMontoDesconocido). top5Proveedores/top5Entidades SÍ reflejan el monto completo por cada " +
+          "proveedor/entidad, aunque el award sea compartido -- es su exposición real, no doble conteo. " +
           "minor_contracts no registra moneda en la fuente -- se asume PEN por convención del dataset " +
           "(contratación menor peruana se licita en soles), no por un campo explícito como en awards.USD. " +
-          "nuevosDesdeUltimaCorrida depende de que /api/crossref (soloLectura=false) se haya corrido en la " +
-          "ventana pedida -- no hay scheduler todavía, ver docs/BACKLOG_Scheduler_Ingesta_Diseno_v1.md.",
+          "Sanciones vigentes verificadas por rango de fechas real (vigenteEnFecha), no solo por el campo " +
+          "`estado` de la fuente. nuevosDesdeUltimaCorrida depende de que /api/crossref (soloLectura=false) se " +
+          "haya corrido en la ventana pedida -- no hay scheduler todavía, ver " +
+          "docs/BACKLOG_Scheduler_Ingesta_Diseno_v1.md. signals/redes (RCC-09) no están incluidos.",
       },
     },
   };
