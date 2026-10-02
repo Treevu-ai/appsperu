@@ -38,13 +38,50 @@ function parseFechaDdMmYyyy(value: string): string | null {
   return `${m[3]}-${m[2]}-${m[1]}`;
 }
 
+/**
+ * Split de una línea CSV delimitada por `;` respetando comillas RFC4180
+ * (`""` escapa una comilla literal dentro de un campo entrecomillado).
+ * El `split(";")` ingenuo anterior desalineaba columnas en filas cuya
+ * DIRECCION OPERATIVA trae `;` embebido dentro de comillas (ej.
+ * `"AV. ... LOTES 01; 02; 03"`, confirmado en vivo contra el CSV real).
+ */
+function splitCsvLine(line: string): string[] {
+  const out: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += c;
+      }
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === ";") {
+      out.push(current);
+      current = "";
+    } else {
+      current += c;
+    }
+  }
+  out.push(current);
+  return out;
+}
+
 function parseCsv(text: string): { rows: Row[]; rejected: number } {
   const clean = text.replace(/^﻿/, "");
   const lines = clean.split(/\r?\n/).filter((l) => l.trim().length > 0);
   const rows: Row[] = [];
   let rejected = 0;
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(";");
+    const cols = splitCsvLine(lines[i]);
     if (cols.length < 26) {
       rejected++;
       continue;
@@ -101,8 +138,14 @@ async function ingestOsinergmin(): Promise<{ batchId: number; filasInsertadas: n
             fecha_emision, termino_vigencia, representante, source_batch_id)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
          ON CONFLICT (expediente) DO UPDATE
-           SET registro = EXCLUDED.registro, capacidad_total_cl_gln = EXCLUDED.capacidad_total_cl_gln,
-               termino_vigencia = EXCLUDED.termino_vigencia, source_batch_id = EXCLUDED.source_batch_id`,
+           SET codigo_osinergmin = EXCLUDED.codigo_osinergmin, registro = EXCLUDED.registro,
+               ruc = EXCLUDED.ruc, razon_social = EXCLUDED.razon_social,
+               direccion_operativa = EXCLUDED.direccion_operativa, departamento = EXCLUDED.departamento,
+               provincia = EXCLUDED.provincia, distrito = EXCLUDED.distrito,
+               tipo_establecimiento = EXCLUDED.tipo_establecimiento,
+               capacidad_total_cl_gln = EXCLUDED.capacidad_total_cl_gln,
+               fecha_emision = EXCLUDED.fecha_emision, termino_vigencia = EXCLUDED.termino_vigencia,
+               representante = EXCLUDED.representante, source_batch_id = EXCLUDED.source_batch_id`,
         [
           row.expediente, row.codigoOsinergmin, row.registro, row.ruc, row.razonSocial,
           row.direccionOperativa, row.departamento, row.provincia, row.distrito,

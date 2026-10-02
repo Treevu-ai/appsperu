@@ -16,6 +16,16 @@ async function fetchText(url: string): Promise<string> {
   return res.text();
 }
 
+/**
+ * Cada corrida es un snapshot completo (mismo criterio que catastro-forestal):
+ * sin esto, una corrida que falla a mitad de camino deja datos incompletos
+ * que una corrida posterior solo duplicaría en vez de completar, porque
+ * estas tablas no tienen `ON CONFLICT` ni clave natural.
+ */
+async function clearTable(table: string): Promise<void> {
+  await pool.query(`DELETE FROM ${table}`);
+}
+
 async function saveBatch(dataset: string, url: string, text: string, count: number): Promise<number> {
   const checksum = createHash("sha256").update(text).digest("hex");
   const client = await pool.connect();
@@ -31,36 +41,46 @@ async function saveBatch(dataset: string, url: string, text: string, count: numb
 }
 
 /**
- * Inserta fila por fila, pero committeando cada BATCH_SIZE filas con su
- * propia conexión -- una sola conexión Postgres sostenida por decenas de
- * minutos de inserts terminó en "Connection terminated unexpectedly" en
- * vivo (confirmado 2026-10-01, mismo patrón en ONPE/OSITRAN/RENAMU).
+ * Un `INSERT` multi-fila (una sola sentencia con N `VALUES`) por lote, en vez
+ * de N sentencias de una fila cada una. El insert fila-por-fila original
+ * tardaba ~130ms por fila (un round-trip de red completo contra el host
+ * directo de Neon por cada fila) -- confirmado en vivo 2026-10-01: a ese
+ * ritmo, los ~68,391 registros de tráfico hubieran tardado más de 2 horas y
+ * el proceso terminó interrumpido dos veces antes de completar. Un INSERT
+ * multi-fila de 500 registros es una sola sentencia, así que el número de
+ * round-trips baja ~500x.
  */
+function buildMultiRowInsert(table: string, columns: string[], rows: unknown[][]): { sql: string; params: unknown[] } {
+  const params: unknown[] = [];
+  const groups = rows.map((vals) => {
+    const placeholders = vals.map((v) => {
+      params.push(v);
+      return `$${params.length}`;
+    });
+    return `(${placeholders.join(",")})`;
+  });
+  return {
+    sql: `INSERT INTO ${table} (${columns.join(", ")}) VALUES ${groups.join(", ")}`,
+    params,
+  };
+}
+
 const MAX_REINTENTOS_POR_LOTE = 4;
 
 /**
  * Un lote individual puede fallar por `ECONNRESET`/"Connection terminated
- * unexpectedly" de forma intermitente (confirmado en vivo 2026-10-01, no
- * depende del tamaño del lote -- pasó incluso con lotes ya cortos de 500).
+ * unexpectedly" de forma intermitente (confirmado en vivo 2026-10-01).
  * Reintenta el mismo lote con backoff antes de propagar el error.
  */
-async function insertOneBatchConReintento<T>(
-  slice: T[],
-  insertOne: (client: import("pg").PoolClient, row: T) => Promise<unknown>
-): Promise<void> {
+async function insertChunkConReintento(sql: string, params: unknown[]): Promise<void> {
   let ultimoError: unknown;
   for (let intento = 1; intento <= MAX_REINTENTOS_POR_LOTE; intento++) {
     const client = await pool.connect();
     try {
-      await client.query("BEGIN");
-      for (const row of slice) {
-        await insertOne(client, row);
-      }
-      await client.query("COMMIT");
+      await client.query(sql, params);
       return;
     } catch (error) {
       ultimoError = error;
-      await client.query("ROLLBACK").catch(() => {});
       const esErrorDeConexion = /ECONNRESET|Connection terminated/i.test(String((error as Error).message));
       if (!esErrorDeConexion || intento === MAX_REINTENTOS_POR_LOTE) throw error;
       console.error(`  [reintento ${intento}/${MAX_REINTENTOS_POR_LOTE}] lote falló por error de conexión, reintentando en ${intento * 2}s...`);
@@ -72,11 +92,12 @@ async function insertOneBatchConReintento<T>(
   throw ultimoError;
 }
 
-async function insertInBatches<T>(rows: T[], insertOne: (client: import("pg").PoolClient, row: T) => Promise<unknown>): Promise<number> {
+async function insertInBatches(table: string, columns: string[], rows: unknown[][]): Promise<number> {
   let inserted = 0;
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const slice = rows.slice(i, i + BATCH_SIZE);
-    await insertOneBatchConReintento(slice, insertOne);
+    const { sql, params } = buildMultiRowInsert(table, columns, slice);
+    await insertChunkConReintento(sql, params);
     inserted += slice.length;
   }
   return inserted;
@@ -103,15 +124,18 @@ function parseStandardCsv(text: string): string[][] {
 async function ingestReclamos(): Promise<{ batchId: number; filasInsertadas: number }> {
   const text = await fetchText(RECLAMOS_URL);
   const rows = parseReclamosCsv(text).filter((r) => r.length >= 10);
+  await clearTable("reclamos_carreteras");
   const batchId = await saveBatch("reclamos_carreteras", RECLAMOS_URL, text, rows.length);
-  const inserted = await insertInBatches(rows, (client, r) =>
-    client.query(
-      `INSERT INTO reclamos_carreteras
-         (anio, mes, entidad_prestadora, concesion, siglas_concesion, medio_presentacion,
-          motivo_reclamo, materia_reclamo, estado_reclamo, cantidad_reclamos, source_batch_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
-      [Number(r[0]), Number(r[1]), r[2], r[3], r[4], r[5], r[6] || null, r[7] || null, r[8], Number(r[9]) || 0, batchId]
-    )
+  const values = rows.map((r) => [
+    Number(r[0]), Number(r[1]), r[2], r[3], r[4], r[5], r[6] || null, r[7] || null, r[8], Number(r[9]) || 0, batchId,
+  ]);
+  const inserted = await insertInBatches(
+    "reclamos_carreteras",
+    [
+      "anio", "mes", "entidad_prestadora", "concesion", "siglas_concesion", "medio_presentacion",
+      "motivo_reclamo", "materia_reclamo", "estado_reclamo", "cantidad_reclamos", "source_batch_id",
+    ],
+    values
   );
   return { batchId, filasInsertadas: inserted };
 }
@@ -119,18 +143,19 @@ async function ingestReclamos(): Promise<{ batchId: number; filasInsertadas: num
 async function ingestTrafico(): Promise<{ batchId: number; filasInsertadas: number }> {
   const text = await fetchText(TRAFICO_URL);
   const rows = parseStandardCsv(text).filter((r) => r.length >= 11);
+  await clearTable("trafico_vehicular_carreteras");
   const batchId = await saveBatch("trafico_vehicular_carreteras", TRAFICO_URL, text, rows.length);
-  const inserted = await insertInBatches(rows, (client, r) =>
-    client.query(
-      `INSERT INTO trafico_vehicular_carreteras
-         (anio, mes, entidad_prestadora, concesion, siglas_concesion, peaje, clase_vehiculo,
-          tipo_tarifa, tipo_vehiculo, tipo_eje_veh, nro_ejes, cantidad_vehiculos, source_batch_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-      [
-        Number(r[0]), Number(r[1]), r[2], r[3], r[4], r[5] || null, r[6] || null, r[7] || null,
-        r[8] || null, r[9] || null, r[10] || null, Number(r[11]?.replace(/,/g, "")) || 0, batchId,
-      ]
-    )
+  const values = rows.map((r) => [
+    Number(r[0]), Number(r[1]), r[2], r[3], r[4], r[5] || null, r[6] || null, r[7] || null,
+    r[8] || null, r[9] || null, r[10] || null, Number(r[11]?.replace(/,/g, "")) || 0, batchId,
+  ]);
+  const inserted = await insertInBatches(
+    "trafico_vehicular_carreteras",
+    [
+      "anio", "mes", "entidad_prestadora", "concesion", "siglas_concesion", "peaje", "clase_vehiculo",
+      "tipo_tarifa", "tipo_vehiculo", "tipo_eje_veh", "nro_ejes", "cantidad_vehiculos", "source_batch_id",
+    ],
+    values
   );
   return { batchId, filasInsertadas: inserted };
 }
@@ -138,18 +163,19 @@ async function ingestTrafico(): Promise<{ batchId: number; filasInsertadas: numb
 async function ingestRecaudacion(): Promise<{ batchId: number; filasInsertadas: number }> {
   const text = await fetchText(RECAUDACION_URL);
   const rows = parseStandardCsv(text).filter((r) => r.length >= 11);
+  await clearTable("recaudacion_carreteras");
   const batchId = await saveBatch("recaudacion_carreteras", RECAUDACION_URL, text, rows.length);
-  const inserted = await insertInBatches(rows, (client, r) =>
-    client.query(
-      `INSERT INTO recaudacion_carreteras
-         (anio, mes, entidad_prestadora, concesion, siglas_concesion, peaje, tipo_recaudacion,
-          tipo_tarifa, tipo_vehiculo, tipo_eje_veh, nro_ejes, importe_soles, source_batch_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-      [
-        Number(r[0]), Number(r[1]), r[2], r[3], r[4], r[5] || null, r[6] || null, r[7] || null,
-        r[8] || null, r[9] || null, r[10] || null, Number(r[11]?.replace(/,/g, "")) || 0, batchId,
-      ]
-    )
+  const values = rows.map((r) => [
+    Number(r[0]), Number(r[1]), r[2], r[3], r[4], r[5] || null, r[6] || null, r[7] || null,
+    r[8] || null, r[9] || null, r[10] || null, Number(r[11]?.replace(/,/g, "")) || 0, batchId,
+  ]);
+  const inserted = await insertInBatches(
+    "recaudacion_carreteras",
+    [
+      "anio", "mes", "entidad_prestadora", "concesion", "siglas_concesion", "peaje", "tipo_recaudacion",
+      "tipo_tarifa", "tipo_vehiculo", "tipo_eje_veh", "nro_ejes", "importe_soles", "source_batch_id",
+    ],
+    values
   );
   return { batchId, filasInsertadas: inserted };
 }
