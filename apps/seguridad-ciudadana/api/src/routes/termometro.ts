@@ -47,7 +47,9 @@ function normalCdf(z: number): number {
 }
 
 /**
- * Termómetro de denuncias (SIDPOL) — Historia 2.2, SID-05 a SID-09.
+ * Termómetro de denuncias (SIDPOL) — Historia 2.2, SID-05 a SID-08.
+ * **SID-09 NO está implementado** (ver nota más abajo) -- este endpoint
+ * cubre SID-05/06/07/08 del backlog, no los 5 tickets completos.
  *
  * `nivel`/`z_score`/`tasa_100k` se calculan en SQL (window/aggregate
  * functions sobre la serie histórica del mismo mes en años previos, JOIN
@@ -58,10 +60,12 @@ function normalCdf(z: number): number {
  * Sin desviación histórica (0 o 1 solo año de datos) → "SIN_HISTORIAL", no
  * se fuerza un nivel con una sola muestra.
  *
- * SID-09 (excluir diciembre/julio por estacionalidad) queda documentado acá
- * pero NO implementado: es una decisión de producto (¿se excluyen del
- * cálculo de línea base, o del mes evaluado?) que no estaba definida al
- * escribir este handler — ver nota en docs/backlog/backlog-rastro-proyectos.md.
+ * SID-09 (excluir diciembre/julio por estacionalidad) NO está implementado:
+ * es una decisión de producto (¿se excluyen del cálculo de línea base, o
+ * del mes evaluado?) que no estaba definida al escribir este handler --
+ * pendiente, ver nota en docs/backlog/backlog-rastro-proyectos.md. Pedir
+ * `departamento=X` para julio o diciembre hoy evalúa esos meses con el
+ * mismo criterio que cualquier otro, sin ningún ajuste estacional.
  *
  * `variacion_mensual_pct` compara contra el promedio histórico del mismo
  * mes (no contra el mes calendario anterior): con el contrato de 2 queries
@@ -79,18 +83,26 @@ termometroRouter.get(
     const modalidadFiltro = modalidad ? `AND modalidad = $2` : "";
     const baseParams: unknown[] = modalidad ? [dep, modalidad] : [dep];
     const anioPlaceholder = `$${baseParams.length + 1}`;
-    const anioFiltro = anio ? `AND anio <= ${anioPlaceholder}` : "";
+    // El filtro de año se aplica a `objetivo` (qué año se evalúa como
+    // "actual"), NUNCA a `universo` (el histórico completo): filtrar el
+    // universo a `anio <= X` hacía que un año sin filas cayera en silencio
+    // al año anterior más cercano en vez de responder 404 -- hallazgo de
+    // CodeRabbit en PR #224, confirmado. Con el filtro solo en `objetivo`,
+    // un año sin datos deja esa CTE vacía y el query entero no devuelve
+    // filas (404 más abajo), mientras que `historial` (años antes del
+    // objetivo) sigue viendo el universo completo sin restringir.
+    const objetivoFiltro = anio ? `WHERE anio = ${anioPlaceholder}` : "";
     const historialParams = anio ? [...baseParams, Number(anio)] : baseParams;
 
     const { rows: historial } = await pool.query<HistorialRow>(
       `WITH universo AS (
          SELECT anio, mes, SUM(cantidad)::numeric AS cantidad
          FROM police_reports
-         WHERE departamento = $1 ${modalidadFiltro} ${anioFiltro}
+         WHERE departamento = $1 ${modalidadFiltro}
          GROUP BY anio, mes
        ),
        objetivo AS (
-         SELECT mes, anio FROM universo ORDER BY anio DESC, mes DESC LIMIT 1
+         SELECT mes, anio FROM universo ${objetivoFiltro} ORDER BY anio DESC, mes DESC LIMIT 1
        )
        SELECT u.anio, u.mes, u.cantidad,
               CASE WHEN p.poblacion IS NULL OR p.poblacion = 0 THEN NULL
@@ -106,11 +118,11 @@ termometroRouter.get(
       `WITH universo AS (
          SELECT anio, mes, SUM(cantidad)::numeric AS cantidad
          FROM police_reports
-         WHERE departamento = $1 ${modalidadFiltro} ${anioFiltro}
+         WHERE departamento = $1 ${modalidadFiltro}
          GROUP BY anio, mes
        ),
        objetivo AS (
-         SELECT anio, mes, cantidad FROM universo ORDER BY anio DESC, mes DESC LIMIT 1
+         SELECT anio, mes, cantidad FROM universo ${objetivoFiltro} ORDER BY anio DESC, mes DESC LIMIT 1
        ),
        historial_mismo_mes AS (
          SELECT u.cantidad

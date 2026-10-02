@@ -33,6 +33,9 @@ function normalCdf(z: number): number {
  * Handler para `seguridad_ciudadana_denuncias_termometro` — GET
  * /api/denuncias/termometro. SQL idéntico a
  * apps/seguridad-ciudadana/api/src/routes/termometro.ts.
+ *
+ * SID-09 (excluir diciembre/julio por estacionalidad) NO está implementado
+ * -- decisión de producto pendiente, ver docblock del route homónimo.
  */
 export async function get(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const { db, args } = ctx;
@@ -47,18 +50,22 @@ export async function get(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const modalidadFiltro = modalidad ? `AND modalidad = $2` : "";
   const baseParams: unknown[] = modalidad ? [dep, modalidad] : [dep];
   const anioPlaceholder = `$${baseParams.length + 1}`;
-  const anioFiltro = anio ? `AND anio <= ${anioPlaceholder}` : "";
+  // Filtro en `objetivo`, no en `universo`: filtrar el universo completo a
+  // `anio <= X` hacía que un año sin filas cayera en silencio al año
+  // anterior más cercano en vez de responder 404 -- hallazgo de CodeRabbit
+  // en PR #224, confirmado.
+  const objetivoFiltro = anio ? `WHERE anio = ${anioPlaceholder}` : "";
   const historialParams = anio ? [...baseParams, Number(anio)] : baseParams;
 
   const { rows: historial } = await db.query<HistorialRow>(
     `WITH universo AS (
        SELECT anio, mes, SUM(cantidad)::numeric AS cantidad
        FROM police_reports
-       WHERE departamento = $1 ${modalidadFiltro} ${anioFiltro}
+       WHERE departamento = $1 ${modalidadFiltro}
        GROUP BY anio, mes
      ),
      objetivo AS (
-       SELECT mes, anio FROM universo ORDER BY anio DESC, mes DESC LIMIT 1
+       SELECT mes, anio FROM universo ${objetivoFiltro} ORDER BY anio DESC, mes DESC LIMIT 1
      )
      SELECT u.anio, u.mes, u.cantidad,
             CASE WHEN p.poblacion IS NULL OR p.poblacion = 0 THEN NULL
@@ -74,11 +81,11 @@ export async function get(ctx: ToolHandlerContext): Promise<HandlerResult> {
     `WITH universo AS (
        SELECT anio, mes, SUM(cantidad)::numeric AS cantidad
        FROM police_reports
-       WHERE departamento = $1 ${modalidadFiltro} ${anioFiltro}
+       WHERE departamento = $1 ${modalidadFiltro}
        GROUP BY anio, mes
      ),
      objetivo AS (
-       SELECT anio, mes, cantidad FROM universo ORDER BY anio DESC, mes DESC LIMIT 1
+       SELECT anio, mes, cantidad FROM universo ${objetivoFiltro} ORDER BY anio DESC, mes DESC LIMIT 1
      ),
      historial_mismo_mes AS (
        SELECT u.cantidad

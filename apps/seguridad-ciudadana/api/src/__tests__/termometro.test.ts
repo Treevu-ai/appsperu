@@ -149,4 +149,21 @@ describe("GET /api/denuncias/termometro — CONTRATO", () => {
     const sql = queryMock.mock.calls[0][0];
     expect(sql).toMatch(/anio/);
   });
+
+  it("responde 404 (no un año anterior) cuando el año pedido no tiene datos", async () => {
+    // Hallazgo de CodeRabbit en PR #224: el filtro anterior (`anio <= X`)
+    // hacía que un año sin filas devolviera en silencio el año anterior más
+    // cercano. Con el fix, `objetivo` queda vacío y el query entero no
+    // devuelve filas -> 404 real, nunca un fallback silencioso.
+    queryMock
+      .mockResolvedValueOnce({ rows: [] }) // historial: objetivo vacío, sin años previos que comparar
+      .mockResolvedValueOnce({ rows: [] }); // actual: sin filas para el año pedido
+    const res = await request(createApp())
+      .get("/api/denuncias/termometro")
+      .query({ departamento: "LA LIBERTAD", anio: "1999" });
+    expect(res.status).toBe(404);
+    const sql = queryMock.mock.calls[0][0];
+    // El filtro de año debe vivir en `objetivo`, no en el WHERE de `universo`.
+    expect(sql).toMatch(/objetivo AS \(\s*SELECT mes, anio FROM universo WHERE anio = \$\d+/);
+  });
 });
