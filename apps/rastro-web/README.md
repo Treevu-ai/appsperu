@@ -1,0 +1,113 @@
+# Rastro Web — Capa de lectura para no-técnicos + MCP
+
+> **El Estado peruano deja más datos abiertos de los que nadie está usando. Nosotros los estamos conectando.**
+
+**Rastro** es una plataforma de inteligencia que ayuda a equipos y organizaciones a encontrar, conectar y entender las señales que importan. Transformamos información dispersa en contexto accionable, con foco en trazabilidad, claridad y decisiones más seguras.
+
+Porque detrás de cada cambio, oportunidad o riesgo hay un rastro. Y verlo a tiempo cambia lo que viene después.
+
+Rastro es agentic-first: el canal principal de consumo son los
+**<!-- COUNT:TOOL_COUNT -->209<!-- /COUNT --> tools MCP** de las <!-- COUNT:APP_COUNT -->38<!-- /COUNT -->
+apps reales de appsperu, buscables vía 2 meta-tools (`rastro_buscar_tools` + `rastro_llamar`, ver
+`mcp-server/README.md`) para que un agente IA (Claude Code, Claude Desktop, Cursor, Windsurf, Cline,
+Continue.dev) encadene consultas complejas con una sola query. Esta web app (Vite + React Router 7 SPA)
+es la capa de lectura visual para humanos — con dashboard propio hoy para 14 de esas 38 apps (`api-client.ts`),
+las que justificaron una vista dedicada por su rol en los 3 lectores (GORE La Libertad, Prensa, Auditoría).
+Esto es una decisión de alcance, no una brecha: un dashboard por cada app nueva no escala — para eso está
+el MCP.
+
+- **URL producción:** https://rastro.fyi/
+- **Stack:** Vite 8 + React 19 + TypeScript 6 + React Router 7 + Tailwind v4
+- **MCP producción:** <!-- COUNT:TOOL_COUNT -->209<!-- /COUNT --> tools de solo lectura, transporte Streamable HTTP en `https://mcp.rastro.fyi/mcp`, autenticado con `x-api-key`; transporte stdio disponible para desarrollo local
+- **Hosting:** Cloudflare Pages (proyecto `rastro`)
+
+## Estructura
+
+```
+apps/rastro-web/
+├── package.json
+├── vite.config.ts            # valida 14 env vars en build (modo ≠ test)
+├── wrangler.toml             # config de Cloudflare Pages
+├── tsconfig.app.json
+├── .env.example              # 14 URLs VITE_API_BASE_URL_*
+├── README.md                 # este archivo
+├── DEPLOY.md                 # runbook de Cloudflare Pages
+├── docs/
+│   └── linter-meta.md        # cómo escribir números con metadata
+├── public/
+│   ├── rastro-mark.svg
+│   ├── robots.txt            # SEO: indexable + AI agents permitidos
+│   ├── sitemap.xml           # SEO: sitemap para Google/Bing
+│   ├── llms.txt              # GEO: descripción del sitio para LLMs
+│   └── citar-rastro.md       # manual de citación (1 página)
+├── scripts/
+│   └── lint-meta.mjs         # ticket AL3-13
+├── src/
+│   ├── main.tsx
+│   ├── App.tsx               # rutas
+│   ├── index.css             # Tailwind v4 + tokens
+│   ├── components/
+│   │   ├── Layout.tsx
+│   │   ├── DataFreshnessBar.tsx   # ticket AL3-03
+│   │   ├── CoverageBadge.tsx
+│   │   └── NumberWithMetadata.tsx
+│   ├── routes/
+│   │   ├── Home.tsx
+│   │   ├── gore/                  # Sprint 12
+│   │   ├── Proveedor.tsx
+│   │   ├── Distrito.tsx
+│   │   ├── Buscar.tsx
+│   │   ├── Estado.tsx
+│   │   └── DocsApi.tsx
+│   ├── lib/
+│   │   ├── types.ts          # WithMetadata, AppKey, APP_CATALOG
+│   │   └── api-client.ts     # 1+ función tipada por app (21 hoy), MSW-friendly
+│   ├── mocks/
+│   │   └── handlers.ts       # respuestas para tests
+│   └── test/
+│       └── setup.ts
+└── tests/
+    └── api-client.test.ts
+```
+
+## Variables de entorno
+
+Copia `.env.example` a `.env` y completa los 14 puertos. La build falla si falta alguna (excepto en modo `test`).
+
+## Comandos
+
+```bash
+npm install
+npm run dev              # http://localhost:5173
+npm run typecheck        # tsc -b --noEmit
+npm run test             # vitest run
+npm run lint:meta        # linter AL3-13
+npm run build            # tsc + vite build → dist/
+npm run ci               # todo lo anterior en orden
+```
+
+## Convenciones
+
+- Cada número en JSX pasa por `<NumberWithMetadata>` o lleva un comentario `@alsol-meta` adyacente.
+- Cada fetch usa `cache: "no-store"`. La UI nunca muestra datos viejos del navegador (P3).
+- Cada respuesta de API se muestra con su `cobertura` en un badge explícito.
+- Cero dependencia nueva en `apps/*/api` de appsperu. La UI consume las 14 APIs existentes.
+
+## Lo que NO hace en v1
+
+- No es un CMS. No edita nada.
+- No es un dashboard ejecutivo con KPIs inventados.
+- No es un buscador nacional. Solo La Libertad en v1.
+- No tiene login ni roles.
+- No entrena ni usa un LLM.
+- No se despliega en Vercel. Solo **Cloudflare Pages**.
+
+## Documentos del proyecto
+
+- PRD: [`docs/PRD_Rastro_Capa_Lectura_No_Tecnicos_v1.md`](../../docs/PRD_Rastro_Capa_Lectura_No_Tecnicos_v1.md)
+- Tickets: [`docs/TICKETS_Rastro_Capa_Lectura_v1.md`](../../docs/TICKETS_Rastro_Capa_Lectura_v1.md)
+- Backlog: [`docs/BACKLOG_Rastro_Capa_Lectura_No_Tecnicos_v1.md`](../../docs/BACKLOG_Rastro_Capa_Lectura_No_Tecnicos_v1.md)
+- Estado: [`docs/ESTADO.md`](../../docs/ESTADO.md)
+- Conectores: [`docs/conectores.md`](../../docs/conectores.md)
+- Brand: Rastro. URL público: `rastro.fyi`.
+

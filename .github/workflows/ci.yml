@@ -37,6 +37,8 @@ jobs:
           - apps/legislativo-congreso/api
           - apps/mindef/api
           - apps/mimp/api
+          - apps/osinergmin-combustibles/api
+          - apps/ositran-reclamos/api
           - apps/poder-judicial/api
           - apps/programas-sociales/api
           - apps/proveedores-sancionados/api

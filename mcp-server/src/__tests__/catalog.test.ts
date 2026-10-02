@@ -295,6 +295,15 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "geo_intersections_reporte",
     "geo_intersections_stats",
   ],
+  "osinergmin-combustibles": [
+    "osinergmin_combustibles_grifos",
+    "osinergmin_combustibles_precios",
+  ],
+  "ositran-reclamos": [
+    "ositran_reclamos_reclamos",
+    "ositran_reclamos_trafico",
+    "ositran_reclamos_recaudacion",
+  ],
 };
 
 describe("MCP catalog", () => {

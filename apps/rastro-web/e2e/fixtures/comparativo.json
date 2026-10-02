@@ -1,0 +1,49 @@
+{
+  "anio": 2026,
+  "departamento": "LA LIBERTAD",
+  "resultados": [
+    {
+      "sectorId": "TRANSPORTE",
+      "sector": "TRANSPORTE",
+      "entityCode": "831",
+      "entidad": "GOBIERNO REGIONAL LA LIBERTAD — TRANSPORTE",
+      "tipoEntidad": "SEDE_EJECUTORA",
+      "nivelGobierno": "GOBIERNOS REGIONALES",
+      "reglaTerritorial": "SEDE_EJECUTORA",
+      "alcance": "Ejecutado por sede regional",
+      "pia": 2500000,
+      "pim": 6300000,
+      "devengado": 3100000,
+      "saldoPorDevengar": 3200000,
+      "cobertura": {
+        "estado": "COMPLETA",
+        "fechaCorteParticion": "2026-08-26",
+        "registrosParticion": 1820
+      },
+      "cortesUsados": ["2026-08-26"],
+      "recursos": ["mef-pim-devengado"]
+    },
+    {
+      "sectorId": "SALUD",
+      "sector": "SALUD",
+      "entityCode": "832",
+      "entidad": "GOBIERNO REGIONAL LA LIBERTAD — SALUD",
+      "tipoEntidad": "SEDE_EJECUTORA",
+      "nivelGobierno": "GOBIERNOS REGIONALES",
+      "reglaTerritorial": "SEDE_EJECUTORA",
+      "alcance": "Ejecutado por sede regional",
+      "pia": 3800000,
+      "pim": 4100000,
+      "devengado": 1980000,
+      "saldoPorDevengar": 2120000,
+      "cobertura": {
+        "estado": "PARCIAL",
+        "fechaCorteParticion": "2026-08-26",
+        "registrosParticion": 940
+      },
+      "cortesUsados": ["2026-08-26"],
+      "recursos": ["mef-pim-devengado"]
+    }
+  ],
+  "limitation": "El comparativo muestra responsabilidades distintas. No suma Gobierno Nacional dirigido al departamento y Gobierno Regional ejecutado por sede como un único presupuesto."
+}

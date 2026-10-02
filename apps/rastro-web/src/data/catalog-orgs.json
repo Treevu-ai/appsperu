@@ -1,0 +1,35 @@
+{
+  "generated_at": "2026-09-02T02:58:36.612558+00:00",
+  "orgs": [
+    {
+      "slug": "ministerio-de-salud",
+      "title": "Ministerio de Salud",
+      "count": 18
+    },
+    {
+      "slug": "ministerio-de-energ-a-y-minas",
+      "title": "Ministerio de Energía y Minas",
+      "count": 16
+    },
+    {
+      "slug": "ministerio-de-relaciones-exteriores",
+      "title": "Ministerio de Relaciones Exteriores",
+      "count": 8
+    },
+    {
+      "slug": "superintendencia-nacional-de-los-registros-p-blicos",
+      "title": "Superintendencia Nacional de los Registros Públicos",
+      "count": 14
+    },
+    {
+      "slug": "mef-portal-de-transparencia",
+      "title": "MEF · Portal de Transparencia",
+      "count": 14
+    },
+    {
+      "slug": "otros-relevantes-por-tags",
+      "title": "Otros relevantes (por tags)",
+      "count": 6
+    }
+  ]
+}

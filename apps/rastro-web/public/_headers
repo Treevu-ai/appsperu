@@ -1,0 +1,13 @@
+# Headers HTTP para Cloudflare Pages (Git deploy lee public/_headers, no wrangler.toml).
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  Cache-Control: public, max-age=0, must-revalidate
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.txt
+  Cache-Control: public, max-age=300
