@@ -230,6 +230,7 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
       ocid: row.ocid,
       awardId: row.awardId,
       supplierId,
+      ruc,
       supplierName: row.supplierName,
       buyerName: row.buyerName,
       valorMonto: row.valorMonto,

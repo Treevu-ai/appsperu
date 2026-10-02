@@ -3,6 +3,7 @@ import { sancionesRouter } from "./routes/sanciones.js";
 import { inhabilitacionesJudicialesRouter } from "./routes/inhabilitaciones-judiciales.js";
 import { dobleInhabilitacionRouter } from "./routes/doble-inhabilitacion.js";
 import { crossrefRouter } from "./routes/crossref.js";
+import { radarRouter } from "./routes/radar.js";
 import { redesProveedoresRouter } from "./routes/redes-proveedores.js";
 import { personasSancionadasRouter } from "./routes/personas-sancionadas.js";
 import { candidatosSancionadosRouter } from "./routes/candidatos-sancionados.js";
@@ -43,6 +44,7 @@ export function createApp() {
   app.use("/api/crossref/extorsion-duenos-reales", extorsionDuenosRealesRouter);
   app.use("/api/crossref/extorsion-velocidad-sancion", extorsionVelocidadSancionRouter);
   app.use("/api/meta", metaFreshnessRouter);
+  app.use("/api/radar", radarRouter);
 
   app.use(errorHandler);
 

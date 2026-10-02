@@ -98,6 +98,7 @@ import * as proveedores_sancionados_extorsion_velocidad_sancion from "./proveedo
 import * as proveedores_sancionados_inhabilitaciones_judiciales from "./proveedores-sancionados/inhabilitaciones-judiciales.js";
 import * as proveedores_sancionados_meta_freshness from "./proveedores-sancionados/meta-freshness.js";
 import * as proveedores_sancionados_personas_sancionadas from "./proveedores-sancionados/personas-sancionadas.js";
+import * as proveedores_sancionados_radar from "./proveedores-sancionados/radar.js";
 import * as proveedores_sancionados_redes_proveedores from "./proveedores-sancionados/redes-proveedores.js";
 import * as proveedores_sancionados_sancionado_recurrente from "./proveedores-sancionados/sancionado-recurrente.js";
 import * as proveedores_sancionados_sanciones from "./proveedores-sancionados/sanciones.js";
@@ -230,6 +231,7 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "proveedores-sancionados/inhabilitaciones-judiciales": proveedores_sancionados_inhabilitaciones_judiciales,
   "proveedores-sancionados/meta-freshness": proveedores_sancionados_meta_freshness,
   "proveedores-sancionados/personas-sancionadas": proveedores_sancionados_personas_sancionadas,
+  "proveedores-sancionados/radar": proveedores_sancionados_radar,
   "proveedores-sancionados/redes-proveedores": proveedores_sancionados_redes_proveedores,
   "proveedores-sancionados/sancionado-recurrente": proveedores_sancionados_sancionado_recurrente,
   "proveedores-sancionados/sanciones": proveedores_sancionados_sanciones,

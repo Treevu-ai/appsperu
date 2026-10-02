@@ -154,6 +154,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "proveedores_sancionados_inhabilitaciones_judiciales",
     "proveedores_sancionados_meta_freshness",
     "proveedores_sancionados_personas",
+    "proveedores_sancionados_radar",
     "proveedores_sancionados_recurrente",
     "proveedores_sancionados_redes_proveedores",
     "proveedores_sancionados_sanciones",
