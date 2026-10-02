@@ -144,70 +144,77 @@ async function ingestReniec(): Promise<{ batchId: number; filasInsertadas: numbe
   const rows = parseCsv(text);
   const checksum = createHash("sha256").update(text).digest("hex");
 
-  // Claim atómico del batch por checksum (migración 002): si dos corridas
-  // arrancan a la vez, `ON CONFLICT DO NOTHING` garantiza que solo una
-  // inserte la fila de batch -- sin ventana entre un SELECT de existencia y
-  // un INSERT aparte. Si el batch ya existe y quedó `completo`, la
-  // reingesta se omite (idempotencia real: reimportar el mismo CSV dos
-  // veces no duplica el denominador poblacional). Si existe pero quedó
-  // incompleto (una corrida anterior se interrumpió a mitad de los lotes),
-  // se limpian sus filas parciales y se reintenta con el mismo batchId --
-  // hallazgo de CodeRabbit en PR #224, confirmado.
-  const claimClient = await pool.connect();
-  let batchId: number;
-  let yaCompleto = false;
+  // Hallazgo de CodeRabbit en PR #224, confirmado EN VIVO durante esta misma
+  // sesión: sin serializar por checksum, dos corridas concurrentes pueden
+  // encontrar el mismo batch incompleto, borrar las filas de la otra y
+  // reinsertar ambas sobre el mismo batchId -- se observó una duplicación
+  // real (de 842,220 a 1,620,660 filas) cuando dos invocaciones en
+  // background quedaron huérfanas y corrieron a la vez. `pg_advisory_lock`
+  // sobre una conexión dedicada, mantenida durante TODA la ingesta (claim +
+  // borrado + inserción + marcado de completo), hace que la segunda corrida
+  // espere a que la primera termine en vez de pisarla -- al obtener el lock
+  // ya encuentra el batch `completo` y sale sin tocar nada.
+  const lockClient = await pool.connect();
   try {
-    const { rows: claimRows } = await claimClient.query<{ id: number }>(
+    await lockClient.query("SELECT pg_advisory_lock(hashtext($1))", [checksum]);
+
+    // Claim atómico del batch por checksum (migración 002): `ON CONFLICT DO
+    // NOTHING` evita la ventana entre un SELECT de existencia y un INSERT
+    // aparte. Si el batch ya existe y quedó `completo`, la reingesta se
+    // omite (idempotencia real: reimportar el mismo CSV dos veces no
+    // duplica el denominador poblacional). Si existe pero quedó incompleto
+    // (una corrida anterior se interrumpió a mitad de los lotes), se
+    // limpian sus filas parciales y se reintenta con el mismo batchId.
+    const { rows: claimRows } = await lockClient.query<{ id: number }>(
       `INSERT INTO raw_reniec_batches (dataset, source_url, checksum, record_count)
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (checksum) DO NOTHING
        RETURNING id`,
       [DATASET, SOURCE_URL, checksum, rows.length]
     );
+    let batchId: number;
     if (claimRows.length > 0) {
       batchId = claimRows[0].id;
     } else {
-      const { rows: existente } = await claimClient.query<{ id: number; completo: boolean }>(
+      const { rows: existente } = await lockClient.query<{ id: number; completo: boolean }>(
         `SELECT id, completo FROM raw_reniec_batches WHERE checksum = $1`,
         [checksum]
       );
       batchId = existente[0].id;
       if (existente[0].completo) {
-        yaCompleto = true;
-      } else {
-        await claimClient.query(`DELETE FROM padron_electoral_2026 WHERE source_batch_id = $1`, [batchId]);
+        return { batchId, filasInsertadas: 0 };
+      }
+      await lockClient.query(`DELETE FROM padron_electoral_2026 WHERE source_batch_id = $1`, [batchId]);
+    }
+
+    // Commits por lote (no una sola transacción de ~153 lotes) -- un corte de
+    // conexión a mitad de una transacción larga revierte todo (confirmado en
+    // vivo 2026-09-30, ECONNRESET a mitad de carga). Si se relanza, el claim
+    // de arriba detecta el batch incompleto, limpia y retoma. El advisory
+    // lock sigue tomado en `lockClient` mientras tanto, así que ninguna otra
+    // corrida puede intervenir estas filas.
+    let inserted = 0;
+    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        await insertBatch(client, rows.slice(i, i + BATCH_SIZE), batchId);
+        await client.query("COMMIT");
+        inserted += Math.min(BATCH_SIZE, rows.length - i);
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
       }
     }
+
+    await lockClient.query(`UPDATE raw_reniec_batches SET completo = true WHERE id = $1`, [batchId]);
+    return { batchId, filasInsertadas: inserted };
   } finally {
-    claimClient.release();
+    await lockClient.query("SELECT pg_advisory_unlock(hashtext($1))", [checksum]).catch(() => {});
+    lockClient.release();
   }
-
-  if (yaCompleto) {
-    return { batchId, filasInsertadas: 0 };
-  }
-
-  // Commits por lote (no una sola transacción de ~153 lotes) -- un corte de
-  // conexión a mitad de una transacción larga revierte todo (confirmado en
-  // vivo 2026-09-30, ECONNRESET a mitad de carga). Si se relanza, el claim
-  // de arriba detecta el batch incompleto, limpia y retoma.
-  let inserted = 0;
-  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
-      await insertBatch(client, rows.slice(i, i + BATCH_SIZE), batchId);
-      await client.query("COMMIT");
-      inserted += Math.min(BATCH_SIZE, rows.length - i);
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      client.release();
-    }
-  }
-
-  await pool.query(`UPDATE raw_reniec_batches SET completo = true WHERE id = $1`, [batchId]);
-  return { batchId, filasInsertadas: inserted };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

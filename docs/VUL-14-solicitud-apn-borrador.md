@@ -2,7 +2,7 @@
 
 **Ticket:** VUL-14 (ver `docs/backlog/backlog-rastro-proyectos.md`, Épica 4 · Índice de
 Vulnerabilidad Portuaria, Historia 4.4)
-**Estado:** BORRADOR — no enviado. El envío por la Plataforma Nacional de Transparencia y el
+**Estado:** BORRADOR — no enviado. El envío por el formulario de la APN (ver Destinatario) y el
 seguimiento posterior (VUL-15/16) son acciones del usuario, no de este asistente.
 
 ---
@@ -76,9 +76,16 @@ portuaria, periodo 2018-2025
   decreto no guarda relación con la Ley de Transparencia. El Reglamento vigente es el Decreto
   Supremo N° 007-2024-JUS (hallazgo de CodeRabbit en PR #224, corregido). También se reemplazó
   el enlace genérico al portal de transparencia por el formulario específico de la APN
-  (https://portalweb.apn.gob.pe/formulario-solicitud/), que es el canal real de presentación.
-- Guardar el cargo/constancia de presentación (la Plataforma de Transparencia genera un número de
-  expediente), y ese número es lo que se necesita para reclamar si no hay respuesta dentro del
+  (https://portalweb.apn.gob.pe/formulario-solicitud/), que es el canal real de presentación. Ese
+  cambio dejó una inconsistencia que CodeRabbit señaló en una segunda revisión: el resto del
+  documento seguía hablando de "la Plataforma Nacional" y de un "número de expediente" como si el
+  formulario de la APN fuera esa misma plataforma — corregido para no asumir esa equivalencia sin
+  confirmarla.
+- Guardar cualquier constancia, comprobante o correo de confirmación que entregue el formulario de
+  la APN al enviarlo — no está confirmado en esta sesión si ese formulario asigna un número de
+  expediente formal (eso sí ocurre en la Plataforma Nacional de Transparencia Estándar, un canal
+  distinto que este borrador ya no usa). Verificar al momento de enviar qué comprobante entrega
+  realmente y conservarlo; es lo que se necesita para reclamar si no hay respuesta dentro del
   plazo.
 - Si la APN no responde o deniega sin motivación legal, cabe un recurso de apelación ante el
   Tribunal de Transparencia y Acceso a la Información Pública (TTAIP) — verificar el plazo y
