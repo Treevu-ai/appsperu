@@ -44,9 +44,9 @@ portuaria, periodo 2018-2025
 > tráfico real.
 >
 > Solicito que la respuesta sea remitida por esta misma vía o, alternativamente, al correo
-> electrónico [COMPLETAR], dentro del plazo de siete (7) días hábiles establecido en el artículo
-> 11 del TUO de la Ley N° 27806, prorrogable excepcionalmente por cinco (5) días hábiles
-> adicionales según el mismo artículo.
+> electrónico [COMPLETAR], dentro del plazo de diez (10) días hábiles establecido para este
+> trámite, prorrogable de forma justificada cuando exista imposibilidad material de cumplirlo en
+> dicho plazo.
 >
 > Quedo atento a su respuesta.
 >
@@ -59,15 +59,21 @@ portuaria, periodo 2018-2025
 ## Notas para quien envíe esto (no parte de la carta)
 
 - Completar nombre, DNI y correo antes de enviar.
-- El plazo legal es de **7 días hábiles** desde la presentación (Art. 11, TUO Ley 27806),
-  prorrogable **excepcionalmente por 5 días hábiles adicionales** (máximo 12 días hábiles en
-  total) si la entidad comunica por escrito, antes de vencer el primer plazo, las razones de la
-  prórroga — si no lo hace, se considera denegado el pedido. Verificado contra el texto de la ley
-  (no asumido de memoria): [TUO Ley 27806, Congreso](https://www2.congreso.gob.pe/sicr/cendocbib/con5_uibd.nsf/DE0722775AABAAC9052586DB001D51FA/$FILE/TUO-LEY27806.pdf).
+- El plazo del trámite vigente es de **10 días hábiles** desde la presentación. Si la entidad no
+  puede cumplirlo por imposibilidad material (caso excepcional), debe comunicar dentro de 2 días
+  hábiles de recibida la solicitud la fecha en la que sí entregará la información, debidamente
+  justificada — no es una prórroga automática.
+  **Nota de verificación:** esta sesión primero citó 7+5 días hábiles tomados del texto del TUO de
+  la Ley N° 27806 (artículo 11), pero el trámite oficial vigente publicado en la Plataforma del
+  Estado Peruano indica 10 días hábiles — corregido tras encontrar la discrepancia (señalada por
+  revisión de CodeRabbit en PR #224) y verificarla con una segunda fuente independiente. Fuente:
+  [Solicitar acceso a la información pública — trámite 20399, gob.pe](https://www.gob.pe/20399-solicitar-acceso-a-la-informacion-publica).
+  No se investigó a fondo la causa de la discrepancia (podría deberse a una modificación
+  normativa posterior al TUO consultado, o a una variación de la propia APN) — si esto importa,
+  verificar directamente con la APN antes de enviar.
 - Guardar el cargo/constancia de presentación (la Plataforma de Transparencia genera un número de
-  expediente) — VUL-16 pide "hacer seguimiento a los 10 días hábiles" (el backlog original redondeó
-  el plazo; el real son 7, hasta 12 con prórroga), y ese número es lo que se necesita para
-  reclamar si no hay respuesta.
+  expediente), y ese número es lo que se necesita para reclamar si no hay respuesta dentro del
+  plazo.
 - Si la APN no responde o deniega sin motivación legal, cabe un recurso de apelación ante el
   Tribunal de Transparencia y Acceso a la Información Pública (TTAIP) — verificar el plazo y
   procedimiento vigente en gob.pe antes de usarlo; no confirmado en esta sesión con la misma

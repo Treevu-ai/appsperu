@@ -9,11 +9,18 @@ usuario decida si lo activa.
 ## Por qué GitHub Actions y no Cloudflare Cron Triggers
 
 El Worker del MCP (`mcp-server/wrangler.toml`) ya tiene `[triggers] crons = []` como placeholder,
-así que la opción "obvia" sería usar un Cron Trigger de Cloudflare. Pero los conectores de ingesta
-(`apps/*/api/src/ingest/*-connector.ts`) son scripts Node que abren conexiones TCP directas a
-Postgres con el driver `pg` — el runtime de Cloudflare Workers no soporta TCP crudo ni child
-processes, solo el driver HTTP de `@neondatabase/serverless` que ya usa el Worker para servir
-tools. Mover la lógica de ingesta al Worker sería reescribir cada conector, no agregar un cron.
+así que la opción "obvia" sería usar un Cron Trigger de Cloudflare.
+
+**Corrección (hallazgo de CodeRabbit en PR #224):** la primera versión de este documento afirmaba
+que el runtime de Cloudflare Workers no soporta TCP crudo, usándolo como razón para descartar esa
+opción. Es falso — Workers sí admite sockets TCP salientes (API `connect()`) y Cloudflare documenta
+explícitamente `node-postgres` (el driver `pg`, el mismo que usan los conectores) vía Hyperdrive.
+La razón real para preferir GitHub Actions no es una limitación del runtime, sino el costo de
+migración: los conectores ya están escritos contra `pg`/Node tal cual corren hoy a mano. Llevarlos
+al Worker significaría adaptar cada uno a Hyperdrive (pooling, límites de conexión del runtime,
+posible reescritura si usan APIs de Node que Workers no expone) y configurar un binding de
+Hyperdrive por app — trabajo real, no una imposibilidad técnica. Si el usuario prefiere esa ruta
+más adelante, es viable; este documento prioriza la opción de menor cambio para una v1.
 
 **GitHub Actions ya está en el repo** (`.github/workflows/ci.yml`,
 `.github/workflows/check-connectors.yml`), ya sabe instalar cada app y ya tiene (o puede tener) los
@@ -79,7 +86,7 @@ jobs:
 |---|---|---|---|
 | `proveedores-sancionados` | `sanciones-connector.ts` | Sí (tiene `ingestion_log`) | Semanal |
 | `seguridad-ciudadana` | SIDPOL | No verificado en esta sesión — confirmar antes de activar | Mensual |
-| `osinergmin-combustibles` | `precios-combustibles-connector.ts` | Sí sería seguro agregar `ON CONFLICT`, hoy solo hace `INSERT` sin dedupe — ver nota de la sesión 2026-10-01/02 | Diario (la fuente se actualiza a diario) |
+| `osinergmin-combustibles` | `precios-combustibles-connector.ts` | Sí (idempotencia por checksum agregada en PR #223, 2026-10-02) | Diario (la fuente se actualiza a diario) |
 
 **Recomendación:** empezar con UNA sola app en un workflow con `workflow_dispatch` (disparo manual
 desde la UI) antes de agregar `schedule:`, para verificar que corre limpio en el entorno de
