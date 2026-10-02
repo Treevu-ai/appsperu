@@ -1,0 +1,11 @@
+{
+  "entityCode": "831",
+  "anioFiscal": 2026,
+  "status": "ok",
+  "n": 25,
+  "percentil": 60,
+  "medianaAvancePct": 49.5,
+  "criterios": "nivel_gobierno=GOBIERNOS REGIONALES, funcion=*, regla=gobierno-regional-por-funcion v1",
+  "exclusiones": "Entidades con PIM = 0 excluidas del cálculo de avance.",
+  "fechaCorte": "2026-08-26"
+}

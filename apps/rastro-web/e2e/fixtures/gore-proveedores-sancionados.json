@@ -1,0 +1,57 @@
+{
+  "departamento": "LA LIBERTAD",
+  "resultados": [
+    {
+      "origen": "awards",
+      "ocid": "ocds-901",
+      "awardId": "aw-901",
+      "supplierId": "PE-RUC-20111222334",
+      "supplierName": "SERVICIOS GENERALES EL NORTE SAC",
+      "buyerName": "MUNICIPALIDAD PROVINCIAL DE TRUJILLO",
+      "valorMonto": 480000,
+      "valorMoneda": "PEN",
+      "fechaAdjudicacion": "2026-06-15",
+      "rucValido": true,
+      "inhabilitacionesEncontradas": 1,
+      "tieneInhabilitacionVigente": true,
+      "estadoActualFuente": {
+        "tieneInhabilitacionVigente": true,
+        "inhabilitacionExtraidaEn": "2026-09-01",
+        "estadoContribuyente": "ACTIVO",
+        "condicionDomicilio": "HABIDO",
+        "padronExtraidoEn": "2026-09-01"
+      },
+      "inhabilitadoEnFechaAdjudicacion": true,
+      "estadoTributarioEnFechaAdjudicacion": "NO_DISPONIBLE",
+      "estadoContribuyente": "ACTIVO",
+      "condicionDomicilio": "HABIDO",
+      "esNuevoDesdeUltimaCorrida": false
+    },
+    {
+      "origen": "minor_contracts",
+      "ocid": null,
+      "awardId": "mc-455",
+      "supplierId": "seace:ruc:20999888771",
+      "supplierName": "INVERSIONES VALLE VERDE EIRL",
+      "buyerName": "MUNICIPALIDAD DISTRITAL DE MOCHE",
+      "valorMonto": 32000,
+      "valorMoneda": null,
+      "fechaAdjudicacion": "2026-07-02",
+      "rucValido": true,
+      "inhabilitacionesEncontradas": 1,
+      "tieneInhabilitacionVigente": true,
+      "estadoActualFuente": {
+        "tieneInhabilitacionVigente": true,
+        "inhabilitacionExtraidaEn": "2026-09-01",
+        "estadoContribuyente": "ACTIVO",
+        "condicionDomicilio": "HABIDO",
+        "padronExtraidoEn": "2026-09-01"
+      },
+      "inhabilitadoEnFechaAdjudicacion": true,
+      "estadoTributarioEnFechaAdjudicacion": "NO_DISPONIBLE",
+      "estadoContribuyente": "ACTIVO",
+      "condicionDomicilio": "HABIDO",
+      "esNuevoDesdeUltimaCorrida": false
+    }
+  ]
+}

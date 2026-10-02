@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="es-PE">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="canonical" href="https://www.rastro.fyi/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7f7f4" />
+    <meta name="generator" content="Rastro v0.1.0 (https://github.com/Treevu-ai/appsperu)" />
+
+    <!-- Tipografía: Inter (sustituto open-source de CursorGothic, ver DESIGN.md
+         "Note on Font Substitutes") + JetBrains Mono para code/mono-num. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Primary SEO -->
+    <title>Rastro — Conectando los datos abiertos del Estado peruano</title>
+    <meta
+      name="description"
+      content="El Estado peruano publica miles de datos en decenas de portales. Rastro los conecta en un solo pipeline: MEF, INGEMMET, SERFOR, PNDA, OSITRAN, MTC y más. JSONs limpios para dashboards, modelos predictivos y reportes."
+    />
+    <meta name="keywords" content="inteligencia, trazabilidad, inversión pública, Perú, MEF, INFOBRAS, OECE, contrataciones, proveedores, La Libertad, datos abiertos, MCP, agentes IA, GEO" />
+    <meta name="author" content="Ricardo Cuba Alván" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+
+    <!-- Open Graph (Facebook, LinkedIn, Slack, WhatsApp) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Rastro — Conectando los datos abiertos del Estado peruano" />
+    <meta property="og:description" content="El Estado peruano publica miles de datos en decenas de portales. Rastro los conecta en un solo pipeline: MEF, INGEMMET, SERFOR, PNDA, OSITRAN, MTC y más. JSONs limpios para dashboards, modelos predictivos y reportes." />
+    <meta property="og:url" content="https://www.rastro.fyi/" />
+    <meta property="og:site_name" content="Rastro" />
+    <meta property="og:locale" content="es_PE" />
+    <meta property="og:image" content="https://www.rastro.fyi/hero-banner.png" />
+    <meta property="og:image:width" content="1920" />
+    <meta property="og:image:height" content="520" />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Rastro — Conectando los datos abiertos del Estado peruano" />
+    <meta name="twitter:description" content="El Estado peruano publica miles de datos en decenas de portales. Rastro los conecta en un solo pipeline: MEF, INGEMMET, SERFOR, PNDA, OSITRAN, MTC y más. JSONs limpios para dashboards, modelos predictivos y reportes." />
+    <meta name="twitter:image" content="https://www.rastro.fyi/hero-banner.png" />
+
+    <!-- JSON-LD: Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Rastro",
+      "alternateName": "RASTRO",
+      "url": "https://www.rastro.fyi/",
+      "logo": "https://www.rastro.fyi/rastro-logo.png",
+      "description": "Rastro conecta las fuentes públicas más relevantes del Estado peruano en un solo pipeline de datos abiertos. Convierte información dispersa en JSONs listos para dashboards, modelos predictivos y reportes.",
+      "slogan": "El Estado peruano deja más datos abiertos de los que nadie está usando. Nosotros los estamos conectando.",
+      "founder": {
+        "@type": "Person",
+        "name": "Ricardo Cuba Alván"
+      },
+      "areaServed": {
+        "@type": "Country",
+        "name": "Perú"
+      },
+      "knowsAbout": [
+        "inteligencia de datos",
+        "trazabilidad",
+        "inversión pública",
+        "presupuesto público",
+        "contrataciones del Estado",
+        "obras públicas",
+        "datos abiertos",
+        "Model Context Protocol",
+        "agentes de IA",
+        "Perú"
+      ]
+    }
+    </script>
+
+    <!-- JSON-LD: WebSite -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Rastro",
+      "url": "https://www.rastro.fyi/",
+      "description": "Conecta las fuentes públicas más relevantes del Estado peruano en un solo pipeline de datos abiertos.",
+      "inLanguage": "es-PE",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://www.rastro.fyi/buscar?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+
+    <!-- JSON-LD: SoftwareApplication (MCP server, para que AI crawlers lo descubran) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Rastro MCP Server",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Cross-platform",
+      "description": "Servidor MCP (Model Context Protocol) con __TOOL_COUNT__ tools de solo lectura sobre datos abiertos del Estado peruano. Conecta MEF, INGEMMET, SERFOR, PNDA, OSITRAN, MTC, BCRP macro (tipo de cambio, inflación, PBI, tasas) y más fuentes en un solo pipeline de JSONs listos para dashboards, modelos predictivos o reportes.",
+      "url": "https://www.rastro.fyi/docs/api",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "__TOOL_COUNT__ tools de solo lectura",
+        "Servidor MCP en producción (mcp.rastro.fyi), autenticado con API key",
+        "Compatible con Claude Code, Claude Desktop, Cursor, Windsurf",
+        "37 fuentes oficiales conectadas en un solo pipeline",
+        "BCRP macro: tipo de cambio, inflación, PBI, tasas de interés",
+        "Conectores Python estándar, sin dependencias propietarias",
+        "Cache local y rate limits respetuosos",
+        "JSONs limpios para dashboards, modelos predictivos o reportes"
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

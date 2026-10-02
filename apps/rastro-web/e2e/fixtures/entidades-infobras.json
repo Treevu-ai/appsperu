@@ -1,0 +1,30 @@
+{
+  "resultados": [
+    {
+      "ejecucionEntityCode": "831",
+      "ejecucionNombre": "GOBIERNO REGIONAL LA LIBERTAD",
+      "infobrasCodigoEntidad": "E-002",
+      "infobrasEntidadNombre": "GOB REG LA LIBERTAD",
+      "confidence": "confirmada",
+      "score": 1,
+      "devengado": 4558800000,
+      "coberturaTemporal": { "cortesUsados": ["2026-08-26"], "estado": "PARCIAL" },
+      "obras": 12,
+      "obrasParalizadas": 3,
+      "computedAt": "2026-09-02T00:00:00Z"
+    },
+    {
+      "ejecucionEntityCode": "845",
+      "ejecucionNombre": "MUNICIPALIDAD PROVINCIAL DE TRUJILLO",
+      "infobrasCodigoEntidad": "E-001",
+      "infobrasEntidadNombre": "MUNI PROV DE TRUJILLO",
+      "confidence": "candidata",
+      "score": 0.62,
+      "devengado": 892500000,
+      "coberturaTemporal": { "cortesUsados": ["2026-08-26"], "estado": "PARCIAL" },
+      "obras": 5,
+      "obrasParalizadas": 0,
+      "computedAt": "2026-09-02T00:00:00Z"
+    }
+  ]
+}

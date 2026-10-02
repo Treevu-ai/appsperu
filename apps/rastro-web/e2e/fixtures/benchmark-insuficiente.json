@@ -1,0 +1,9 @@
+{
+  "entityCode": "999",
+  "anioFiscal": 2026,
+  "status": "datos_insuficientes",
+  "n": 2,
+  "minRequerido": 5,
+  "criterios": "nivel_gobierno=GOBIERNOS REGIONALES, funcion=*, regla=gobierno-regional-por-funcion v1",
+  "fechaCorte": "2026-08-26"
+}
