@@ -1965,6 +1965,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: {
       departamento: z.string().min(1).optional(),
       provincia: z.string().min(1).optional(),
+      ubigeo: z.string().regex(/^\d{6}$/).optional(),
       anio: z.string().regex(/^\d{4}$/).optional().describe("Año de 4 dígitos."),
       modalidad: z.string().min(1).optional(),
     },
