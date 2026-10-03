@@ -36,55 +36,9 @@ afterAll(async () => {
 });
 
 describe.skipIf(!CON_DB)("Índice de Vulnerabilidad Portuaria", () => {
-  // ─── Test: El score se calcula correctamente ───────────────────────────────
-  it("debe calcular el score correctamente para un terminal conocido", async () => {
-    // Terminal en buenas condiciones, concedido, con geo
-    // Score esperado:
-    //   estado:Bueno=10 * 0.25 = 2.5
-    //   concesion:true=5 * 0.20 = 1.0
-    //   alcance:Nacional=5 * 0.15 = 0.75
-    //   ambito:Marítimo=15 * 0.10 = 1.5
-    //   geo:true=0 * 0.10 = 0
-    //   Total: 5.75
-    const { calcularScoreVulnerabilidad } = await import("../src/routes/vulnerabilidad-portuaria.js");
-
-    const resultado = calcularScoreVulnerabilidad({
-      estadoConservacion: "Bueno",
-      esConcesionado: true,
-      alcance: "Nacional",
-      ambito: "Marítimo",
-      tieneGeolocalizacion: true,
-    });
-
-    expect(resultado.score).toBe(5.75);
-    expect(resultado.componentes.estadoConservacion).toBe(10);
-    expect(resultado.componentes.esConcesionado).toBe(5);
-    expect(resultado.componentes.alcance).toBe(5);
-    expect(resultado.componentes.ambito).toBe(15);
-    expect(resultado.componentes.tieneGeolocalizacion).toBe(0);
-  });
-
-  it("debe calcular score alto para terminal en mal estado sin geo", async () => {
-    // Terminal malo, no concedido, local, sin geo
-    //   estado:Malo=50 * 0.25 = 12.5
-    //   concesion:false=30 * 0.20 = 6.0
-    //   alcance:Local=25 * 0.15 = 3.75
-    //   ambito:null=15 * 0.10 = 1.5
-    //   geo:false=20 * 0.10 = 2.0
-    //   Total: 25.75
-    const { calcularScoreVulnerabilidad } = await import("../src/routes/vulnerabilidad-portuaria.js");
-
-    const resultado = calcularScoreVulnerabilidad({
-      estadoConservacion: "Malo",
-      esConcesionado: false,
-      alcance: "Local",
-      ambito: null,
-      tieneGeolocalizacion: false,
-    });
-
-    expect(resultado.score).toBe(25.75);
-    expect(resultado.componentes.tieneGeolocalizacion).toBe(20);
-  });
+  // Los tests de las fórmulas puras (calcularScoreVulnerabilidad, calcularScoreVulnerabilidadTrafico)
+  // viven en src/__tests__/vulnerabilidad-scoring.test.ts, sin el gate de DATABASE_URL — ver el
+  // comentario de cabecera de ese archivo.
 
   // ─── Test: Ranking ordenando por score DESC ─────────────────────────────────
   it("debe devolver terminales ordenados por score DESC", async () => {

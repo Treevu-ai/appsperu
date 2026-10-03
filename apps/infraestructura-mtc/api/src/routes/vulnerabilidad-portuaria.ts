@@ -3,6 +3,20 @@ import { z } from "zod";
 import { pool } from "../db/pool.js";
 import { asyncHandler } from "../lib/async-handler.js";
 import { parseQuery } from "../lib/validate-query.js";
+import {
+  buildPuertoSeriesMap,
+  computeVariacionScore,
+  computeVolumenScore,
+  matchTerminalToPuerto,
+  type PuertoSeriesMap,
+} from "../ingest/cargas-portuarias-join.js";
+import { calcularScoreVulnerabilidad, calcularScoreVulnerabilidadTrafico } from "../lib/vulnerabilidad-scoring.js";
+
+export { calcularScoreVulnerabilidad, calcularScoreVulnerabilidadTrafico };
+
+/** Fuente que activa el enriquecimiento VUL-11/12 (join con cargas_portuarias_historico). Ver
+ * cargas-portuarias-join.ts — distinto del "v2" de riesgo climático (`/vulnerabilidad/clima`). */
+const FUENTE_TRAFICO = "MTC+CARGAS_2017";
 
 // ─── Tipos para datos ANA SNIRH ─────────────────────────────────────────────
 
@@ -68,96 +82,6 @@ export const vulnerabilidadRouter = Router();
 
 const DEFAULT_LIMIT = 500;
 const MAX_LIMIT = 1000;
-
-/** Scoring por estado de conservación (0-75) */
-function estadoScore(estado: string | null): number {
-  switch (estado?.toLowerCase()) {
-    case "bueno":
-      return 10;
-    case "regular":
-      return 25;
-    case "malo":
-      return 50;
-    case "muy malo":
-      return 75;
-    default:
-      return 50; // null o desconocido = riesgo alto
-  }
-}
-
-/** Scoring por concesión (concesionados suelen tener mejor mantenimiento) */
-function concesionScore(esConcesionado: boolean | null): number {
-  return esConcesionado === true ? 5 : 30;
-}
-
-/** Scoring por alcance geográfico */
-function alcanceScore(alcance: string | null): number {
-  switch (alcance?.toLowerCase()) {
-    case "nacional":
-      return 5;
-    case "regional":
-      return 15;
-    case "local":
-      return 25;
-    default:
-      return 20;
-  }
-}
-
-/** Scoring por ámbito */
-function ambitoScore(ambito: string | null): number {
-  switch (ambito?.toLowerCase()) {
-    case "marítimo":
-      return 15;
-    case "fluvial":
-      return 20;
-    case "lacustre":
-      return 10;
-    default:
-      return 15;
-  }
-}
-
-/** Scoring por geolocalización (sin geo no se puede supervisar) */
-function geoScore(tieneGeo: boolean): number {
-  return tieneGeo ? 0 : 20;
-}
-
-/**
- * Calcula el score de vulnerabilidad para un terminal.
- * Fórmula: estado*0.25 + concesion*0.20 + alcance*0.15 + ambito*0.10 + geo*0.10
- */
-export function calcularScoreVulnerabilidad(params: {
-  estadoConservacion: string | null;
-  esConcesionado: boolean | null;
-  alcance: string | null;
-  ambito: string | null;
-  tieneGeolocalizacion: boolean;
-}): { score: number; componentes: Record<string, number> } {
-  const estadoS = estadoScore(params.estadoConservacion);
-  const concesionS = concesionScore(params.esConcesionado);
-  const alcanceS = alcanceScore(params.alcance);
-  const ambitoS = ambitoScore(params.ambito);
-  const geoS = geoScore(params.tieneGeolocalizacion);
-
-  const score =
-    estadoS * 0.25 +
-    concesionS * 0.20 +
-    alcanceS * 0.15 +
-    ambitoS * 0.10 +
-    geoS * 0.10;
-
-  return {
-    score: Math.round(score * 100) / 100,
-    componentes: {
-      estadoConservacion: estadoS,
-      esConcesionado: concesionS,
-      alcance: alcanceS,
-      ambito: ambitoS,
-      tieneGeolocalizacion: geoS,
-    },
-  };
-}
 
 // ─── Endpoint: GET /api/terminales/vulnerabilidad ─────────────────────────────
 
@@ -529,12 +453,14 @@ vulnerabilidadRouter.post(
   "/calcular",
   asyncHandler(async (req, res) => {
     const { fuente } = req.body?.fuente ? { fuente: req.body.fuente } : { fuente: "MTC_2025" };
+    const esTrafico = fuente === FUENTE_TRAFICO;
 
     // Obtener todos los terminales del corte más reciente
     const { rows: terminales } = await pool.query(
       `SELECT
          t.codigo_puerto,
          t.nombre_terminal,
+         t.label_terminal,
          t.id_departamento,
          t.ambito,
          t.alcance,
@@ -547,6 +473,19 @@ vulnerabilidadRouter.post(
        WHERE t.fecha_corte = (SELECT MAX(fecha_corte) FROM terminales_portuarios)`
     );
 
+    // Para la fuente de tráfico, precargar las series de volumen por puerto (VUL-11).
+    let seriesPorPuerto: PuertoSeriesMap = new Map();
+    let puertosDisponibles: string[] = [];
+    if (esTrafico) {
+      const { rows: cargasRows } = await pool.query<{ nombre_fuente: string; anio: number; volumen_tm: string }>(
+        `SELECT nombre_fuente, anio, volumen_tm FROM cargas_portuarias_historico WHERE nivel = 'puerto'`
+      );
+      seriesPorPuerto = buildPuertoSeriesMap(
+        cargasRows.map((r) => ({ nombreFuente: r.nombre_fuente, anio: r.anio, volumenTm: Number(r.volumen_tm) }))
+      );
+      puertosDisponibles = [...seriesPorPuerto.keys()];
+    }
+
     // Limpiar índice existente para esta fuente
     await pool.query(
       `DELETE FROM indice_vulnerabilidad_portuaria WHERE fuente_datos = $1`,
@@ -555,18 +494,42 @@ vulnerabilidadRouter.post(
 
     // Calcular e insertar scores
     let insertados = 0;
+    let terminalesConCoberturaTrafico = 0;
     const errores: string[] = [];
 
     for (const t of terminales) {
       const tieneGeo = t.latitud !== null && t.longitud !== null;
 
-      const { score, componentes } = calcularScoreVulnerabilidad({
-        estadoConservacion: t.estado_conservacion,
-        esConcesionado: t.es_concesionado,
-        alcance: t.alcance,
-        ambito: t.ambito,
-        tieneGeolocalizacion: tieneGeo,
-      });
+      let score: number;
+      let componentes: Record<string, unknown>;
+
+      if (esTrafico) {
+        const puertoMatch = matchTerminalToPuerto(t.nombre_terminal, t.label_terminal, puertosDisponibles);
+        const serie = puertoMatch ? seriesPorPuerto.get(puertoMatch) ?? null : null;
+        if (puertoMatch) terminalesConCoberturaTrafico++;
+
+        const resultado = calcularScoreVulnerabilidadTrafico({
+          estadoConservacion: t.estado_conservacion,
+          esConcesionado: t.es_concesionado,
+          alcance: t.alcance,
+          ambito: t.ambito,
+          tieneGeolocalizacion: tieneGeo,
+          volumenScore: computeVolumenScore(serie?.[2017] ?? null),
+          variacionScore: computeVariacionScore(serie),
+        });
+        score = resultado.score;
+        componentes = { ...resultado.componentes, puertoMatch };
+      } else {
+        const resultado = calcularScoreVulnerabilidad({
+          estadoConservacion: t.estado_conservacion,
+          esConcesionado: t.es_concesionado,
+          alcance: t.alcance,
+          ambito: t.ambito,
+          tieneGeolocalizacion: tieneGeo,
+        });
+        score = resultado.score;
+        componentes = resultado.componentes;
+      }
 
       try {
         await pool.query(
@@ -616,6 +579,9 @@ vulnerabilidadRouter.post(
       fuente,
       terminalesProcesados: terminales.length,
       insertados,
+      coberturaTrafico: esTrafico
+        ? { terminalesConMatch: terminalesConCoberturaTrafico, total: terminales.length }
+        : undefined,
       errores: errores.length > 0 ? errores : undefined,
     });
   })
