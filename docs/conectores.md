@@ -398,6 +398,22 @@ Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distrito
 | **API expuesta (2026-09-20)** | `GET /api/oece-ficha` (filtros `razonSocial`, `departamento`, `inscritoRnp`, paginado — cada fila ya trae `inscritoRnp` derivado de `codigoRegistro`) y `GET /api/oece-ficha/{ruc}` (ficha + `personas[]` con rol/DNI/cargo). Registrada como tools MCP `identidad_fiscal_oece_ficha`/`_by_ruc`. |
 | **Detalle completo** | [`docs/data-contracts/oece-ficha-proveedor.md`](data-contracts/oece-ficha-proveedor.md) |
 
+### `materialize-financieras-informales.ts` — Candidatas a financiera informal (sin SBS)
+
+Investigado y construido 2026-10-02, Épica 3 (Mapa de Gota a Gota, PRD-003) adaptada.
+
+| | |
+|---|---|
+| **Descripción** | Candidatas a financiera informal ("gota a gota", casa de cambio o de empeño) por coincidencia de nombre en el Padrón RUC nacional, cruzadas con la tasa de extorsión SIDPOL por departamento. No es un conector de ingesta externa -- materializa una vista derivada de `contribuyentes`, ya ingerido por `padron-connector.ts`. |
+| **Por qué no hay lado SBS** | El conector original (GOT-01 a GOT-05 del PRD-003) debía extraer el registro de casas de préstamo de `sbs.gob.pe` vía Playwright. Confirmado en vivo: **todo el dominio está protegido por Incapsula** (WAF anti-bot) -- tanto `curl` como un navegador automatizado reciben el challenge de Incapsula en cualquier URL del portal, no solo en el registro. Sin API ni dataset abierto alternativo (verificado contra `datosabiertos.gob.pe`). Construir un scraper para evadir el WAF queda fuera de lo que este proyecto puede hacer -- ver PRD-003 sección 2.1. |
+| **Qué hace** | Filtra `contribuyentes` por regex de nombre (`PRESTAMOS?`, `EMPEÑOS?`, `CASA DE CAMBIO`, `CAMBIO DE MONEDA`, `PRENDARIOS?`, con límites de palabra para evitar falsos positivos como "DESEMPEÑOS"), decodifica departamento desde el prefijo UBIGEO (tabla fija de 25 códigos INEI, no hay CIIU en el padrón reducido nacional para filtrar por actividad económica real), y trunca+reinserta `financieras_informales_candidatas` completo cada vez (`npm run materialize:financieras-informales`). |
+| **Frecuencia** | Manual, re-ejecutable sin fuente externa (solo depende de que `contribuyentes` esté actualizado). Sin scheduler. |
+| **Fuente de datos** | Derivado de `contribuyentes` (padrón reducido SUNAT, ya ingerido localmente) -- no hay fetch HTTP en este script. |
+| **Cobertura real ingerida** | Verificado en vivo 2026-10-02: **250 candidatas, 94 activas** (`estado_contribuyente = 'ACTIVO'`), 0 falsos positivos en una muestra aleatoria de 25. |
+| **Hallazgo real — Lima/Callao con etiqueta distinta entre fuentes** | `seguridad-ciudadana` reporta Lima partida en `LIMA METROPOLITANA` + `REGION LIMA` (y Callao como `PROV. CONST. DEL CALLAO`), mismo criterio que `poblacion_departamental` del Termómetro SIDPOL. El Padrón RUC decodifica a los nombres INEI estándar (`LIMA`/`CALLAO`). Sin normalizar, las 78 candidatas de Lima y las 6 de Callao nunca cruzaban con su tasa de extorsión -- confirmado en vivo antes del fix (ambas aparecían con `tasaExtorsion100k: null`), corregido sumando las entradas partidas antes de unir. |
+| **API expuesta** | `GET /api/financieras-informales` (filtros `departamento`/`soloActivas`, paginado) y `GET /api/financieras-informales/resumen-geo` (agregados por departamento, cruzados con extorsión SIDPOL -- `candidatas`/`candidatasActivas` y `tasaExtorsion100k` como señales independientes, sin combinar en un score: no hay evidencia de que una financiera específica esté vinculada a casos de extorsión concretos). Registrada como tools MCP `identidad_fiscal_financieras_informales`/`_resumen_geo`. |
+| **Detalle completo** | [`docs/prd/PRD-003-mapa-gota-gota.md`](prd/PRD-003-mapa-gota-gota.md) sección 2.1 |
+
 ---
 
 <a id="proveedores-sancionados"></a>

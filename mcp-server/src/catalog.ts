@@ -1468,6 +1468,43 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: {},
   },
   {
+    name: "identidad_fiscal_financieras_informales",
+    app: "identidad-fiscal",
+    handler: "financieras-informales:list",
+    description:
+      "Candidatas a financiera informal ('gota a gota', casa de cambio o de empeño) por coincidencia de nombre " +
+      "en el Padrón RUC nacional (contribuyentes, no CIIU: el padrón reducido no trae código de actividad " +
+      "económica, solo ficha_ruc_actividades/ruc_consulta_masiva lo tienen y con cobertura parcial de un seed, " +
+      "no el universo completo — ver docs/prd/PRD-003-mapa-gota-gota.md). Reemplaza al conector SBS original " +
+      "(GOT-01 a GOT-05): el portal sbs.gob.pe completo está protegido por Incapsula (WAF anti-bot, confirmado " +
+      "en vivo), sin API ni dataset abierto alternativo — no hay lado 'casas registradas por SBS' en este dato. " +
+      "Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/financieras-informales",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      soloActivas: z.enum(["true", "false"]).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "identidad_fiscal_financieras_informales_resumen_geo",
+    app: "identidad-fiscal",
+    handler: "financieras-informales:resumenGeo",
+    description:
+      "Agregados por departamento de `identidad_fiscal_financieras_informales` cruzados con la tasa de " +
+      "extorsión SIDPOL por 100k habitantes (mismo denominador que el Termómetro SIDPOL). `candidatas`/" +
+      "`candidatasActivas` y `tasaExtorsion100k` son DOS señales independientes, no un score combinado — no hay " +
+      "evidencia de que una financiera específica esté vinculada a casos de extorsión concretos, solo que ambos " +
+      "fenómenos coexisten geográficamente. Lima y Callao se normalizan desde las etiquetas propias de SIDPOL " +
+      "('LIMA METROPOLITANA'/'REGION LIMA'/'PROV. CONST. DEL CALLAO') antes de cruzar.",
+    pathTemplate: "/api/financieras-informales/resumen-geo",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
     name: "identidad_fiscal_oece_ficha",
     app: "identidad-fiscal",
     handler: "oece-ficha:list",

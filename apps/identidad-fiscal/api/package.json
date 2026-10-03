@@ -15,6 +15,7 @@
     "ingest:padron-ppa": "tsx src/ingest/padron-ppa-connector.ts",
     "ingest:oece-ficha": "tsx src/ingest/oece-ficha-connector.ts",
     "coverage:identidad-fiscal": "tsx src/ingest/materialize-coverage.ts",
+    "materialize:financieras-informales": "tsx src/ingest/materialize-financieras-informales.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

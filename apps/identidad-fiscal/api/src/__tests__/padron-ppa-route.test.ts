@@ -13,6 +13,7 @@ vi.mock("../db/pool.js", () => ({
 // de app.js sí las evalúa.
 process.env.COMPRAS_DATABASE_URL ??= "postgres://test:test@localhost:5432/test";
 process.env.EJECUCION_DATABASE_URL ??= "postgres://test:test@localhost:5432/test";
+process.env.SEGURIDAD_DATABASE_URL ??= "postgres://test:test@localhost:5432/test";
 
 const { createApp } = await import("../app.js");
 

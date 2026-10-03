@@ -1,6 +1,31 @@
 # PRD-003 · Mapa de Gota a Gota
-**Versión:** 1.0 · **Fecha:** 2026-09-26 · **Estado:** Propuesto (pendiente verificación SIDPOL)
+**Versión:** 1.1 · **Fecha:** 2026-09-26 (actualizado 2026-10-02) · **Estado:** Implementado (v1, sin SBS)
 **Autor:** Ricardo · **Alcance:** RASTRO / Treevu · **Prioridad:** 3/4
+
+## 2.1 Actualización 2026-10-02 — SBS descartado, implementado sin ese lado
+
+Al intentar construir el conector SBS (Fase 1, GOT-01/GOT-02) se confirmó en vivo que
+**todo el dominio `sbs.gob.pe` está protegido por Incapsula** (WAF anti-bot) — tanto
+`curl` como un navegador automatizado reciben el challenge de Incapsula en vez del
+contenido real, en cualquier URL del portal (la antigua `casacambioweb.aspx` y la
+nueva `/supervisados-y-registros/...`). Se investigó una API o dataset abierto
+alternativo (`datosabiertos.gob.pe`, búsqueda de APIs públicas de SBS) — no existe
+ninguno para este registro específico. Construir un scraper para evadir ese WAF
+queda fuera de lo que este proyecto puede hacer.
+
+**Implementado en su lugar:** candidatas por coincidencia de nombre en el Padrón RUC
+nacional (`contribuyentes`, 2.3M filas — sin CIIU, así que no se puede filtrar por
+código de actividad económica real) cruzadas con la tasa de extorsión SIDPOL por
+departamento. Expuesto como `GET /api/financieras-informales` y
+`GET /api/financieras-informales/resumen-geo` en `identidad-fiscal`
+(`identidad_fiscal_financieras_informales`/`_resumen_geo` en el catálogo MCP).
+
+Esto reemplaza GOT-01 a GOT-10 de la Fase 1/2 originales — ver
+`docs/backlog/backlog-rastro-proyectos.md` Épica 3 para el detalle ticket por ticket.
+No se construyó `score_riesgo` combinado (denuncias/casas_registradas de la Fase 2
+original): sin el numerador de SBS, un ratio inventado implicaría una relación causal
+no verificada. `candidatas`/`candidatasActivas` y `tasaExtorsion100k` se exponen como
+dos señales independientes.
 
 ---
 
