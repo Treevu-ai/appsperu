@@ -103,6 +103,16 @@ export async function ingestCargasPortuarias(): Promise<IngestCargasSummary> {
   const lastRowIndex = findLastDataRow(worksheet, headerRowIndex);
   const { rows, rejected, filasFuenteOrigen } = extractCargasRows(worksheet, headerRowIndex, lastRowIndex);
 
+  // Guard crítico: purgeFilasObsoletas() borra todo lo que no tenga el source_batch_id del
+  // batch nuevo. Si el parseo alguna vez devuelve 0 filas (ej. el portal cambió de estructura y
+  // findHeaderRow/findLastDataRow ya no encuentran los datos reales), seguir adelante vaciaría
+  // el histórico completo en vez de fallar ruidosamente. Hallazgo real de CodeRabbit en PR #232.
+  if (rows.length === 0) {
+    throw new Error(
+      `El parseo de ${CARGAS_URL} no produjo ninguna fila válida (${filasFuenteOrigen} filas de origen, ${rejected.length} rechazadas) — probablemente cambió la estructura del XLSX. Abortando sin tocar la base.`
+    );
+  }
+
   const client = await pool.connect();
   try {
     await client.query("BEGIN");

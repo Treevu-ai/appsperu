@@ -42,7 +42,16 @@ function cellText(value: unknown): string {
 
 function cellNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === "") return null;
-  const n = typeof value === "object" && "result" in (value as object) ? Number((value as { result: unknown }).result) : Number(value);
+  // Celda de fórmula: su `.result` puede venir null/undefined/"" (fórmula que evaluó a blanco) —
+  // sin este chequeo, Number(null)=0 y Number(undefined)=NaN convertían silenciosamente una
+  // celda vacía en un volumen "0" real en vez de null. Hallazgo real de CodeRabbit en PR #232.
+  if (typeof value === "object" && "result" in (value as object)) {
+    const result = (value as { result: unknown }).result;
+    if (result === null || result === undefined || result === "") return null;
+    const n = Number(result);
+    return Number.isFinite(n) ? n : null;
+  }
+  const n = Number(value);
   return Number.isFinite(n) ? n : null;
 }
 

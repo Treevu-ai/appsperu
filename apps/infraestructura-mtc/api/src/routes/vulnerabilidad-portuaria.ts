@@ -487,10 +487,14 @@ vulnerabilidadRouter.post(
 
       // Sin datos de tráfico cargados (ej. base recién migrada, antes de correr
       // ingest:cargas-portuarias), este recálculo degeneraría silenciosamente en puro v1
-      // etiquetado como 'MTC+CARGAS_2017' — hallazgo real de Copilot en PR #232.
-      if (puertosDisponibles.length === 0) {
+      // etiquetado como 'MTC+CARGAS_2017' — hallazgo real de Copilot en PR #232. No basta con
+      // "algún año": computeVolumenScore usa específicamente serie[2017] (hallazgo real de
+      // CodeRabbit en la misma PR) — datos de otros años sin 2017 producirían el mismo
+      // degenere silencioso.
+      const tieneDato2017 = [...seriesPorPuerto.values()].some((serie) => serie[2017] !== undefined);
+      if (puertosDisponibles.length === 0 || !tieneDato2017) {
         res.status(409).json({
-          error: `No hay datos en cargas_portuarias_historico para calcular '${FUENTE_TRAFICO}'. Corre primero 'npm run ingest:cargas-portuarias'.`,
+          error: `No hay datos de 2017 en cargas_portuarias_historico para calcular '${FUENTE_TRAFICO}'. Corre primero 'npm run ingest:cargas-portuarias'.`,
         });
         return;
       }
