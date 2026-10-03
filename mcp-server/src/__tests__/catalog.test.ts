@@ -133,6 +133,8 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "identidad_fiscal_exportaciones_fob_resumen",
     "identidad_fiscal_ficha_ruc",
     "identidad_fiscal_ficha_ruc_by_ruc",
+    "identidad_fiscal_financieras_informales",
+    "identidad_fiscal_financieras_informales_resumen_geo",
     "identidad_fiscal_oece_ficha",
     "identidad_fiscal_oece_ficha_by_ruc",
     "identidad_fiscal_padron_ppa",

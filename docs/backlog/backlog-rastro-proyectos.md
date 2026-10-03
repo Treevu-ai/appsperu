@@ -157,49 +157,59 @@
 **Criterios de aceptación:**
 - Query `SELECT DISTINCT modalidad FROM police_reports WHERE lower(modalidad) LIKE '%gota%'` devuelve filas
 - Si no devuelve: documentar decisión de replantear estrategia y pausar épica
-**Ticket:** `[GOT-00]` Ejecutar y documentar resultado
+**Ticket:** `[GOT-00]` Ejecutar y documentar resultado — ✅ ejecutado 2026-09-26, no devuelve filas (confirmado
+de nuevo en vivo 2026-10-02). **Reinterpretado 2026-10-02**, no pausado: "Extorsión" (19,527 casos reales,
+confirmado en vivo) es la modalidad SIDPOL más cercana al mecanismo de cobro gota a gota — se usa como proxy
+geográfico en vez de pausar la épica. Decisión del usuario, ver PRD-003 sección 2.1.
 
 ---
 
-### Historia 3.1 — Conector SBS (Playwright)
+### Historia 3.1 — Conector SBS (Playwright) — ❌ DESCARTADO 2026-10-02
 **Como** data engineer **quiero** extraer el registro de casas de préstamo de la SBS **para** tener una base de comparación con las fachadas.
 **Criterios de aceptación:**
 - El conector extrae RUC, razón social, dirección, departamento de todas las casas registradas
 - Se ejecuta en < 30 minutos para el universo completo
 - Test: el conector devuelve filas consistentes en dos ejecuciones
 **Tickets técnicos:**
-- `[GOT-01]` Investigar estructura del HTML del portal SBS con Playwright
-- `[GOT-02]` Implementar `sbs-casas-prestamo-connector.ts`
-- `[GOT-03]` Rate limiting: 1 request/5s para no bloquear el portal
-- `[GOT-04]` Tests del conector con mocks del HTML
-- `[GOT-05]` Script de ingest a tabla `casas_gota_gota`
+- `[GOT-01]` ❌ Investigar estructura del HTML del portal SBS con Playwright — todo `sbs.gob.pe` está detrás de
+  Incapsula (WAF anti-bot), confirmado en vivo con curl y navegador automatizado. Sin API/dataset abierto
+  alternativo (verificado contra datosabiertos.gob.pe). Ver PRD-003 sección 2.1.
+- `[GOT-02]` a `[GOT-05]` ❌ No ejecutados — construir un scraper para evadir el WAF queda fuera de lo que este
+  proyecto puede hacer.
 
 ---
 
-### Historia 3.2 — Modelo de datos integrado
+### Historia 3.2 — Modelo de datos integrado — ✅ adaptado sin SBS, 2026-10-02
 **Como** arquitecto de datos **quiero** un modelo que cruce SIDPOL × SBS × Padrón RUC **para** generar un mapa completo.
-**Criterios de aceptación:**
-- Tabla `casas_gota_gota` con score de riesgo calculado
-- JOIN idempotente: las casas de SBS se cruzan con Padrón RUC por RUC exacto
-- JOIN geográfico: SIDPOL por ubigeo con Padrón RUC por ubigeo
+**Criterios de aceptación (adaptados, sin SBS):**
+- Tabla `financieras_informales_candidatas` en `identidad-fiscal` (no `casas_gota_gota`/`seguridad-ciudadana`
+  del diseño original — el RUC es el ancla, no hay lado SBS que anclar en seguridad-ciudadana)
+- Candidatas por coincidencia de nombre en `contribuyentes` (no CIIU — el padrón reducido nacional no lo trae)
+- Cruce geográfico con extorsión SIDPOL por departamento (no por distrito/ubigeo exacto — la fuente de
+  población/extorsión del Termómetro SIDPOL está a nivel departamental)
 **Tickets técnicos:**
-- `[GOT-06]` Diseñar schema de `casas_gota_gota` (ver PRD-003 sección 3)
-- `[GOT-07]` Crear tabla en BD `seguridad-ciudadana`
-- `[GOT-08]` Script de cruce SBS × Padrón RUC
-- `[GOT-09]` Script de cruce SIDPOL × Padrón RUC por ubigeo
-- `[GOT-10]` Calcular score de riesgo (fórmula: denuncias_gota_gota.count / casas_registradas * factor_geografico)
+- `[GOT-06]` ✅ Schema de `financieras_informales_candidatas` (migración 011, `identidad-fiscal`)
+- `[GOT-07]` ✅ Tabla creada en BD `identidad-fiscal` (no `seguridad-ciudadana`, ver arriba)
+- `[GOT-08]` ❌ Cruce SBS × Padrón RUC — no aplica, SBS descartado
+- `[GOT-09]` ✅ Cruce extorsión SIDPOL × candidatas por departamento (`materialize-financieras-informales.ts`
+  + `GET /api/financieras-informales/resumen-geo`)
+- `[GOT-10]` ❌ Score de riesgo combinado — deliberadamente NO implementado: sin el numerador de SBS
+  (`casas_registradas`), un ratio inventado implicaría una relación causal no verificada entre candidatas y
+  extorsión. Se exponen como dos señales independientes (`candidatas`/`candidatasActivas` y
+  `tasaExtorsion100k`).
 
 ---
 
-### Historia 3.3 — API de consulta
+### Historia 3.3 — API de consulta — ✅ adaptada, 2026-10-02
 **Como** periodista **quiero** consultar casas por distrito y ver su score de riesgo **para** identificar zonas críticas.
-**Criterios de aceptación:**
-- `GET /api/gota-gota/casas?departamento=LIMA&minScore=60` devuelve lista paginada
-- `GET /api/gota-gota/resumen-geo` devuelve agregados por distrito
+**Criterios de aceptación (adaptados):**
+- `GET /api/financieras-informales?departamento=LIMA` devuelve lista paginada (no `minScore`, no hay score)
+- `GET /api/financieras-informales/resumen-geo` devuelve agregados por departamento (no por distrito)
 **Tickets técnicos:**
-- `[GOT-11]` Endpoints de la API (ver PRD-003 sección 3)
-- `[GOT-12]` Tests de la API
-- `[GOT-13]` Consumir tools en `catalog.ts`
+- `[GOT-11]` ✅ Endpoints implementados (`apps/identidad-fiscal/api/src/routes/financieras-informales.ts`)
+- `[GOT-12]` ✅ Tests de la API (`financieras-informales-route.test.ts`, incluye el caso de normalización
+  LIMA METROPOLITANA + REGION LIMA → LIMA, hallazgo real encontrado al verificar en vivo)
+- `[GOT-13]` ✅ Tools en `catalog.ts` (`identidad_fiscal_financieras_informales`/`_resumen_geo`)
 
 ---
 

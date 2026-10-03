@@ -6,6 +6,7 @@ import { padronPpaRouter } from "./routes/padron-ppa.js";
 import { oeceFichaRouter } from "./routes/oece-ficha.js";
 import { rucConsultaMasivaRouter } from "./routes/ruc-consulta-masiva.js";
 import { exportacionesFobRouter } from "./routes/exportaciones-fob.js";
+import { financierasInformalesRouter } from "./routes/financieras-informales.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 import { pool } from "./db/pool.js";
 
@@ -31,6 +32,7 @@ export function createApp() {
   app.use("/api/oece-ficha", oeceFichaRouter);
   app.use("/api/ruc-consulta-masiva", rucConsultaMasivaRouter);
   app.use("/api/exportaciones-fob", exportacionesFobRouter);
+  app.use("/api/financieras-informales", financierasInformalesRouter);
 
   // Debe ir al final: sin esto, un rechazo dentro de un handler async se
   // vuelve un unhandled rejection que tumba el proceso entero.

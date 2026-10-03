@@ -53,6 +53,7 @@ import * as identidad_fiscal_contribuyentes from "./identidad-fiscal/contribuyen
 import * as identidad_fiscal_crossref from "./identidad-fiscal/crossref.js";
 import * as identidad_fiscal_exportaciones_fob from "./identidad-fiscal/exportaciones-fob.js";
 import * as identidad_fiscal_ficha_ruc from "./identidad-fiscal/ficha-ruc.js";
+import * as identidad_fiscal_financieras_informales from "./identidad-fiscal/financieras-informales.js";
 import * as identidad_fiscal_oece_ficha from "./identidad-fiscal/oece-ficha.js";
 import * as identidad_fiscal_padron_ppa from "./identidad-fiscal/padron-ppa.js";
 import * as identidad_fiscal_ruc_consulta_masiva from "./identidad-fiscal/ruc-consulta-masiva.js";
@@ -186,6 +187,7 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "identidad-fiscal/crossref": identidad_fiscal_crossref,
   "identidad-fiscal/exportaciones-fob": identidad_fiscal_exportaciones_fob,
   "identidad-fiscal/ficha-ruc": identidad_fiscal_ficha_ruc,
+  "identidad-fiscal/financieras-informales": identidad_fiscal_financieras_informales,
   "identidad-fiscal/oece-ficha": identidad_fiscal_oece_ficha,
   "identidad-fiscal/padron-ppa": identidad_fiscal_padron_ppa,
   "identidad-fiscal/ruc-consulta-masiva": identidad_fiscal_ruc_consulta_masiva,
