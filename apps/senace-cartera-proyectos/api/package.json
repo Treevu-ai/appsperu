@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "migrate": "tsx src/db/migrate.ts",
     "ingest:senace": "tsx src/ingest/senace-connector.ts",
+    "ingest:certificaciones": "tsx src/ingest/certificaciones-evaluadas-connector.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
