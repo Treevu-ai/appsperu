@@ -1158,6 +1158,20 @@ Investigado y construido 2026-09-21 (ticket ADS-04, `docs/BACKLOG_Organismos_Ads
 | **API expuesta** | `GET /api/proyectos` (filtros `estado`/`actividad`/`ruc`/`texto`, paginado con `total`/`hasMore`) y `GET /api/proyectos/{senaceId}` (detalle, 404 si no existe). Registrada como tools MCP `senace_cartera_proyectos`/`senace_cartera_proyecto_detalle`. |
 | **Cruces** | Ninguno implementado todavía — candidato natural: cruce por RUC contra `infracciones-ambientales` (OEFA) para perfil de riesgo ambiental de un titular, o contra `proveedores-sancionados` (OSCE). |
 
+### `certificaciones-evaluadas-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Expedientes de certificación ambiental evaluados por SENACE con titular del proyecto, consultora ambiental responsable de preparar el instrumento, tipo de IGA (ITS, Clasificación, MEIA-d, PPC, IGAPRO, etc.), monto de inversión y ubicación geográfica (departamento/provincia/distrito/lat/long). Complementa a `senace-connector.ts`: ese cubre la cartera de proyectos por estado de tramitación; este cubre el registro histórico de certificaciones ya evaluadas, con el dato adicional de la consultora. |
+| **Fuente de datos** | CSV público `https://www.datosabiertos.gob.pe/sites/default/files/Certificaciones_Evaluadas.csv` (datosabiertos.gob.pe, no `datosabiertos.senace.gob.pe`) — descarga directa sin auth, sin paginado. Parser CSV propio con soporte de comillas (delimitador `;`, campos pueden traer el delimitador dentro de comillas, ej. títulos de proyecto largos). |
+| **`FECHA_INGRESO`/`FECHA_RD` como texto `YYYYMMDD`** | La fuente no usa ISO ni separadores — el conector lo parsea explícitamente a `YYYY-MM-DD`; un formato inesperado (longitud distinta de 8) deja el campo en `null` sin rechazar la fila. |
+| **`MONEDA_INVERSION` sin normalizar (hallazgo real)** | El campo viene tal cual de la fuente con al menos 7 variantes para las mismas 2 monedas: `"Soles"`, `"SOLES"`, `"US$"`, `"DOLARES"`, `"No declarado"`, el string literal `"<Nulo>"`, y `null` — sumar montos agrupando por este campo sin normalizar antes produce totales sin sentido. El conector no normaliza (se guarda tal cual llega); cualquier análisis que agregue montos debe normalizar primero. |
+| **Clave real verificada** | `expediente` (texto) — `ON CONFLICT (expediente) DO UPDATE` solo sobre `estado`/`monto_inversion`/`source_batch_id`, el resto de campos no se actualiza en una re-corrida. |
+| **Frecuencia** | Manual (`npm run ingest:certificaciones` en `apps/senace-cartera-proyectos/api`). Sin scheduler. |
+| **Cobertura real ingerida** | Verificado en vivo 2026-10-02: **2,161 filas**, 527 titulares distintos, 263 consultoras ambientales distintas, 27 departamentos, rango 2016-2023. |
+| **API expuesta** | Ninguna todavía — este PR es solo el conector base. Pendiente: `GET /api/certificaciones-evaluadas` + tool MCP, si se decide construir sobre esto. |
+| **Cruces** | Cruce exploratorio por RUC (consultora/titular) contra `proveedores-sancionados.inhabilitaciones` encontró una correlación real pero no concluyente: una consultora ambiental aparece registrada en expedientes de entidades públicas durante la vigencia exacta de su inhabilitación OSCE. No se pudo confirmar el mecanismo contractual porque `compras-publicas` solo cubre desde 2024-02-15 — anterior a eso es un hueco de cobertura, no evidencia de ausencia de contrato. Ver memoria de sesión `project_rastro_hallazgo_fc_ingenieria_senace_inhabilitacion.md` para el detalle completo; no publicado como hallazgo verificado. |
+
 ---
 
 <a id="catastro-forestal"></a>
