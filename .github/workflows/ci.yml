@@ -35,6 +35,7 @@ jobs:
           - apps/instituciones-educativas/api
           - apps/inversion-privada/api
           - apps/legislativo-congreso/api
+          - apps/mincetur-juegos-casino/api
           - apps/mindef/api
           - apps/mimp/api
           - apps/osinergmin-combustibles/api
