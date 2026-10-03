@@ -1291,6 +1291,33 @@ Investigado y construido 2026-10-01/02.
 
 ---
 
+<a id="mincetur-juegos-casino"></a>
+## mincetur-juegos-casino — Registro de juegos de casino y máquinas tragamonedas (MINCETUR/DGJCMT)
+
+Investigado y construido 2026-10-03. El spike previo de MINCETUR
+(`docs/adr/0007-research-spike-midagri-mincetur-actividad-economica.md`,
+`docs/data-contracts/mincetur-turismo-regional.md`, agosto 2026) había concluido que el portal
+era mayormente PDF/dashboard sin dataset exportable -- cierto para turismo regional, pero el
+catálogo CKAN reparado en el backfill masivo reveló 25+ datasets CSV/XLSX reales de MINCETUR
+nunca explorados, incluyendo todo el registro DGJCMT (Dirección General de Juegos de Casino y
+Máquinas Tragamonedas) -- un dominio sin relación con turismo/comercio exterior.
+
+### `salas-autorizadas-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Registro de salas autorizadas para operar juegos de casino y/o máquinas tragamonedas: empresa, RUC, establecimiento, resolución autorizante, código de sala, fecha de vigencia de la licencia, ubicación geográfica. |
+| **Fuente de datos** | CSV directo `https://www.mincetur.gob.pe/Datos_abiertos/DGJCMT/Salas_autorizadas_juego.csv` (dominio `mincetur.gob.pe`, distinto de `datosabiertos.mincetur.gob.pe`) — sin auth, sin paginado. |
+| **Hallazgo real — encoding ISO-8859-1 sin charset declarado** | El header HTTP solo declara `Content-Type: text/csv` (sin `charset=`) y no hay BOM, pero el archivo es ISO-8859-1 real (confirmado con `file` antes de escribir el conector) -- decodificar como UTF-8 (lo que hace `res.text()` por defecto) corrompe toda Ñ/tilde en distrito/provincia/departamento (ej. "CAÑETE", "ÁNCASH"). El conector decodifica explícitamente con `new TextDecoder("iso-8859-1").decode(arrayBuffer)`. Patrón reutilizable para el resto de la familia DGJCMT (Comercializadores, Fabricantes, Importadores, Ensambladores, Representantes, Entidades Calificadoras, Registro de máquinas tragamonedas -- 155,938 filas, no ingerido todavía) y probablemente cualquier CSV directo de `mincetur.gob.pe`. |
+| **Clave real verificada** | `CODIGO_SALA` -- único por sala (una empresa puede tener varias salas, cada una con su propio código); `ON CONFLICT (codigo_sala) DO UPDATE`. |
+| **`FECHA_VIGENCIA` puede venir vacía** | Sin fecha de vigencia registrada en 60/676 filas (8.9%) -- se guarda `null`, la fila no se descarta. |
+| **Frecuencia** | Manual (`npm run ingest:salas` en `apps/mincetur-juegos-casino/api`). Sin scheduler. |
+| **Cobertura real ingerida** | Verificado en vivo 2026-10-03: **676 salas, 303 operadores distintos** (corte de la fuente: 2026-10-01). |
+| **API expuesta** | `GET /api/salas-autorizadas` (filtros `departamento`/`ruc`, paginado) y `GET /api/salas-autorizadas/irregulares-sunat` (cruce por RUC contra el Padrón RUC de `identidad-fiscal`, vía segundo pool de solo lectura). No registrada todavía como tool MCP. |
+| **Cruces** | `GET /api/salas-autorizadas/irregulares-sunat` contra `identidad-fiscal.contribuyentes` -- encontró 5 operadores (7 salas) sin estado ACTIVO+HABIDO en SUNAT, incluyendo un caso de BAJA DEFINITIVA con licencia vigente hasta 2029. Ver memoria de sesión `project_rastro_hallazgo_mincetur_juegos_sunat.md` para el detalle verificado 1:1. |
+
+---
+
 ## Mapa de cruces entre apps
 
 Cada fila es un endpoint `GET /api/crossref*` real (verificado en `src/routes/crossref.ts` de cada
