@@ -93,6 +93,14 @@ interface PoblacionRow extends NeonRow {
   poblacion: number;
 }
 
+// Comparación de delta año a año: hardcodeado a 2024 vs 2025 (no al MAX(anio)
+// dinámico) porque 2026 está parcial -- un solo fetch SIDPOL el 2026-10-01 con
+// datos solo hasta julio (ver raw_sidpol_batches). Comparar 2026 parcial contra
+// 2025 completo infla artificialmente cualquier caída. 2024 y 2025 son los dos
+// últimos años cerrados, verificados en vivo (La Libertad: 5096 -> 4333, -15%).
+const ANIO_ACTUAL_DELTA = 2025;
+const ANIO_ANTERIOR_DELTA = 2024;
+
 /**
  * Handler para `identidad_fiscal_financieras_informales_resumen_geo` —
  * GET /api/financieras-informales/resumen-geo. SQL idéntico a
@@ -103,7 +111,7 @@ export async function resumenGeo(ctx: ToolHandlerContext): Promise<HandlerResult
   const seguridadDb = crossAppPool("seguridad-ciudadana", env);
   if (!seguridadDb) return crossAppUnavailable("seguridad-ciudadana");
 
-  const [candidatasResult, extorsionResult, poblacionResult] = await Promise.all([
+  const [candidatasResult, extorsionResult, poblacionResult, deltaResult] = await Promise.all([
     db.query<GeoCandidataRow>(
       `SELECT departamento, COUNT(*) AS candidatas,
               COUNT(*) FILTER (WHERE estado_contribuyente = 'ACTIVO') AS candidatas_activas
@@ -117,6 +125,13 @@ export async function resumenGeo(ctx: ToolHandlerContext): Promise<HandlerResult
        GROUP BY departamento, anio`
     ),
     seguridadDb.query<PoblacionRow>(`SELECT departamento, poblacion FROM poblacion_departamental`),
+    seguridadDb.query<ExtorsionRow>(
+      `SELECT departamento, anio, SUM(cantidad) AS total
+       FROM police_reports
+       WHERE modalidad = 'Extorsión' AND anio IN ($1, $2)
+       GROUP BY departamento, anio`,
+      [ANIO_ACTUAL_DELTA, ANIO_ANTERIOR_DELTA]
+    ),
   ]);
 
   const normalizarDepartamento = (d: string): string => {
@@ -138,13 +153,26 @@ export async function resumenGeo(ctx: ToolHandlerContext): Promise<HandlerResult
     extorsionPorDepartamento.set(dep, { total: (actual?.total ?? 0) + Number(r.total), anio: r.anio });
   }
 
+  const deltaPorDepartamento = new Map<string, { actual: number | null; anterior: number | null }>();
+  for (const r of deltaResult.rows) {
+    const dep = normalizarDepartamento(r.departamento);
+    const entry = deltaPorDepartamento.get(dep) ?? { actual: null, anterior: null };
+    if (r.anio === ANIO_ACTUAL_DELTA) entry.actual = (entry.actual ?? 0) + Number(r.total);
+    if (r.anio === ANIO_ANTERIOR_DELTA) entry.anterior = (entry.anterior ?? 0) + Number(r.total);
+    deltaPorDepartamento.set(dep, entry);
+  }
+
   const candidatasPorDepartamento = new Map(
     candidatasResult.rows
       .filter((r): r is typeof r & { departamento: string } => r.departamento !== null)
       .map((r) => [r.departamento, { candidatas: Number(r.candidatas), candidatasActivas: Number(r.candidatas_activas) }])
   );
 
-  const departamentos = new Set([...candidatasPorDepartamento.keys(), ...extorsionPorDepartamento.keys()]);
+  const departamentos = new Set([
+    ...candidatasPorDepartamento.keys(),
+    ...extorsionPorDepartamento.keys(),
+    ...deltaPorDepartamento.keys(),
+  ]);
 
   const resumen = [...departamentos].map((departamento) => {
     const candidatas = candidatasPorDepartamento.get(departamento);
@@ -152,6 +180,12 @@ export async function resumenGeo(ctx: ToolHandlerContext): Promise<HandlerResult
     const poblacion = poblacionPorDepartamento.get(departamento) ?? null;
     const tasaExtorsion100k =
       extorsion && poblacion ? Math.round((extorsion.total / poblacion) * 100_000 * 10) / 10 : null;
+
+    const delta = deltaPorDepartamento.get(departamento);
+    const deltaExtorsionPct =
+      delta !== undefined && delta.actual !== null && delta.anterior !== null && delta.anterior > 0
+        ? Math.round(((delta.actual - delta.anterior) / delta.anterior) * 100 * 10) / 10
+        : null;
 
     return {
       departamento,
@@ -161,6 +195,9 @@ export async function resumenGeo(ctx: ToolHandlerContext): Promise<HandlerResult
       extorsionAnio: extorsion?.anio ?? null,
       poblacion,
       tasaExtorsion100k,
+      extorsion2024: delta?.anterior ?? null,
+      extorsion2025: delta?.actual ?? null,
+      deltaExtorsionPct,
     };
   });
 
@@ -175,7 +212,10 @@ export async function resumenGeo(ctx: ToolHandlerContext): Promise<HandlerResult
         "(no hay CIIU en el padrón nacional completo, ver docs/prd/PRD-003-mapa-gota-gota.md). " +
         "tasaExtorsion100k es independiente -- ambas señales se muestran juntas por geografía " +
         "compartida, no como un score combinado: no hay evidencia de que relacione una " +
-        "financiera específica con casos de extorsión concretos.",
+        "financiera específica con casos de extorsión concretos. " +
+        "deltaExtorsionPct compara 2024 vs 2025 (los dos últimos años cerrados) -- no se usa " +
+        "2026 porque SIDPOL solo tiene datos hasta julio de ese año (fetch único, 2026-10-01), " +
+        "y mezclarlo con un año completo infla artificialmente cualquier caída.",
     },
   };
 }

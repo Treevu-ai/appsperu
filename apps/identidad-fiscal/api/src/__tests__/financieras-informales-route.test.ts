@@ -77,6 +77,14 @@ describe("GET /api/financieras-informales/resumen-geo", () => {
           { departamento: "LIMA METROPOLITANA", poblacion: 7822555 },
           { departamento: "REGION LIMA", poblacion: 828473 },
         ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          { departamento: "LIMA METROPOLITANA", anio: 2025, total: "4333" },
+          { departamento: "REGION LIMA", anio: 2025, total: "0" },
+          { departamento: "LIMA METROPOLITANA", anio: 2024, total: "5096" },
+          { departamento: "REGION LIMA", anio: 2024, total: "0" },
+        ],
       });
 
     const res = await request(createApp()).get("/api/financieras-informales/resumen-geo");
@@ -88,6 +96,9 @@ describe("GET /api/financieras-informales/resumen-geo", () => {
     expect(lima.extorsionTotal).toBe(5917);
     expect(lima.poblacion).toBe(8651028);
     expect(lima.tasaExtorsion100k).toBeCloseTo(68.4, 1);
+    expect(lima.extorsion2024).toBe(5096);
+    expect(lima.extorsion2025).toBe(4333);
+    expect(lima.deltaExtorsionPct).toBeCloseTo(-15.0, 1);
   });
 
   it("no combina el score en un solo número -- candidatas y tasaExtorsion100k quedan como campos separados", async () => {
@@ -96,13 +107,37 @@ describe("GET /api/financieras-informales/resumen-geo", () => {
     });
     seguridadQueryMock
       .mockResolvedValueOnce({ rows: [{ departamento: "TUMBES", anio: 2026, total: "439" }] })
-      .mockResolvedValueOnce({ rows: [{ departamento: "TUMBES", poblacion: 181317 }] });
+      .mockResolvedValueOnce({ rows: [{ departamento: "TUMBES", poblacion: 181317 }] })
+      .mockResolvedValueOnce({
+        rows: [
+          { departamento: "TUMBES", anio: 2025, total: "621" },
+          { departamento: "TUMBES", anio: 2024, total: "307" },
+        ],
+      });
 
     const res = await request(createApp()).get("/api/financieras-informales/resumen-geo");
 
     const tumbes = res.body.resumen.find((r: { departamento: string }) => r.departamento === "TUMBES");
     expect(tumbes).toMatchObject({ candidatas: 2, candidatasActivas: 1, extorsionTotal: 439 });
     expect(tumbes).not.toHaveProperty("scoreRiesgo");
+    expect(tumbes.deltaExtorsionPct).toBeCloseTo(102.3, 1);
     expect(res.body.nota).toMatch(/no hay evidencia/i);
+  });
+
+  it("deja deltaExtorsionPct en null cuando falta un año de comparación", async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [{ departamento: "MOQUEGUA", candidatas: "1", candidatas_activas: "1" }],
+    });
+    seguridadQueryMock
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ departamento: "MOQUEGUA", anio: 2025, total: "10" }] });
+
+    const res = await request(createApp()).get("/api/financieras-informales/resumen-geo");
+
+    const moquegua = res.body.resumen.find((r: { departamento: string }) => r.departamento === "MOQUEGUA");
+    expect(moquegua.extorsion2025).toBe(10);
+    expect(moquegua.extorsion2024).toBe(null);
+    expect(moquegua.deltaExtorsionPct).toBe(null);
   });
 });
