@@ -59,12 +59,25 @@ async function insertCargasBatch(client: PoolClient, batchId: number, rows: read
   );
 }
 
+/**
+ * El XLSX es un snapshot completo en cada corrida: cualquier fila que ya no aparezca (o que
+ * ahora se rechace) debe desaparecer del histórico, no quedarse con su `source_batch_id` viejo
+ * para siempre. Mismo patrón que los conectores de snapshot completo de esta app
+ * (infraestructura-mtc-connector.ts borra+reinserta vía UPSERT con purga por `fecha_corte`).
+ * Hallazgo real de Copilot en PR #232.
+ */
+async function purgeFilasObsoletas(client: PoolClient, batchId: number): Promise<number> {
+  const result = await client.query(`DELETE FROM cargas_portuarias_historico WHERE source_batch_id != $1`, [batchId]);
+  return result.rowCount ?? 0;
+}
+
 export interface IngestCargasSummary {
   dataset: "cargas_portuarias";
   batchId: number;
   filasOrigen: number;
   filasInsertadas: number;
   filasRechazadas: number;
+  filasPurgadas: number;
 }
 
 export async function ingestCargasPortuarias(): Promise<IngestCargasSummary> {
@@ -88,16 +101,24 @@ export async function ingestCargasPortuarias(): Promise<IngestCargasSummary> {
 
   const headerRowIndex = findHeaderRow(worksheet);
   const lastRowIndex = findLastDataRow(worksheet, headerRowIndex);
-  const { rows, rejected } = extractCargasRows(worksheet, headerRowIndex, lastRowIndex);
+  const { rows, rejected, filasFuenteOrigen } = extractCargasRows(worksheet, headerRowIndex, lastRowIndex);
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const batchId = await saveRawBatch(client, CARGAS_URL, checksumOf(buffer), rows.length + rejected.length);
+    const batchId = await saveRawBatch(client, CARGAS_URL, checksumOf(buffer), filasFuenteOrigen);
     await insertCargasBatch(client, batchId, rows);
     await insertRejectedBatch(client, batchId, rejected);
+    const filasPurgadas = await purgeFilasObsoletas(client, batchId);
     await client.query("COMMIT");
-    return { dataset: "cargas_portuarias", batchId, filasOrigen: rows.length + rejected.length, filasInsertadas: rows.length, filasRechazadas: rejected.length };
+    return {
+      dataset: "cargas_portuarias",
+      batchId,
+      filasOrigen: filasFuenteOrigen,
+      filasInsertadas: rows.length,
+      filasRechazadas: rejected.length,
+      filasPurgadas,
+    };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

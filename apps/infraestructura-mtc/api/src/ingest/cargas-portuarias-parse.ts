@@ -66,9 +66,11 @@ function normalizeUso(label: string): Uso | null {
 export function extractCargasRows(worksheet: Worksheet, headerRowIndex: number, lastRowIndex: number): {
   rows: CargaPortuariaRow[];
   rejected: RejectedRow[];
+  filasFuenteOrigen: number;
 } {
   const rows: CargaPortuariaRow[] = [];
   const rejected: RejectedRow[] = [];
+  let filasFuenteOrigen = 0;
 
   let ambitoActual: Ambito | null = null;
   let puertoActual: string | null = null;
@@ -78,6 +80,7 @@ export function extractCargasRows(worksheet: Worksheet, headerRowIndex: number, 
     const nombre = cellText(row.getCell(COL_TERMINAL).value);
     if (!nombre) continue;
     if (/^Fuente:|^Elaborado por/i.test(nombre)) continue;
+    filasFuenteOrigen += 1;
 
     const usoLabel = cellText(row.getCell(COL_USO).value);
     const uso = normalizeUso(usoLabel);
@@ -108,7 +111,7 @@ export function extractCargasRows(worksheet: Worksheet, headerRowIndex: number, 
     pushYearRows(rows, { nivel: "terminal", ambito: ambitoActual, puerto: puertoActual, nombreFuente: nombre, uso }, row, rejected);
   }
 
-  return { rows, rejected };
+  return { rows, rejected, filasFuenteOrigen };
 }
 
 function pushYearRows(

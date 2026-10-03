@@ -484,6 +484,16 @@ vulnerabilidadRouter.post(
         cargasRows.map((r) => ({ nombreFuente: r.nombre_fuente, anio: r.anio, volumenTm: Number(r.volumen_tm) }))
       );
       puertosDisponibles = [...seriesPorPuerto.keys()];
+
+      // Sin datos de tráfico cargados (ej. base recién migrada, antes de correr
+      // ingest:cargas-portuarias), este recálculo degeneraría silenciosamente en puro v1
+      // etiquetado como 'MTC+CARGAS_2017' — hallazgo real de Copilot en PR #232.
+      if (puertosDisponibles.length === 0) {
+        res.status(409).json({
+          error: `No hay datos en cargas_portuarias_historico para calcular '${FUENTE_TRAFICO}'. Corre primero 'npm run ingest:cargas-portuarias'.`,
+        });
+        return;
+      }
     }
 
     // Limpiar índice existente para esta fuente

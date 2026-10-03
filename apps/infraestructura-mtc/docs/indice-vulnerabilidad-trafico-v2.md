@@ -30,7 +30,7 @@ en la misma dirección de riesgo real.
 
 `matchTerminalToPuerto()` en `src/ingest/cargas-portuarias-join.ts`:
 
-1. Primero revisa una tabla de **18 overrides verificados manualmente** contra el XLSX real
+1. Primero revisa una tabla de **21 overrides verificados manualmente** contra el XLSX real
    (no son suposición — cada uno cita la fila de detalle del anuario 2010-2017 que lo respalda),
    para los casos donde el nombre del operador no menciona el puerto/bahía (ej. "Perú LNG
    Melchorita" → Callao, porque APN agrupaba Chancay/Ventanilla/Conchán/Melchorita bajo la
