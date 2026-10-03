@@ -78,26 +78,42 @@ financierasInformalesRouter.get(
  * coexisten geográficamente. Mezclarlos en un solo número implicaría una
  * relación causal que esta fuente no puede sustentar.
  */
+// Comparación de delta año a año: hardcodeado a 2024 vs 2025 (no al MAX(anio)
+// dinámico) porque 2026 está parcial -- un solo fetch SIDPOL el 2026-10-01 con
+// datos solo hasta julio (ver raw_sidpol_batches). Comparar 2026 parcial contra
+// 2025 completo infla artificialmente cualquier caída. 2024 y 2025 son los dos
+// últimos años cerrados, verificados en vivo (La Libertad: 5096 -> 4333, -15%).
+const ANIO_ACTUAL_DELTA = 2025;
+const ANIO_ANTERIOR_DELTA = 2024;
+
 financierasInformalesRouter.get(
   "/resumen-geo",
   asyncHandler(async (_req, res) => {
-    const [{ rows: candidatasRows }, { rows: extorsionRows }, { rows: poblacionRows }] = await Promise.all([
-      pool.query<{ departamento: string | null; candidatas: string; candidatas_activas: string }>(
-        `SELECT departamento, COUNT(*) AS candidatas,
+    const [{ rows: candidatasRows }, { rows: extorsionRows }, { rows: poblacionRows }, { rows: deltaRows }] =
+      await Promise.all([
+        pool.query<{ departamento: string | null; candidatas: string; candidatas_activas: string }>(
+          `SELECT departamento, COUNT(*) AS candidatas,
                 COUNT(*) FILTER (WHERE estado_contribuyente = 'ACTIVO') AS candidatas_activas
          FROM financieras_informales_candidatas
          GROUP BY departamento`
-      ),
-      seguridadPool.query<{ departamento: string; anio: number; total: string }>(
-        `SELECT departamento, anio, SUM(cantidad) AS total
+        ),
+        seguridadPool.query<{ departamento: string; anio: number; total: string }>(
+          `SELECT departamento, anio, SUM(cantidad) AS total
          FROM police_reports
          WHERE modalidad = 'Extorsión' AND anio = (SELECT MAX(anio) FROM police_reports WHERE modalidad = 'Extorsión')
          GROUP BY departamento, anio`
-      ),
-      seguridadPool.query<{ departamento: string; poblacion: number }>(
-        `SELECT departamento, poblacion FROM poblacion_departamental`
-      ),
-    ]);
+        ),
+        seguridadPool.query<{ departamento: string; poblacion: number }>(
+          `SELECT departamento, poblacion FROM poblacion_departamental`
+        ),
+        seguridadPool.query<{ departamento: string; anio: number; total: string }>(
+          `SELECT departamento, anio, SUM(cantidad) AS total
+         FROM police_reports
+         WHERE modalidad = 'Extorsión' AND anio IN ($1, $2)
+         GROUP BY departamento, anio`,
+          [ANIO_ACTUAL_DELTA, ANIO_ANTERIOR_DELTA]
+        ),
+      ]);
 
     // `seguridad-ciudadana` reporta Lima partida en "LIMA METROPOLITANA" +
     // "REGION LIMA" (y Callao como "PROV. CONST. DEL CALLAO"), mismo
@@ -125,13 +141,26 @@ financierasInformalesRouter.get(
       extorsionPorDepartamento.set(dep, { total: (actual?.total ?? 0) + Number(r.total), anio: r.anio });
     }
 
+    const deltaPorDepartamento = new Map<string, { actual: number | null; anterior: number | null }>();
+    for (const r of deltaRows) {
+      const dep = normalizarDepartamento(r.departamento);
+      const entry = deltaPorDepartamento.get(dep) ?? { actual: null, anterior: null };
+      if (r.anio === ANIO_ACTUAL_DELTA) entry.actual = (entry.actual ?? 0) + Number(r.total);
+      if (r.anio === ANIO_ANTERIOR_DELTA) entry.anterior = (entry.anterior ?? 0) + Number(r.total);
+      deltaPorDepartamento.set(dep, entry);
+    }
+
     const candidatasPorDepartamento = new Map(
       candidatasRows
         .filter((r): r is typeof r & { departamento: string } => r.departamento !== null)
         .map((r) => [r.departamento, { candidatas: Number(r.candidatas), candidatasActivas: Number(r.candidatas_activas) }])
     );
 
-    const departamentos = new Set([...candidatasPorDepartamento.keys(), ...extorsionPorDepartamento.keys()]);
+    const departamentos = new Set([
+      ...candidatasPorDepartamento.keys(),
+      ...extorsionPorDepartamento.keys(),
+      ...deltaPorDepartamento.keys(),
+    ]);
 
     const resumen = [...departamentos].map((departamento) => {
       const candidatas = candidatasPorDepartamento.get(departamento);
@@ -139,6 +168,12 @@ financierasInformalesRouter.get(
       const poblacion = poblacionPorDepartamento.get(departamento) ?? null;
       const tasaExtorsion100k =
         extorsion && poblacion ? Math.round((extorsion.total / poblacion) * 100_000 * 10) / 10 : null;
+
+      const delta = deltaPorDepartamento.get(departamento);
+      const deltaExtorsionPct =
+        delta !== undefined && delta.actual !== null && delta.anterior !== null && delta.anterior > 0
+          ? Math.round(((delta.actual - delta.anterior) / delta.anterior) * 100 * 10) / 10
+          : null;
 
       return {
         departamento,
@@ -148,6 +183,9 @@ financierasInformalesRouter.get(
         extorsionAnio: extorsion?.anio ?? null,
         poblacion,
         tasaExtorsion100k,
+        extorsion2024: delta?.anterior ?? null,
+        extorsion2025: delta?.actual ?? null,
+        deltaExtorsionPct,
       };
     });
 
@@ -160,7 +198,10 @@ financierasInformalesRouter.get(
         "(no hay CIIU en el padrón nacional completo, ver docs/prd/PRD-003-mapa-gota-gota.md). " +
         "tasaExtorsion100k es independiente -- ambas señales se muestran juntas por geografía " +
         "compartida, no como un score combinado: no hay evidencia de que relacione una " +
-        "financiera específica con casos de extorsión concretos.",
+        "financiera específica con casos de extorsión concretos. " +
+        "deltaExtorsionPct compara 2024 vs 2025 (los dos últimos años cerrados) -- no se usa " +
+        "2026 porque SIDPOL solo tiene datos hasta julio de ese año (fetch único, 2026-10-01), " +
+        "y mezclarlo con un año completo infla artificialmente cualquier caída.",
     });
   })
 );
