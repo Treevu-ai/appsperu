@@ -97,7 +97,10 @@ async function ingestDgaaa(): Promise<{ batchId: number; filasInsertadas: number
             documento_aprobacion, fecha_registro, sistema_ctcum, source_batch_id)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
          ON CONFLICT (cut) DO UPDATE SET
-           documento_aprobacion = EXCLUDED.documento_aprobacion,
+           nombre_estudio = EXCLUDED.nombre_estudio, nivel_detalle = EXCLUDED.nivel_detalle,
+           escala_trabajo = EXCLUDED.escala_trabajo, superficie_ha = EXCLUDED.superficie_ha,
+           titular = EXCLUDED.titular, documento_aprobacion = EXCLUDED.documento_aprobacion,
+           fecha_registro = EXCLUDED.fecha_registro, sistema_ctcum = EXCLUDED.sistema_ctcum,
            source_batch_id = EXCLUDED.source_batch_id`,
         [
           row.cut, row.nombreEstudio, row.nivelDetalle, row.escalaTrabajo, row.superficieHa,

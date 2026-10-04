@@ -7,6 +7,10 @@ const BASE_URL = "https://www.fonafe.gob.pe/empresasdelacorporacion";
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
 
+function checksumOf(text: string): string {
+  return createHash("sha256").update(text).digest("hex");
+}
+
 /**
  * Lista depurada de las 34 empresas activas bajo el ámbito de FONAFE
  * (confirmada contra /empresasdelacorporacion, por sector, 2026-09-30).
@@ -129,10 +133,16 @@ async function ingestFonafe(): Promise<{ batchId: number; empresasProcesadas: nu
   let filasInsertadas = 0;
   let empresasProcesadas = 0;
 
+  // El checksum debe describir el contenido realmente descargado, no un valor que cambia en
+  // cada corrida sin importar si la fuente cambió (hallazgo real de CodeRabbit en PR #233: antes
+  // usaba `Date.now()`). Como este conector descarga 34 páginas una por una (no un solo archivo),
+  // se acumula cada `reportHtml` en orden de slug y se recalcula el checksum real al final.
+  const reportesDescargados: string[] = [];
+
   try {
     const { rows: batchRows } = await client.query<{ id: number }>(
       `INSERT INTO raw_fonafe_batches (dataset, source_url, checksum, record_count) VALUES ($1, $2, $3, $4) RETURNING id`,
-      [DATASET, BASE_URL, createHash("sha256").update(DATASET + Date.now()).digest("hex"), EMPRESAS.length]
+      [DATASET, BASE_URL, checksumOf(DATASET), EMPRESAS.length]
     );
     const batchId = batchRows[0].id;
 
@@ -146,6 +156,7 @@ async function ingestFonafe(): Promise<{ batchId: number; empresasProcesadas: nu
         }
 
         const reportHtml = await fetchHtml(`${BASE_URL}/dataempresarial/${codigo}/06`);
+        reportesDescargados.push(`${slug}:${reportHtml}`);
         const razonSocial = extractField(reportHtml, "RAZÓN SOCIAL");
         const anioStr = extractField(reportHtml, "AÑO DE EJECUCIÓN");
         const ultimoMes = extractField(reportHtml, "ÚLTIMO MES INFORMADO");
@@ -174,6 +185,11 @@ async function ingestFonafe(): Promise<{ batchId: number; empresasProcesadas: nu
         errores.push(`${slug}: ${String((err as Error).message).slice(0, 120)}`);
       }
     }
+
+    await client.query(`UPDATE raw_fonafe_batches SET checksum = $1 WHERE id = $2`, [
+      checksumOf(reportesDescargados.join("\n")),
+      batchId,
+    ]);
 
     return { batchId, empresasProcesadas, filasInsertadas, empresasConError: errores };
   } finally {

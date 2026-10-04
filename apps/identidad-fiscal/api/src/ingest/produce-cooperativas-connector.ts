@@ -198,13 +198,15 @@ async function withClient<T>(fn: (client: PoolClient) => Promise<T>): Promise<T>
 export async function ingestCooperativas(options: IngestOptions = {}): Promise<IngestSummary> {
   const actividad = options.actividad ?? 1;
 
-  const batchId = await withClient((client) => saveRawBatch(client, actividad));
-
+  // El batch se crea DESPUÉS de completar la descarga, no antes (hallazgo real de Copilot en
+  // PR #233): crearlo antes dejaba un batch permanente de 0 filas sin ningún estado de fallo
+  // cada vez que la descarga fallaba a mitad de camino (ej. el DNS caído de PRODUCE) — un batch
+  // "exitoso" indistinguible de uno que nunca llegó a descargar nada.
   let totalRows = 0;
   let accepted = 0;
   let rejectedCount = 0;
-  let acceptBuffer: NormalizedCooperativa[] = [];
-  let rejectBuffer: { raw: string[]; reason: string }[] = [];
+  const acceptBuffer: NormalizedCooperativa[] = [];
+  const rejectBuffer: { raw: string[]; reason: string }[] = [];
 
   for await (const row of streamCooperativasRows(actividad)) {
     totalRows += 1;
@@ -219,10 +221,13 @@ export async function ingestCooperativas(options: IngestOptions = {}): Promise<I
     }
   }
 
+  const batchId = await withClient((client) => saveRawBatch(client, actividad));
   await withClient((client) => insertBatch(client, batchId, acceptBuffer));
   await withClient((client) => insertRejectedBatch(client, batchId, rejectBuffer));
+  // record_count audita cuántas filas de origen se recibieron (aceptadas + rechazadas), no solo
+  // las aceptadas (hallazgo real de Copilot) — mismo criterio que senace-connector.ts:171-173.
   await withClient((client) =>
-    client.query("UPDATE raw_cooperativas_batches SET record_count = $1 WHERE id = $2", [accepted, batchId])
+    client.query("UPDATE raw_cooperativas_batches SET record_count = $1 WHERE id = $2", [totalRows, batchId])
   );
 
   return { batchId, totalRows, accepted, rejected: rejectedCount };

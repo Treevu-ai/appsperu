@@ -98,8 +98,13 @@ async function ingestOnpe(): Promise<{ batchId: number; filasInsertadas: number 
               tipo_agrupacion, codigo_agrupacion, agrupacion_politica, votos_obtenidos,
               electores_habiles, votos_blancos, votos_nulos, votos_impugnados, source_batch_id)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
-           ON CONFLICT (tipo_eleccion, mesa, codigo_agrupacion) DO UPDATE
-             SET votos_obtenidos = EXCLUDED.votos_obtenidos, source_batch_id = EXCLUDED.source_batch_id`,
+           ON CONFLICT (tipo_eleccion, mesa, codigo_agrupacion) DO UPDATE SET
+             ubigeo = EXCLUDED.ubigeo, departamento = EXCLUDED.departamento, provincia = EXCLUDED.provincia,
+             distrito = EXCLUDED.distrito, estado_mesa = EXCLUDED.estado_mesa,
+             tipo_agrupacion = EXCLUDED.tipo_agrupacion, agrupacion_politica = EXCLUDED.agrupacion_politica,
+             votos_obtenidos = EXCLUDED.votos_obtenidos, electores_habiles = EXCLUDED.electores_habiles,
+             votos_blancos = EXCLUDED.votos_blancos, votos_nulos = EXCLUDED.votos_nulos,
+             votos_impugnados = EXCLUDED.votos_impugnados, source_batch_id = EXCLUDED.source_batch_id`,
           [
             row.ubigeo, row.departamento, row.provincia, row.distrito, row.tipoEleccion, row.mesa,
             row.estadoMesa, row.tipoAgrupacion, row.codigoAgrupacion, row.agrupacionPolitica,

@@ -10,8 +10,8 @@
  *
  * "UBIGEO" es la etiqueta que usa la propia fuente, pero el valor real es
  * un string libre "DEPARTAMENTO-PROVINCIA-DISTRITO" (ej. "LIMA-LIMA-COMAS"),
- * no un código ubigeo de 6 dígitos — se conserva tal cual en
- * `ubicacionTexto`, ver docs/data-contracts/produce-cooperativas.md.
+ * no un código ubigeo de 6 dígitos — se conserva tal cual en `ubicacionTexto`,
+ * sin intentar mapearlo a un código UBIGEO real.
  */
 const COL = {
   RUC: 0,

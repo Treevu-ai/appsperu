@@ -32,9 +32,26 @@ function extractBalancedJsonText(rawText: string): string {
     throw new Error("Respuesta de BCRP sin un objeto JSON inicial reconocible.");
   }
   let depth = 0;
+  let inString = false;
+  let escaped = false;
+  // Hallazgo real de Copilot (PR #233): una llave `{`/`}` literal dentro de un string JSON
+  // (ej. un título de serie con "}" en el texto) se contaba como estructural — se necesita
+  // rastrear si estamos dentro de un string (y si el carácter actual viene escapado con `\`)
+  // para no confundir contenido con estructura.
   for (let i = start; i < rawText.length; i++) {
-    if (rawText[i] === "{") depth++;
-    else if (rawText[i] === "}") {
+    const ch = rawText[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === "{") depth++;
+    else if (ch === "}") {
       depth--;
       if (depth === 0) {
         return rawText.slice(start, i + 1);

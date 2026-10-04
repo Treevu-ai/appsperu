@@ -21,13 +21,47 @@ interface Row {
   ugel: string | null;
 }
 
+/**
+ * `direccion` es texto libre y puede traer comas dentro de comillas — un `split(",")` ingenuo
+ * desplaza las columnas siguientes. Confirmado en vivo por CodeRabbit (PR #233) contra el CSV
+ * real: 1,199 de 71,605 filas quedaban mal alineadas. Mismo parser consciente de comillas que
+ * usa senasa-connector.ts.
+ */
+function parseCsvLine(line: string): string[] {
+  const fields: string[] = [];
+  let cur = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQuotes) {
+      if (c === '"' && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else if (c === '"') {
+        inQuotes = false;
+      } else {
+        cur += c;
+      }
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === ",") {
+      fields.push(cur);
+      cur = "";
+    } else {
+      cur += c;
+    }
+  }
+  fields.push(cur);
+  return fields;
+}
+
 function parseCsv(text: string): { rows: Row[]; rejected: number } {
   const clean = text.replace(/^﻿/, "");
   const lines = clean.split(/\r?\n/).filter((l) => l.trim().length > 0);
   const rows: Row[] = [];
   let rejected = 0;
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(",");
+    const cols = parseCsvLine(lines[i]);
     if (cols.length < 9) {
       rejected++;
       continue;

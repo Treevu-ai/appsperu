@@ -57,9 +57,15 @@ function parseCsv(text: string): Row[] {
   for (let i = 1; i < lines.length; i++) {
     const c = parseCsvLine(lines[i]);
     if (c.length < 12) continue;
+    const anio = Number(c[1]);
+    const mes = Number(c[2]);
+    // anio/mes son INTEGER NOT NULL en la tabla — un NaN (fila de pie/cabecera mal cortada)
+    // llega como el literal "NaN" a Postgres y hace fallar toda la transacción de una vez
+    // (hallazgo real de CodeRabbit en PR #233). Se descarta la fila en vez de abortar el lote.
+    if (!Number.isFinite(anio) || !Number.isFinite(mes)) continue;
     rows.push({
-      anio: Number(c[1]),
-      mes: Number(c[2]),
+      anio,
+      mes,
       codDep: c[3]?.trim() || null,
       nomDep: c[4]?.trim() || null,
       codPro: c[5]?.trim() || null,

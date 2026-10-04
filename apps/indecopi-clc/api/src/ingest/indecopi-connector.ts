@@ -85,7 +85,11 @@ async function ingestIndecopi(): Promise<{ batchId: number; filasInsertadas: num
            (nro_expediente, nro_expediente_origen, tipo_expediente, fecha_presentacion,
             denunciado, tipo_documento, numero_documento, materia, source_batch_id)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-         ON CONFLICT (nro_expediente) DO UPDATE SET materia = EXCLUDED.materia, source_batch_id = EXCLUDED.source_batch_id`,
+         ON CONFLICT (nro_expediente) DO UPDATE SET
+           nro_expediente_origen = EXCLUDED.nro_expediente_origen, tipo_expediente = EXCLUDED.tipo_expediente,
+           fecha_presentacion = EXCLUDED.fecha_presentacion, denunciado = EXCLUDED.denunciado,
+           tipo_documento = EXCLUDED.tipo_documento, numero_documento = EXCLUDED.numero_documento,
+           materia = EXCLUDED.materia, source_batch_id = EXCLUDED.source_batch_id`,
         [
           row.nroExpediente, row.nroExpedienteOrigen, row.tipoExpediente, row.fechaPresentacion,
           row.denunciado, row.tipoDocumento, row.numeroDocumento, row.materia, batchId,

@@ -57,7 +57,10 @@ async function ingestCategoriaRica(categoria: (typeof CATEGORIAS_RICAS)[number])
            (categoria, inacal_id, nombre, direccion, telefono, email, web, resolucion, registro_nro, vigencia, tipo, source_batch_id)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
          ON CONFLICT (categoria, inacal_id) DO UPDATE SET
-           vigencia = EXCLUDED.vigencia, source_batch_id = EXCLUDED.source_batch_id`,
+           nombre = EXCLUDED.nombre, direccion = EXCLUDED.direccion, telefono = EXCLUDED.telefono,
+           email = EXCLUDED.email, web = EXCLUDED.web, resolucion = EXCLUDED.resolucion,
+           registro_nro = EXCLUDED.registro_nro, vigencia = EXCLUDED.vigencia, tipo = EXCLUDED.tipo,
+           source_batch_id = EXCLUDED.source_batch_id`,
         [
           categoria, o.id, o.nombre, nullIfEmpty(o.direccion), nullIfEmpty(o.telefono),
           nullIfEmpty(o.email), nullIfEmpty(o.web), nullIfEmpty(o.resolucion),

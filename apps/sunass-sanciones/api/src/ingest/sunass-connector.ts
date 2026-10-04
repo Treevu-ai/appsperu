@@ -30,12 +30,46 @@ function toBool(v: string): boolean {
   return v.trim() === "1";
 }
 
+/**
+ * `administrado`/`incumplimiento`/`resolucion` son texto libre y pueden traer comas dentro de
+ * comillas (ej. "EPS SEDAPAL, SUCURSAL NORTE") — un `split(",")` ingenuo corta ahí y desplaza
+ * todas las columnas siguientes, corrompiendo `multa`/`anio`/`mes` sin avisar (hallazgo real de
+ * CodeRabbit en PR #233). Parser consciente de comillas, mismo patrón que senasa-connector.ts.
+ */
+function parseCsvLine(line: string): string[] {
+  const fields: string[] = [];
+  let cur = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQuotes) {
+      if (c === '"' && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else if (c === '"') {
+        inQuotes = false;
+      } else {
+        cur += c;
+      }
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === ",") {
+      fields.push(cur);
+      cur = "";
+    } else {
+      cur += c;
+    }
+  }
+  fields.push(cur);
+  return fields;
+}
+
 function parseCsv(text: string): Row[] {
   const clean = text.replace(/^﻿/, "");
   const lines = clean.split(/\r?\n/).filter((l) => l.trim().length > 0);
   const rows: Row[] = [];
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(",");
+    const cols = parseCsvLine(lines[i]);
     if (cols.length < 17) continue;
     rows.push({
       expediente: cols[0].trim(),
@@ -84,7 +118,14 @@ async function ingestSunass(): Promise<{ batchId: number; filasInsertadas: numbe
             incumplimiento, resolucion, multa, amonestacion_escrita, remocion, archivo,
             medida_correctiva, anio, mes, source_batch_id)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
-         ON CONFLICT (expediente) DO UPDATE SET resolucion = EXCLUDED.resolucion, source_batch_id = EXCLUDED.source_batch_id`,
+         ON CONFLICT (expediente) DO UPDATE SET
+           administrado = EXCLUDED.administrado, ubigeo = EXCLUDED.ubigeo, departamento = EXCLUDED.departamento,
+           provincia = EXCLUDED.provincia, distrito = EXCLUDED.distrito, tema = EXCLUDED.tema,
+           incumplimiento = EXCLUDED.incumplimiento, resolucion = EXCLUDED.resolucion,
+           multa = EXCLUDED.multa, amonestacion_escrita = EXCLUDED.amonestacion_escrita,
+           remocion = EXCLUDED.remocion, archivo = EXCLUDED.archivo,
+           medida_correctiva = EXCLUDED.medida_correctiva, anio = EXCLUDED.anio, mes = EXCLUDED.mes,
+           source_batch_id = EXCLUDED.source_batch_id`,
         [
           row.expediente, row.administrado, row.ubigeo, row.departamento, row.provincia,
           row.distrito, row.tema, row.incumplimiento, row.resolucion, row.multa,
