@@ -1,0 +1,15 @@
+{
+  "name": "@appsperu/indecopi-reclamos-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "migrate": "tsx src/db/migrate.ts",
+    "ingest:reclamos": "tsx src/ingest/indecopi-connector.ts"
+  },
+  "dependencies": { "dotenv": "^17.4.2", "pg": "^8.12.0", "exceljs": "^4.4.0" },
+  "devDependencies": {
+    "@types/node": "^20.14.10", "@types/pg": "^8.11.6",
+    "tsx": "^4.16.2", "typescript": "^5.5.3"
+  }
+}
