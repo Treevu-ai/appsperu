@@ -106,48 +106,64 @@ export async function ingestMtpeDistrital(): Promise<MtpeDistritalIngestSummary>
     const headerRowIndex = findHeaderRow(worksheet);
     const distritoRows = extractDistritoRows(worksheet, headerRowIndex);
 
-    const client = await pool.connect();
+    const checksum = checksumOf(archiveBuffer);
+    const metaClient = await pool.connect();
+    let batchId: number;
     try {
-      await client.query("BEGIN");
-
-      const checksum = checksumOf(archiveBuffer);
-      const batchResult = await client.query<{ id: number }>(
+      const batchResult = await metaClient.query<{ id: number }>(
         `INSERT INTO raw_mtpe_batches (resource_url, checksum, record_count)
          VALUES ($1, $2, $3)
          ON CONFLICT (resource_url, checksum) DO UPDATE SET fetched_at = now()
          RETURNING id`,
         [url7z, checksum, distritoRows.length]
       );
-      const batchId = batchResult.rows[0].id;
+      batchId = batchResult.rows[0].id;
+    } finally {
+      metaClient.release();
+    }
 
-      let inserted = 0;
-      let sinUbigeo = 0;
-
-      for (const row of distritoRows) {
-        if (!row.ubigeo) {
-          sinUbigeo += 1;
-          continue;
+    // Commits por lote de distritos (no una transacción única para hasta
+    // 18,120 filas = 1,510 distritos x 12 meses) -- una sola conexión
+    // Postgres sostenida por un insert fila-por-fila así de largo terminó en
+    // "Connection terminated unexpectedly" en vivo (confirmado 2026-10-01,
+    // mismo patrón visto en ONPE/OSITRAN/RENAMU).
+    const DISTRITOS_POR_LOTE = 100;
+    let inserted = 0;
+    let sinUbigeo = 0;
+    for (let i = 0; i < distritoRows.length; i += DISTRITOS_POR_LOTE) {
+        const slice = distritoRows.slice(i, i + DISTRITOS_POR_LOTE);
+        const client = await pool.connect();
+        try {
+          await client.query("BEGIN");
+          for (const row of slice) {
+            if (!row.ubigeo) {
+              sinUbigeo += 1;
+              continue;
+            }
+            for (let mesIdx = 0; mesIdx < 12; mesIdx += 1) {
+              const mes = mesIdx + 1;
+              const numeroEmpresas = row.valoresPorMes[mesIdx];
+              await client.query(
+                `INSERT INTO empresas_privadas_distrito (ubigeo, anio, mes, distrito, numero_empresas, source_batch_id, updated_at)
+                 VALUES ($1,$2,$3,$4,$5,$6, now())
+                 ON CONFLICT (ubigeo, anio, mes) DO UPDATE SET
+                   distrito = EXCLUDED.distrito,
+                   numero_empresas = EXCLUDED.numero_empresas,
+                   source_batch_id = EXCLUDED.source_batch_id,
+                   updated_at = now()`,
+                [row.ubigeo, year, mes, row.distrito, numeroEmpresas, batchId]
+              );
+            }
+            inserted += 1;
+          }
+          await client.query("COMMIT");
+        } catch (error) {
+          await client.query("ROLLBACK");
+          throw error;
+        } finally {
+          client.release();
         }
-
-        for (let mesIdx = 0; mesIdx < 12; mesIdx += 1) {
-          const mes = mesIdx + 1;
-          const numeroEmpresas = row.valoresPorMes[mesIdx];
-
-          await client.query(
-            `INSERT INTO empresas_privadas_distrito (ubigeo, anio, mes, distrito, numero_empresas, source_batch_id, updated_at)
-             VALUES ($1,$2,$3,$4,$5,$6, now())
-             ON CONFLICT (ubigeo, anio, mes) DO UPDATE SET
-               distrito = EXCLUDED.distrito,
-               numero_empresas = EXCLUDED.numero_empresas,
-               source_batch_id = EXCLUDED.source_batch_id,
-               updated_at = now()`,
-            [row.ubigeo, year, mes, row.distrito, numeroEmpresas, batchId]
-          );
-        }
-        inserted += 1;
       }
-
-      await client.query("COMMIT");
       return {
         resourceUrl: url7z,
         anio: year,
@@ -156,12 +172,6 @@ export async function ingestMtpeDistrital(): Promise<MtpeDistritalIngestSummary>
         filasInsertadas: inserted,
         filasSinUbigeo: sinUbigeo,
       };
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      client.release();
-    }
   } finally {
     await rm(workDir, { recursive: true, force: true });
   }

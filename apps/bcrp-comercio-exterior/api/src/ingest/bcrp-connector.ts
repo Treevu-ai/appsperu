@@ -19,6 +19,31 @@ function checksumOf(text: string): string {
   return createHash("sha256").update(text).digest("hex");
 }
 
+/**
+ * El API de BCRP a veces filtra un volcado de debug de PHP (stack trace HTML,
+ * `getBrowser()`) después del cuerpo JSON válido — confirmado en vivo
+ * 2026-09-30, no es determinista (aparece o no según la request). Se recorta
+ * al primer objeto JSON balanceado y se descarta la cola antes de parsear
+ * o de guardar en `raw_bcrp_batches` (columna `jsonb`, exige JSON válido).
+ */
+function extractBalancedJsonText(rawText: string): string {
+  const start = rawText.indexOf("{");
+  if (start === -1) {
+    throw new Error("Respuesta de BCRP sin un objeto JSON inicial reconocible.");
+  }
+  let depth = 0;
+  for (let i = start; i < rawText.length; i++) {
+    if (rawText[i] === "{") depth++;
+    else if (rawText[i] === "}") {
+      depth--;
+      if (depth === 0) {
+        return rawText.slice(start, i + 1);
+      }
+    }
+  }
+  throw new Error("Respuesta de BCRP con JSON sin cerrar (llaves desbalanceadas).");
+}
+
 export async function fetchNationalTradeSeries(periodStart: string, periodEnd: string): Promise<{
   rawText: string;
   data: BcrpApiResponse;
@@ -30,7 +55,7 @@ export async function fetchNationalTradeSeries(periodStart: string, periodEnd: s
   if (!res.ok) {
     throw new Error(`BCRP devolvió ${res.status} al pedir comercio exterior nacional (${url}).`);
   }
-  const rawText = await res.text();
+  const rawText = extractBalancedJsonText(await res.text());
   return { rawText, data: JSON.parse(rawText) as BcrpApiResponse, seriesCodes };
 }
 
@@ -45,7 +70,7 @@ export async function fetchMacroSeries(periodStart: string, periodEnd: string): 
   if (!res.ok) {
     throw new Error(`BCRP devolvió ${res.status} al pedir series macro nacionales (${url}).`);
   }
-  const rawText = await res.text();
+  const rawText = extractBalancedJsonText(await res.text());
   return { rawText, data: JSON.parse(rawText) as BcrpApiResponse, seriesCodes };
 }
 
