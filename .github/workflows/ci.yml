@@ -26,8 +26,11 @@ jobs:
           - apps/ceplan-geo/api
           - apps/compras-publicas/api
           - apps/emergencias-indeci/api
+          - apps/fonafe-empresarial/api
           - apps/geo-intersections/api
           - apps/identidad-fiscal/api
+          - apps/inacal-acreditados/api
+          - apps/indecopi-clc/api
           - apps/informes-control/api
           - apps/infobras/api
           - apps/infracciones-ambientales/api
@@ -35,12 +38,15 @@ jobs:
           - apps/instituciones-educativas/api
           - apps/inversion-privada/api
           - apps/legislativo-congreso/api
+          - apps/midagri-dgaaa/api
           - apps/mincetur-juegos-casino/api
           - apps/mindef/api
           - apps/mimp/api
+          - apps/onpe-resultados/api
           - apps/osinergmin-combustibles/api
           - apps/ositran-reclamos/api
           - apps/poder-judicial/api
+          - apps/pronabec-colegios/api
           - apps/programas-sociales/api
           - apps/proveedores-sancionados/api
           - apps/radar-ejecucion/api
@@ -53,7 +59,9 @@ jobs:
           - apps/salud-institucional/api
           - apps/seguridad-ciudadana/api
           - apps/senace-cartera-proyectos/api
+          - apps/senasa-ejecucion/api
           - apps/servicios-salud/api
+          - apps/sunass-sanciones/api
           - apps/sunat-aduanas/api
           - apps/territorio-inteligencia/api
           - apps/violencia-escolar/api

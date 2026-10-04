@@ -15,7 +15,9 @@ const INSERT_BATCH_SIZE = 1000;
  * por `;` es seguro aquí; no hace falta un parser CSV completo con manejo de comillas/escapes.
  */
 async function fetchEmergenciasCsv(): Promise<string[][]> {
-  const res = await fetch(CSV_URL, { signal: AbortSignal.timeout(60_000) });
+  // 27 MB — confirmado en vivo 2026-09-30 que 60s no alcanza de forma consistente
+  // contra datosabiertos.gob.pe (WAF + latencia variable del portal).
+  const res = await fetch(CSV_URL, { signal: AbortSignal.timeout(180_000) });
   if (!res.ok) {
     throw new Error(`INDECI devolvió ${res.status} al descargar el CSV`);
   }

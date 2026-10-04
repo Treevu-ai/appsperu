@@ -39,7 +39,11 @@ from threading import BoundedSemaphore
 # ---------------------------------------------------------------------------
 
 CKAN_BASE = os.environ.get("CKAN_BASE", "https://www.datosabiertos.gob.pe")
-USER_AGENT = "Rastro-CKAN-Indexer/1.0 (+https://rastro.fyi)"
+# UA de navegador real: un UA no-navegador (ej. "Rastro-CKAN-Indexer/1.0") empezó
+# a ser bloqueado por el WAF del portal (CloudWAF, HTTP 418 "行为疑似攻击") en
+# algún momento entre 2026-09-02 (última corrida exitosa) y 2026-09-30 — confirmado
+# en vivo que un UA de Chrome real pasa sin problema.
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
 RATE_LIMIT_PER_SEC = 15
 HEAD_TIMEOUT = 8
 GET_TIMEOUT = 30
@@ -196,9 +200,13 @@ def norm_resource(res: dict) -> dict:
 
 
 def normalize(pkg: dict) -> dict:
-    # DKAN no tiene `organization` en el resultado; usa `maintainer` y `author`.
-    # Mantenemos un dict de organización uniforme, aunque venga vacío.
+    # DKAN no tiene `organization` en el resultado — la entidad publicadora real
+    # vive en `groups[0]` (confirmado en vivo 2026-09-30, ej. dataset MIDAGRI-02
+    # trae groups: [{"title": "Ministerio de Desarrollo Agrario y Riego - MIDAGRI"}]).
+    # `maintainer` casi siempre es el genérico "Plataforma Nacional de Datos
+    # Abiertos" — no identifica el ministerio, por eso queda de último fallback.
     org_raw = pkg.get("organization")
+    groups = pkg.get("groups") or []
     if isinstance(org_raw, dict):
         org = {
             "id": org_raw.get("id"),
@@ -207,8 +215,11 @@ def normalize(pkg: dict) -> dict:
         }
     elif isinstance(org_raw, str) and org_raw:
         org = {"id": None, "name": org_raw, "title": org_raw}
+    elif groups and isinstance(groups[0], dict) and (groups[0].get("title") or groups[0].get("name")):
+        g = groups[0]
+        org = {"id": g.get("id"), "name": g.get("name"), "title": g.get("title") or g.get("name")}
     else:
-        # Fallback DKAN: usar maintainer o author como pseudo-organización
+        # Último fallback: maintainer o author (rara vez identifica el ministerio real)
         fallback = pkg.get("maintainer") or pkg.get("author") or ""
         org = {"id": None, "name": fallback.strip() or None, "title": fallback.strip() or None}
 
