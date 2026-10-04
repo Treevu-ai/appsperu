@@ -45,6 +45,59 @@ contra la base `mcp` de Neon — no hay autoservicio.
 `geo-intersections` (5831 intersecciones minería∩bosque calculadas, ver
 `RUNBOOK_NEON.md`).
 
+## Repo vs. desplegado: el catálogo va por delante del Worker
+
+Las cifras de arriba son del **despliegue del 2026-09-29**, no del repo. El
+repo ya tiene más tools que el Worker desplegado y esa diferencia no se
+documentaba en ninguna parte, lo que hace el número ambiguo: no se sabe si
+"209" describe lo desplegado o lo que hay en código.
+
+| | Tools | Apps |
+|---|---|---|
+| **Build anterior a #223** (lo que reporta `rastro_health`) | 209 | 38 |
+| **Repo** (`mcp-server/src/catalog.ts`) | 220 | 40 |
+
+El doc ya decía 209/38 sin decir de dónde salía el número, y esa es la
+ambigüedad que hace esta sección: no se sabe si describe un despliegue o el
+código. Las dos filas son de fuentes distintas y verificables por separado.
+
+Las 2 apps que faltan en ese build son `ositran-reclamos` y
+`osinergmin-combustibles` (PR #223). De las 11 tools de diferencia, 2 son
+`legislativo_congreso_cruces_infobras` y
+`legislativo_congreso_cruce_infobras_proyecto` (PR #234, pendiente de
+merge). El resto del delta viene de apps que ya estaban en el repo.
+
+El "209 / 38" se obtuvo de `rastro_health` contra un cliente MCP conectado
+por stdio que corre un build anterior a #223. Es consistente con un Worker
+sin redesplegar, pero **no es una verificación del Worker de producción**:
+para esa hace falta el `curl` de más abajo con `x-api-key`.
+
+En el repo **220/220 tools tienen handler** contra Neon — se verifica con:
+
+```bash
+cd mcp-server
+node -e "const {TOOL_CATALOG}=require('./dist/catalog.js');
+  console.log(TOOL_CATALOG.length, new Set(TOOL_CATALOG.map(t=>t.app)).size,
+              TOOL_CATALOG.filter(t=>t.handler).length)"
+# 220 40 220   (total tools, apps, tools con handler)
+```
+
+Que el repo vaya por delante **no** significa que el Worker sirva esos
+endpoints: llamar a un tool que no está en el build desplegado falla. El
+estado real del Worker hay que sacarlo de él, no del repo:
+
+```bash
+curl -s https://www.rastro.fyi/mcp -X POST \
+  -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" \
+  -H "x-api-key: sk-rastro-..." \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"rastro_health","arguments":{}}}'
+```
+
+**Ojo con `rastro_health` en stdio:** sin `NEON_DATABASE_URL` en el entorno
+reporta todas las apps como `sin_base` y `toolsOperativos: 0`. Eso es el
+cliente local sin base configurada, no el estado del Worker — para lo
+último sirve el `curl` de arriba.
+
 ### Cliente local por stdio (para desarrollo)
 
 ```bash
