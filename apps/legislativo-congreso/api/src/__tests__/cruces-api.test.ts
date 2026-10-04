@@ -191,7 +191,8 @@ describe("GET /api/cruces/proyectos-infobras", () => {
 
     const res = await request(createApp()).get("/api/cruces/proyectos-infobras");
     expect(res.status).toBe(503);
-    expect(res.body.detalle).toContain("infobras");
+    // Nombre público de la app, no la clave interna del pool ("infobras").
+    expect(res.body.detalle).toBe("INFOBRAS no está accesible");
   });
 });
 
