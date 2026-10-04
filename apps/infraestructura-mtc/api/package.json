@@ -11,6 +11,7 @@
     "ingest:puertos": "tsx src/ingest/infraestructura-mtc-connector.ts puertos",
     "ingest:aerodromos": "tsx src/ingest/infraestructura-mtc-connector.ts aerodromos",
     "ingest:peajes": "tsx src/ingest/infraestructura-mtc-connector.ts peajes",
+    "ingest:cargas-portuarias": "tsx src/ingest/cargas-portuarias-connector.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
@@ -18,6 +19,7 @@
     "cors": "^2.8.6",
     "csv-parse": "^5.5.6",
     "dotenv": "^17.4.2",
+    "exceljs": "^4.4.0",
     "express": "^4.19.2",
     "express-rate-limit": "^8.6.2",
     "helmet": "^8.3.0",

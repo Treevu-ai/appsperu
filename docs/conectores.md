@@ -996,6 +996,27 @@ beneficio real.
 | **Cruces** | Ninguno implementado — candidato natural: por UBIGEO contra `radar-ejecucion` (`FUNCION = TRANSPORTE`) y contra `inversion-privada` (Puerto Salaverry ha tenido inversión APP reciente). |
 | **Corte vigente por defecto en los 3 endpoints (DQ-03, 2026-09-08)** | Los tres catálogos son paneles multi-año (`UNIQUE (código, fecha_corte)`) con hasta 4 cortes distintos ingeridos por app. Sin `fechaCorte` ni `historico=true`, cada endpoint filtra al corte más reciente (`MAX(fecha_corte)`) — antes devolvía todos los cortes mezclados (ej. aeródromos: 595 filas de 4 años en vez de las 152 vigentes). `historico=true` recupera la serie completa; `fechaCorte=YYYY-MM-DD` filtra a un corte exacto. |
 
+### `cargas-portuarias-connector.ts` — Histórico de volumen de carga (APN, VUL-01 a VUL-13)
+
+Construido 2026-10-03 para enriquecer el Índice de Vulnerabilidad Portuaria (`indice_vulnerabilidad_portuaria`,
+`fuente_datos='MTC+CARGAS_2017'`) con tráfico real, siguiendo PRD-004 Épica 4.
+
+| | |
+|---|---|
+| **Descripción** | Histórico de movimiento de carga (TM) 2010-2017 por terminal/puerto portuario, publicado por la APN. Único dataset de volumen disponible — el anuario no se actualizó después de 2017. |
+| **Qué hace** | `npm run ingest:cargas-portuarias` descarga el XLSX, reconstruye la jerarquía puerto→terminal (filas de agregado sin "Uso" vs. filas de detalle con "Uso" Público/Privado — no es una tabla plana), y hace upsert en `cargas_portuarias_historico` con clave `(nombre_fuente, puerto, anio)` vía índice único con `COALESCE` (Postgres no deduplica `NULL` en una UNIQUE normal). |
+| **Hallazgo real: WAF bloquea requests sin headers de navegador** | `datosabiertos.gob.pe` devuelve `418` (CloudWAF) a cualquier request sin `User-Agent`/`Referer` de navegador real — mismo patrón que otros conectores de este publicador, pero confirmado de nuevo en vivo 2026-10-03. |
+| **Corrección a una suposición del PRD** | El PRD-004 asumía desagregación por tipo de carga (contenedorizada/granel/otros) — el XLSX real **no la tiene**, solo un total TM por terminal/año. |
+| **Join con el inventario MTC (VUL-11)** | `cargas-portuarias-join.ts`: matching algorítmico (nombre del puerto como palabra completa dentro de `nombre_terminal`/`label_terminal`) + 21 overrides verificados manualmente contra filas reales del XLSX (ej. "Perú LNG Melchorita" → puerto "Callao", porque la APN agrupaba Chancay/Ventanilla/Conchán/Melchorita bajo esa jurisdicción administrativa). Cobertura real: **60/151 terminales (~40%)** — el resto son embarcaderos informales fuera del alcance del anuario por construcción, no se fuerza ningún match sin evidencia. |
+| **Decisión de diseño: sin match ≠ riesgo alto** | A diferencia del resto de componentes del índice ("dato faltante = riesgo"), un terminal sin match en este histórico no recibe el score alto por defecto — habría duplicado la señal que ya capturan `alcance`/`ambito`. Detalle completo en [`apps/infraestructura-mtc/docs/indice-vulnerabilidad-trafico-v2.md`](../apps/infraestructura-mtc/docs/indice-vulnerabilidad-trafico-v2.md). |
+| **Encoding** | XLSX (Excel 2007+), parseado con `exceljs`. |
+| **Frecuencia** | Manual, dataset estático (no se re-publica desde 2017) — `npm run ingest:cargas-portuarias` es idempotente (verificado con 2 corridas reales: 741 filas ambas veces). |
+| **Fuente de datos** | `datosabiertos.gob.pe/sites/default/files/CARGAS_2010_2017.xlsx` (APN). |
+| **Cobertura real ingerida** | Verificado en vivo 2026-10-03 contra Neon: **741 filas insertadas, 3 rechazadas** (volúmenes vacíos reales en estaciones Petroperú/Pluspetrol de la Amazonía, 2015). Sin cobertura Lacustre (Titicaca no aparece en el anuario). |
+| **Detalle completo** | [`apps/infraestructura-mtc/docs/estructura-cargas-apn-2010-2017.md`](../apps/infraestructura-mtc/docs/estructura-cargas-apn-2010-2017.md) (estructura del XLSX) y [`apps/infraestructura-mtc/docs/indice-vulnerabilidad-trafico-v2.md`](../apps/infraestructura-mtc/docs/indice-vulnerabilidad-trafico-v2.md) (join y fórmula v2). |
+| **Cruces** | Con `terminales_portuarios` (mismo app) vía `matchTerminalToPuerto` — no es un `JOIN` SQL directo, es resuelto en código por el riesgo de nombres no normalizables entre fuentes. |
+| **Pendiente** | VUL-14/15/16 (solicitud Ley 27806 a la APN pidiendo datos 2018-2025): borrador listo en `docs/VUL-14-solicitud-apn-borrador.md`, no enviado — acción del usuario. |
+
 ---
 
 <a id="riesgo-fiscal-isds"></a>
