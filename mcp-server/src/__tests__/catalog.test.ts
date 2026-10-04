@@ -265,6 +265,8 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "violencia_escolar_resumen",
   ],
   "legislativo-congreso": [
+    "legislativo_congreso_cruce_infobras_proyecto",
+    "legislativo_congreso_cruces_infobras",
     "legislativo_congreso_periodos",
     "legislativo_congreso_proyecto_detalle",
     "legislativo_congreso_proyectos",

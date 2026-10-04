@@ -55,10 +55,10 @@ crucesRouter.get(
     const { departamento, umbral_score, periodo, limit, offset } = parsed.data;
 
     try {
-      const cruces = await cruzarProyectosInfobras(departamento, umbral_score, periodo);
+      const { cruces, truncated } = await cruzarProyectosInfobras(departamento, umbral_score, periodo);
 
       // Paginación en memoria: el cruce ya está acotado por OBRAS_CANDIDATAS_LIMIT
-      // en la única query a INFOBRAS.
+      // obras candidatas en la única query a INFOBRAS.
       const total = cruces.length;
       const paginated = cruces.slice(offset, offset + limit);
 
@@ -68,6 +68,7 @@ crucesRouter.get(
         offset,
         periodo,
         hasMore: offset + paginated.length < total,
+        truncated,
         resultados: paginated,
         fuente: FUENTE,
       });
@@ -107,7 +108,7 @@ crucesRouter.get(
     const { departamento, umbral_score } = parsedQuery.data;
 
     try {
-      const cruces = await cruzarProyectoInfobrasPorId(periodo, numero, departamento, umbral_score);
+      const { cruces, truncated } = await cruzarProyectoInfobrasPorId(periodo, numero, departamento, umbral_score);
 
       if (cruces.length === 0) {
         res.status(404).json({
@@ -125,6 +126,7 @@ crucesRouter.get(
         departamento,
         umbral_score,
         total: cruces.length,
+        truncated,
         resultados: cruces,
         fuente: FUENTE,
       });

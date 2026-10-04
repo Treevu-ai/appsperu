@@ -76,6 +76,7 @@ import * as inversion_privada_gis from "./inversion-privada/gis.js";
 import * as inversion_privada_meta from "./inversion-privada/meta.js";
 import * as inversion_privada_oxi from "./inversion-privada/oxi.js";
 import * as inversion_privada_projects from "./inversion-privada/projects.js";
+import * as legislativo_congreso_cruces from "./legislativo-congreso/cruces.js";
 import * as legislativo_congreso_proyectos from "./legislativo-congreso/proyectos.js";
 import * as mimp_cem from "./mimp/cem.js";
 import * as mimp_chat100 from "./mimp/chat100.js";
@@ -210,6 +211,7 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "inversion-privada/meta": inversion_privada_meta,
   "inversion-privada/oxi": inversion_privada_oxi,
   "inversion-privada/projects": inversion_privada_projects,
+  "legislativo-congreso/cruces": legislativo_congreso_cruces,
   "legislativo-congreso/proyectos": legislativo_congreso_proyectos,
   "mimp/cem": mimp_cem,
   "mimp/chat100": mimp_chat100,

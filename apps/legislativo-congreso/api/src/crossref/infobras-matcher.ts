@@ -60,6 +60,15 @@ interface ProyectoMatcheable {
   keywords: string[];
 }
 
+/**
+ * Resultado del cruce. `truncated` indica que INFOBRAS devolvió más obras
+ * candidatas que OBRAS_CANDIDATAS_LIMIT y el cruce quedó incompleto.
+ */
+export interface CruceResultado {
+  cruces: CruceProyectoInfobrasResult[];
+  truncated: boolean;
+}
+
 export interface CruceProyectoInfobrasResult {
   proyecto: {
     perParId: number;
@@ -98,10 +107,6 @@ export interface CruceProyectoInfobrasResult {
   matchScore: number;
   matchedKeywords: string[];
 }
-
-const PROYECTO_SELECT = `
-  SELECT per_par_id, pley_num, proyecto_ley, estado, fecha_presentacion, titulo, proponente, autores
-  FROM legislativo_congreso_proyectos`;
 
 const OBRA_SELECT = `
   SELECT codigo_infobras, codigo_entidad, entidad_nombre, nombre_obra,
@@ -160,12 +165,16 @@ function mapObra(row: ObraRow): CruceProyectoInfobrasResult["obra"] {
 
 /**
  * Devuelve las obras candidatas de INFOBRAS para un conjunto de keywords con UN solo query.
+ *
+ * Pide LIMIT+1 filas: si llegan más que el tope, el departamento tiene más
+ * obras candidatas que las que se cruzan, y eso se reporta en `truncated`
+ * en vez de truncar en silencio.
  */
 async function fetchObrasCandidatas(
   infobrasDb: Pool,
   departamento: string,
   keywords: string[]
-): Promise<ObraRow[]> {
+): Promise<{ obras: ObraRow[]; truncated: boolean }> {
   const params: unknown[] = [departamento.toUpperCase()];
   const ilikeConditions = keywords.map((kw) => {
     params.push(`%${kw}%`);
@@ -176,11 +185,14 @@ async function fetchObrasCandidatas(
     `${OBRA_SELECT}
      WHERE departamento = $1 AND (${ilikeConditions.join(" OR ")})
      ORDER BY codigo_infobras
-     LIMIT ${OBRAS_CANDIDATAS_LIMIT}`,
+     LIMIT ${OBRAS_CANDIDATAS_LIMIT + 1}`,
     params
   );
 
-  return rows;
+  return {
+    obras: rows.slice(0, OBRAS_CANDIDATAS_LIMIT),
+    truncated: rows.length > OBRAS_CANDIDATAS_LIMIT,
+  };
 }
 
 /**
@@ -190,9 +202,10 @@ export async function cruzarProyectosInfobras(
   departamento: string,
   umbralScore: number = 0.3,
   periodo: number = 2026
-): Promise<CruceProyectoInfobrasResult[]> {
+): Promise<CruceResultado> {
   const { rows: proyectos } = await pool.query<ProyectoRow>(
-    `${PROYECTO_SELECT}
+    `SELECT per_par_id, pley_num, proyecto_ley, estado, fecha_presentacion, titulo, proponente, autores
+     FROM legislativo_congreso_proyectos
      WHERE per_par_id = $1
      ORDER BY fecha_presentacion DESC NULLS LAST`,
     [periodo]
@@ -207,13 +220,13 @@ export async function cruzarProyectosInfobras(
   }
 
   if (matcheables.length === 0) {
-    return [];
+    return { cruces: [], truncated: false };
   }
 
   const infobrasDb = requireCrossAppPool("infobras", process.env);
 
   const todasKeywords = [...new Set(matcheables.flatMap((p) => p.keywords))];
-  const obras = await fetchObrasCandidatas(infobrasDb, departamento, todasKeywords);
+  const { obras, truncated } = await fetchObrasCandidatas(infobrasDb, departamento, todasKeywords);
 
   const resultados: CruceProyectoInfobrasResult[] = [];
   for (const { row, keywords } of matcheables) {
@@ -230,7 +243,7 @@ export async function cruzarProyectosInfobras(
     }
   }
 
-  return resultados.sort((a, b) => b.matchScore - a.matchScore);
+  return { cruces: resultados.sort((a, b) => b.matchScore - a.matchScore), truncated };
 }
 
 /**
@@ -241,25 +254,26 @@ export async function cruzarProyectoInfobrasPorId(
   pleyNum: number,
   departamento: string,
   umbralScore: number = 0.3
-): Promise<CruceProyectoInfobrasResult[]> {
+): Promise<CruceResultado> {
   const { rows: proyectos } = await pool.query<ProyectoRow>(
-    `${PROYECTO_SELECT}
+    `SELECT per_par_id, pley_num, proyecto_ley, estado, fecha_presentacion, titulo, proponente, autores
+     FROM legislativo_congreso_proyectos
      WHERE per_par_id = $1 AND pley_num = $2`,
     [perParId, pleyNum]
   );
 
   if (proyectos.length === 0) {
-    return [];
+    return { cruces: [], truncated: false };
   }
 
   const row = proyectos[0];
   const keywords = extractKeywords(row.titulo);
   if (keywords.length === 0) {
-    return [];
+    return { cruces: [], truncated: false };
   }
 
   const infobrasDb = requireCrossAppPool("infobras", process.env);
-  const obras = await fetchObrasCandidatas(infobrasDb, departamento, keywords);
+  const { obras, truncated } = await fetchObrasCandidatas(infobrasDb, departamento, keywords);
 
   const resultados: CruceProyectoInfobrasResult[] = [];
   for (const obra of obras) {
@@ -274,5 +288,5 @@ export async function cruzarProyectoInfobrasPorId(
     }
   }
 
-  return resultados.sort((a, b) => b.matchScore - a.matchScore);
+  return { cruces: resultados.sort((a, b) => b.matchScore - a.matchScore), truncated };
 }

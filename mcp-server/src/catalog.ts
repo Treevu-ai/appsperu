@@ -3241,6 +3241,45 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: [],
     querySchema: {},
   },
+  {
+    name: "legislativo_congreso_cruces_infobras",
+    handler: "cruces:list",
+    app: "legislativo-congreso",
+    description:
+      "Cruce keyword-based entre proyectos de ley y obras públicas de INFOBRAS, por departamento — SIN IA ni " +
+      "embeddings: `matchScore` es la fracción de keywords del título del proyecto que aparecen en el nombre de la " +
+      "obra, y `matchedKeywords` las lista. Es una heurística léxica: un score alto NO prueba que el proyecto de ley " +
+      "cause esa obra. El cruce hace UNA query a INFOBRAS por departamento (no una por proyecto). " +
+      "`truncated: true` significa que INFOBRAS devolvió más de 500 obras candidatas y el cruce está incompleto — " +
+      "bajar `departamento` o subir `umbral_score` acota el resultado. Requiere la base de `infobras`: sin ella " +
+      "responde 503, no cero. " + SIN_SCHEDULER,
+    pathTemplate: "/api/cruces/proyectos-infobras",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Default 'LA LIBERTAD'."),
+      periodo: z.coerce.number().int().optional().describe("perParId (default 2026)."),
+      umbral_score: z.coerce.number().min(0).max(1).optional().describe("Default 0.3."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "legislativo_congreso_cruce_infobras_proyecto",
+    handler: "cruces:proyecto",
+    app: "legislativo-congreso",
+    description:
+      "Cruce de un proyecto de ley concreto contra obras públicas de INFOBRAS, por `periodo` (perParId) + `numero` " +
+      "(pleyNum). Misma heurística keyword-based y mismo `matchScore` que `legislativo_congreso_cruces_infobras`, " +
+      "pero acotado a un proyecto. 404 si el proyecto no existe O si ninguna obra alcanza el umbral — son dos " +
+      "causas distintas: usar `legislativo_congreso_proyecto_detalle` para confirmar que el proyecto existe antes de " +
+      "interpretar un 404 como 'sin obras'. " + SIN_SCHEDULER,
+    pathTemplate: "/api/cruces/proyectos-infobras/{periodo}/{numero}",
+    pathParams: ["periodo", "numero"],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Default 'LA LIBERTAD'."),
+      umbral_score: z.coerce.number().min(0).max(1).optional().describe("Default 0.3."),
+    },
+  },
 
   // ---- catastro-minero (INGEMMET, derechos mineros) ----
   {

@@ -161,6 +161,27 @@ describe("GET /api/cruces/proyectos-infobras", () => {
     expect(res.body.hasMore).toBe(true);
   });
 
+  it("reporta truncated:false cuando no hay truncamiento", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [proyectoRow()] });
+    infoobrasQueryMock.mockResolvedValueOnce({ rows: [obraRow()] });
+
+    const res = await request(createApp()).get("/api/cruces/proyectos-infobras");
+    expect(res.body.truncated).toBe(false);
+  });
+
+  it("reporta truncated:true cuando INFOBRAS excede el tope de candidatas", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [proyectoRow()] });
+    infoobrasQueryMock.mockResolvedValueOnce({
+      rows: Array.from({ length: 501 }, (_, i) =>
+        obraRow(`Obras publicas ${i}`, { codigo_infobras: `OBR-${i}` })
+      ),
+    });
+
+    const res = await request(createApp()).get("/api/cruces/proyectos-infobras");
+    expect(res.status).toBe(200);
+    expect(res.body.truncated).toBe(true);
+  });
+
   it("responde 503 cuando INFOBRAS no está configurada", async () => {
     const { CrossAppUnavailableError } = await import("../lib/cross-app-pool.js");
     queryMock.mockResolvedValueOnce({ rows: [proyectoRow()] });
