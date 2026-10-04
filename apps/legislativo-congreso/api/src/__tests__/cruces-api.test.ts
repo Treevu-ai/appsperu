@@ -216,6 +216,22 @@ describe("GET /api/cruces/proyectos-infobras/:periodo/:numero", () => {
 
     const res = await request(createApp()).get("/api/cruces/proyectos-infobras/2026/1234");
     expect(res.status).toBe(404);
+    expect(res.body.truncated).toBe(false);
+  });
+
+  it("incluye truncated en el 404 para no leer el truncamiento como cero", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [proyectoRow({ titulo: "Ley de obras publicas" })] });
+    // 501 candidatas cuyo score queda bajo el umbral: tope agotado, cero cruces.
+    infoobrasQueryMock.mockResolvedValueOnce({
+      rows: Array.from({ length: 501 }, (_, i) =>
+        obraRow(`Obra sin relacion ${i}`, { codigo_infobras: `OBR-${i}` })
+      ),
+    });
+
+    const res = await request(createApp()).get("/api/cruces/proyectos-infobras/2026/1234");
+
+    expect(res.status).toBe(404);
+    expect(res.body.truncated).toBe(true);
   });
 
   it("devuelve los cruces de un proyecto concreto", async () => {

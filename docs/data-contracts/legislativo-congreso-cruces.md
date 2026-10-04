@@ -60,6 +60,12 @@ más de 500 obras candidatas, `truncated: true` lo declara. **Ausencia de dato �
 cero**: un `truncated: true` con `total: 0` significa "el departamento excedió el
 tope y ninguna de las 500 obras alcanzaba el umbral", no "no hay obras".
 
+El 404 del endpoint de un proyecto concreto también incluye `truncated` en el
+cuerpo. Antes no lo hacía, y con datos reales eso convertía un truncamiento en
+un cero indistinguible: el proyecto 14849 devolvía 0 cruces con 501 candidatas
+agotadas, y el cliente no tenía forma de saber que el tope se había tocado.
+
+
 ## Cómo se calcula el score
 
 1. `extractKeywords(titulo)`: minúsculas, sin diacríticos, sin stopwords, sin
@@ -75,8 +81,10 @@ ocurrió y está cubierta por test.
 ## Verificación en vivo (2026-10-04)
 
 Postgres 16 real con las **migraciones reales** de ambas apps aplicadas
-(`legislativo_congreso/001_init.sql`, `infobras/001`–`005`) y datos de prueba.
-No mocks.
+(`legislativo_congreso/001_init.sql`, `infobras/001`–`005`). Dos corridas: una
+con datos de prueba, otra con las **ingestas reales** completas.
+
+### Corrida con datos de prueba
 
 | Caso | Resultado |
 |---|---|
@@ -87,18 +95,59 @@ No mocks.
 | `NUMERIC` de Postgres viene como string y se convierte | ✅ `montoViable 1500000.5`, `avanceFisicoRealPct 45.5` |
 | `truncated` con 523 obras | ✅ `truncated: true`, exactamente 500 cruces |
 | Sin `INFOBRAS_DATABASE_URL` | ✅ **503** en ambos endpoints |
-| 400 departameto vacío / 404 proyecto inexistente | ✅ |
+| 400 departamento vacío / 404 proyecto inexistente | ✅ |
 | Paginación `limit=1` | ✅ `total 2`, `hasMore true` |
 
-**Lo que NO cubre esta verificación:** los datos eran sintéticos. Falta correr
-las ingestas reales (14,868 proyectos del Congreso + XLSX nacional de INFOBRAS)
-para confirmar volumen, tiempo de respuesta y `truncated` con las 25 regiones
-reales. El ticket sigue sin ese evidencia.
+### Corrida con ingesta real
+
+| Fuente | Resultado |
+|---|---|
+| Congreso (`api.congreso.gob.pe/spley-portal-service`) | 14,870 filas, **0 rechazadas** (6 de 2026 + 14,864 de 2021) |
+| INFOBRAS (XLSX de Contraloría) | 191,180 leídas → **178,616 aceptadas**, 12,218 `skippedOtherDepartamento`, 346 rechazadas, `isPartial: false` |
+
+La ingesta de INFOBRAS se corrió sobre el XLSX local `DataSet-Obras-Publicas
+16-08-2026.xlsx` (54.7 MB). El corte temporal es **2026-08-16**, no la fecha de
+esta verificación; el nombre y checksum quedan en `raw_infobras_batches`.
+
+## Rendimiento real (defecto abierto)
+
+El cruce por departamento es inviable a escala nacional. Medido:
+
+| Consulta | Tiempo | Cruces | `truncated` |
+|---|---|---|---|
+| `LA LIBERTAD` periodo 2021 (14,864 proyectos) | **75,613 ms** | 39,670 | `true` |
+| `LIMA` periodo 2021 | **58,318 ms** | 47,898 | `true` |
+| `CALLAO` periodo 2021 | 57,610 ms | 61,971 | `true` |
+| `LA LIBERTAD` periodo 2026 (6 proyectos) | 360 ms | 14 | `true` |
+| Un proyecto concreto | 513 ms | 0 | `true` |
+
+Causa medida, no supuesta. Los 14,864 títulos del periodo 2021 producen **12,888
+keywords únicas**, y cada una entra como un `OR` de `ILIKE`:
+
+- La **query** con 12,888 `OR ILIKE` tarda **17,228 ms**. El `EXPLAIN` muestra
+  `Bitmap Index Scan` sobre `departamento` (10,134 filas) y después un `Filter`
+  que descarta 9,702: no hay índice trigram, así que cada `ILIKE '%kw%'` es un
+  barrido de la partición del departamento. Un solo `ILIKE` aislado ya cuesta
+  119 ms; el `COUNT` por departamento, 11 ms.
+- Los ~58 s restantes son el scoring en memoria: 14,864 proyectos × 500
+  candidatas ≈ **7.4 M** llamadas a `calculateMatchScore`.
+
+La estrategia de una sola query evita el N+1 y el test lo cubre, pero no escala
+con el número de keywords. Sin índice trigram, límite de keywords, o
+precomputado, el endpoint no es usable por HTTP en un periodo completo.
 
 ## Límites conocidos
 
+- **El tope de 500 candidatas no es un caso borde: es el caso normal.**
+  `LA LIBERTAD` tiene 10,134 obras reales, así que `truncated: true` es la
+  respuesta habitual en cualquier departamento mediano, y 500 candidatas son
+  ~5% de su obras. El tope está sin calibrar contra el volumen real.
 - `departamento` se compara contra el valor canónico uppercase del catálogo
   peruano. El alias de fuente `"P C DEL CALLAO"` se resuelve en la ingesta, no
-  en esta query: pasarlo devuelve 0 cruces sin error.
-- La paginación es en memoria sobre un conjunto acotado a 500 obras candidatas.
+  en esta query: pasarlo devuelve 0 cruces **sin error** y `truncated: false`
+  (medido: 0 cruces en 6,403 ms, frente a 61,971 cruces de `CALLAO`). Un 0 sin
+  error y sin `truncated` es indistinguible de "ese departamento no tiene obras".
+- La paginación es en memoria sobre un conjunto acotado a 500 obras candidatas,
+  pero el array completo de cruces se materializa antes de paginar: `CALLAO`
+  2021 construye 61,971 objetos para devolver 200.
 - El score no distingue "puente" de "construcción de puente": es substring.

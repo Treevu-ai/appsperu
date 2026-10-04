@@ -120,12 +120,17 @@ crucesRouter.get(
       const { cruces, truncated } = await cruzarProyectoInfobrasPorId(periodo, numero, departamento, umbral_score);
 
       if (cruces.length === 0) {
+        // `truncated` viaja en el 404: si el tope de 500 candidatas se agotó y
+        // ninguna alcanzó el umbral, "no hay match" y "no lo buscamos todo" son
+        // respuestas distintas. Ocultarlo aquí convertía el truncamiento en un
+        // cero indistinguible (verificado en vivo con proyecto 14849).
         res.status(404).json({
           error: "No se encontraron obras que matcheen este proyecto",
           periodo,
           numero,
           departamento,
           umbral_score,
+          truncated,
         });
         return;
       }
