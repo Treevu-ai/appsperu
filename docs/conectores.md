@@ -414,6 +414,16 @@ Investigado y construido 2026-10-02, Épica 3 (Mapa de Gota a Gota, PRD-003) ada
 | **API expuesta** | `GET /api/financieras-informales` (filtros `departamento`/`soloActivas`, paginado) y `GET /api/financieras-informales/resumen-geo` (agregados por departamento, cruzados con extorsión SIDPOL -- `candidatas`/`candidatasActivas` y `tasaExtorsion100k` como señales independientes, sin combinar en un score: no hay evidencia de que una financiera específica esté vinculada a casos de extorsión concretos). Registrada como tools MCP `identidad_fiscal_financieras_informales`/`_resumen_geo`. |
 | **Detalle completo** | [`docs/prd/PRD-003-mapa-gota-gota.md`](prd/PRD-003-mapa-gota-gota.md) sección 2.1 |
 
+### `produce-cooperativas-connector.ts` — Directorio de cooperativas agrarias (PRODUCE)
+
+| | |
+|---|---|
+| **Descripción** | Cooperativas del sector agropecuario (café/cacao, EUDR) del directorio PRODUCE: ubicación en texto libre y número de socios — dato que no existe en ningún otro conector del repo. |
+| **Por qué se recreó** | La tabla `cooperativas` existió, se borró en `003_drop_cooperativas.sql` (2026-09-18, porque `representante` quedaba desactualizado frente a SUNAT) y se recreó en `010_recrear_cooperativas_produce.sql` por el dato de ubicación/socios que sí aporta. `ficha_ruc` sigue siendo la fuente de verdad para representante legal. |
+| **Qué hace** | Pagina el endpoint DataTables 1.9 server-side de PRODUCE (`actividad=1` = Agricultura/Ganadería/Silvicultura/Pesca) con reintentos y backoff. |
+| **Fuente de datos** | `directoriocoop.produce.gob.pe/ajax/busqueda_ajax.php` (API no documentada, sin autenticación). |
+| **Estado real (2026-10-04)** | **Migración aplicada, 0 filas ingeridas.** El subdominio `directoriocoop.produce.gob.pe` no resuelve por DNS en este momento (`NXDOMAIN`) — caído o decomisionado del lado de PRODUCE, confirmado que el resto de `produce.gob.pe` sí responde. Reintentar `npm run ingest:cooperativas` cuando el subdominio vuelva a resolver. |
+
 ---
 
 <a id="proveedores-sancionados"></a>
@@ -1381,6 +1391,123 @@ OCDS); esos resultados devuelven `valorMoneda: null` en vez de asumir soles.
 
 ---
 
+## fonafe-empresarial — Presupuesto empresarial de las 34 empresas FONAFE (FONAFE)
+
+Construido 2026-10-01. **Fase 0 (solo ingesta):** aún sin rutas Express ni registro en el
+catálogo MCP — `package.json` solo expone `migrate`/`ingest:*`, no `dev`/`start`.
+
+### `fonafe-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Presupuesto y ejecución mensual por rubro de las 34 empresas activas de la Corporación FONAFE, scrapeado página por página desde `fonafe.gob.pe/empresasdelacorporacion`. |
+| **Lista depurada de empresas** | 34 slugs hardcodeados (confirmados contra el listado real); excluye a propósito `banmatsac`, `banvip`, `enace` (disueltas/en liquidación) y `essalud` (no es empresa FONAFE, capturado por error de regex del scrape crudo). |
+| **Fuente de datos** | `fonafe.gob.pe/empresasdelacorporacion/<slug>` (código interno) + `.../dataempresarial/<código>/06` (tabla de presupuesto). |
+| **Cobertura real ingerida** | Verificado en Neon 2026-10-04: 34 empresas, 3,774 filas de presupuesto, 2 batches. |
+| **Pendiente** | `presupuesto_empresarial` no tiene `ON CONFLICT` — re-ejecutar el conector duplica el histórico de presupuesto en vez de actualizarlo (a diferencia de `empresas_fonafe`, que sí hace upsert por `slug`). |
+
+---
+
+## inacal-acreditados — Organismos de evaluación de la conformidad y laboratorios acreditados (INACAL)
+
+Construido 2026-10-01. **Fase 0 (solo ingesta).**
+
+### `inacal-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Organismos acreditados por categoría (certificación, inspección, calibración, etc.) y laboratorios de ensayo acreditados por el Sistema Nacional de Calidad. |
+| **Fuente de datos** | `servicios.inacal.gob.pe/datos_abiertos_data/api/<categoria>` y `.../LaboratorioEnsayo` (API JSON propia de INACAL, no CKAN). |
+| **Cobertura real ingerida** | Verificado en Neon 2026-10-04: 56 organismos, 105 laboratorios, 4 batches. |
+
+---
+
+## indecopi-clc — Expedientes de la Comisión de Protección al Consumidor (INDECOPI)
+
+Construido 2026-10-01. **Fase 0 (solo ingesta).**
+
+### `indecopi-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Expedientes presentados ante la Comisión de Protección al Consumidor (SPC/CLC), con denunciado, tipo y número de documento, y materia. |
+| **Fuente de datos** | `datosabiertos.gob.pe/.../Expedientes Presentados 2019.xlsx` (dataset `indecopi_spc_expedientes_presentados_2019`). |
+| **Cobertura real ingerida** | Verificado en Neon 2026-10-04: 3,123 expedientes, 1 batch. |
+
+---
+
+## midagri-dgaaa — Estudios de suelos aprobados (MIDAGRI/DGAAA)
+
+Construido 2026-10-01. **Fase 0 (solo ingesta).**
+
+### `dgaaa-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Estudios de suelos aprobados por la Dirección General de Asuntos Ambientales Agrarios, con titular, superficie y sistema de clasificación de tierras (CTCUM). |
+| **Fuente de datos** | `datosabiertos.gob.pe/.../Estudios_aprobados_periodo_2024-2025.xlsx`. |
+| **Cobertura real ingerida** | Verificado en Neon 2026-10-04: 18 estudios, 1 batch. |
+
+---
+
+## onpe-resultados — Resultados de mesa, segunda vuelta regional 2022 (ONPE)
+
+Construido 2026-10-01. **Fase 0 (solo ingesta).**
+
+### `onpe-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Resultados por mesa de votación de la segunda vuelta de Gobernador/Vicegobernador Regional ERM 2022, con votos por agrupación política, electores hábiles, blancos/nulos/impugnados. |
+| **Fuente de datos** | `datosabiertos.gob.pe/.../SER2022_Gobernador_Vicegobernador.csv`. |
+| **Hallazgo real: inserción fila-por-fila en una sola transacción falla contra Neon** | Confirmado en vivo 2026-10-01: sostener una conexión Postgres abierta por decenas de minutos durante ~47K inserts individuales termina en `Connection terminated unexpectedly`. Se resolvió con commits por lotes de 500 filas, cada uno con su propia conexión (mismo patrón que RENIEC). |
+| **Cobertura real ingerida** | Verificado en Neon 2026-10-04: 47,156 filas, 1 batch (el intento anterior, id=1, no llegó a completarse). |
+
+---
+
+## pronabec-colegios — Colegios hábiles para beca 18 (PRONABEC)
+
+Construido 2026-10-01. **Fase 0 (solo ingesta).**
+
+### `pronabec-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Catálogo nacional de colegios hábiles para postular a Beca 18, con modalidad, tipo de gestión, UGEL y ubicación. |
+| **Fuente de datos** | `datosabiertos.gob.pe/.../2605_COLEGIOS HÁBILES - PRONABEC.csv`. |
+| **Cobertura real ingerida** | Verificado en Neon 2026-10-04: 71,605 colegios, 1 batch. |
+| **Pendiente** | El `INSERT` no tiene `ON CONFLICT` — no hay clave natural única declarada; re-ejecutar el conector duplicaría el catálogo completo en vez de actualizarlo. |
+
+---
+
+## senasa-ejecucion — Ejecución física de actividades SENASA (MIDAGRI/SENASA)
+
+Construido 2026-10-01. **Fase 0 (solo ingesta).**
+
+### `senasa-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Ejecución física mensual de actividades de SENASA (sanidad agraria) por departamento/provincia/distrito, unidad de medida y actividad. |
+| **Fuente de datos** | `datosabiertos.gob.pe/.../ejecfisica0521.csv` (dataset `senasa_ejecucion_fisica_2021_2026`). |
+| **Cobertura real ingerida** | Verificado en Neon 2026-10-04: 6,814 filas, 1 batch. |
+
+---
+
+## sunass-sanciones — Sanciones a EPS de saneamiento (SUNASS)
+
+Construido 2026-10-01. **Fase 0 (solo ingesta).**
+
+### `sunass-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Sanciones impuestas a Empresas Prestadoras de Servicios de Saneamiento (EPS): multa, amonestación, remoción, archivo o medida correctiva, por expediente y administrado. |
+| **Fuente de datos** | `datosabiertos.gob.pe/.../Sanciones_impuestas_Dataset.csv`. |
+| **Cobertura real ingerida** | Verificado en Neon 2026-10-04: 280 sanciones, 1 batch. |
+
+---
+
 ## Resumen
 
 | Conector | App | Fuente | Método | Frecuencia de ejecución | Cobertura ingerida |
@@ -1432,4 +1559,13 @@ OCDS); esos resultados devuelven `valorMoneda: null` en vez de asumir soles.
 | `pdf-connector.ts` | riesgo-fiscal-isds | MEF, Marco Macroeconómico Multianual / IAPM (PDF, descarga con navegador real — `curl`/`WebFetch` bloqueados) | Parseo de texto tabulado con `pdf-parse`, mismo motor que bcrp-la-libertad; 2 años cargados a mano por formato de tabla no soportado | Manual (archivo local) | Serie 2020-2025 completa (24 filas) |
 | `procesos-judiciales-connector.ts` | poder-judicial | Poder Judicial (datosabiertos.gob.pe, CSV estático fuera de CKAN) | Descarga CSV directo (Latin-1), maneja WAF | Manual | Completa (nacional, 58,568 filas, desde 2024) |
 | `siseve-connector.ts` | violencia-escolar | SíseVe/MINEDU (`siseve.minedu.gob.pe`, exportación pública Excel) | POST sin sesión, parsea XLSX con `exceljs`, cabecera real ubicada dinámicamente | Manual | Completa (nacional, 50,633 filas, 01/01/2024-hoy) |
+| `fonafe-connector.ts` | fonafe-empresarial | FONAFE (fonafe.gob.pe, scraping HTML propio) | Scraping página por empresa, 34 slugs fijos | Manual | Completa (34 empresas, 3,774 filas de presupuesto) |
+| `inacal-connector.ts` | inacal-acreditados | INACAL (API JSON propia, no CKAN) | API REST JSON | Manual | Completa (56 organismos, 105 laboratorios) |
+| `indecopi-connector.ts` | indecopi-clc | INDECOPI (datosabiertos.gob.pe) | Descarga XLSX | Manual | Completa (3,123 expedientes) |
+| `dgaaa-connector.ts` | midagri-dgaaa | MIDAGRI/DGAAA (datosabiertos.gob.pe) | Descarga XLSX | Manual | Completa (18 estudios) |
+| `onpe-connector.ts` | onpe-resultados | ONPE (datosabiertos.gob.pe) | Descarga CSV, commits por lotes de 500 | Manual | Completa (47,156 filas) |
+| `pronabec-connector.ts` | pronabec-colegios | PRONABEC (datosabiertos.gob.pe) | Descarga CSV | Manual | Completa (71,605 colegios) |
+| `senasa-connector.ts` | senasa-ejecucion | SENASA/MIDAGRI (datosabiertos.gob.pe) | Descarga CSV | Manual | Completa (6,814 filas) |
+| `sunass-connector.ts` | sunass-sanciones | SUNASS (datosabiertos.gob.pe) | Descarga CSV | Manual | Completa (280 sanciones) |
+| `produce-cooperativas-connector.ts` | identidad-fiscal | PRODUCE (API DataTables propia) | API JSON paginada | Manual | Bloqueada — subdominio sin DNS al 2026-10-04 |
 
