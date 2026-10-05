@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("../db/pool.js", () => ({ pool: { query: vi.fn() } }));
 vi.mock("../db/ejecucion-pool.js", () => ({ ejecucionPool: { query: vi.fn() } }));
 
-const { canonicalizarDepartamentoFuente, normalizeDepartamentoScope } = await import(
+const { canonicalizarDepartamentoFuente, normalizeDepartamentoScope, corregirGeografiaFuente } = await import(
   "../ingest/infobras-connector.js"
 );
 
@@ -27,6 +27,32 @@ describe("canonicalizarDepartamentoFuente", () => {
   it("trata un valor vacío o indefinido como cadena vacía, sin lanzar", () => {
     expect(canonicalizarDepartamentoFuente(undefined)).toBe("");
     expect(canonicalizarDepartamentoFuente("")).toBe("");
+  });
+});
+
+describe("corregirGeografiaFuente", () => {
+  it("reclasifica las 4 provincias de Ica etiquetadas como Huancavelica (DQ-19)", () => {
+    expect(corregirGeografiaFuente("HUANCAVELICA", "CHINCHA")).toEqual({ departamento: "ICA", provincia: "CHINCHA" });
+    expect(corregirGeografiaFuente("HUANCAVELICA", "PISCO")).toEqual({ departamento: "ICA", provincia: "PISCO" });
+    expect(corregirGeografiaFuente("HUANCAVELICA", "PALPA")).toEqual({ departamento: "ICA", provincia: "PALPA" });
+  });
+
+  it('normaliza "NAZCA" a la grafía oficial "NASCA" al reclasificar a Ica', () => {
+    expect(corregirGeografiaFuente("HUANCAVELICA", "NAZCA")).toEqual({ departamento: "ICA", provincia: "NASCA" });
+    expect(corregirGeografiaFuente("HUANCAVELICA", "NASCA")).toEqual({ departamento: "ICA", provincia: "NASCA" });
+  });
+
+  it("corrige la provincia corrupta ANDAHUAYLAS a HUAYLAS dentro de Áncash, sin tocar el departamento", () => {
+    expect(corregirGeografiaFuente("ANCASH", "ANDAHUAYLAS")).toEqual({ departamento: "ANCASH", provincia: "HUAYLAS" });
+  });
+
+  it("no toca ANDAHUAYLAS cuando el departamento declarado ya es APURIMAC (ahí sí es la provincia real)", () => {
+    expect(corregirGeografiaFuente("APURIMAC", "ANDAHUAYLAS")).toBeNull();
+  });
+
+  it("devuelve null para departamento/provincia sin corrección conocida", () => {
+    expect(corregirGeografiaFuente("LA LIBERTAD", "TRUJILLO")).toBeNull();
+    expect(corregirGeografiaFuente("HUANCAVELICA", "TAYACAJA")).toBeNull();
   });
 });
 
