@@ -41,6 +41,15 @@ function isCruceDegradado(error: unknown): boolean {
 }
 
 /**
+ * Nombre público de la app en el mensaje de degradación. `appName` es la clave
+ * interna del pool ("infobras"); el usuario-facing es "INFOBRAS", igual que en
+ * el handler MCP — si divergen, el mismo fallo se lee distinto según la capa.
+ */
+function nombreAppDegradada(error: unknown): string {
+  return error instanceof CrossAppUnavailableError ? error.appName.toUpperCase() : "la app cruzada";
+}
+
+/**
  * Cruce proyectos de ley con obras públicas (INFOBRAS).
  * GET /api/cruces/proyectos-infobras?departamento=LA LIBERTAD&umbral_score=0.3&periodo=2026
  */
@@ -76,7 +85,7 @@ crucesRouter.get(
       if (isCruceDegradado(error)) {
         res.status(503).json({
           error: "Cruce no disponible",
-          detalle: `${(error as CrossAppUnavailableError).appName} no está accesible`,
+          detalle: `${nombreAppDegradada(error)} no está accesible`,
         });
         return;
       }
@@ -111,12 +120,17 @@ crucesRouter.get(
       const { cruces, truncated } = await cruzarProyectoInfobrasPorId(periodo, numero, departamento, umbral_score);
 
       if (cruces.length === 0) {
+        // `truncated` viaja en el 404: si el tope de 500 candidatas se agotó y
+        // ninguna alcanzó el umbral, "no hay match" y "no lo buscamos todo" son
+        // respuestas distintas. Ocultarlo aquí convertía el truncamiento en un
+        // cero indistinguible (verificado en vivo con proyecto 14849).
         res.status(404).json({
           error: "No se encontraron obras que matcheen este proyecto",
           periodo,
           numero,
           departamento,
           umbral_score,
+          truncated,
         });
         return;
       }
@@ -134,7 +148,7 @@ crucesRouter.get(
       if (isCruceDegradado(error)) {
         res.status(503).json({
           error: "Cruce no disponible",
-          detalle: `${(error as CrossAppUnavailableError).appName} no está accesible`,
+          detalle: `${nombreAppDegradada(error)} no está accesible`,
         });
         return;
       }

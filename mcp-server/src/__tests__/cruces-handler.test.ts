@@ -149,7 +149,18 @@ describe("cruces:list", () => {
     expect((res.body as { detalle: string }).detalle).toContain("INFOBRAS");
   });
 
-  it("devuelve vacío sin tocar INFOBRAS si el periodo no tiene proyectos", async () => {
+  it("responde 503 con periodo vacío si INFOBRAS no está configurada", async () => {
+    // Antes devolvía 200 con total:0 sin mirar el pool, y eso hacía un periodo
+    // vacío indistinguible de un cruce degradado.
+    dbQuery.mockResolvedValueOnce({ rows: [] });
+    getPool.mockReturnValue(undefined as never);
+
+    const res = await list(ctx({}));
+
+    expect(res.status).toBe(503);
+  });
+
+  it("devuelve vacío sin consultar obras si el periodo no tiene proyectos", async () => {
     dbQuery.mockResolvedValueOnce({ rows: [] });
 
     const res = await list(ctx({}));
@@ -157,6 +168,20 @@ describe("cruces:list", () => {
     expect(res.status).toBe(200);
     expect((res.body as { total: number }).total).toBe(0);
     expect(infobrasQuery).not.toHaveBeenCalled();
+  });
+
+  it("incluye truncated en el 404 del proyecto individual", async () => {
+    dbQuery.mockResolvedValueOnce({ rows: [proyectoRow({ titulo: "Ley de obras publicas" })] });
+    infobrasQuery.mockResolvedValueOnce({
+      rows: Array.from({ length: 501 }, (_, i) =>
+        obraRow(`Obra sin relacion ${i}`, { codigo_infobras: `OBR-${i}` })
+      ),
+    });
+
+    const res = await proyecto(ctx({ periodo: 2026, numero: 1234 }));
+
+    expect(res.status).toBe(404);
+    expect((res.body as { truncated: boolean }).truncated).toBe(true);
   });
 
   it("respeta limit y offset", async () => {
