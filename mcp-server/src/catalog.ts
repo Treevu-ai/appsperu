@@ -2238,7 +2238,11 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "Cartera OxI (Obras por Impuestos) en promoción por PROINVERSIÓN — universo distinto a APP/PA, misma " +
       "plataforma VERTIX. `codigoReferencia` viene de una columna fuente que mezcla tres sistemas de código " +
       "(SNIP / Invierte.pe / IDEA) — no asumir que siempre es un codigo_snip exacto. Cobertura completa del " +
-      "export consultado (761 nacional, 55 en La Libertad, verificado 2026-08-28). " +
+      "export consultado (761 nacional, 55 en La Libertad, verificado 2026-08-28). `provincia` viene puramente " +
+      "numérica (no un ubigeo) en ~11% de los proyectos a nivel nacional — DQ-18: `provinciaConfiable: false` " +
+      "marca esos casos, nunca corrige el campo en silencio; `provinciaExtraidaDeNombre`/`distritoExtraidoDeNombre` " +
+      "traen el fallback recuperado de `nombreProyecto` por regex cuando el patrón de texto lo permite (puede " +
+      "ser `null` incluso con `provinciaConfiable: false`, si el texto no sigue el patrón reconocido). " +
       SIN_SCHEDULER,
     pathTemplate: "/api/oxi",
     pathParams: [],

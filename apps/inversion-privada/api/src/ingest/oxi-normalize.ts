@@ -33,6 +33,20 @@ export interface NormalizedOxiRow {
   departamento: string | null;
   provincia: string | null;
   distrito: string | null;
+  /**
+   * `false` cuando `provincia` no pasa la validación de DQ-18 (ver
+   * `provinciaEsConfiable`). Mismo patrón que `distrito_sospechoso` de
+   * INFOBRAS: marca, nunca corrige en silencio ni descarta la fila.
+   */
+  provinciaConfiable: boolean;
+  /**
+   * Provincia recuperada de `nombreProyecto` por regex, solo cuando
+   * `provinciaConfiable` es `false` — nunca sustituye al campo estructurado,
+   * se expone aparte para que el consumidor decida si confiar en el fallback.
+   */
+  provinciaExtraidaDeNombre: string | null;
+  /** Mismo criterio que `provinciaExtraidaDeNombre`, para `distrito`. */
+  distritoExtraidoDeNombre: string | null;
   entidad: string | null;
   codigoReferencia: string | null;
   nombreProyecto: string;
@@ -40,6 +54,55 @@ export interface NormalizedOxiRow {
   tipologia: string | null;
   montoInversionReferencial: number | null;
   rangoMonto: string | null;
+}
+
+/**
+ * DQ-18: la fuente trae `provincia` puramente numérica en vez de un nombre de
+ * provincia real. No es un ubigeo: la misma fila (`oxi_id 5346`) cambió de
+ * `provincia "469"` a `"478"` al re-descargar 3 días después, y el valor
+ * `"478"` se repite en la misma descarga entre Pacasmayo, Sánchez Carrión,
+ * Virú y Santiago de Chuco — provincias reales distintas. Verificado en vivo
+ * 2026-10-05: el patrón es nacional, 78/711 proyectos (11%) en 20 de los 25
+ * departamentos — no un caso aislado de La Libertad, contra lo documentado
+ * originalmente en DQ-18.
+ */
+export function provinciaEsConfiable(provincia: string | null): boolean {
+  if (!provincia) return false;
+  return !/^\d+$/.test(provincia);
+}
+
+/**
+ * Recupera distrito/provincia/departamento de `nombreProyecto` cuando el
+ * campo estructurado no es confiable. El dataset nacional de INVIERTE.PE
+ * nombra sus proyectos con el patrón "...DISTRITO DE <d> - PROVINCIA [DE]
+ * <p> - DEPARTAMENTO [DE] <dep>" (separador "-" o ","; "DE" opcional antes de
+ * provincia/departamento, siempre presente antes de distrito) — verificado
+ * en vivo sobre las 78 filas de `provincia` no confiable a nivel nacional.
+ *
+ * Deliberadamente estricto: exige el patrón completo anclado al final del
+ * texto. Frases con otra gramática (ej. "...DE LA PROVINCIA DE LA MAR DEL
+ * DEPARTAMENTO DE AYACUCHO", sin separador antes de "PROVINCIA") no
+ * matchean y devuelven `null` — es preferible no extraer nada a adivinar mal
+ * el límite entre distrito y provincia.
+ */
+const PATRON_UBICACION_NOMBRE_PROYECTO =
+  /DISTRITO\s+DE\s+([^,\-]+?)\s*[-,]\s*PROVINCIA\s+(?:DE\s+)?([^,\-]+?)\s*[-,]\s*DEPARTAMENTO\s+(?:DE\s+)?([^,\-.]+?)[.\s]*$/i;
+
+export interface UbicacionExtraida {
+  distrito: string;
+  provincia: string;
+  departamento: string;
+}
+
+export function extraerUbicacionDeNombreProyecto(nombreProyecto: string): UbicacionExtraida | null {
+  const match = nombreProyecto.match(PATRON_UBICACION_NOMBRE_PROYECTO);
+  if (!match) return null;
+  const [, distrito, provincia, departamento] = match;
+  return {
+    distrito: distrito.trim().toUpperCase(),
+    provincia: provincia.trim().toUpperCase(),
+    departamento: departamento.trim().toUpperCase(),
+  };
 }
 
 /**
@@ -73,6 +136,13 @@ export function parseOxiRow(cells: OxiRawRow): NormalizedOxiRow | null {
   const nombreProyecto = cells[OXI_COLUMNS.nombreProyecto]?.trim();
   if (!nombreProyecto) return null;
 
+  const provincia = trimOrNull(cells[OXI_COLUMNS.provincia]);
+  const provinciaConfiable = provinciaEsConfiable(provincia);
+  // Solo se intenta el fallback cuando el estructurado no es confiable: si
+  // provincia ya es un nombre real, extraer de nombreProyecto no aporta y
+  // arriesga divergir del campo estructurado sin motivo.
+  const ubicacionExtraida = provinciaConfiable ? null : extraerUbicacionDeNombreProyecto(nombreProyecto);
+
   return {
     oxiId: Number(idRaw),
     fase: trimOrNull(cells[OXI_COLUMNS.fase]),
@@ -80,8 +150,11 @@ export function parseOxiRow(cells: OxiRawRow): NormalizedOxiRow | null {
     nivelEstudio: trimOrNull(cells[OXI_COLUMNS.nivelEstudio]),
     nivelGobierno: trimOrNull(cells[OXI_COLUMNS.nivelGobierno]),
     departamento: trimOrNull(cells[OXI_COLUMNS.departamento]),
-    provincia: trimOrNull(cells[OXI_COLUMNS.provincia]),
+    provincia,
     distrito: trimOrNull(cells[OXI_COLUMNS.distrito]),
+    provinciaConfiable,
+    provinciaExtraidaDeNombre: ubicacionExtraida?.provincia ?? null,
+    distritoExtraidoDeNombre: ubicacionExtraida?.distrito ?? null,
     entidad: trimOrNull(cells[OXI_COLUMNS.entidad]),
     codigoReferencia: trimOrNull(cells[OXI_COLUMNS.codigoReferencia]),
     nombreProyecto,
