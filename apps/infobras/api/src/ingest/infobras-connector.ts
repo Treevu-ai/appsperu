@@ -274,18 +274,54 @@ const PROVINCIA_HUAYLAS_CORROMPIDA = "ANDAHUAYLAS";
  * un patrón 100% consistente, confirmado en la ingesta real completa (ver
  * docs/TICKETS_Calidad_Datos_Auditoria_La_Libertad_v1.md, DQ-19/DQ-20).
  * Devuelve `null` si la fila no matchea ningún caso conocido.
+ *
+ * Recibe `distrito` además de `provincia`: la única fila cuyo propio
+ * `distrito` repite el mismo valor corrupto ("ANDAHUAYLAS") también debe
+ * corregirse a "HUAYLAS" — dejarla con un distrito que ya sabemos que está
+ * mal (aunque quede marcado `distrito_sospechoso`) deja la corrección a
+ * medias (hallazgo de code review, Copilot en PR #237).
  */
 export function corregirGeografiaFuente(
   departamento: string,
-  provincia: string
-): { departamento: string; provincia: string } | null {
+  provincia: string,
+  distrito: string
+): { departamento: string; provincia: string; distrito: string } | null {
   if (departamento === "HUANCAVELICA" && PROVINCIAS_ICA_ETIQUETADAS_COMO_HUANCAVELICA.has(provincia)) {
-    return { departamento: "ICA", provincia: provincia === "NAZCA" ? "NASCA" : provincia };
+    return { departamento: "ICA", provincia: provincia === "NAZCA" ? "NASCA" : provincia, distrito };
   }
   if (departamento === "ANCASH" && provincia === PROVINCIA_HUAYLAS_CORROMPIDA) {
-    return { departamento, provincia: "HUAYLAS" };
+    return {
+      departamento,
+      provincia: "HUAYLAS",
+      distrito: distrito === PROVINCIA_HUAYLAS_CORROMPIDA ? "HUAYLAS" : distrito,
+    };
   }
   return null;
+}
+
+/**
+ * Aplica el alias de Callao y `corregirGeografiaFuente` a cada fila cruda,
+ * en ese orden — extraído a función propia (hallazgo de code review,
+ * CodeRabbit + Copilot en PR #237) para poder probar el pipeline real
+ * (corrección → filtro de scope → normalización) sin mockear I/O de archivo
+ * ni de base de datos, en vez de solo `corregirGeografiaFuente` aislada.
+ */
+export function construirFilasCanonicas(rawRows: string[][]): string[][] {
+  return rawRows.map((row) => {
+    const canonical = [...row];
+    canonical[29] = canonicalizarDepartamentoFuente(row[29]);
+    const corregido = corregirGeografiaFuente(
+      canonical[29],
+      (row[30] ?? "").trim().toUpperCase(),
+      (row[31] ?? "").trim().toUpperCase()
+    );
+    if (corregido) {
+      canonical[29] = corregido.departamento;
+      canonical[30] = corregido.provincia;
+      canonical[31] = corregido.distrito;
+    }
+    return canonical;
+  });
 }
 
 export function normalizeDepartamentoScope(
@@ -342,20 +378,11 @@ export async function ingestInfobrasPublicWorks(options: IngestOptions = {}): Pr
 
   try {
     const [checksum, rawRows] = await Promise.all([checksumOf(filePath), readInfobrasRows(filePath)]);
-    const allRows = rawRows.map((row) => {
-      const canonical = [...row];
-      canonical[29] = canonicalizarDepartamentoFuente(row[29]);
-      // Corrección de geografía (DQ-19/DQ-20), no solo alias de nombre: debe
-      // ocurrir antes del filtro de scope por departamento, para que una fila
-      // de Ica mal etiquetada como Huancavelica cuente para el departamento
-      // real, no para el declarado.
-      const corregido = corregirGeografiaFuente(canonical[29], (row[30] ?? "").trim().toUpperCase());
-      if (corregido) {
-        canonical[29] = corregido.departamento;
-        canonical[30] = corregido.provincia;
-      }
-      return canonical;
-    });
+    // Alias de Callao + corrección de geografía (DQ-19/DQ-20): debe ocurrir
+    // antes del filtro de scope por departamento, para que una fila de Ica
+    // mal etiquetada como Huancavelica cuente para el departamento real, no
+    // para el declarado.
+    const allRows = construirFilasCanonicas(rawRows);
 
     const wantedDepartamentos = new Set(normalizeDepartamentoScope(departamento, departamentos));
     const filteredRows = wantedDepartamentos.size > 0

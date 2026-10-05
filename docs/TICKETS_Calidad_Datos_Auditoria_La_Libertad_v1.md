@@ -312,7 +312,23 @@
   - Repetir el mismo desglose por provincia para los demás departamentos de la tabla nacional de DQ-17 (Lima, Piura, Huánuco, Cajamarca, Cusco también tienen conteos altos en términos absolutos) para descartar que haya otros bloques grandes similares sin descubrir.
 - **Dependencias:** DQ-17 (la auditoría nacional que reveló el outlier).
 - **Prioridad:** P1 · **Esfuerzo:** M (investigación ya hecha; falta la decisión de producto + implementación si se opta por corregir)
-- **Estado:** ⬜ Pendiente — documentado 2026-09-09, investigación de causa raíz completa, sin decisión ni fix.
+- **Estado:** ✅ Resuelto (2026-10-05, PR #237) — decisión de producto: **corregir el `departamento`** de las 889 filas en el ingest, no solo señalizar. El gap del 95% de CHINCHA mencionado arriba queda cerrado porque la corrección ya no depende de `distrito_sospechoso` para excluir las filas: las 889 pasan a `departamento = 'ICA'` directamente.
+- **Hecho (2026-10-05):**
+  1. `corregirGeografiaFuente()` (`infobras-connector.ts`) reclasifica `HUANCAVELICA` → `ICA` cuando `provincia` ∈ {NASCA/NAZCA, CHINCHA, PISCO, PALPA}; `NAZCA` se normaliza a `NASCA` (grafía oficial INEI). Corre antes del filtro de scope por departamento y antes de `distritoEsSospechoso`, para que la fila cuente para ICA y la bandera se recalcule contra el catálogo correcto.
+  2. Verificado en vivo contra Postgres local con el XLSX nacional real (16-08-2026): HUANCAVELICA 9,186→8,297 (-889 exacto), ICA 4,878→5,767 (+889 exacto). `distrito_sospechoso` de HUANCAVELICA bajó de 1,409 a 537 (se fue con las filas); ICA subió de 359 a 440 (solo 81 de las 889 migradas quedan sospechosas al evaluarse contra su catálogo real, el resto resuelve limpio).
+  3. **Pendiente, fuera de este fix:** aplicar la corrección contra producción (Neon) — solo se verificó contra la BD local, requiere un backfill separado. Investigar aparte la tasa interna alta (19.5%) de la propia provincia HUANCAVELICA y repetir el desglose para Lima/Piura/Huánuco/Cajamarca/Cusco — ver DQ-20 abajo, que ya cubrió ese segundo punto a nivel nacional.
+
+### DQ-20 · `provincia = "ANDAHUAYLAS"` (real, de Apurímac) bajo `departamento = "ANCASH"` en INFOBRAS
+
+- **Historia:** Como consumidor de `infobras`, quiero que un cruce nacional provincia↔departamento (el mismo tipo de verificación que DQ-19) no deje pasar otro bloque de geografía corrupta sin descubrir.
+- **Contexto verificado (2026-10-05, al repetir el desglose nacional que pedía el criterio de aceptación de DQ-19):** cruzando `public_works` contra el catálogo territorial nacional (196 provincias, tabla `territories` de `ceplan-geo`), **no aparece ningún otro bloque cruzado entre departamentos** como el de Ica/Huancavelica — pero sí un bug distinto: 113 obras en `departamento = 'ANCASH'` tienen `provincia = 'ANDAHUAYLAS'` (provincia real, pero de Apurímac). A diferencia de DQ-19, el `departamento` aquí está bien; solo la `provincia` vino corrupta.
+  - Verificado 1:1: los 10 distritos distintos de esas 113 filas (PUEBLO LIBRE, CARAZ, PAMPAROMAS, HUALLANCA, MATO, SANTO TORIBIO, SANTA CRUZ, YURACMARCA, HUATA, HUAYLAS) son exactamente los 10 distritos reales de la provincia **HUAYLAS** de Áncash — incluida la única fila cuyo propio `distrito` repite el mismo valor corrupto (`codigo_infobras 515438`), cuyo `nombre_obra` confirma explícitamente "...DISTRITO DE HUAYLAS HUAYLAS ANCASH".
+- **Criterios de aceptación:**
+  - Corregir `provincia` → `HUAYLAS` cuando `departamento = 'ANCASH'` y `provincia = 'ANDAHUAYLAS'`, sin tocar `departamento`.
+  - Corregir también `distrito` en la única fila donde repite el mismo valor corrupto — dejarla con un distrito que ya se sabe que está mal, aunque quede marcada `distrito_sospechoso`, es una corrección a medias (hallazgo de code review, Copilot en PR #237).
+- **Dependencias:** ninguna — hallazgo independiente, aunque surgió al ejecutar el criterio de aceptación de DQ-19.
+- **Prioridad:** P2 · **Esfuerzo:** S
+- **Estado:** ✅ Resuelto (2026-10-05, PR #237). Verificado en vivo: 113→0 filas en `ANCASH/ANDAHUAYLAS`, +113 en `ANCASH/HUAYLAS` (735→848). Pendiente, igual que DQ-19: aplicar contra producción (Neon).
 
 ### DQ-18 · `provincia`/`distrito` estructurados no confiables en OxI (Ficha técnica / Por Priorizar) — `inversion-privada`
 
