@@ -20,7 +20,9 @@ de INFOBRAS. **Sin IA y sin embeddings**: `matchScore` es una heurística léxic
 
 Sin `INFOBRAS_DATABASE_URL` la API responde **503, no cero**. Un `total: 0` con
 503 ausente significa "no hay obras que matcheen"; con 503 significa "no se pudo
-consultar". La distinción es deliberada.
+consultar". La distinción es deliberada y se aplica **antes** del fast path de
+"el periodo no trae proyectos con keywords": un periodo vacío con INFOBRAS
+inaccesible responde 503, no `200` con `total: 0`.
 
 ## Endpoints
 
@@ -89,7 +91,7 @@ con datos de prueba, otra con las **ingestas reales** completas.
 | Caso | Resultado |
 |---|---|
 | Las 22 columnas de `public_works` y las 8 de `legislativo_congreso_proyectos` existen | ✅ contrastadas contra `information_schema` |
-| `ILIKE %obras públicas%` encuentra "Construcción de obras públicas" | ✅ `matchScore 0.571`, `matchedKeywords` con 4 keywords |
+| Acentos en `nombre_obra` | ✅ la obra "Construcción de obras públicas" entra como candidata y puntúa `matchScore 0.571` con 4 keywords. **No** porque la query mande `%públicas%`: `extractKeywords` quita los diacríticos, así que el patrón real es `%publicas%`, y `ILIKE` es sensible a acentos. La obra entra por `%obras%`; recién en el scoring en memoria se normalizan ambos lados |
 | Filtro `departamento` (mayúsculas) | ✅ `LA LIBERTAD`→OBR-001/002, `LIMA`→OBR-004, sin cruce cruzado |
 | `periodo` parametrizado (antes hardcodeado 2026) | ✅ 2026→1001/1002, 2025→2001 |
 | `NUMERIC` de Postgres viene como string y se convierte | ✅ `montoViable 1500000.5`, `avanceFisicoRealPct 45.5` |
@@ -150,4 +152,16 @@ precomputado, el endpoint no es usable por HTTP en un periodo completo.
 - La paginación es en memoria sobre un conjunto acotado a 500 obras candidatas,
   pero el array completo de cruces se materializa antes de paginar: `CALLAO`
   2021 construye 61,971 objetos para devolver 200.
+- **La recuperación de candidatas no es insensible a acentos.** La query manda
+  keywords ya normalizadas sin diacrítico (`%publicas%`), y `ILIKE` es sensible a
+  acentos en Postgres: una obra cuyo `nombre_obra` solo difiera del título en la
+  acentuación no entra como candidata aunque el scoring en memoria la habría
+  empatado. Hoy la entrada la rescued keywords sin acento comunes (`obras`,
+  `saneamiento`), pero un título cuyas keywords sean todas variantes acentuadas
+  de las de la obra puede quedarse sin candidatas y devolver `total: 0`.
+- **La degradación se declara antes que el fast path.** El pool de INFOBRAS se
+  resuelve antes de evaluar si el periodo tiene proyectos con keywords, en los
+  dos endpoints y en los dos handlers MCP. Sin eso, un periodo vacío con
+  `INFOBRAS_DATABASE_URL` ausente devolvía `200` con `total: 0`, que es el estado
+  que este contrato declara imposible.
 - El score no distingue "puente" de "construcción de puente": es substring.

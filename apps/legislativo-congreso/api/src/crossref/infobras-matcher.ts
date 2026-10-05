@@ -219,11 +219,15 @@ export async function cruzarProyectosInfobras(
     }
   }
 
+  // El pool se resuelve antes del fast path de "nada que cruzar": si INFOBRAS no
+  // está accesible la respuesta es 503 aunque el periodo no traiga proyectos con
+  // keywords. Devolver 200 con total:0 ahí hacía indistinguible un periodo vacío
+  // de un cruce degradado.
+  const infobrasDb = requireCrossAppPool("infobras", process.env);
+
   if (matcheables.length === 0) {
     return { cruces: [], truncated: false };
   }
-
-  const infobrasDb = requireCrossAppPool("infobras", process.env);
 
   const todasKeywords = [...new Set(matcheables.flatMap((p) => p.keywords))];
   const { obras, truncated } = await fetchObrasCandidatas(infobrasDb, departamento, todasKeywords);
@@ -266,13 +270,16 @@ export async function cruzarProyectoInfobrasPorId(
     return { cruces: [], truncated: false };
   }
 
+  // El proyecto existe, así que este camino sí corresponde a un cruce: la
+  // degradación se declara aunque su título no rinda keywords.
+  const infobrasDb = requireCrossAppPool("infobras", process.env);
+
   const row = proyectos[0];
   const keywords = extractKeywords(row.titulo);
   if (keywords.length === 0) {
     return { cruces: [], truncated: false };
   }
 
-  const infobrasDb = requireCrossAppPool("infobras", process.env);
   const { obras, truncated } = await fetchObrasCandidatas(infobrasDb, departamento, keywords);
 
   const resultados: CruceProyectoInfobrasResult[] = [];

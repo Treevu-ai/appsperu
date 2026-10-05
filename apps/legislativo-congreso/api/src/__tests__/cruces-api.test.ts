@@ -244,4 +244,33 @@ describe("GET /api/cruces/proyectos-infobras/:periodo/:numero", () => {
     expect(res.body.proyecto).toEqual({ perParId: 2026, pleyNum: 1234 });
     expect(res.body.total).toBe(1);
   });
+
+  it("responde 503 también en el detalle cuando INFOBRAS no está configurada", async () => {
+    const { CrossAppUnavailableError } = await import("../lib/cross-app-pool.js");
+    queryMock.mockResolvedValueOnce({ rows: [proyectoRow()] });
+    requireCrossAppPoolMock.mockImplementation(() => {
+      throw new CrossAppUnavailableError("infobras");
+    });
+
+    const res = await request(createApp()).get("/api/cruces/proyectos-infobras/2026/1234");
+
+    expect(res.status).toBe(503);
+    expect(res.body.detalle).toBe("INFOBRAS no está accesible");
+  });
+});
+
+describe("degradación declarada antes del fast path", () => {
+  it("503 con periodo sin proyectos, no un 200 con total 0", async () => {
+    const { CrossAppUnavailableError } = await import("../lib/cross-app-pool.js");
+    // Periodo ingested pero cuyos títulos no rinden ninguna keyword: antes de
+    // esto devolvía 200 con total:0, indistinguible de "se consultó y no matcheó".
+    queryMock.mockResolvedValueOnce({ rows: [proyectoRow({ titulo: "2026" })] });
+    requireCrossAppPoolMock.mockImplementation(() => {
+      throw new CrossAppUnavailableError("infobras");
+    });
+
+    const res = await request(createApp()).get("/api/cruces/proyectos-infobras?periodo=2031");
+
+    expect(res.status).toBe(503);
+  });
 });

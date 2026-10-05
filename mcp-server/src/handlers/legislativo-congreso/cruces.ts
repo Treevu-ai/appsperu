@@ -231,18 +231,21 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
     .map((row) => ({ row, keywords: extractKeywords(row.titulo) }))
     .filter((p) => p.keywords.length > 0);
 
-  if (matcheables.length === 0) {
-    return {
-      status: 200,
-      body: { total: 0, limit, offset, periodo, hasMore: false, truncated: false, resultados: [], fuente: FUENTE },
-    };
-  }
-
+  // La degradación se declara antes del fast path de "nada que cruzar": con el
+  // pool ausente, un periodo sin proyectos con keywords devolvería 200 con
+  // total:0, indistinguible de un cruce que sí se consultó y no matcheó.
   const infobras = getPoolForApp(env as NeonEnv, "infobras");
   if (!infobras) {
     return {
       status: 503,
       body: { error: "Cruce no disponible", detalle: "INFOBRAS no está accesible" },
+    };
+  }
+
+  if (matcheables.length === 0) {
+    return {
+      status: 200,
+      body: { total: 0, limit, offset, periodo, hasMore: false, truncated: false, resultados: [], fuente: FUENTE },
     };
   }
 
@@ -289,6 +292,16 @@ export async function proyecto(ctx: ToolHandlerContext): Promise<HandlerResult> 
     return { status: 404, body: { error: "Proyecto no encontrado" } };
   }
 
+  // El proyecto existe, así que este camino sí corresponde a un cruce: la
+  // degradación se declara aunque su título no rinda keywords.
+  const infobras = getPoolForApp(env as NeonEnv, "infobras");
+  if (!infobras) {
+    return {
+      status: 503,
+      body: { error: "Cruce no disponible", detalle: "INFOBRAS no está accesible" },
+    };
+  }
+
   const row = proyectos[0];
   const keywords = extractKeywords(row.titulo);
   if (keywords.length === 0) {
@@ -300,15 +313,8 @@ export async function proyecto(ctx: ToolHandlerContext): Promise<HandlerResult> 
         numero,
         departamento,
         umbral_score: umbral,
+        truncated: false,
       },
-    };
-  }
-
-  const infobras = getPoolForApp(env as NeonEnv, "infobras");
-  if (!infobras) {
-    return {
-      status: 503,
-      body: { error: "Cruce no disponible", detalle: "INFOBRAS no está accesible" },
     };
   }
 
@@ -316,6 +322,7 @@ export async function proyecto(ctx: ToolHandlerContext): Promise<HandlerResult> 
   const cruces = crucesEntre([{ row, keywords }], obras, umbral);
 
   if (cruces.length === 0) {
+    // `truncated` en el 404: tope agotado y cero cruces no es "no hay obras".
     return {
       status: 404,
       body: {
@@ -324,6 +331,7 @@ export async function proyecto(ctx: ToolHandlerContext): Promise<HandlerResult> 
         numero,
         departamento,
         umbral_score: umbral,
+        truncated,
       },
     };
   }

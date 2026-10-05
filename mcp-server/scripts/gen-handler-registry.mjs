@@ -65,8 +65,13 @@ ${entradas.join("\n")}
 `;
 
 if (checkOnly) {
-  const actual = existsSync(destino) ? readFileSync(destino, "utf8") : "";
-  if (actual !== archivo) {
+  // Normalizar finales de línea antes de comparar: un checkout en Windows deja
+  // el archivo con CRLF y la plantilla se arma con \n, así que la comparación
+  // byte a byte reportaba "desactualizado" con el contenido ya correcto. En CI
+  // (Linux) pasaba por casualidad; en local era una falsa señal siempre.
+  const normalizar = (s) => s.replace(/\r\n/g, "\n");
+  const actual = existsSync(destino) ? normalizar(readFileSync(destino, "utf8")) : "";
+  if (actual !== normalizar(archivo)) {
     console.error("modules.ts está desactualizado. Regenerar: node scripts/gen-handler-registry.mjs");
     process.exit(1);
   }
