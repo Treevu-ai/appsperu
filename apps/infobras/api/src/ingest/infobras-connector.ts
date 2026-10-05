@@ -11,7 +11,7 @@ import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
 import { ejecucionPool } from "../db/ejecucion-pool.js";
 import { TITLE_ROWS, HEADER_ROWS } from "./columns.js";
-import { normalizeInfobrasRows } from "./normalize.js";
+import { normalizeInfobrasRows, type CanonicalPublicWorkRow, type RejectedPublicWork } from "./normalize.js";
 
 const DATASETS_URL = "https://infobras.contraloria.gob.pe/InfobrasWeb/DataSets";
 const DOWNLOAD_HREF_RE = /href=["']([^"']*\/Archivo\/DownloadFile\?[^"']*filename=DataSet-Obras-Publicas(?:%20|\s)[^"']*)["']/i;
@@ -207,6 +207,106 @@ async function saveRawBatch(client: PoolClient, checksum: string, recordCount: n
   return result.rows[0].id;
 }
 
+/**
+ * Insertaba una fila por `await client.query(...)` — contra Postgres local
+ * (latencia ~0) tardaba segundos; contra Neon por red, cada fila paga una
+ * ida y vuelta completa: 9,476 filas (4 departamentos chicos) tardaron más
+ * de una hora sin terminar, verificado en vivo 2026-10-05. El ingest
+ * nacional completo (191,180 filas) a ese ritmo son horas con una
+ * transacción abierta todo ese tiempo — frágil contra una conexión remota.
+ *
+ * `UPSERT_CHUNK_SIZE` filas por INSERT multi-fila en vez de una por una:
+ * 30 columnas × 500 filas = 15,000 parámetros, bajo el límite de 65,535 de
+ * Postgres. Reduce ~191,180 round-trips a ~383.
+ */
+const UPSERT_CHUNK_SIZE = 500;
+
+export const PUBLIC_WORKS_COLUMNS = [
+  "codigo_infobras", "codigo_entidad", "entidad_nombre", "nombre_obra", "modalidad_ejecucion",
+  "naturaleza_obra", "estado_ejecucion", "nivel_gobierno", "sector_entidad", "cui", "codigo_snip",
+  "nombre_inversion", "monto_viable", "costo_actualizado", "departamento", "provincia", "distrito",
+  "distrito_sospechoso", "costo_expediente_tecnico", "avance_fisico_prog_pct",
+  "avance_fisico_real_pct", "valorizacion_prog", "valorizacion_ejecutada",
+  "ejecucion_financiera_pct", "existe_paralizacion", "causal_paralizacion",
+  "fecha_paralizacion", "dias_paralizado", "monto_devengado_total", "source_batch_id",
+] as const;
+
+const PUBLIC_WORKS_UPDATE_SET = PUBLIC_WORKS_COLUMNS
+  .filter((column) => column !== "codigo_infobras")
+  .map((column) => `${column} = EXCLUDED.${column}`)
+  .join(",\n       ");
+
+export function publicWorksRowValues(row: CanonicalPublicWorkRow, batchId: number): unknown[] {
+  return [
+    row.codigoInfobras, row.codigoEntidad, row.entidadNombre, row.nombreObra, row.modalidadEjecucion,
+    row.naturalezaObra, row.estadoEjecucion, row.nivelGobierno, row.sectorEntidad, row.cui, row.codigoSnip,
+    row.nombreInversion, row.montoViable, row.costoActualizado, row.departamento, row.provincia, row.distrito,
+    row.distritoSospechoso, row.costoExpedienteTecnico, row.avanceFisicoProgPct,
+    row.avanceFisicoRealPct, row.valorizacionProg, row.valorizacionEjecutada,
+    row.ejecucionFinancieraPct, row.existeParalizacion, row.causalParalizacion,
+    row.fechaParalizacion, row.diasParalizado, row.montoDevengadoTotal, batchId,
+  ];
+}
+
+/** `($1,$2,...,$N),($N+1,...)` — un grupo de placeholders por fila del chunk. */
+export function valuesPlaceholders(rowCount: number, colCount: number): string {
+  const groups: string[] = [];
+  for (let r = 0; r < rowCount; r++) {
+    const base = r * colCount;
+    const cols: string[] = [];
+    for (let c = 0; c < colCount; c++) cols.push(`$${base + c + 1}`);
+    groups.push(`(${cols.join(",")})`);
+  }
+  return groups.join(",\n       ");
+}
+
+/**
+ * Un `codigo_infobras` repetido dentro del mismo chunk hacía que Postgres
+ * rechazara el INSERT multi-fila completo: `ON CONFLICT DO UPDATE` no puede
+ * afectar la misma fila dos veces en una sola instrucción (SQLSTATE 21000).
+ * El loop anterior, fila por fila, toleraba duplicados sin problema (ganaba
+ * la última) — hallazgo de code review (Copilot en PR #239). Se deduplica
+ * aquí, no en el llamador, para que la garantía viva donde está el riesgo
+ * real (el límite es por INSERT, no por chunk en abstracto). Conserva la
+ * última aparición, igual que el loop secuencial que reemplaza.
+ */
+function dedupeByCodigoInfobras(chunk: readonly CanonicalPublicWorkRow[]): CanonicalPublicWorkRow[] {
+  const porCodigo = new Map<string, CanonicalPublicWorkRow>();
+  for (const row of chunk) porCodigo.set(row.codigoInfobras, row);
+  return [...porCodigo.values()];
+}
+
+export async function upsertPublicWorksChunk(
+  client: PoolClient,
+  chunk: readonly CanonicalPublicWorkRow[],
+  batchId: number
+): Promise<void> {
+  if (chunk.length === 0) return;
+  const filas = dedupeByCodigoInfobras(chunk);
+  const params = filas.flatMap((row) => publicWorksRowValues(row, batchId));
+  await client.query(
+    `INSERT INTO public_works (${PUBLIC_WORKS_COLUMNS.join(", ")})
+     VALUES ${valuesPlaceholders(filas.length, PUBLIC_WORKS_COLUMNS.length)}
+     ON CONFLICT (codigo_infobras) DO UPDATE SET
+       ${PUBLIC_WORKS_UPDATE_SET}`,
+    params
+  );
+}
+
+export async function insertRejectedChunk(
+  client: PoolClient,
+  chunk: readonly RejectedPublicWork[],
+  batchId: number
+): Promise<void> {
+  if (chunk.length === 0) return;
+  const params = chunk.flatMap((bad) => [batchId, JSON.stringify(bad.raw), bad.reason]);
+  await client.query(
+    `INSERT INTO public_works_rejected (source_batch_id, raw_row, reason)
+     VALUES ${valuesPlaceholders(chunk.length, 3)}`,
+    params
+  );
+}
+
 export interface IngestSummary {
   batchId: number;
   totalFetched: number;
@@ -397,87 +497,12 @@ export async function ingestInfobrasPublicWorks(options: IngestOptions = {}): Pr
       await client.query("BEGIN");
       const batchId = await saveRawBatch(client, checksum, allRows.length);
 
-      for (const row of rows) {
-        await client.query(
-          `INSERT INTO public_works
-             (codigo_infobras, codigo_entidad, entidad_nombre, nombre_obra, modalidad_ejecucion,
-              naturaleza_obra, estado_ejecucion, nivel_gobierno, sector_entidad, cui, codigo_snip,
-              nombre_inversion, monto_viable, costo_actualizado, departamento, provincia, distrito,
-              distrito_sospechoso, costo_expediente_tecnico, avance_fisico_prog_pct,
-              avance_fisico_real_pct, valorizacion_prog, valorizacion_ejecutada,
-              ejecucion_financiera_pct, existe_paralizacion, causal_paralizacion,
-              fecha_paralizacion, dias_paralizado, monto_devengado_total, source_batch_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30)
-           ON CONFLICT (codigo_infobras) DO UPDATE SET
-             codigo_entidad = EXCLUDED.codigo_entidad,
-             entidad_nombre = EXCLUDED.entidad_nombre,
-             nombre_obra = EXCLUDED.nombre_obra,
-             modalidad_ejecucion = EXCLUDED.modalidad_ejecucion,
-             naturaleza_obra = EXCLUDED.naturaleza_obra,
-             estado_ejecucion = EXCLUDED.estado_ejecucion,
-             nivel_gobierno = EXCLUDED.nivel_gobierno,
-             sector_entidad = EXCLUDED.sector_entidad,
-             cui = EXCLUDED.cui,
-             codigo_snip = EXCLUDED.codigo_snip,
-             nombre_inversion = EXCLUDED.nombre_inversion,
-             monto_viable = EXCLUDED.monto_viable,
-             costo_actualizado = EXCLUDED.costo_actualizado,
-             departamento = EXCLUDED.departamento,
-             provincia = EXCLUDED.provincia,
-             distrito = EXCLUDED.distrito,
-             distrito_sospechoso = EXCLUDED.distrito_sospechoso,
-             costo_expediente_tecnico = EXCLUDED.costo_expediente_tecnico,
-             avance_fisico_prog_pct = EXCLUDED.avance_fisico_prog_pct,
-             avance_fisico_real_pct = EXCLUDED.avance_fisico_real_pct,
-             valorizacion_prog = EXCLUDED.valorizacion_prog,
-             valorizacion_ejecutada = EXCLUDED.valorizacion_ejecutada,
-             ejecucion_financiera_pct = EXCLUDED.ejecucion_financiera_pct,
-             existe_paralizacion = EXCLUDED.existe_paralizacion,
-             causal_paralizacion = EXCLUDED.causal_paralizacion,
-             fecha_paralizacion = EXCLUDED.fecha_paralizacion,
-             dias_paralizado = EXCLUDED.dias_paralizado,
-             monto_devengado_total = EXCLUDED.monto_devengado_total,
-             source_batch_id = EXCLUDED.source_batch_id`,
-          [
-            row.codigoInfobras,
-            row.codigoEntidad,
-            row.entidadNombre,
-            row.nombreObra,
-            row.modalidadEjecucion,
-            row.naturalezaObra,
-            row.estadoEjecucion,
-            row.nivelGobierno,
-            row.sectorEntidad,
-            row.cui,
-            row.codigoSnip,
-            row.nombreInversion,
-            row.montoViable,
-            row.costoActualizado,
-            row.departamento,
-            row.provincia,
-            row.distrito,
-            row.distritoSospechoso,
-            row.costoExpedienteTecnico,
-            row.avanceFisicoProgPct,
-            row.avanceFisicoRealPct,
-            row.valorizacionProg,
-            row.valorizacionEjecutada,
-            row.ejecucionFinancieraPct,
-            row.existeParalizacion,
-            row.causalParalizacion,
-            row.fechaParalizacion,
-            row.diasParalizado,
-            row.montoDevengadoTotal,
-            batchId,
-          ]
-        );
+      for (let i = 0; i < rows.length; i += UPSERT_CHUNK_SIZE) {
+        await upsertPublicWorksChunk(client, rows.slice(i, i + UPSERT_CHUNK_SIZE), batchId);
       }
 
-      for (const bad of rejected) {
-        await client.query(
-          `INSERT INTO public_works_rejected (source_batch_id, raw_row, reason) VALUES ($1, $2, $3)`,
-          [batchId, JSON.stringify(bad.raw), bad.reason]
-        );
+      for (let i = 0; i < rejected.length; i += UPSERT_CHUNK_SIZE) {
+        await insertRejectedChunk(client, rejected.slice(i, i + UPSERT_CHUNK_SIZE), batchId);
       }
 
       await client.query("COMMIT");

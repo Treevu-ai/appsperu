@@ -10,6 +10,11 @@ const {
   normalizeDepartamentoScope,
   corregirGeografiaFuente,
   construirFilasCanonicas,
+  valuesPlaceholders,
+  publicWorksRowValues,
+  upsertPublicWorksChunk,
+  insertRejectedChunk,
+  PUBLIC_WORKS_COLUMNS,
 } = await import("../ingest/infobras-connector.js");
 
 describe("canonicalizarDepartamentoFuente", () => {
@@ -151,5 +156,157 @@ describe("pipeline real: corrección → filtro de scope → normalización", ()
     // HUAYLAS es un distrito real de Áncash: con la corrección aplicada,
     // ya no debería quedar marcada sospechosa.
     expect(rows[0].distritoSospechoso).toBe(false);
+  });
+});
+
+/**
+ * Inserts por lote en vez de fila por fila: contra Postgres local (latencia
+ * ~0) una fila a la vez era viable; contra Neon por red, 9,476 filas (4
+ * departamentos chicos) tardaron más de una hora sin terminar (verificado en
+ * vivo 2026-10-05). Estos tests cubren exactamente lo que un desalineamiento
+ * de columnas/parámetros en el batch corrompería en silencio: el orden y la
+ * cantidad de placeholders, y que cada fila del chunk mapea a sus propios
+ * parámetros sin mezclarse con la fila vecina.
+ */
+describe("valuesPlaceholders", () => {
+  it("genera un grupo de placeholders por fila, numerados consecutivamente", () => {
+    expect(valuesPlaceholders(2, 3)).toBe("($1,$2,$3),\n       ($4,$5,$6)");
+  });
+
+  it("genera un solo grupo para 1 fila", () => {
+    expect(valuesPlaceholders(1, 4)).toBe("($1,$2,$3,$4)");
+  });
+
+  it("retorna cadena vacía para 0 filas", () => {
+    expect(valuesPlaceholders(0, 5)).toBe("");
+  });
+});
+
+function filaCanonica(overrides: Record<string, unknown> = {}) {
+  return {
+    codigoInfobras: "OBR-001",
+    codigoEntidad: "ENT-001",
+    entidadNombre: "Municipalidad de prueba",
+    nombreObra: "Obra de prueba",
+    modalidadEjecucion: null,
+    naturalezaObra: null,
+    estadoEjecucion: null,
+    nivelGobierno: null,
+    sectorEntidad: null,
+    cui: null,
+    codigoSnip: null,
+    nombreInversion: null,
+    montoViable: 1000,
+    costoActualizado: null,
+    departamento: "LA LIBERTAD",
+    provincia: "TRUJILLO",
+    distrito: "TRUJILLO",
+    distritoSospechoso: false,
+    costoExpedienteTecnico: null,
+    avanceFisicoProgPct: null,
+    avanceFisicoRealPct: null,
+    valorizacionProg: null,
+    valorizacionEjecutada: null,
+    ejecucionFinancieraPct: null,
+    existeParalizacion: false,
+    causalParalizacion: null,
+    fechaParalizacion: null,
+    diasParalizado: null,
+    montoDevengadoTotal: null,
+    ...overrides,
+  };
+}
+
+describe("publicWorksRowValues", () => {
+  it("devuelve un valor por cada columna de PUBLIC_WORKS_COLUMNS, en el mismo orden", () => {
+    const valores = publicWorksRowValues(filaCanonica(), 42);
+    expect(valores).toHaveLength(PUBLIC_WORKS_COLUMNS.length);
+    expect(valores[0]).toBe("OBR-001"); // codigo_infobras
+    expect(valores[14]).toBe("LA LIBERTAD"); // departamento
+    expect(valores[valores.length - 1]).toBe(42); // source_batch_id al final
+  });
+});
+
+describe("upsertPublicWorksChunk", () => {
+  it("construye un solo INSERT multi-fila para todo el chunk, sin mezclar parámetros entre filas", async () => {
+    const query = vi.fn().mockResolvedValue({});
+    const client = { query } as unknown as Parameters<typeof upsertPublicWorksChunk>[0];
+    const filas = [
+      filaCanonica({ codigoInfobras: "OBR-001", departamento: "LA LIBERTAD" }),
+      filaCanonica({ codigoInfobras: "OBR-002", departamento: "ICA" }),
+    ];
+
+    await upsertPublicWorksChunk(client, filas, 7);
+
+    expect(query).toHaveBeenCalledTimes(1);
+    const [sql, params] = query.mock.calls[0];
+    expect(sql).toContain("INSERT INTO public_works");
+    expect(sql).toContain("ON CONFLICT (codigo_infobras) DO UPDATE SET");
+    // Un placeholder por columna por fila, y los parámetros en el mismo orden.
+    const colCount = PUBLIC_WORKS_COLUMNS.length;
+    expect(params).toHaveLength(filas.length * colCount);
+    expect(params[0]).toBe("OBR-001");
+    expect(params[14]).toBe("LA LIBERTAD");
+    expect(params[colCount]).toBe("OBR-002"); // primer valor de la 2da fila
+    expect(params[colCount + 14]).toBe("ICA");
+  });
+
+  it("deduplica por codigoInfobras dentro del chunk, conservando la última aparición", async () => {
+    // Un codigo_infobras repetido en el mismo INSERT multi-fila hace que
+    // Postgres rechace la query entera (ON CONFLICT DO UPDATE no puede
+    // afectar la misma fila dos veces en una instrucción) — el loop
+    // anterior, fila por fila, toleraba esto sin problema.
+    const query = vi.fn().mockResolvedValue({});
+    const client = { query } as unknown as Parameters<typeof upsertPublicWorksChunk>[0];
+    const filas = [
+      filaCanonica({ codigoInfobras: "OBR-001", nombreObra: "Versión vieja" }),
+      filaCanonica({ codigoInfobras: "OBR-002", nombreObra: "Otra obra" }),
+      filaCanonica({ codigoInfobras: "OBR-001", nombreObra: "Versión nueva" }),
+    ];
+
+    await upsertPublicWorksChunk(client, filas, 7);
+
+    expect(query).toHaveBeenCalledTimes(1);
+    const [, params] = query.mock.calls[0];
+    const colCount = PUBLIC_WORKS_COLUMNS.length;
+    // Solo 2 filas en los parámetros (OBR-001 deduplicado), no 3.
+    expect(params).toHaveLength(2 * colCount);
+    expect(params[3]).toBe("Versión nueva"); // nombre_obra de OBR-001 es la última aparición
+  });
+
+  it("no ejecuta ninguna query para un chunk vacío", async () => {
+    const query = vi.fn();
+    const client = { query } as unknown as Parameters<typeof upsertPublicWorksChunk>[0];
+
+    await upsertPublicWorksChunk(client, [], 7);
+
+    expect(query).not.toHaveBeenCalled();
+  });
+});
+
+describe("insertRejectedChunk", () => {
+  it("construye un solo INSERT multi-fila para el chunk de rechazadas", async () => {
+    const query = vi.fn().mockResolvedValue({});
+    const client = { query } as unknown as Parameters<typeof insertRejectedChunk>[0];
+    const rechazadas = [
+      { raw: ["a"], reason: "motivo 1" },
+      { raw: ["b"], reason: "motivo 2" },
+    ];
+
+    await insertRejectedChunk(client, rechazadas, 7);
+
+    expect(query).toHaveBeenCalledTimes(1);
+    const [sql, params] = query.mock.calls[0];
+    expect(sql).toContain("INSERT INTO public_works_rejected");
+    expect(params).toEqual([7, JSON.stringify(["a"]), "motivo 1", 7, JSON.stringify(["b"]), "motivo 2"]);
+  });
+
+  it("no ejecuta ninguna query para un chunk vacío", async () => {
+    const query = vi.fn();
+    const client = { query } as unknown as Parameters<typeof insertRejectedChunk>[0];
+
+    await insertRejectedChunk(client, [], 7);
+
+    expect(query).not.toHaveBeenCalled();
   });
 });
