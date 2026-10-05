@@ -212,6 +212,24 @@ describe("paridad app ↔ MCP: índice invertido", () => {
     }
   });
 
+  it("regresión: 'obra'/'obras' no cuentan como dos coincidencias", async () => {
+    // Título con un plural y su singular de la misma palabra. Antes del fix,
+    // extractKeywords conservaba ambos como keywords distintas; puntuarProyecto
+    // los busca por normalizeToken, así que los dos caían en el mismo posting
+    // ("obra") y sumaban matched=2 para una sola palabra real compartida —
+    // suficiente para pasar matched_minimo=2 sin que hubiera dos conceptos
+    // distintos coincidiendo. Con el fix, extractKeywords ya deduplica por
+    // token canónico: solo queda una keyword "obra", matched=1, y el cruce se
+    // descarta.
+    dbQuery.mockResolvedValueOnce({
+      rows: [proyectoRow({ titulo: "Mejora de la obra y las obras de la zona" })],
+    });
+    infobrasQuery.mockResolvedValueOnce({ rows: [obraRow("CREACION DE OBRA DE REGADIO")] });
+
+    const res = await list(ctx({ umbral_score: 0.3, matched_minimo: 2 }));
+    expect((res.body as { total: number }).total).toBe(0);
+  });
+
   it("el detalle comparte criterio con la lista", async () => {
     dbQuery.mockResolvedValueOnce({ rows: [proyectoRow({ titulo: TITULOS[5] })] });
     infobrasQuery.mockResolvedValueOnce({

@@ -65,6 +65,14 @@ describe("keyword-matcher", () => {
       ]);
     });
 
+    it("elimina duplicados por forma canónica, no solo por palabra cruda", () => {
+      // "obra" y "obras" singularizan al mismo token: sin dedupe canónico,
+      // ambas sobreviven como keywords distintas y en puntuarProyecto cuentan
+      // dos coincidencias para una sola palabra, inflando matchScore.
+      const keywords = extractKeywords("obra y obras de saneamiento saneamientos");
+      expect(keywords).toEqual(["obra", "saneamiento"]);
+    });
+
     it("retorna array vacío para texto vacío", () => {
       expect(extractKeywords("")).toEqual([]);
     });

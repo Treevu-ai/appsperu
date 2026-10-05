@@ -98,13 +98,26 @@ export function tokenize(text: string): string[] {
 /**
  * Extrae palabras clave de un texto (tokenización simple).
  * Elimina stopwords, números puros, palabras cortas (<3 caracteres).
+ *
+ * Deduplica por `normalizeToken`, no por la palabra cruda: sin esto, un
+ * título con "obra" y "obras" conserva ambas como keywords distintas, y en
+ * `puntuarProyecto` las dos buscan el mismo posting ("obra") y cuentan como
+ * dos coincidencias para una sola palabra — infla `matched` y permite que
+ * `matchScore` llegue a 1.0 o pase `matched_minimo` sin dos conceptos
+ * distintos coincidiendo.
  */
 export function extractKeywords(text: string): string[] {
   if (!text) return [];
-  return normalizeText(text)
-    .split(/[\s,;:.()\-–—_\/"']/)
-    .filter((word) => word.length > 2 && !STOPWORDS.has(word) && !/^\d+$/.test(word))
-    .filter((word, i, arr) => arr.indexOf(word) === i); // Remove duplicates
+  const vistos = new Set<string>();
+  const keywords: string[] = [];
+  for (const word of normalizeText(text).split(/[\s,;:.()\-–—_\/"']/)) {
+    if (word.length <= 2 || STOPWORDS.has(word) || /^\d+$/.test(word)) continue;
+    const canonico = normalizeToken(word);
+    if (vistos.has(canonico)) continue;
+    vistos.add(canonico);
+    keywords.push(word);
+  }
+  return keywords;
 }
 
 /**

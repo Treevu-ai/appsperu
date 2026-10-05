@@ -209,6 +209,29 @@ describe("cruces:list", () => {
     expect(res.body).not.toHaveProperty("truncated");
   });
 
+  it("rechaza con 400 un departamento fuera del catálogo peruano", async () => {
+    // Antes solo se hacía toUpperCase(): un departamento inexistente llegaba
+    // tal cual a la query a INFOBRAS y volvía 200 con total:0, indistinguible
+    // de "ese departamento no tiene obras".
+    const res = await list(ctx({ departamento: "NARNIA" }));
+
+    expect(res.status).toBe(400);
+    expect(dbQuery).not.toHaveBeenCalled();
+    expect(infobrasQuery).not.toHaveBeenCalled();
+  });
+
+  it("resuelve el alias 'P C DEL CALLAO' a CALLAO antes de consultar", async () => {
+    // Antes el alias llegaba sin resolver a la query exacta de INFOBRAS
+    // (`WHERE departamento = $1`), que nunca matcheaba "P C DEL CALLAO" como
+    // fila real y daba 0 cruces en silencio.
+    dbQuery.mockResolvedValueOnce({ rows: [proyectoRow()] });
+    infobrasQuery.mockResolvedValueOnce({ rows: [] });
+
+    await list(ctx({ departamento: "P C DEL CALLAO" }));
+
+    expect(infobrasQuery.mock.calls[0][1]).toEqual(["CALLAO"]);
+  });
+
   it("respeta limit y offset", async () => {
     dbQuery.mockResolvedValueOnce({ rows: [proyectoRow()] });
     infobrasQuery.mockResolvedValueOnce({
@@ -263,6 +286,22 @@ describe("cruces:proyecto", () => {
     const res = await proyecto(ctx({ periodo: 2026, numero: 1234 }));
 
     expect(res.status).toBe(503);
+  });
+
+  it("rechaza con 400 un departamento fuera del catálogo peruano", async () => {
+    const res = await proyecto(ctx({ periodo: 2026, numero: 1234, departamento: "NARNIA" }));
+
+    expect(res.status).toBe(400);
+    expect(dbQuery).not.toHaveBeenCalled();
+  });
+
+  it("resuelve el alias 'P C DEL CALLAO' a CALLAO antes de consultar", async () => {
+    dbQuery.mockResolvedValueOnce({ rows: [proyectoRow()] });
+    infobrasQuery.mockResolvedValueOnce({ rows: [obraRow("Construccion de obras publicas")] });
+
+    await proyecto(ctx({ periodo: 2026, numero: 1234, departamento: "P C DEL CALLAO" }));
+
+    expect(infobrasQuery.mock.calls[0][1]).toEqual(["CALLAO"]);
   });
 });
 

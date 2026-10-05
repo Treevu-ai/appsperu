@@ -37,6 +37,34 @@ const DEFAULT_LIMIT = 200;
 const MAX_LIMIT = 1000;
 
 /**
+ * Catálogo y alias de departamento. Duplicado de
+ * `apps/legislativo-congreso/api/src/lib/departamentos.ts`: el handler de la
+ * API resuelve y valida `departamento` en la capa de rutas, pero el MCP
+ * despacha directo a este handler sin pasar por ahí. Sin esto, "P C DEL
+ * CALLAO" llegaba tal cual a la query exacta de INFOBRAS (0 filas, nunca
+ * CALLAO) y un departamento inexistente devolvía 200/404 en vez de 400.
+ */
+const PERU_DEPARTAMENTOS = new Set([
+  "AMAZONAS", "ANCASH", "APURIMAC", "AREQUIPA", "AYACUCHO", "CAJAMARCA", "CALLAO",
+  "CUSCO", "HUANCAVELICA", "HUANUCO", "ICA", "JUNIN", "LA LIBERTAD", "LAMBAYEQUE",
+  "LIMA", "LORETO", "MADRE DE DIOS", "MOQUEGUA", "PASCO", "PIURA", "PUNO",
+  "SAN MARTIN", "TACNA", "TUMBES", "UCAYALI",
+]);
+
+const ALIAS_DEPARTAMENTO: Record<string, string> = {
+  "P C DEL CALLAO": "CALLAO",
+  "PROVINCIA CONSTITUCIONAL DEL CALLAO": "CALLAO",
+  "CALLAO PROVINCIAL": "CALLAO",
+};
+
+/** `null` si `raw` no resuelve a un departamento del catálogo peruano. */
+function resolverDepartamento(raw: string): string | null {
+  const limpio = raw.trim().toUpperCase().replace(/\s+/g, " ");
+  const canonico = ALIAS_DEPARTAMENTO[limpio] ?? limpio;
+  return PERU_DEPARTAMENTOS.has(canonico) ? canonico : null;
+}
+
+/**
  * Tokens administrativos que los nombres de obra embeben ("DEL DISTRITO DE …
  * PROVINCIA … DEPARTAMENTO …"). Dentro de un departamento no distinguen una obra
  * de otra, y excluirlos del índice bajó los cruces de 675,856 a 26,693 en la
@@ -113,12 +141,23 @@ function tokenize(text: string): string[] {
   return tokens;
 }
 
+/**
+ * Deduplica por `normalizeToken`, no por la palabra cruda. Ver
+ * `keyword-matcher.ts` de la app: sin esto, "obra"/"obras" cuentan como dos
+ * coincidencias de un mismo posting e inflan `matched`.
+ */
 function extractKeywords(text: string): string[] {
   if (!text) return [];
-  return normalizeText(text)
-    .split(/[\s,;:.()\-–—_\/"']/)
-    .filter((w) => w.length > 2 && !STOPWORDS.has(w) && !/^\d+$/.test(w))
-    .filter((w, i, arr) => arr.indexOf(w) === i);
+  const vistos = new Set<string>();
+  const keywords: string[] = [];
+  for (const w of normalizeText(text).split(/[\s,;:.()\-–—_\/"']/)) {
+    if (w.length <= 2 || STOPWORDS.has(w) || /^\d+$/.test(w)) continue;
+    const canonico = normalizeToken(w);
+    if (vistos.has(canonico)) continue;
+    vistos.add(canonico);
+    keywords.push(w);
+  }
+  return keywords;
 }
 
 function findMatchedKeywords(keywords: string[], target: string): string[] {
@@ -324,7 +363,17 @@ const FUENTE = {
 export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const { db, args, env } = ctx;
 
-  const departamento = ((args.departamento as string | undefined) ?? DEFAULT_DEPARTAMENTO).toUpperCase();
+  const rawDepartamento = (args.departamento as string | undefined) ?? DEFAULT_DEPARTAMENTO;
+  const departamento = resolverDepartamento(rawDepartamento);
+  if (departamento === null) {
+    return {
+      status: 400,
+      body: {
+        error: "Departamento inválido",
+        detalle: `Departamento fuera del catálogo peruano: "${rawDepartamento}"`,
+      },
+    };
+  }
   const periodo = args.periodo !== undefined ? Number(args.periodo) : DEFAULT_PERIODO;
   const umbral = args.umbral_score !== undefined ? Number(args.umbral_score) : DEFAULT_UMBRAL;
   const matchedMinimo = args.matched_minimo !== undefined ? Number(args.matched_minimo) : DEFAULT_MATCHED_MINIMO;
@@ -401,7 +450,17 @@ export async function proyecto(ctx: ToolHandlerContext): Promise<HandlerResult> 
 
   const periodo = Number(args.periodo);
   const numero = Number(args.numero);
-  const departamento = ((args.departamento as string | undefined) ?? DEFAULT_DEPARTAMENTO).toUpperCase();
+  const rawDepartamento = (args.departamento as string | undefined) ?? DEFAULT_DEPARTAMENTO;
+  const departamento = resolverDepartamento(rawDepartamento);
+  if (departamento === null) {
+    return {
+      status: 400,
+      body: {
+        error: "Departamento inválido",
+        detalle: `Departamento fuera del catálogo peruano: "${rawDepartamento}"`,
+      },
+    };
+  }
   const umbral = args.umbral_score !== undefined ? Number(args.umbral_score) : DEFAULT_UMBRAL;
   const matchedMinimo = args.matched_minimo !== undefined ? Number(args.matched_minimo) : DEFAULT_MATCHED_MINIMO;
 
