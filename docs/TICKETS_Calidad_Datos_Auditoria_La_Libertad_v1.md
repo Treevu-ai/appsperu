@@ -316,7 +316,7 @@
 - **Hecho (2026-10-05):**
   1. `corregirGeografiaFuente()` (`infobras-connector.ts`) reclasifica `HUANCAVELICA` → `ICA` cuando `provincia` ∈ {NASCA/NAZCA, CHINCHA, PISCO, PALPA}; `NAZCA` se normaliza a `NASCA` (grafía oficial INEI). Corre antes del filtro de scope por departamento y antes de `distritoEsSospechoso`, para que la fila cuente para ICA y la bandera se recalcule contra el catálogo correcto.
   2. Verificado en vivo contra Postgres local con el XLSX nacional real (16-08-2026): HUANCAVELICA 9,186→8,297 (-889 exacto), ICA 4,878→5,767 (+889 exacto). `distrito_sospechoso` de HUANCAVELICA bajó de 1,409 a 537 (se fue con las filas); ICA subió de 359 a 440 (solo 81 de las 889 migradas quedan sospechosas al evaluarse contra su catálogo real, el resto resuelve limpio).
-  3. **Pendiente, fuera de este fix:** aplicar la corrección contra producción (Neon) — solo se verificó contra la BD local, requiere un backfill separado. Investigar aparte la tasa interna alta (19.5%) de la propia provincia HUANCAVELICA y repetir el desglose para Lima/Piura/Huánuco/Cajamarca/Cusco — ver DQ-20 abajo, que ya cubrió ese segundo punto a nivel nacional.
+  3. **Aplicado a producción (2026-10-05):** el ingest nacional de INFOBRAS se corrió contra Neon por primera vez (producción solo tenía LA LIBERTAD hasta ese momento) — 178,616 filas, 25/25 departamentos, con la corrección ya incluida desde el primer ingest (sin backfill aparte). Verificado en vivo contra producción: HUANCAVELICA sin las provincias de Ica, ICA con NASCA(330)/CHINCHA(1,661)/PISCO(1,191)/PALPA(197) reclasificadas. Pendiente: investigar aparte la tasa interna alta (19.5%) de la propia provincia HUANCAVELICA y repetir el desglose para Lima/Piura/Huánuco/Cajamarca/Cusco — ver DQ-20 abajo, que ya cubrió ese segundo punto a nivel nacional.
 
 ### DQ-20 · `provincia = "ANDAHUAYLAS"` (real, de Apurímac) bajo `departamento = "ANCASH"` en INFOBRAS
 
@@ -328,7 +328,7 @@
   - Corregir también `distrito` en la única fila donde repite el mismo valor corrupto — dejarla con un distrito que ya se sabe que está mal, aunque quede marcada `distrito_sospechoso`, es una corrección a medias (hallazgo de code review, Copilot en PR #237).
 - **Dependencias:** ninguna — hallazgo independiente, aunque surgió al ejecutar el criterio de aceptación de DQ-19.
 - **Prioridad:** P2 · **Esfuerzo:** S
-- **Estado:** ✅ Resuelto (2026-10-05, PR #237). Verificado en vivo: 113→0 filas en `ANCASH/ANDAHUAYLAS`, +113 en `ANCASH/HUAYLAS` (735→848). Pendiente, igual que DQ-19: aplicar contra producción (Neon).
+- **Estado:** ✅ Resuelto (2026-10-05, PR #237) y aplicado a producción el mismo día (ver DQ-19). Verificado en vivo contra producción: 113→0 filas en `ANCASH/ANDAHUAYLAS`, +113 en `ANCASH/HUAYLAS` (735→848).
 
 ### DQ-18 · `provincia`/`distrito` estructurados no confiables en OxI (Ficha técnica / Por Priorizar) — `inversion-privada`
 
@@ -344,7 +344,13 @@
   - Confirmar si el patrón (Ficha técnica + Gobierno Regional + Por Priorizar) se repite en otros departamentos antes de asumir que es exclusivo de La Libertad.
 - **Dependencias:** ninguna — hallazgo aislado en `inversion-privada`, no depende de otro ticket.
 - **Prioridad:** P2 · **Esfuerzo:** S
-- **Estado:** Pendiente — documentado 2026-09-10, no resuelto esta sesión (exploración ad-hoc, fuera del alcance de la auditoría original).
+- **Estado:** ✅ Resuelto (2026-10-05, PR #238).
+- **Hecho (2026-10-05):**
+  1. Verificado en vivo que el patrón **no es exclusivo** de "Ficha técnica + Gobierno Regional + Por Priorizar" en La Libertad: 78/711 proyectos (11%) en 20 de los 25 departamentos tienen `provincia` numérica, con combinaciones de fase/nivel distintas.
+  2. `provinciaEsConfiable()` (`oxi-normalize.ts`) marca `provinciaConfiable: false` cuando `provincia` es nula o puramente numérica — mismo patrón que `distrito_sospechoso`, nunca corrige en silencio.
+  3. `extraerUbicacionDeNombreProyecto()` recupera `provinciaExtraidaDeNombre`/`distritoExtraidoDeNombre` por regex sobre `nombreProyecto` cuando el patrón "DISTRITO DE X - PROVINCIA [DE] Y - DEPARTAMENTO [DE] Z" está presente — deliberadamente estricto, `null` en vez de adivinar mal cuando la gramática no calza (ej. "...DE LA PROVINCIA DE LA MAR DEL DEPARTAMENTO DE AYACUCHO" no matchea).
+  4. Migración `004_oxi_provincia_confiabilidad.sql` agrega las 3 columnas, con backfill propio (no depende de una reingesta posterior — hallazgo de code review, Copilot en PR #238).
+  5. Verificado contra el export real (527 proyectos tras refresh): 42 no confiables, 8 con fallback recuperado por regex.
 
 ### SI-09 · Advertencias de calidad de dato en el score institucional (sin pesar en el score)
 
