@@ -10,6 +10,9 @@ interface OxiRow extends NeonRow {
   departamento: string;
   provincia: string;
   distrito: string;
+  provincia_confiable: boolean;
+  provincia_extraida_de_nombre: string | null;
+  distrito_extraido_de_nombre: string | null;
   entidad: string;
   codigo_referencia: string | null;
   nombre_proyecto: string;
@@ -56,7 +59,9 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
 
   const { rows } = await db.query<OxiRow>(
     `SELECT o.oxi_id, o.fase, o.tipo_inversion, o.nivel_estudio, o.nivel_gobierno,
-            o.departamento, o.provincia, o.distrito, o.entidad, o.codigo_referencia,
+            o.departamento, o.provincia, o.distrito,
+            o.provincia_confiable, o.provincia_extraida_de_nombre, o.distrito_extraido_de_nombre,
+            o.entidad, o.codigo_referencia,
             o.nombre_proyecto, o.funcion, o.tipologia, o.monto_inversion_referencial,
             o.rango_monto, rb.fetched_at
      FROM oxi_investment_promotions o
@@ -84,6 +89,9 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
         departamento: r.departamento,
         provincia: r.provincia,
         distrito: r.distrito,
+        provinciaConfiable: r.provincia_confiable,
+        provinciaExtraidaDeNombre: r.provincia_extraida_de_nombre,
+        distritoExtraidoDeNombre: r.distrito_extraido_de_nombre,
         entidad: r.entidad,
         codigoReferencia: r.codigo_referencia,
         nombreProyecto: r.nombre_proyecto,
@@ -138,6 +146,9 @@ export async function byId(ctx: ToolHandlerContext): Promise<HandlerResult> {
       departamento: r.departamento,
       provincia: r.provincia,
       distrito: r.distrito,
+      provinciaConfiable: r.provincia_confiable,
+      provinciaExtraidaDeNombre: r.provincia_extraida_de_nombre,
+      distritoExtraidoDeNombre: r.distrito_extraido_de_nombre,
       entidad: r.entidad,
       codigoReferencia: r.codigo_referencia,
       nombreProyecto: r.nombre_proyecto,

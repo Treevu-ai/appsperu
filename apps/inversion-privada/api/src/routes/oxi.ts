@@ -43,7 +43,9 @@ oxiRouter.get(
 
     const { rows } = await pool.query(
       `SELECT o.oxi_id, o.fase, o.tipo_inversion, o.nivel_estudio, o.nivel_gobierno,
-              o.departamento, o.provincia, o.distrito, o.entidad, o.codigo_referencia,
+              o.departamento, o.provincia, o.distrito,
+              o.provincia_confiable, o.provincia_extraida_de_nombre, o.distrito_extraido_de_nombre,
+              o.entidad, o.codigo_referencia,
               o.nombre_proyecto, o.funcion, o.tipologia, o.monto_inversion_referencial,
               o.rango_monto, rb.fetched_at
        FROM oxi_investment_promotions o
@@ -69,6 +71,9 @@ oxiRouter.get(
         departamento: r.departamento,
         provincia: r.provincia,
         distrito: r.distrito,
+        provinciaConfiable: r.provincia_confiable,
+        provinciaExtraidaDeNombre: r.provincia_extraida_de_nombre,
+        distritoExtraidoDeNombre: r.distrito_extraido_de_nombre,
         entidad: r.entidad,
         codigoReferencia: r.codigo_referencia,
         nombreProyecto: r.nombre_proyecto,
@@ -121,6 +126,9 @@ oxiRouter.get(
       departamento: r.departamento,
       provincia: r.provincia,
       distrito: r.distrito,
+      provinciaConfiable: r.provincia_confiable,
+      provinciaExtraidaDeNombre: r.provincia_extraida_de_nombre,
+      distritoExtraidoDeNombre: r.distrito_extraido_de_nombre,
       entidad: r.entidad,
       codigoReferencia: r.codigo_referencia,
       nombreProyecto: r.nombre_proyecto,

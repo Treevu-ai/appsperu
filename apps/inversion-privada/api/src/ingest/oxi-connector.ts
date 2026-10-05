@@ -148,9 +148,10 @@ async function upsertOxiRow(client: PoolClient, batchId: number, row: Normalized
   await client.query(
     `INSERT INTO oxi_investment_promotions (
        oxi_id, fase, tipo_inversion, nivel_estudio, nivel_gobierno, departamento, provincia,
-       distrito, entidad, codigo_referencia, nombre_proyecto, funcion, tipologia,
+       distrito, provincia_confiable, provincia_extraida_de_nombre, distrito_extraido_de_nombre,
+       entidad, codigo_referencia, nombre_proyecto, funcion, tipologia,
        monto_inversion_referencial, rango_monto, source_batch_id, updated_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16, now())
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19, now())
      ON CONFLICT (oxi_id) DO UPDATE SET
        fase = EXCLUDED.fase,
        tipo_inversion = EXCLUDED.tipo_inversion,
@@ -159,6 +160,9 @@ async function upsertOxiRow(client: PoolClient, batchId: number, row: Normalized
        departamento = EXCLUDED.departamento,
        provincia = EXCLUDED.provincia,
        distrito = EXCLUDED.distrito,
+       provincia_confiable = EXCLUDED.provincia_confiable,
+       provincia_extraida_de_nombre = EXCLUDED.provincia_extraida_de_nombre,
+       distrito_extraido_de_nombre = EXCLUDED.distrito_extraido_de_nombre,
        entidad = EXCLUDED.entidad,
        codigo_referencia = EXCLUDED.codigo_referencia,
        nombre_proyecto = EXCLUDED.nombre_proyecto,
@@ -177,6 +181,9 @@ async function upsertOxiRow(client: PoolClient, batchId: number, row: Normalized
       row.departamento,
       row.provincia,
       row.distrito,
+      row.provinciaConfiable,
+      row.provinciaExtraidaDeNombre,
+      row.distritoExtraidoDeNombre,
       row.entidad,
       row.codigoReferencia,
       row.nombreProyecto,
