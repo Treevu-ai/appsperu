@@ -262,29 +262,37 @@ const OBRA_SELECT = `
          existe_paralizacion, causal_paralizacion, fecha_paralizacion, dias_paralizado
   FROM public_works`;
 
-/**
- * Una sola query con OR de todas las keywords. Pide LIMIT+1 para poder
- * reportar `truncated` en vez de cortar en silencio.
- */
+interface ObraLigera extends NeonRow {
+  codigo_infobras: string;
+  nombre_obra: string;
+}
+
 interface IndiceObras {
-  obras: ObraRow[];
+  obras: ObraLigera[];
   postings: Map<string, number[]>;
 }
 
 /**
- * Lee todas las obras del departamento y tokeniza sus nombres una sola vez.
- * Duplica `construirIndiceObras` de
+ * Lee `codigo_infobras, nombre_obra` de todas las obras del departamento y
+ * tokeniza sus nombres una sola vez. Duplica `construirIndiceObras` de
  * `apps/legislativo-congreso/api/src/crossref/obra-index.ts`: el `rootDir: src`
  * de mcp-server impide importar de fuera sin romper el bundle del Worker, igual
  * que con `packages/shared-queries` (ADR-0019). La paridad la fija
  * `cruces.test.ts`.
+ *
+ * Solo esas dos columnas, no las 22 de `OBRA_SELECT`: el índice solo
+ * tokeniza `nombre_obra`, y traer el resto para las ~10,000 obras de un
+ * departamento era egress que se descartaba después de paginar. Las columnas
+ * completas se piden después, solo para las obras de la página —
+ * `hidratarObras`.
  */
 async function cargarIndice(
   infobras: ReturnType<typeof getPoolForApp> & object,
   departamento: string
 ): Promise<IndiceObras> {
-  const { rows } = await infobras.query<ObraRow>(
-    `${OBRA_SELECT}
+  const { rows } = await infobras.query<ObraLigera>(
+    `SELECT codigo_infobras, nombre_obra
+     FROM public_works
      WHERE departamento = $1
      ORDER BY codigo_infobras`,
     [departamento]
@@ -301,6 +309,20 @@ async function cargarIndice(
   }
 
   return { obras: rows, postings };
+}
+
+/**
+ * Trae las columnas completas solo de las obras cuyo código aparece en la
+ * página final. `codigo_infobras` es la clave de INFOBRAS: no hace falta
+ * repetir el filtro por departamento.
+ */
+async function hidratarObras(
+  infobras: ReturnType<typeof getPoolForApp> & object,
+  codigos: string[]
+): Promise<Map<string, ObraRow>> {
+  if (codigos.length === 0) return new Map();
+  const { rows } = await infobras.query<ObraRow>(`${OBRA_SELECT} WHERE codigo_infobras = ANY($1)`, [codigos]);
+  return new Map(rows.map((row) => [row.codigo_infobras, row]));
 }
 
 /**
@@ -342,7 +364,7 @@ function puntuarProyecto(
 function ordenarTuplas(
   tuplas: Array<{ proyectoIdx: number; obraIdx: number; matchScore: number; matchedKeywords: string[] }>,
   proyectos: ProyectoRow[],
-  obras: ObraRow[]
+  obras: ObraLigera[]
 ) {
   return tuplas.sort(
     (a, b) =>
@@ -422,6 +444,9 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
   ordenarTuplas(tuplas, proyectos, indice.obras);
 
   const pagina = tuplas.slice(offset, offset + limit);
+  const codigosPagina = [...new Set(pagina.map((t) => indice.obras[t.obraIdx].codigo_infobras))];
+  const obrasCompletas = await hidratarObras(infobras, codigosPagina);
+
   return {
     status: 200,
     body: {
@@ -430,12 +455,17 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
       offset,
       periodo,
       hasMore: offset + pagina.length < tuplas.length,
-      resultados: pagina.map((t) => ({
-        proyecto: mapProyecto(proyectos[t.proyectoIdx]),
-        obra: mapObra(indice.obras[t.obraIdx]),
-        matchScore: t.matchScore,
-        matchedKeywords: t.matchedKeywords,
-      })),
+      resultados: pagina.map((t) => {
+        const codigo = indice.obras[t.obraIdx].codigo_infobras;
+        const obra = obrasCompletas.get(codigo);
+        if (!obra) throw new Error(`Obra ${codigo} no encontrada al hidratar la página del cruce`);
+        return {
+          proyecto: mapProyecto(proyectos[t.proyectoIdx]),
+          obra: mapObra(obra),
+          matchScore: t.matchScore,
+          matchedKeywords: t.matchedKeywords,
+        };
+      }),
       fuente: FUENTE,
     },
   };
@@ -516,6 +546,9 @@ export async function proyecto(ctx: ToolHandlerContext): Promise<HandlerResult> 
     };
   }
 
+  const codigos = [...new Set(cruces.map((t) => indice.obras[t.obraIdx].codigo_infobras))];
+  const obrasCompletas = await hidratarObras(infobras, codigos);
+
   return {
     status: 200,
     body: {
@@ -523,12 +556,17 @@ export async function proyecto(ctx: ToolHandlerContext): Promise<HandlerResult> 
       departamento,
       umbral_score: umbral,
       total: cruces.length,
-      resultados: cruces.map((t) => ({
-        proyecto: mapProyecto(proyectos[t.proyectoIdx]),
-        obra: mapObra(indice.obras[t.obraIdx]),
-        matchScore: t.matchScore,
-        matchedKeywords: t.matchedKeywords,
-      })),
+      resultados: cruces.map((t) => {
+        const codigo = indice.obras[t.obraIdx].codigo_infobras;
+        const obra = obrasCompletas.get(codigo);
+        if (!obra) throw new Error(`Obra ${codigo} no encontrada al hidratar el detalle del cruce`);
+        return {
+          proyecto: mapProyecto(proyectos[t.proyectoIdx]),
+          obra: mapObra(obra),
+          matchScore: t.matchScore,
+          matchedKeywords: t.matchedKeywords,
+        };
+      }),
       fuente: FUENTE,
     },
   };

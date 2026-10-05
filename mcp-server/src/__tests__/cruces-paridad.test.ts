@@ -123,6 +123,7 @@ describe("paridad app ↔ MCP: tokenización y matching", () => {
   it("el handler MCP tampoco matchea 'crea' contra 'CREACION'", async () => {
     dbQuery.mockResolvedValueOnce({ rows: [proyectoRow({ titulo: TITULOS[0] })] });
     infobrasQuery.mockResolvedValueOnce({ rows: [obraRow(NOMBRES_OBRA[0])] });
+    infobrasQuery.mockResolvedValueOnce({ rows: [obraRow(NOMBRES_OBRA[0])] });
 
     // Umbral bajo a propósito: el título aporta 5 keywords y solo "salud"
     // coincide (1/5 = 0.2), así que a 0.3 no habría cruce y la prueba no
@@ -176,6 +177,7 @@ describe("paridad app ↔ MCP: índice invertido", () => {
     );
 
     dbQuery.mockResolvedValueOnce({ rows: proyectos });
+    infobrasQuery.mockResolvedValueOnce({ rows: obras });
     infobrasQuery.mockResolvedValueOnce({ rows: obras });
 
     const res = await list(ctx({ umbral_score: 0.3, matched_minimo: 1, limit: 1000 }));
@@ -232,9 +234,9 @@ describe("paridad app ↔ MCP: índice invertido", () => {
 
   it("el detalle comparte criterio con la lista", async () => {
     dbQuery.mockResolvedValueOnce({ rows: [proyectoRow({ titulo: TITULOS[5] })] });
-    infobrasQuery.mockResolvedValueOnce({
-      rows: [obraRow(NOMBRES_OBRA[5], { codigo_infobras: "OBR-0005" })],
-    });
+    const obraDetalle = obraRow(NOMBRES_OBRA[5], { codigo_infobras: "OBR-0005" });
+    infobrasQuery.mockResolvedValueOnce({ rows: [obraDetalle] });
+    infobrasQuery.mockResolvedValueOnce({ rows: [obraDetalle] });
 
     const res = await proyecto(ctx({ periodo: 2026, numero: 1234, umbral_score: 0.3, matched_minimo: 1 }));
 

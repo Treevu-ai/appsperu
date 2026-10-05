@@ -83,6 +83,9 @@ beforeEach(() => {
 describe("cruces:list", () => {
   it("devuelve cruces con score y keywords coincidentes", async () => {
     dbQuery.mockResolvedValueOnce({ rows: [proyectoRow()] });
+    // Dos queries a INFOBRAS: el índice liviano y la hidratación de columnas
+    // completas solo para la obra que matcheó.
+    infobrasQuery.mockResolvedValueOnce({ rows: [obraRow("Construccion de obras publicas")] });
     infobrasQuery.mockResolvedValueOnce({ rows: [obraRow("Construccion de obras publicas")] });
 
     const res = await list(ctx({}));
@@ -94,16 +97,20 @@ describe("cruces:list", () => {
     expect(body.resultados[0].matchedKeywords).toEqual(["obras", "publicas"]);
   });
 
-  it("emite UNA sola query a INFOBRAS para muchos proyectos", async () => {
+  it("consulta INFOBRAS un número fijo de veces, no una por proyecto", async () => {
+    // El índice liviano es una query por request; la hidratación es una
+    // segunda query acotada a los códigos de la página, sin importar cuántos
+    // proyectos del periodo matchearon esa misma obra.
     const proyectos = Array.from({ length: 40 }, (_, i) =>
       proyectoRow({ pley_num: 1000 + i, titulo: `Ley de obras publicas ${i}` })
     );
     dbQuery.mockResolvedValueOnce({ rows: proyectos });
     infobrasQuery.mockResolvedValueOnce({ rows: [obraRow("Obras publicas")] });
+    infobrasQuery.mockResolvedValueOnce({ rows: [obraRow("Obras publicas")] });
 
     await list(ctx({}));
 
-    expect(infobrasQuery).toHaveBeenCalledTimes(1);
+    expect(infobrasQuery).toHaveBeenCalledTimes(2);
   });
 
   it("parametriza el periodo con default 2026", async () => {
@@ -120,11 +127,11 @@ describe("cruces:list", () => {
     // El corte anterior tomaba las 500 de codigo_infobras más bajo, lo que
     // sesgaba el cruce en vez de solo recortarlo.
     dbQuery.mockResolvedValueOnce({ rows: [proyectoRow()] });
-    infobrasQuery.mockResolvedValueOnce({
-      rows: Array.from({ length: 1500 }, (_, i) => obraRow(`Obras publicas ${i}`, {
-        codigo_infobras: `OBR-${String(i).padStart(4, "0")}`,
-      })),
-    });
+    const obras1500 = Array.from({ length: 1500 }, (_, i) => obraRow(`Obras publicas ${i}`, {
+      codigo_infobras: `OBR-${String(i).padStart(4, "0")}`,
+    }));
+    infobrasQuery.mockResolvedValueOnce({ rows: obras1500 });
+    infobrasQuery.mockResolvedValueOnce({ rows: obras1500 });
 
     const res = await list(ctx({}));
 
@@ -234,11 +241,11 @@ describe("cruces:list", () => {
 
   it("respeta limit y offset", async () => {
     dbQuery.mockResolvedValueOnce({ rows: [proyectoRow()] });
-    infobrasQuery.mockResolvedValueOnce({
-      rows: Array.from({ length: 5 }, (_, i) =>
-        obraRow(`Obras publicas ${i}`, { codigo_infobras: `OBR-00${i}` })
-      ),
-    });
+    const obras5 = Array.from({ length: 5 }, (_, i) =>
+      obraRow(`Obras publicas ${i}`, { codigo_infobras: `OBR-00${i}` })
+    );
+    infobrasQuery.mockResolvedValueOnce({ rows: obras5 });
+    infobrasQuery.mockResolvedValueOnce({ rows: obras5 });
 
     const res = await list(ctx({ limit: 2, offset: 1 }));
     const body = res.body as { total: number; resultados: unknown[] };
@@ -251,6 +258,7 @@ describe("cruces:list", () => {
 describe("cruces:proyecto", () => {
   it("devuelve los cruces de un proyecto concreto", async () => {
     dbQuery.mockResolvedValueOnce({ rows: [proyectoRow()] });
+    infobrasQuery.mockResolvedValueOnce({ rows: [obraRow("Construccion de obras publicas")] });
     infobrasQuery.mockResolvedValueOnce({ rows: [obraRow("Construccion de obras publicas")] });
 
     const res = await proyecto(ctx({ periodo: 2026, numero: 1234 }));
@@ -297,6 +305,7 @@ describe("cruces:proyecto", () => {
 
   it("resuelve el alias 'P C DEL CALLAO' a CALLAO antes de consultar", async () => {
     dbQuery.mockResolvedValueOnce({ rows: [proyectoRow()] });
+    infobrasQuery.mockResolvedValueOnce({ rows: [obraRow("Construccion de obras publicas")] });
     infobrasQuery.mockResolvedValueOnce({ rows: [obraRow("Construccion de obras publicas")] });
 
     await proyecto(ctx({ periodo: 2026, numero: 1234, departamento: "P C DEL CALLAO" }));

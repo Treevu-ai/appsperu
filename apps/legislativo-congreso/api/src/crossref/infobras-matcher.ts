@@ -182,18 +182,45 @@ function mapObra(row: ObraRow): CruceProyectoInfobrasResult["obra"] {
   };
 }
 
+interface ObraLigera {
+  codigo_infobras: string;
+  nombre_obra: string;
+}
+
 /**
- * Lee las obras del departamento y construye el índice invertido. Sin `LIMIT`:
- * el corte anterior por `codigo_infobras` era el sesgo del cruce.
+ * Lee `codigo_infobras, nombre_obra` de todas las obras del departamento y
+ * construye el índice invertido. Sin `LIMIT`: el corte anterior por
+ * `codigo_infobras` era el sesgo del cruce.
+ *
+ * Solo esas dos columnas: el índice solo tokeniza `nombre_obra`, y traer las
+ * otras 20 (`nombre_inversion`, `causal_paralizacion`, etc.) de las ~10,000
+ * obras de un departamento para descartarlas después de paginar era egress
+ * puro. Las columnas completas se piden después, solo para las obras que
+ * terminan en la página — `hidratarObras`.
  */
-async function cargarIndice(infobrasDb: Pool, departamento: string): Promise<IndiceObras<ObraRow>> {
-  const { rows } = await infobrasDb.query<ObraRow>(
-    `${OBRA_SELECT}
+async function cargarIndice(infobrasDb: Pool, departamento: string): Promise<IndiceObras<ObraLigera>> {
+  const { rows } = await infobrasDb.query<ObraLigera>(
+    `SELECT codigo_infobras, nombre_obra
+     FROM public_works
      WHERE departamento = $1
      ORDER BY codigo_infobras`,
     [canonicalizarDepartamento(departamento)]
   );
   return construirIndiceObras(rows);
+}
+
+/**
+ * Trae las columnas completas solo de las obras cuyo código aparece en la
+ * página final. `codigo_infobras` es la clave de INFOBRAS, así que no hace
+ * falta repetir el filtro por departamento.
+ */
+async function hidratarObras(infobrasDb: Pool, codigos: string[]): Promise<Map<string, ObraRow>> {
+  if (codigos.length === 0) return new Map();
+  const { rows } = await infobrasDb.query<ObraRow>(
+    `${OBRA_SELECT} WHERE codigo_infobras = ANY($1)`,
+    [codigos]
+  );
+  return new Map(rows.map((row) => [row.codigo_infobras, row]));
 }
 
 /** Una coincidencia antes de hidratarla: solo índices y números. */
@@ -209,7 +236,7 @@ interface TuplaCruce {
  * desempate la paginación devuelve páginas distintas en la misma consulta, y
  * con `limit` sobre un conjunto grande eso se nota.
  */
-function ordenarTuplas(tuplas: TuplaCruce[], proyectos: ProyectoRow[], obras: ObraRow[]): TuplaCruce[] {
+function ordenarTuplas(tuplas: TuplaCruce[], proyectos: ProyectoRow[], obras: ObraLigera[]): TuplaCruce[] {
   return tuplas.sort(
     (a, b) =>
       b.matchScore - a.matchScore ||
@@ -221,11 +248,20 @@ function ordenarTuplas(tuplas: TuplaCruce[], proyectos: ProyectoRow[], obras: Ob
 function hidratar(
   tupla: TuplaCruce,
   proyectos: ProyectoRow[],
-  obras: ObraRow[]
+  obrasLigeras: ObraLigera[],
+  obrasCompletas: Map<string, ObraRow>
 ): CruceProyectoInfobrasResult {
+  const codigo = obrasLigeras[tupla.obraIdx].codigo_infobras;
+  const obra = obrasCompletas.get(codigo);
+  if (!obra) {
+    // No debería pasar: hidratarObras se llama con los códigos de estas
+    // mismas tuplas. Si pasa, es un bug de esta función, no un caso de
+    // producción a tolerar en silencio.
+    throw new Error(`Obra ${codigo} no encontrada al hidratar la página del cruce`);
+  }
   return {
     proyecto: mapProyecto(proyectos[tupla.proyectoIdx]),
-    obra: mapObra(obras[tupla.obraIdx]),
+    obra: mapObra(obra),
     matchScore: tupla.matchScore,
     matchedKeywords: tupla.matchedKeywords,
   };
@@ -292,9 +328,11 @@ export async function cruzarProyectosInfobras(
 
   ordenarTuplas(tuplas, proyectos, indice.obras);
   const pagina = tuplas.slice(offset, offset + limite);
+  const codigosPagina = [...new Set(pagina.map((t) => indice.obras[t.obraIdx].codigo_infobras))];
+  const obrasCompletas = await hidratarObras(infobrasDb, codigosPagina);
   return {
     total: tuplas.length,
-    cruces: pagina.map((t) => hidratar(t, proyectos, indice.obras)),
+    cruces: pagina.map((t) => hidratar(t, proyectos, indice.obras, obrasCompletas)),
     hasMore: offset + pagina.length < tuplas.length,
   };
 }
@@ -342,9 +380,11 @@ export async function cruzarProyectoInfobrasPorId(
   }));
 
   ordenarTuplas(tuplas, proyectos, indice.obras);
+  const codigos = [...new Set(tuplas.map((t) => indice.obras[t.obraIdx].codigo_infobras))];
+  const obrasCompletas = await hidratarObras(infobrasDb, codigos);
   return {
     total: tuplas.length,
-    cruces: tuplas.map((t) => hidratar(t, proyectos, indice.obras)),
+    cruces: tuplas.map((t) => hidratar(t, proyectos, indice.obras, obrasCompletas)),
     hasMore: false,
   };
 }
