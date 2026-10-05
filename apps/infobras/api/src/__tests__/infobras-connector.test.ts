@@ -251,6 +251,29 @@ describe("upsertPublicWorksChunk", () => {
     expect(params[colCount + 14]).toBe("ICA");
   });
 
+  it("deduplica por codigoInfobras dentro del chunk, conservando la última aparición", async () => {
+    // Un codigo_infobras repetido en el mismo INSERT multi-fila hace que
+    // Postgres rechace la query entera (ON CONFLICT DO UPDATE no puede
+    // afectar la misma fila dos veces en una instrucción) — el loop
+    // anterior, fila por fila, toleraba esto sin problema.
+    const query = vi.fn().mockResolvedValue({});
+    const client = { query } as unknown as Parameters<typeof upsertPublicWorksChunk>[0];
+    const filas = [
+      filaCanonica({ codigoInfobras: "OBR-001", nombreObra: "Versión vieja" }),
+      filaCanonica({ codigoInfobras: "OBR-002", nombreObra: "Otra obra" }),
+      filaCanonica({ codigoInfobras: "OBR-001", nombreObra: "Versión nueva" }),
+    ];
+
+    await upsertPublicWorksChunk(client, filas, 7);
+
+    expect(query).toHaveBeenCalledTimes(1);
+    const [, params] = query.mock.calls[0];
+    const colCount = PUBLIC_WORKS_COLUMNS.length;
+    // Solo 2 filas en los parámetros (OBR-001 deduplicado), no 3.
+    expect(params).toHaveLength(2 * colCount);
+    expect(params[3]).toBe("Versión nueva"); // nombre_obra de OBR-001 es la última aparición
+  });
+
   it("no ejecuta ninguna query para un chunk vacío", async () => {
     const query = vi.fn();
     const client = { query } as unknown as Parameters<typeof upsertPublicWorksChunk>[0];

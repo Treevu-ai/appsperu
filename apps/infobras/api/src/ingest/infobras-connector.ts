@@ -260,16 +260,33 @@ export function valuesPlaceholders(rowCount: number, colCount: number): string {
   return groups.join(",\n       ");
 }
 
+/**
+ * Un `codigo_infobras` repetido dentro del mismo chunk hacía que Postgres
+ * rechazara el INSERT multi-fila completo: `ON CONFLICT DO UPDATE` no puede
+ * afectar la misma fila dos veces en una sola instrucción (SQLSTATE 21000).
+ * El loop anterior, fila por fila, toleraba duplicados sin problema (ganaba
+ * la última) — hallazgo de code review (Copilot en PR #239). Se deduplica
+ * aquí, no en el llamador, para que la garantía viva donde está el riesgo
+ * real (el límite es por INSERT, no por chunk en abstracto). Conserva la
+ * última aparición, igual que el loop secuencial que reemplaza.
+ */
+function dedupeByCodigoInfobras(chunk: readonly CanonicalPublicWorkRow[]): CanonicalPublicWorkRow[] {
+  const porCodigo = new Map<string, CanonicalPublicWorkRow>();
+  for (const row of chunk) porCodigo.set(row.codigoInfobras, row);
+  return [...porCodigo.values()];
+}
+
 export async function upsertPublicWorksChunk(
   client: PoolClient,
   chunk: readonly CanonicalPublicWorkRow[],
   batchId: number
 ): Promise<void> {
   if (chunk.length === 0) return;
-  const params = chunk.flatMap((row) => publicWorksRowValues(row, batchId));
+  const filas = dedupeByCodigoInfobras(chunk);
+  const params = filas.flatMap((row) => publicWorksRowValues(row, batchId));
   await client.query(
     `INSERT INTO public_works (${PUBLIC_WORKS_COLUMNS.join(", ")})
-     VALUES ${valuesPlaceholders(chunk.length, PUBLIC_WORKS_COLUMNS.length)}
+     VALUES ${valuesPlaceholders(filas.length, PUBLIC_WORKS_COLUMNS.length)}
      ON CONFLICT (codigo_infobras) DO UPDATE SET
        ${PUBLIC_WORKS_UPDATE_SET}`,
     params
