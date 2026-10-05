@@ -244,6 +244,86 @@ export function canonicalizarDepartamentoFuente(raw: string | undefined): string
   return DEPARTAMENTO_ALIASES_FUENTE[trimmed] ?? trimmed;
 }
 
+/**
+ * Provincias reales de ICA que la fuente etiqueta con `departamento =
+ * "HUANCAVELICA"` — DQ-19, verificado en vivo 2026-10-05: 889 obras (NASCA/NAZCA
+ * 330, CHINCHA 324, PISCO 208, PALPA 27) cuyo `nombre_obra` confirma Ica sin
+ * ambigüedad (ej. "...EL INGENIO NASCA", "CENTRAL EÓLICA PARQUE NAZCA 126 MW").
+ * A diferencia del alias de Callao arriba, esto no es un nombre no canónico de
+ * un departamento real: la columna `departamento` del XLSX está directamente
+ * mal para estas filas. "NAZCA" se normaliza a "NASCA" (grafía oficial INEI,
+ * la misma que usa el catálogo territorial de `ceplan-geo`).
+ */
+const PROVINCIAS_ICA_ETIQUETADAS_COMO_HUANCAVELICA = new Set(["NAZCA", "NASCA", "CHINCHA", "PISCO", "PALPA"]);
+
+/**
+ * `provincia = "ANDAHUAYLAS"` (provincia real, pero de Apurímac) bajo
+ * `departamento = "ANCASH"` — verificado en vivo 2026-10-05: 113 obras cuyos
+ * distritos (PUEBLO LIBRE, CARAZ, PAMPAROMAS, HUALLANCA, MATO, SANTO TORIBIO,
+ * SANTA CRUZ, YURACMARCA, HUATA, HUAYLAS) son exactamente los 10 distritos
+ * reales de la provincia HUAYLAS de Áncash — incluida la única fila cuyo
+ * propio `distrito` repite el mismo valor corrupto, cuyo `nombre_obra` dice
+ * explícitamente "...DISTRITO DE HUAYLAS HUAYLAS ANCASH". El `departamento`
+ * está bien; solo la `provincia` vino corrupta de la fuente.
+ */
+const PROVINCIA_HUAYLAS_CORROMPIDA = "ANDAHUAYLAS";
+
+/**
+ * Corrige errores de geografía de la fuente verificados 1:1 contra
+ * `nombre_obra` y el catálogo territorial — no una heurística: cada caso es
+ * un patrón 100% consistente, confirmado en la ingesta real completa (ver
+ * docs/TICKETS_Calidad_Datos_Auditoria_La_Libertad_v1.md, DQ-19/DQ-20).
+ * Devuelve `null` si la fila no matchea ningún caso conocido.
+ *
+ * Recibe `distrito` además de `provincia`: la única fila cuyo propio
+ * `distrito` repite el mismo valor corrupto ("ANDAHUAYLAS") también debe
+ * corregirse a "HUAYLAS" — dejarla con un distrito que ya sabemos que está
+ * mal (aunque quede marcado `distrito_sospechoso`) deja la corrección a
+ * medias (hallazgo de code review, Copilot en PR #237).
+ */
+export function corregirGeografiaFuente(
+  departamento: string,
+  provincia: string,
+  distrito: string
+): { departamento: string; provincia: string; distrito: string } | null {
+  if (departamento === "HUANCAVELICA" && PROVINCIAS_ICA_ETIQUETADAS_COMO_HUANCAVELICA.has(provincia)) {
+    return { departamento: "ICA", provincia: provincia === "NAZCA" ? "NASCA" : provincia, distrito };
+  }
+  if (departamento === "ANCASH" && provincia === PROVINCIA_HUAYLAS_CORROMPIDA) {
+    return {
+      departamento,
+      provincia: "HUAYLAS",
+      distrito: distrito === PROVINCIA_HUAYLAS_CORROMPIDA ? "HUAYLAS" : distrito,
+    };
+  }
+  return null;
+}
+
+/**
+ * Aplica el alias de Callao y `corregirGeografiaFuente` a cada fila cruda,
+ * en ese orden — extraído a función propia (hallazgo de code review,
+ * CodeRabbit + Copilot en PR #237) para poder probar el pipeline real
+ * (corrección → filtro de scope → normalización) sin mockear I/O de archivo
+ * ni de base de datos, en vez de solo `corregirGeografiaFuente` aislada.
+ */
+export function construirFilasCanonicas(rawRows: string[][]): string[][] {
+  return rawRows.map((row) => {
+    const canonical = [...row];
+    canonical[29] = canonicalizarDepartamentoFuente(row[29]);
+    const corregido = corregirGeografiaFuente(
+      canonical[29],
+      (row[30] ?? "").trim().toUpperCase(),
+      (row[31] ?? "").trim().toUpperCase()
+    );
+    if (corregido) {
+      canonical[29] = corregido.departamento;
+      canonical[30] = corregido.provincia;
+      canonical[31] = corregido.distrito;
+    }
+    return canonical;
+  });
+}
+
 export function normalizeDepartamentoScope(
   departamento?: string,
   departamentos?: readonly string[]
@@ -298,11 +378,11 @@ export async function ingestInfobrasPublicWorks(options: IngestOptions = {}): Pr
 
   try {
     const [checksum, rawRows] = await Promise.all([checksumOf(filePath), readInfobrasRows(filePath)]);
-    const allRows = rawRows.map((row) => {
-      const canonical = [...row];
-      canonical[29] = canonicalizarDepartamentoFuente(row[29]);
-      return canonical;
-    });
+    // Alias de Callao + corrección de geografía (DQ-19/DQ-20): debe ocurrir
+    // antes del filtro de scope por departamento, para que una fila de Ica
+    // mal etiquetada como Huancavelica cuente para el departamento real, no
+    // para el declarado.
+    const allRows = construirFilasCanonicas(rawRows);
 
     const wantedDepartamentos = new Set(normalizeDepartamentoScope(departamento, departamentos));
     const filteredRows = wantedDepartamentos.size > 0
