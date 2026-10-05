@@ -10,6 +10,7 @@ import {
   findMatchedKeywords,
   jaccardSimilarity,
   normalizeText,
+  tokenize,
 } from "../lib/keyword-matcher.js";
 
 describe("keyword-matcher", () => {
@@ -121,6 +122,47 @@ describe("keyword-matcher", () => {
 
     it("retorna vacío para texto objetivo vacío", () => {
       expect(findMatchedKeywords(["obras"], "")).toEqual([]);
+    });
+
+    it("no matchea por subcadena: 'crea' no es 'creacion'", () => {
+      // Defecto medido contra la ingesta real: con subcadena, la ley "que crea
+      // la Universidad Nacional de Ciencias de la Salud" puntuaba 0.40 contra
+      // "CREACION DE LOS SERVICIOS DE SALUD". El token 'crea' ya no cuenta;
+      // 'salud' sí, porque aparece como palabra completa en ambos textos.
+      const keywords = extractKeywords("Ley que crea la Universidad Nacional de Ciencias de la Salud");
+      const objetivo = "CREACION DE LOS SERVICIOS DE SALUD DEL PUESTO DE SALUD";
+      expect(findMatchedKeywords(keywords, objetivo)).toEqual(["salud"]);
+      expect(findMatchedKeywords(["crea"], objetivo)).toEqual([]);
+      expect(calculateMatchScore(["crea"], "CREACION")).toBe(0);
+    });
+
+    it("no matchea fragmentos dentro de otra palabra", () => {
+      // 'partamento' venia de 'departamento' y 'ent' de 'entidad'.
+      expect(findMatchedKeywords(["partamento"], "OBRA EN EL DEPARTAMENTO LA LIBERTAD")).toEqual([]);
+      expect(findMatchedKeywords(["ent"], "ENTIDAD PRESTADORA MTC")).toEqual([]);
+    });
+
+    it("tolera plurales por sufijo, no por prefijo", () => {
+      const keywords = extractKeywords("Ley de saneamiento");
+      expect(findMatchedKeywords(keywords, "SANEAMIENTOS DE AGUA POTABLE")).toEqual(["saneamiento"]);
+      // Y el plural no se resuelve ampliando el prefijo, que es lo que
+      // reintroducia el artefacto.
+      expect(findMatchedKeywords(["crea"], "CREACION")).toEqual([]);
+    });
+  });
+
+  describe("tokenize", () => {
+    it("devuelve tokens normalizados, singularizados y sin stopwords", () => {
+      expect(tokenize("Construcción de las Obras Públicas")).toEqual(["construccion", "obra", "publica"]);
+    });
+
+    it("parte por separadores, no solo por espacios", () => {
+      expect(tokenize("obras/publicas, CONCLUSION")).toEqual(["obra", "publica", "conclusion"]);
+    });
+
+    it("retorna vacío para texto sin tokens utilizables", () => {
+      expect(tokenize("de la el")).toEqual([]);
+      expect(tokenize("")).toEqual([]);
     });
   });
 

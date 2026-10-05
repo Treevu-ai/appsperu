@@ -2,7 +2,17 @@ import { Router } from "express";
 import { z } from "zod";
 import { asyncHandler } from "../lib/async-handler.js";
 import { CrossAppUnavailableError } from "../lib/cross-app-pool.js";
-import { cruzarProyectosInfobras, cruzarProyectoInfobrasPorId } from "../crossref/infobras-matcher.js";
+import {
+  cruzarProyectosInfobras,
+  cruzarProyectoInfobrasPorId,
+  UMBRAL_SCORE_DEFAULT,
+  MATCHED_MINIMO_DEFAULT,
+} from "../crossref/infobras-matcher.js";
+import {
+  DEFAULT_DEPARTAMENTO,
+  PERU_DEPARTAMENTOS,
+  resolverDepartamento,
+} from "../lib/departamentos.js";
 
 export const crucesRouter = Router();
 
@@ -11,8 +21,10 @@ const MAX_LIMIT = 1000;
 const DEFAULT_PERIODO = 2026;
 
 const CruceInfobrasQuerySchema = z.object({
-  departamento: z.string().min(1).default("LA LIBERTAD").describe("Departamento (ej. LA LIBERTAD)"),
-  umbral_score: z.coerce.number().min(0).max(1).default(0.3).describe("Umbral mínimo de score (0.0-1.0)"),
+  departamento: z.string().min(1).default(DEFAULT_DEPARTAMENTO).describe("Departamento (ej. LA LIBERTAD)"),
+  umbral_score: z.coerce.number().min(0).max(1).default(UMBRAL_SCORE_DEFAULT).describe("Umbral mínimo de score (0.0-1.0)"),
+  matched_minimo: z.coerce.number().int().min(1).max(20).default(MATCHED_MINIMO_DEFAULT)
+    .describe("Mínimo de keywords coincidentes, además del umbral"),
   periodo: z.coerce.number().int().min(1900).max(2999).default(DEFAULT_PERIODO).describe("Periodo legislativo (per_par_id)"),
   limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
   offset: z.coerce.number().int().min(0).default(0),
@@ -24,13 +36,15 @@ const CruceInfobrasProyectoParamsSchema = z.object({
 });
 
 const CruceInfobrasProyectoQuerySchema = z.object({
-  departamento: z.string().min(1).default("LA LIBERTAD").describe("Departamento"),
-  umbral_score: z.coerce.number().min(0).max(1).default(0.3).describe("Umbral mínimo de score"),
+  departamento: z.string().min(1).default(DEFAULT_DEPARTAMENTO).describe("Departamento"),
+  umbral_score: z.coerce.number().min(0).max(1).default(UMBRAL_SCORE_DEFAULT).describe("Umbral mínimo de score"),
+  matched_minimo: z.coerce.number().int().min(1).max(20).default(MATCHED_MINIMO_DEFAULT)
+    .describe("Mínimo de keywords coincidentes, además del umbral"),
 });
 
 const FUENTE = {
   dataset: "Congreso de la República - Proyectos de Ley × INFOBRAS - Obras Públicas",
-  nota: "Cruce keyword-based sin IA. Score de match indica palabras clave coincidentes del título del proyecto en el nombre de la obra.",
+  nota: "Cruce keyword-based sin IA ni embeddings. matchScore es la fracción de keywords del título presentes en el nombre de la obra, con coincidencia por token completo: un score alto no prueba causalidad.",
 };
 
 /**
@@ -50,8 +64,19 @@ function nombreAppDegradada(error: unknown): string {
 }
 
 /**
+ * Un departamento fuera del catálogo se rechaza con 400. Antes pasaba tal cual
+ * a la query y devolvía 0 cruces sin error, idéntico a "ese departamento no
+ * tiene obras"; el alias "P C DEL CALLAO" del XLSX de INFOBRAS cae en esa
+ * ambigüedad y por eso se canonicaliza antes de comparar.
+ */
+function departamentoInvalido(departamento: string): string | null {
+  if (resolverDepartamento(departamento)) return null;
+  return `Departamento fuera del catálogo peruano: "${departamento}". Valores: ${PERU_DEPARTAMENTOS.join(", ")}`;
+}
+
+/**
  * Cruce proyectos de ley con obras públicas (INFOBRAS).
- * GET /api/cruces/proyectos-infobras?departamento=LA LIBERTAD&umbral_score=0.3&periodo=2026
+ * GET /api/cruces/proyectos-infobras?departamento=LA LIBERTAD&umbral_score=0.5&periodo=2026
  */
 crucesRouter.get(
   "/proyectos-infobras",
@@ -61,24 +86,33 @@ crucesRouter.get(
       res.status(400).json({ error: "Parámetros inválidos", details: parsed.error.issues });
       return;
     }
-    const { departamento, umbral_score, periodo, limit, offset } = parsed.data;
+    const { departamento, umbral_score, matched_minimo, periodo, limit, offset } = parsed.data;
+
+    const invalido = departamentoInvalido(departamento);
+    if (invalido) {
+      res.status(400).json({ error: "Departamento inválido", detalle: invalido });
+      return;
+    }
 
     try {
-      const { cruces, truncated } = await cruzarProyectosInfobras(departamento, umbral_score, periodo);
-
-      // Paginación en memoria: el cruce ya está acotado por OBRAS_CANDIDATAS_LIMIT
-      // obras candidatas en la única query a INFOBRAS.
-      const total = cruces.length;
-      const paginated = cruces.slice(offset, offset + limit);
+      // El matcher pagina sobre el conjunto completo: `total` es el conteo real
+      // y solo se hidratan los objetos de la página, así que ya no hace falta
+      // acotar candidatas ni reportar truncamiento.
+      const { total, cruces, hasMore } = await cruzarProyectosInfobras(departamento, {
+        umbralScore: umbral_score,
+        matchedMinimo: matched_minimo,
+        periodo,
+        limite: limit,
+        offset,
+      });
 
       res.json({
         total,
         limit,
         offset,
         periodo,
-        hasMore: offset + paginated.length < total,
-        truncated,
-        resultados: paginated,
+        hasMore,
+        resultados: cruces,
         fuente: FUENTE,
       });
     } catch (error) {
@@ -114,23 +148,29 @@ crucesRouter.get(
     }
 
     const { periodo, numero } = parsedParams.data;
-    const { departamento, umbral_score } = parsedQuery.data;
+    const { departamento, umbral_score, matched_minimo } = parsedQuery.data;
+
+    const invalido = departamentoInvalido(departamento);
+    if (invalido) {
+      res.status(400).json({ error: "Departamento inválido", detalle: invalido });
+      return;
+    }
 
     try {
-      const { cruces, truncated } = await cruzarProyectoInfobrasPorId(periodo, numero, departamento, umbral_score);
+      const { total, cruces } = await cruzarProyectoInfobrasPorId(periodo, numero, departamento, {
+        umbralScore: umbral_score,
+        matchedMinimo: matched_minimo,
+      });
 
+      // Sin tope de candidatas, un 404 ya solo significa que ninguna obra
+      // alcanzó el umbral: no hay un segundo caso que distinguir.
       if (cruces.length === 0) {
-        // `truncated` viaja en el 404: si el tope de 500 candidatas se agotó y
-        // ninguna alcanzó el umbral, "no hay match" y "no lo buscamos todo" son
-        // respuestas distintas. Ocultarlo aquí convertía el truncamiento en un
-        // cero indistinguible (verificado en vivo con proyecto 14849).
         res.status(404).json({
           error: "No se encontraron obras que matcheen este proyecto",
           periodo,
           numero,
           departamento,
           umbral_score,
-          truncated,
         });
         return;
       }
@@ -139,8 +179,7 @@ crucesRouter.get(
         proyecto: { perParId: periodo, pleyNum: numero },
         departamento,
         umbral_score,
-        total: cruces.length,
-        truncated,
+        total,
         resultados: cruces,
         fuente: FUENTE,
       });

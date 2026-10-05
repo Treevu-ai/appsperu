@@ -88,9 +88,8 @@ describe("cruces:list", () => {
     const res = await list(ctx({}));
 
     expect(res.status).toBe(200);
-    const body = res.body as { total: number; truncated: boolean; resultados: Array<{ matchScore: number; matchedKeywords: string[] }> };
+    const body = res.body as { total: number; resultados: Array<{ matchScore: number; matchedKeywords: string[] }> };
     expect(body.total).toBe(1);
-    expect(body.truncated).toBe(false);
     expect(body.resultados[0].matchScore).toBeCloseTo(2 / 3, 5);
     expect(body.resultados[0].matchedKeywords).toEqual(["obras", "publicas"]);
   });
@@ -117,26 +116,51 @@ describe("cruces:list", () => {
     expect(dbQuery.mock.calls[1][1]).toEqual([2021]);
   });
 
-  it("reporta truncated:true cuando INFOBRAS devuelve más de 500 candidatas", async () => {
+  it("no trunca: cuenta todas las obras que matchean y pagina sobre el total", async () => {
+    // El corte anterior tomaba las 500 de codigo_infobras más bajo, lo que
+    // sesgaba el cruce en vez de solo recortarlo.
     dbQuery.mockResolvedValueOnce({ rows: [proyectoRow()] });
     infobrasQuery.mockResolvedValueOnce({
-      rows: Array.from({ length: 501 }, (_, i) => obraRow(`Obra ${i}`)),
+      rows: Array.from({ length: 1500 }, (_, i) => obraRow(`Obras publicas ${i}`, {
+        codigo_infobras: `OBR-${String(i).padStart(4, "0")}`,
+      })),
     });
 
     const res = await list(ctx({}));
 
-    expect((res.body as { truncated: boolean }).truncated).toBe(true);
+    const body = res.body as { total: number; hasMore: boolean; resultados: unknown[] };
+    expect(body.total).toBe(1500);
+    expect(body.resultados).toHaveLength(200);
+    expect(body.hasMore).toBe(true);
+    expect(res.body).not.toHaveProperty("truncated");
   });
 
-  it("no reporta truncated con exactamente 500 candidatas", async () => {
-    dbQuery.mockResolvedValueOnce({ rows: [proyectoRow()] });
+  it("no matchea por subcadena: 'crea' no es 'CREACION'", async () => {
+    dbQuery.mockResolvedValueOnce({
+      rows: [proyectoRow({ titulo: "Ley que crea la Universidad Nacional de Ciencias de la Salud" })],
+    });
     infobrasQuery.mockResolvedValueOnce({
-      rows: Array.from({ length: 500 }, (_, i) => obraRow(`Obra ${i}`)),
+      rows: [obraRow("CREACION DE LOS SERVICIOS DE SALUD DEL PUESTO DE SALUD")],
     });
 
     const res = await list(ctx({}));
 
-    expect((res.body as { truncated: boolean }).truncated).toBe(false);
+    expect((res.body as { total: number }).total).toBe(0);
+  });
+
+  it("excluye el boilerplate administrativo del indice", async () => {
+    // "distrito/provincia/departamento" vienen en el nombre de casi toda obra y
+    // no distinguen una de otra dentro del mismo departamento.
+    dbQuery.mockResolvedValueOnce({
+      rows: [proyectoRow({ titulo: "Ley que declara distrito provincia departamento" })],
+    });
+    infobrasQuery.mockResolvedValueOnce({
+      rows: [obraRow("MEJORAMIENTO DE LA RED DISTRITO PROVINCIA DEPARTAMENTO LA LIBERTAD")],
+    });
+
+    const res = await list(ctx({}));
+
+    expect((res.body as { total: number }).total).toBe(0);
   });
 
   it("responde 503 —no cero— cuando INFOBRAS no está configurada", async () => {
@@ -170,7 +194,7 @@ describe("cruces:list", () => {
     expect(infobrasQuery).not.toHaveBeenCalled();
   });
 
-  it("incluye truncated en el 404 del proyecto individual", async () => {
+  it("el 404 del proyecto individual ya no declara truncated", async () => {
     dbQuery.mockResolvedValueOnce({ rows: [proyectoRow({ titulo: "Ley de obras publicas" })] });
     infobrasQuery.mockResolvedValueOnce({
       rows: Array.from({ length: 501 }, (_, i) =>
@@ -181,7 +205,8 @@ describe("cruces:list", () => {
     const res = await proyecto(ctx({ periodo: 2026, numero: 1234 }));
 
     expect(res.status).toBe(404);
-    expect((res.body as { truncated: boolean }).truncated).toBe(true);
+    // Sin tope de candidatas el 404 tiene un solo significado.
+    expect(res.body).not.toHaveProperty("truncated");
   });
 
   it("respeta limit y offset", async () => {

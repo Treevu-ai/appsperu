@@ -30,11 +30,25 @@ import type { ToolHandlerContext, HandlerResult } from "../registry.js";
  */
 
 const DEFAULT_PERIODO = 2026;
-const DEFAULT_UMBRAL = 0.3;
+const DEFAULT_UMBRAL = 0.5;
+const DEFAULT_MATCHED_MINIMO = 2;
 const DEFAULT_DEPARTAMENTO = "LA LIBERTAD";
 const DEFAULT_LIMIT = 200;
 const MAX_LIMIT = 1000;
-const OBRAS_CANDIDATAS_LIMIT = 500;
+
+/**
+ * Tokens administrativos que los nombres de obra embeben ("DEL DISTRITO DE …
+ * PROVINCIA … DEPARTAMENTO …"). Dentro de un departamento no distinguen una obra
+ * de otra, y excluirlos del índice bajó los cruces de 675,856 a 26,693 en la
+ * corrida real de LA LIBERTAD periodo 2021. Duplicado de
+ * `apps/legislativo-congreso/api/src/crossref/obra-index.ts`; la paridad la
+ * fija `cruces.test.ts`.
+ */
+const TOKENS_ADMINISTRATIVOS = new Set([
+  "distrito", "provincia", "departamento", "municipalidad", "municipal",
+  "gobierno", "nivel", "region", "provincial", "localidad", "caserio",
+  "centro", "poblado", "comunidad", "ubicacion", "geografico",
+]);
 
 const STOPWORDS = new Set([
   "el", "la", "de", "en", "por", "para", "con", "sin", "a", "que", "y", "o",
@@ -55,12 +69,48 @@ const STOPWORDS = new Set([
   "primero", "segundo", "segunda", "último", "última", "últimos", "últimas",
 ]);
 
+/** Sufijos plurales → singular. Ver `keyword-matcher.ts` de la app. */
+const SUFIJOS_PLURAL: ReadonlyArray<readonly [string, string]> = [
+  ["amientos", "amiento"],
+  ["imientos", "imiento"],
+  ["aciones", "acion"],
+  ["uciones", "ucion"],
+  ["ancias", "ancia"],
+  ["encias", "encia"],
+  ["ismos", "ismo"],
+  ["anzas", "anza"],
+  ["es", ""],
+  ["s", ""],
+];
+
 function normalizeText(text: string): string {
   if (!text) return "";
   return text
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+function normalizeToken(token: string): string {
+  const t = normalizeText(token);
+  if (t.length < 5) return t;
+  for (const [plural, singular] of SUFIJOS_PLURAL) {
+    if (t.endsWith(plural) && t.length - plural.length >= 4) {
+      return t.slice(0, t.length - plural.length) + singular;
+    }
+  }
+  return t;
+}
+
+/** Tokens por palabra completa, no por subcadena. Ver `keyword-matcher.ts`. */
+function tokenize(text: string): string[] {
+  const normalizado = normalizeText(text);
+  if (!normalizado) return [];
+  const tokens: string[] = [];
+  for (const bruto of normalizado.split(/[^a-z0-9]+/)) {
+    if (bruto.length > 2 && !STOPWORDS.has(bruto)) tokens.push(normalizeToken(bruto));
+  }
+  return tokens;
 }
 
 function extractKeywords(text: string): string[] {
@@ -72,9 +122,9 @@ function extractKeywords(text: string): string[] {
 }
 
 function findMatchedKeywords(keywords: string[], target: string): string[] {
-  const t = normalizeText(target);
-  if (!t) return [];
-  return keywords.filter((kw) => t.includes(kw));
+  const objetivo = new Set(tokenize(target));
+  if (objetivo.size === 0) return [];
+  return keywords.filter((kw) => objetivo.has(normalizeToken(kw)));
 }
 
 function calculateMatchScore(keywords: string[], target: string): number {
@@ -177,34 +227,95 @@ const OBRA_SELECT = `
  * Una sola query con OR de todas las keywords. Pide LIMIT+1 para poder
  * reportar `truncated` en vez de cortar en silencio.
  */
-async function fetchObras(
-  infobras: ReturnType<typeof getPoolForApp> & object,
-  departamento: string,
-  keywords: string[]
-): Promise<{ obras: ObraRow[]; truncated: boolean }> {
-  const params: unknown[] = [departamento];
-  const conds = keywords.map((kw) => {
-    params.push(`%${kw}%`);
-    return `nombre_obra ILIKE $${params.length}`;
-  });
+interface IndiceObras {
+  obras: ObraRow[];
+  postings: Map<string, number[]>;
+}
 
+/**
+ * Lee todas las obras del departamento y tokeniza sus nombres una sola vez.
+ * Duplica `construirIndiceObras` de
+ * `apps/legislativo-congreso/api/src/crossref/obra-index.ts`: el `rootDir: src`
+ * de mcp-server impide importar de fuera sin romper el bundle del Worker, igual
+ * que con `packages/shared-queries` (ADR-0019). La paridad la fija
+ * `cruces.test.ts`.
+ */
+async function cargarIndice(
+  infobras: ReturnType<typeof getPoolForApp> & object,
+  departamento: string
+): Promise<IndiceObras> {
   const { rows } = await infobras.query<ObraRow>(
     `${OBRA_SELECT}
-     WHERE departamento = $1 AND (${conds.join(" OR ")})
-     ORDER BY codigo_infobras
-     LIMIT ${OBRAS_CANDIDATAS_LIMIT + 1}`,
-    params
+     WHERE departamento = $1
+     ORDER BY codigo_infobras`,
+    [departamento]
   );
 
-  return {
-    obras: rows.slice(0, OBRAS_CANDIDATAS_LIMIT),
-    truncated: rows.length > OBRAS_CANDIDATAS_LIMIT,
-  };
+  const postings = new Map<string, number[]>();
+  for (let i = 0; i < rows.length; i++) {
+    for (const token of new Set(tokenize(rows[i].nombre_obra))) {
+      if (TOKENS_ADMINISTRATIVOS.has(token)) continue;
+      let lista = postings.get(token);
+      if (!lista) postings.set(token, (lista = []));
+      lista.push(i);
+    }
+  }
+
+  return { obras: rows, postings };
+}
+
+/**
+ * Puntúa un proyecto contra el índice recorriendo solo los postings de sus
+ * keywords, y sin tope de candidatas. Devuelve tuplas (score + índices) para no
+ * hidratar objetos que la paginación va a descartar.
+ */
+function puntuarProyecto(
+  indice: IndiceObras,
+  keywords: string[],
+  umbral: number,
+  matchedMinimo: number
+): Array<{ proyectoIdx: number; obraIdx: number; matchScore: number; matchedKeywords: string[] }> {
+  if (keywords.length === 0 || indice.obras.length === 0) return [];
+
+  const acumulados = new Map<number, { matched: number; hit: string[] }>();
+  for (const kw of keywords) {
+    const lista = indice.postings.get(normalizeToken(kw));
+    if (!lista) continue;
+    for (const i of lista) {
+      let acc = acumulados.get(i);
+      if (!acc) acumulados.set(i, (acc = { matched: 0, hit: [] }));
+      acc.matched++;
+      acc.hit.push(kw);
+    }
+  }
+
+  const out: Array<{ proyectoIdx: number; obraIdx: number; matchScore: number; matchedKeywords: string[] }> = [];
+  for (const [obraIdx, acc] of acumulados) {
+    if (acc.matched < matchedMinimo) continue;
+    const matchScore = acc.matched / keywords.length;
+    if (matchScore < umbral) continue;
+    out.push({ proyectoIdx: 0, obraIdx, matchScore, matchedKeywords: acc.hit });
+  }
+  return out;
+}
+
+/** Orden total y estable: score desc, luego proyecto y obra por clave. */
+function ordenarTuplas(
+  tuplas: Array<{ proyectoIdx: number; obraIdx: number; matchScore: number; matchedKeywords: string[] }>,
+  proyectos: ProyectoRow[],
+  obras: ObraRow[]
+) {
+  return tuplas.sort(
+    (a, b) =>
+      b.matchScore - a.matchScore ||
+      proyectos[a.proyectoIdx].pley_num - proyectos[b.proyectoIdx].pley_num ||
+      obras[a.obraIdx].codigo_infobras.localeCompare(obras[b.obraIdx].codigo_infobras)
+  );
 }
 
 const FUENTE = {
   dataset: "Congreso de la República - Proyectos de Ley × INFOBRAS - Obras Públicas",
-  nota: "Cruce keyword-based sin IA. Score de match indica palabras clave coincidentes del título del proyecto en el nombre de la obra.",
+  nota: "Cruce keyword-based sin IA ni embeddings. matchScore es la fracción de keywords del título presentes en el nombre de la obra, con coincidencia por token completo: un score alto no prueba causalidad.",
 };
 
 /**
@@ -216,6 +327,7 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const departamento = ((args.departamento as string | undefined) ?? DEFAULT_DEPARTAMENTO).toUpperCase();
   const periodo = args.periodo !== undefined ? Number(args.periodo) : DEFAULT_PERIODO;
   const umbral = args.umbral_score !== undefined ? Number(args.umbral_score) : DEFAULT_UMBRAL;
+  const matchedMinimo = args.matched_minimo !== undefined ? Number(args.matched_minimo) : DEFAULT_MATCHED_MINIMO;
   const limit = Math.min(args.limit !== undefined ? Number(args.limit) : DEFAULT_LIMIT, MAX_LIMIT);
   const offset = args.offset !== undefined ? Number(args.offset) : 0;
 
@@ -227,9 +339,7 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
     [periodo]
   );
 
-  const matcheables = proyectos
-    .map((row) => ({ row, keywords: extractKeywords(row.titulo) }))
-    .filter((p) => p.keywords.length > 0);
+  const keywordsPorProyecto = proyectos.map((row) => extractKeywords(row.titulo));
 
   // La degradación se declara antes del fast path de "nada que cruzar": con el
   // pool ausente, un periodo sin proyectos con keywords devolvería 200 con
@@ -242,28 +352,41 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
     };
   }
 
-  if (matcheables.length === 0) {
+  if (keywordsPorProyecto.every((k) => k.length === 0)) {
     return {
       status: 200,
-      body: { total: 0, limit, offset, periodo, hasMore: false, truncated: false, resultados: [], fuente: FUENTE },
+      body: { total: 0, limit, offset, periodo, hasMore: false, resultados: [], fuente: FUENTE },
     };
   }
 
-  const keywords = [...new Set(matcheables.flatMap((p) => p.keywords))];
-  const { obras, truncated } = await fetchObras(infobras, departamento, keywords);
+  const indice = await cargarIndice(infobras, departamento);
 
-  const cruces = crucesEntre(matcheables, obras, umbral);
+  type Tupla = { proyectoIdx: number; obraIdx: number; matchScore: number; matchedKeywords: string[] };
+  const tuplas: Tupla[] = [];
+  for (let i = 0; i < proyectos.length; i++) {
+    const keywords = keywordsPorProyecto[i];
+    if (keywords.length === 0) continue;
+    for (const t of puntuarProyecto(indice, keywords, umbral, matchedMinimo)) {
+      tuplas.push({ ...t, proyectoIdx: i });
+    }
+  }
+  ordenarTuplas(tuplas, proyectos, indice.obras);
 
+  const pagina = tuplas.slice(offset, offset + limit);
   return {
     status: 200,
     body: {
-      total: cruces.length,
+      total: tuplas.length,
       limit,
       offset,
       periodo,
-      hasMore: offset + Math.min(cruces.length, limit) < cruces.length,
-      truncated,
-      resultados: cruces.slice(offset, offset + limit),
+      hasMore: offset + pagina.length < tuplas.length,
+      resultados: pagina.map((t) => ({
+        proyecto: mapProyecto(proyectos[t.proyectoIdx]),
+        obra: mapObra(indice.obras[t.obraIdx]),
+        matchScore: t.matchScore,
+        matchedKeywords: t.matchedKeywords,
+      })),
       fuente: FUENTE,
     },
   };
@@ -280,6 +403,7 @@ export async function proyecto(ctx: ToolHandlerContext): Promise<HandlerResult> 
   const numero = Number(args.numero);
   const departamento = ((args.departamento as string | undefined) ?? DEFAULT_DEPARTAMENTO).toUpperCase();
   const umbral = args.umbral_score !== undefined ? Number(args.umbral_score) : DEFAULT_UMBRAL;
+  const matchedMinimo = args.matched_minimo !== undefined ? Number(args.matched_minimo) : DEFAULT_MATCHED_MINIMO;
 
   const { rows: proyectos } = await db.query<ProyectoRow>(
     `SELECT per_par_id, pley_num, proyecto_ley, estado, fecha_presentacion, titulo, proponente, autores
@@ -313,16 +437,14 @@ export async function proyecto(ctx: ToolHandlerContext): Promise<HandlerResult> 
         numero,
         departamento,
         umbral_score: umbral,
-        truncated: false,
       },
     };
   }
 
-  const { obras, truncated } = await fetchObras(infobras, departamento, keywords);
-  const cruces = crucesEntre([{ row, keywords }], obras, umbral);
+  const indice = await cargarIndice(infobras, departamento);
+  const cruces = ordenarTuplas(puntuarProyecto(indice, keywords, umbral, matchedMinimo), proyectos, indice.obras);
 
   if (cruces.length === 0) {
-    // `truncated` en el 404: tope agotado y cero cruces no es "no hay obras".
     return {
       status: 404,
       body: {
@@ -331,7 +453,6 @@ export async function proyecto(ctx: ToolHandlerContext): Promise<HandlerResult> 
         numero,
         departamento,
         umbral_score: umbral,
-        truncated,
       },
     };
   }
@@ -343,38 +464,13 @@ export async function proyecto(ctx: ToolHandlerContext): Promise<HandlerResult> 
       departamento,
       umbral_score: umbral,
       total: cruces.length,
-      truncated,
-      resultados: cruces,
+      resultados: cruces.map((t) => ({
+        proyecto: mapProyecto(proyectos[t.proyectoIdx]),
+        obra: mapObra(indice.obras[t.obraIdx]),
+        matchScore: t.matchScore,
+        matchedKeywords: t.matchedKeywords,
+      })),
       fuente: FUENTE,
     },
   };
-}
-
-function crucesEntre(
-  matcheables: Array<{ row: ProyectoRow; keywords: string[] }>,
-  obras: ObraRow[],
-  umbral: number
-) {
-  const out: Array<{
-    proyecto: ReturnType<typeof mapProyecto>;
-    obra: ReturnType<typeof mapObra>;
-    matchScore: number;
-    matchedKeywords: string[];
-  }> = [];
-
-  for (const { row, keywords } of matcheables) {
-    for (const obra of obras) {
-      const matchScore = calculateMatchScore(keywords, obra.nombre_obra);
-      if (matchScore >= umbral) {
-        out.push({
-          proyecto: mapProyecto(row),
-          obra: mapObra(obra),
-          matchScore,
-          matchedKeywords: findMatchedKeywords(keywords, obra.nombre_obra),
-        });
-      }
-    }
-  }
-
-  return out.sort((a, b) => b.matchScore - a.matchScore);
 }
