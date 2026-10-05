@@ -91,6 +91,9 @@ describe("GET /api/cruces/proyectos-infobras", () => {
 
   it("devuelve cruces con score y keywords coincidentes", async () => {
     queryMock.mockResolvedValueOnce({ rows: [proyectoRow()] });
+    // Dos queries a INFOBRAS: el índice liviano (codigo_infobras, nombre_obra)
+    // y la hidratación de columnas completas solo para la obra que matcheó.
+    infoobrasQueryMock.mockResolvedValueOnce({ rows: [obraRow()] });
     infoobrasQueryMock.mockResolvedValueOnce({ rows: [obraRow()] });
 
     const res = await request(createApp()).get("/api/cruces/proyectos-infobras?departamento=LA LIBERTAD");
@@ -107,9 +110,9 @@ describe("GET /api/cruces/proyectos-infobras", () => {
 
   it("preserva un 0 real en montos en vez de convertirlo a null", async () => {
     queryMock.mockResolvedValueOnce({ rows: [proyectoRow()] });
-    infoobrasQueryMock.mockResolvedValueOnce({
-      rows: [obraRow("Obras publicas", { monto_viable: "0", costo_actualizado: "0" })],
-    });
+    const obra = obraRow("Obras publicas", { monto_viable: "0", costo_actualizado: "0" });
+    infoobrasQueryMock.mockResolvedValueOnce({ rows: [obra] });
+    infoobrasQueryMock.mockResolvedValueOnce({ rows: [obra] });
 
     const res = await request(createApp()).get("/api/cruces/proyectos-infobras");
     expect(res.body.resultados[0].obra.montoViable).toBe(0);
@@ -125,17 +128,21 @@ describe("GET /api/cruces/proyectos-infobras", () => {
     expect(res.body.total).toBe(0);
   });
 
-  it("emite UNA sola query a INFOBRAS aunque haya muchos proyectos", async () => {
+  it("consulta INFOBRAS un número fijo de veces, no una por proyecto", async () => {
+    // El índice liviano es una query por request (no por proyecto); la
+    // hidratación es una segunda query acotada a los códigos de la página,
+    // sin importar cuántos proyectos del periodo matchearon esa misma obra.
     const proyectos = Array.from({ length: 50 }, (_, i) =>
       proyectoRow({ pley_num: 1000 + i, titulo: `Ley de obras publicas numero ${i}` })
     );
     queryMock.mockResolvedValueOnce({ rows: proyectos });
     infoobrasQueryMock.mockResolvedValueOnce({ rows: [obraRow()] });
+    infoobrasQueryMock.mockResolvedValueOnce({ rows: [obraRow()] });
 
     const res = await request(createApp()).get("/api/cruces/proyectos-infobras");
 
     expect(res.status).toBe(200);
-    expect(infoobrasQueryMock).toHaveBeenCalledTimes(1);
+    expect(infoobrasQueryMock).toHaveBeenCalledTimes(2);
   });
 
   it("parametriza el periodo en vez de hardcodearlo", async () => {
@@ -150,9 +157,9 @@ describe("GET /api/cruces/proyectos-infobras", () => {
 
   it("pagina los resultados", async () => {
     queryMock.mockResolvedValueOnce({ rows: [proyectoRow()] });
-    infoobrasQueryMock.mockResolvedValueOnce({
-      rows: Array.from({ length: 5 }, (_, i) => obraRow(`Obras publicas ${i}`, { codigo_infobras: `OBR-00${i}` })),
-    });
+    const obras = Array.from({ length: 5 }, (_, i) => obraRow(`Obras publicas ${i}`, { codigo_infobras: `OBR-00${i}` }));
+    infoobrasQueryMock.mockResolvedValueOnce({ rows: obras });
+    infoobrasQueryMock.mockResolvedValueOnce({ rows: obras });
 
     const res = await request(createApp()).get("/api/cruces/proyectos-infobras?limit=2&offset=0");
 
@@ -161,25 +168,76 @@ describe("GET /api/cruces/proyectos-infobras", () => {
     expect(res.body.hasMore).toBe(true);
   });
 
-  it("reporta truncated:false cuando no hay truncamiento", async () => {
+  it("no expone truncated: ya no hay tope que truncar", async () => {
     queryMock.mockResolvedValueOnce({ rows: [proyectoRow()] });
+    infoobrasQueryMock.mockResolvedValueOnce({ rows: [obraRow()] });
     infoobrasQueryMock.mockResolvedValueOnce({ rows: [obraRow()] });
 
     const res = await request(createApp()).get("/api/cruces/proyectos-infobras");
-    expect(res.body.truncated).toBe(false);
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty("truncated");
   });
 
-  it("reporta truncated:true cuando INFOBRAS excede el tope de candidatas", async () => {
+  it("cuenta todas las obras que matchean, sin truncar por codigo", async () => {
+    // El corte anterior tomaba las 500 de codigo_infobras mas bajo: en un
+    // departamento de 10,134 obras eso sesgaba el resultado, no solo lo
+    // recortaba. Con 1,500 candidatas el total debe ser 1,500.
     queryMock.mockResolvedValueOnce({ rows: [proyectoRow()] });
-    infoobrasQueryMock.mockResolvedValueOnce({
-      rows: Array.from({ length: 501 }, (_, i) =>
-        obraRow(`Obras publicas ${i}`, { codigo_infobras: `OBR-${i}` })
+    const obras = Array.from({ length: 1500 }, (_, i) =>
+      obraRow(`Obras publicas ${i}`, { codigo_infobras: `OBR-${String(i).padStart(4, "0")}` })
+    );
+    infoobrasQueryMock.mockResolvedValueOnce({ rows: obras });
+    infoobrasQueryMock.mockResolvedValueOnce({ rows: obras });
+
+    const res = await request(createApp()).get("/api/cruces/proyectos-infobras");
+
+    expect(res.body.total).toBe(1500);
+    expect(res.body.resultados).toHaveLength(200);
+    expect(res.body.hasMore).toBe(true);
+  });
+
+  it("pagina sin repetir ni omitir cruces entre páginas", async () => {
+    // Dos requests, así que los mocks no pueden ser de un solo uso.
+    queryMock.mockResolvedValue({ rows: [proyectoRow()] });
+    infoobrasQueryMock.mockResolvedValue({
+      rows: Array.from({ length: 25 }, (_, i) =>
+        obraRow(`Obras publicas ${i}`, { codigo_infobras: `OBR-${String(i).padStart(4, "0")}` })
       ),
     });
 
-    const res = await request(createApp()).get("/api/cruces/proyectos-infobras");
+    const app = createApp();
+    const p1 = await request(app).get("/api/cruces/proyectos-infobras?limit=10&offset=0");
+    const p2 = await request(app).get("/api/cruces/proyectos-infobras?limit=10&offset=10");
+
+    const codigos = [...p1.body.resultados, ...p2.body.resultados].map((r: any) => r.obra.codigoInfobras);
+    expect(codigos).toHaveLength(20);
+    expect(new Set(codigos).size).toBe(20);
+    // Orden estable: a igual score, por codigo de obra ascendente.
+    expect(codigos).toEqual([...codigos].sort());
+  });
+
+  it("rechaza un departamento fuera del catálogo con 400", async () => {
+    const res = await request(createApp()).get("/api/cruces/proyectos-infobras?departamento=PROVINCIA FICTICIA");
+
+    expect(res.status).toBe(400);
+    expect(res.body.detalle).toContain("PROVINCIA FICTICIA");
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it("resuelve el alias P C DEL CALLAO del XLSX de INFOBRAS", async () => {
+    // Sin canonicalizar devolvía 0 cruces sin error, idéntico a un departamento
+    // sin obras. Con el alias se comporta como CALLAO.
+    queryMock.mockResolvedValueOnce({ rows: [proyectoRow()] });
+    infoobrasQueryMock.mockResolvedValueOnce({ rows: [obraRow()] });
+    infoobrasQueryMock.mockResolvedValueOnce({ rows: [obraRow()] });
+
+    const res = await request(createApp()).get("/api/cruces/proyectos-infobras?departamento=P%20C%20DEL%20CALLAO");
+
     expect(res.status).toBe(200);
-    expect(res.body.truncated).toBe(true);
+    expect(res.body.total).toBe(1);
+    const [sql, params] = infoobrasQueryMock.mock.calls[0];
+    expect(sql).toContain("departamento = $1");
+    expect(params).toEqual(["CALLAO"]);
   });
 
   it("responde 503 cuando INFOBRAS no está configurada", async () => {
@@ -216,26 +274,14 @@ describe("GET /api/cruces/proyectos-infobras/:periodo/:numero", () => {
 
     const res = await request(createApp()).get("/api/cruces/proyectos-infobras/2026/1234");
     expect(res.status).toBe(404);
-    expect(res.body.truncated).toBe(false);
-  });
-
-  it("incluye truncated en el 404 para no leer el truncamiento como cero", async () => {
-    queryMock.mockResolvedValueOnce({ rows: [proyectoRow({ titulo: "Ley de obras publicas" })] });
-    // 501 candidatas cuyo score queda bajo el umbral: tope agotado, cero cruces.
-    infoobrasQueryMock.mockResolvedValueOnce({
-      rows: Array.from({ length: 501 }, (_, i) =>
-        obraRow(`Obra sin relacion ${i}`, { codigo_infobras: `OBR-${i}` })
-      ),
-    });
-
-    const res = await request(createApp()).get("/api/cruces/proyectos-infobras/2026/1234");
-
-    expect(res.status).toBe(404);
-    expect(res.body.truncated).toBe(true);
+    // Ya no hay tope que agotar, así que el 404 tiene un solo significado y no
+    // necesita declarar `truncated`.
+    expect(res.body).not.toHaveProperty("truncated");
   });
 
   it("devuelve los cruces de un proyecto concreto", async () => {
     queryMock.mockResolvedValueOnce({ rows: [proyectoRow()] });
+    infoobrasQueryMock.mockResolvedValueOnce({ rows: [obraRow()] });
     infoobrasQueryMock.mockResolvedValueOnce({ rows: [obraRow()] });
 
     const res = await request(createApp()).get("/api/cruces/proyectos-infobras/2026/1234");

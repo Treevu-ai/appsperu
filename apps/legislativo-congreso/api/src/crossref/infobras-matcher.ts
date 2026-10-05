@@ -2,22 +2,37 @@
  * Cruce entre proyectos de ley y obras públicas (INFOBRAS).
  *
  * Estrategia:
- * 1. Extraer palabras clave del título de cada proyecto del periodo
- * 2. Una sola query a INFOBRAS: nombre_obra ILIKE '%kw%' OR ... AND departamento = filtro
- * 3. Score de match en memoria: keywords coincidentes / keywords del proyecto
+ * 1. Las obras del departamento se leen una vez y se tokenizan en un índice
+ *    invertido (token → obras), sin límite de candidatas.
+ * 2. Cada proyecto del periodo se puntúa contra ese índice recorriendo solo los
+ *    postings de sus keywords.
+ * 3. Se pagina sobre el conjunto completo con orden total estable.
  *
- * El cruce se hace con un único SELECT por departamento. Una query por proyecto
- * (N+1) sobre el periodo completo era inviable: el periodo 2026 tiene cientos de
- * proyectos y cada query cruzaba la red hacia la BD de INFOBRAS.
+ * Por qué ya no un `ILIKE` por keyword: contra la ingesta real, el periodo
+ * 2021 producía 12,888 keywords únicas y la query `nombre_obra ILIKE $n OR ...`
+ * tardaba 17.2 s en LA LIBERTAD, de los cuales 10,105 cláusulas (78%) no
+ * matcheaban ninguna obra. Encima truncaba en 500 por `codigo_infobras` —por
+ * código, no por relevancia—, así que en un departamento de 10,134 obras
+ * devolvía las 500 de código más bajo: el resultado no era solo incompleto, era
+ * sesgado. Medido en vivo 2026-10-04; ver `docs/data-contracts/legislativo-congreso-cruces.md`.
  */
 
 import type { Pool } from "pg";
 import { pool } from "../db/pool.js";
 import { requireCrossAppPool } from "../lib/cross-app-pool.js";
-import { calculateMatchScore, extractKeywords, findMatchedKeywords } from "../lib/keyword-matcher.js";
+import { extractKeywords } from "../lib/keyword-matcher.js";
+import { canonicalizarDepartamento } from "../lib/departamentos.js";
+import { construirIndiceObras, puntuarProyecto, type IndiceObras } from "./obra-index.js";
 
-/** Tope de obras candidatas por departamento en la única query a INFOBRAS. */
-const OBRAS_CANDIDATAS_LIMIT = 500;
+/** Defaults del cruce. El umbral sube de 0.3 a 0.5 con la ingesta real. */
+export const UMBRAL_SCORE_DEFAULT = 0.5;
+/**
+ * Mínimo de keywords coincidentes además de la fracción. Con solo la fracción,
+ * 1 keyword sobre 3 puntúa 0.33 y pasa el corte; en la corrida real ese fue el
+ * grueso de los cruces de baja confianza.
+ */
+export const MATCHED_MINIMO_DEFAULT = 2;
+
 
 interface ProyectoRow {
   per_par_id: number;
@@ -61,12 +76,16 @@ interface ProyectoMatcheable {
 }
 
 /**
- * Resultado del cruce. `truncated` indica que INFOBRAS devolvió más obras
- * candidatas que OBRAS_CANDIDATAS_LIMIT y el cruce quedó incompleto.
+ * Cruce de una página. Ya no existe `truncated`: el campo existía para avisar
+ * que el tope de 500 obras candidatas había cortado el cruce. Sin tope, el
+ * `total` es el conteo real del conjunto completo y no hay nada que declarar.
+ * Esa era además la ambigüedad que el contrato intentaba documentar: un
+ * `truncated: true` con `total: 0` era indistinguible de "no hay obras".
  */
 export interface CruceResultado {
+  total: number;
   cruces: CruceProyectoInfobrasResult[];
-  truncated: boolean;
+  hasMore: boolean;
 }
 
 export interface CruceProyectoInfobrasResult {
@@ -163,46 +182,116 @@ function mapObra(row: ObraRow): CruceProyectoInfobrasResult["obra"] {
   };
 }
 
+interface ObraLigera {
+  codigo_infobras: string;
+  nombre_obra: string;
+}
+
 /**
- * Devuelve las obras candidatas de INFOBRAS para un conjunto de keywords con UN solo query.
+ * Lee `codigo_infobras, nombre_obra` de todas las obras del departamento y
+ * construye el índice invertido. Sin `LIMIT`: el corte anterior por
+ * `codigo_infobras` era el sesgo del cruce.
  *
- * Pide LIMIT+1 filas: si llegan más que el tope, el departamento tiene más
- * obras candidatas que las que se cruzan, y eso se reporta en `truncated`
- * en vez de truncar en silencio.
+ * Solo esas dos columnas: el índice solo tokeniza `nombre_obra`, y traer las
+ * otras 20 (`nombre_inversion`, `causal_paralizacion`, etc.) de las ~10,000
+ * obras de un departamento para descartarlas después de paginar era egress
+ * puro. Las columnas completas se piden después, solo para las obras que
+ * terminan en la página — `hidratarObras`.
  */
-async function fetchObrasCandidatas(
-  infobrasDb: Pool,
-  departamento: string,
-  keywords: string[]
-): Promise<{ obras: ObraRow[]; truncated: boolean }> {
-  const params: unknown[] = [departamento.toUpperCase()];
-  const ilikeConditions = keywords.map((kw) => {
-    params.push(`%${kw}%`);
-    return `nombre_obra ILIKE $${params.length}`;
-  });
-
-  const { rows } = await infobrasDb.query<ObraRow>(
-    `${OBRA_SELECT}
-     WHERE departamento = $1 AND (${ilikeConditions.join(" OR ")})
-     ORDER BY codigo_infobras
-     LIMIT ${OBRAS_CANDIDATAS_LIMIT + 1}`,
-    params
+async function cargarIndice(infobrasDb: Pool, departamento: string): Promise<IndiceObras<ObraLigera>> {
+  const { rows } = await infobrasDb.query<ObraLigera>(
+    `SELECT codigo_infobras, nombre_obra
+     FROM public_works
+     WHERE departamento = $1
+     ORDER BY codigo_infobras`,
+    [canonicalizarDepartamento(departamento)]
   );
+  return construirIndiceObras(rows);
+}
 
+/**
+ * Trae las columnas completas solo de las obras cuyo código aparece en la
+ * página final. `codigo_infobras` es la clave de INFOBRAS, así que no hace
+ * falta repetir el filtro por departamento.
+ */
+async function hidratarObras(infobrasDb: Pool, codigos: string[]): Promise<Map<string, ObraRow>> {
+  if (codigos.length === 0) return new Map();
+  const { rows } = await infobrasDb.query<ObraRow>(
+    `${OBRA_SELECT} WHERE codigo_infobras = ANY($1)`,
+    [codigos]
+  );
+  return new Map(rows.map((row) => [row.codigo_infobras, row]));
+}
+
+/** Una coincidencia antes de hidratarla: solo índices y números. */
+interface TuplaCruce {
+  proyectoIdx: number;
+  obraIdx: number;
+  matchScore: number;
+  matchedKeywords: string[];
+}
+
+/**
+ * Orden total y estable: score desc, luego proyecto y obra por clave. Sin el
+ * desempate la paginación devuelve páginas distintas en la misma consulta, y
+ * con `limit` sobre un conjunto grande eso se nota.
+ */
+function ordenarTuplas(tuplas: TuplaCruce[], proyectos: ProyectoRow[], obras: ObraLigera[]): TuplaCruce[] {
+  return tuplas.sort(
+    (a, b) =>
+      b.matchScore - a.matchScore ||
+      proyectos[a.proyectoIdx].pley_num - proyectos[b.proyectoIdx].pley_num ||
+      obras[a.obraIdx].codigo_infobras.localeCompare(obras[b.obraIdx].codigo_infobras)
+  );
+}
+
+function hidratar(
+  tupla: TuplaCruce,
+  proyectos: ProyectoRow[],
+  obrasLigeras: ObraLigera[],
+  obrasCompletas: Map<string, ObraRow>
+): CruceProyectoInfobrasResult {
+  const codigo = obrasLigeras[tupla.obraIdx].codigo_infobras;
+  const obra = obrasCompletas.get(codigo);
+  if (!obra) {
+    // No debería pasar: hidratarObras se llama con los códigos de estas
+    // mismas tuplas. Si pasa, es un bug de esta función, no un caso de
+    // producción a tolerar en silencio.
+    throw new Error(`Obra ${codigo} no encontrada al hidratar la página del cruce`);
+  }
   return {
-    obras: rows.slice(0, OBRAS_CANDIDATAS_LIMIT),
-    truncated: rows.length > OBRAS_CANDIDATAS_LIMIT,
+    proyecto: mapProyecto(proyectos[tupla.proyectoIdx]),
+    obra: mapObra(obra),
+    matchScore: tupla.matchScore,
+    matchedKeywords: tupla.matchedKeywords,
   };
+}
+
+export interface OpcionesCruce {
+  umbralScore?: number;
+  matchedMinimo?: number;
+  limite?: number;
+  offset?: number;
 }
 
 /**
  * Cruza proyectos de ley con obras INFOBRAS por departamento y periodo.
+ *
+ * Puntúa el conjunto completo y pagina sobre él: `total` es el conteo real, y
+ * solo se hidratan los objetos de la página pedida.
  */
 export async function cruzarProyectosInfobras(
   departamento: string,
-  umbralScore: number = 0.3,
-  periodo: number = 2026
+  opciones: OpcionesCruce & { periodo?: number } = {}
 ): Promise<CruceResultado> {
+  const {
+    umbralScore = UMBRAL_SCORE_DEFAULT,
+    matchedMinimo = MATCHED_MINIMO_DEFAULT,
+    limite = 200,
+    offset = 0,
+    periodo = 2026,
+  } = opciones;
+
   const { rows: proyectos } = await pool.query<ProyectoRow>(
     `SELECT per_par_id, pley_num, proyecto_ley, estado, fecha_presentacion, titulo, proponente, autores
      FROM legislativo_congreso_proyectos
@@ -211,43 +300,41 @@ export async function cruzarProyectosInfobras(
     [periodo]
   );
 
-  const matcheables: ProyectoMatcheable[] = [];
-  for (const row of proyectos) {
-    const keywords = extractKeywords(row.titulo);
-    if (keywords.length > 0) {
-      matcheables.push({ row, keywords });
-    }
-  }
-
   // El pool se resuelve antes del fast path de "nada que cruzar": si INFOBRAS no
   // está accesible la respuesta es 503 aunque el periodo no traiga proyectos con
   // keywords. Devolver 200 con total:0 ahí hacía indistinguible un periodo vacío
   // de un cruce degradado.
   const infobrasDb = requireCrossAppPool("infobras", process.env);
 
-  if (matcheables.length === 0) {
-    return { cruces: [], truncated: false };
+  const keywordsPorProyecto = proyectos.map((row) => extractKeywords(row.titulo));
+  if (keywordsPorProyecto.every((k) => k.length === 0)) {
+    return { total: 0, cruces: [], hasMore: false };
   }
 
-  const todasKeywords = [...new Set(matcheables.flatMap((p) => p.keywords))];
-  const { obras, truncated } = await fetchObrasCandidatas(infobrasDb, departamento, todasKeywords);
-
-  const resultados: CruceProyectoInfobrasResult[] = [];
-  for (const { row, keywords } of matcheables) {
-    for (const obra of obras) {
-      const matchScore = calculateMatchScore(keywords, obra.nombre_obra);
-      if (matchScore >= umbralScore) {
-        resultados.push({
-          proyecto: mapProyecto(row),
-          obra: mapObra(obra),
-          matchScore,
-          matchedKeywords: findMatchedKeywords(keywords, obra.nombre_obra),
-        });
-      }
+  const indice = await cargarIndice(infobrasDb, departamento);
+  const tuplas: TuplaCruce[] = [];
+  for (let i = 0; i < proyectos.length; i++) {
+    const keywords = keywordsPorProyecto[i];
+    if (keywords.length === 0) continue;
+    for (const match of puntuarProyecto(indice, keywords, { umbralMinimo: umbralScore, matchedMinimo })) {
+      tuplas.push({
+        proyectoIdx: i,
+        obraIdx: match.obraIndex,
+        matchScore: match.matched / keywords.length,
+        matchedKeywords: match.keywords,
+      });
     }
   }
 
-  return { cruces: resultados.sort((a, b) => b.matchScore - a.matchScore), truncated };
+  ordenarTuplas(tuplas, proyectos, indice.obras);
+  const pagina = tuplas.slice(offset, offset + limite);
+  const codigosPagina = [...new Set(pagina.map((t) => indice.obras[t.obraIdx].codigo_infobras))];
+  const obrasCompletas = await hidratarObras(infobrasDb, codigosPagina);
+  return {
+    total: tuplas.length,
+    cruces: pagina.map((t) => hidratar(t, proyectos, indice.obras, obrasCompletas)),
+    hasMore: offset + pagina.length < tuplas.length,
+  };
 }
 
 /**
@@ -257,8 +344,10 @@ export async function cruzarProyectoInfobrasPorId(
   perParId: number,
   pleyNum: number,
   departamento: string,
-  umbralScore: number = 0.3
+  opciones: OpcionesCruce = {}
 ): Promise<CruceResultado> {
+  const { umbralScore = UMBRAL_SCORE_DEFAULT, matchedMinimo = MATCHED_MINIMO_DEFAULT } = opciones;
+
   const { rows: proyectos } = await pool.query<ProyectoRow>(
     `SELECT per_par_id, pley_num, proyecto_ley, estado, fecha_presentacion, titulo, proponente, autores
      FROM legislativo_congreso_proyectos
@@ -267,33 +356,35 @@ export async function cruzarProyectoInfobrasPorId(
   );
 
   if (proyectos.length === 0) {
-    return { cruces: [], truncated: false };
+    return { total: 0, cruces: [], hasMore: false };
   }
 
   // El proyecto existe, así que este camino sí corresponde a un cruce: la
   // degradación se declara aunque su título no rinda keywords.
   const infobrasDb = requireCrossAppPool("infobras", process.env);
 
-  const row = proyectos[0];
-  const keywords = extractKeywords(row.titulo);
+  const keywords = extractKeywords(proyectos[0].titulo);
   if (keywords.length === 0) {
-    return { cruces: [], truncated: false };
+    return { total: 0, cruces: [], hasMore: false };
   }
 
-  const { obras, truncated } = await fetchObrasCandidatas(infobrasDb, departamento, keywords);
+  const indice = await cargarIndice(infobrasDb, departamento);
+  const tuplas: TuplaCruce[] = puntuarProyecto(indice, keywords, {
+    umbralMinimo: umbralScore,
+    matchedMinimo,
+  }).map((m) => ({
+    proyectoIdx: 0,
+    obraIdx: m.obraIndex,
+    matchScore: m.matched / keywords.length,
+    matchedKeywords: m.keywords,
+  }));
 
-  const resultados: CruceProyectoInfobrasResult[] = [];
-  for (const obra of obras) {
-    const matchScore = calculateMatchScore(keywords, obra.nombre_obra);
-    if (matchScore >= umbralScore) {
-      resultados.push({
-        proyecto: mapProyecto(row),
-        obra: mapObra(obra),
-        matchScore,
-        matchedKeywords: findMatchedKeywords(keywords, obra.nombre_obra),
-      });
-    }
-  }
-
-  return { cruces: resultados.sort((a, b) => b.matchScore - a.matchScore), truncated };
+  ordenarTuplas(tuplas, proyectos, indice.obras);
+  const codigos = [...new Set(tuplas.map((t) => indice.obras[t.obraIdx].codigo_infobras))];
+  const obrasCompletas = await hidratarObras(infobrasDb, codigos);
+  return {
+    total: tuplas.length,
+    cruces: tuplas.map((t) => hidratar(t, proyectos, indice.obras, obrasCompletas)),
+    hasMore: false,
+  };
 }

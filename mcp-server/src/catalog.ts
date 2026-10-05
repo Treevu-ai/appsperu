@@ -3249,16 +3249,18 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "Cruce keyword-based entre proyectos de ley y obras públicas de INFOBRAS, por departamento — SIN IA ni " +
       "embeddings: `matchScore` es la fracción de keywords del título del proyecto que aparecen en el nombre de la " +
       "obra, y `matchedKeywords` las lista. Es una heurística léxica: un score alto NO prueba que el proyecto de ley " +
-      "cause esa obra. El cruce hace UNA query a INFOBRAS por departamento (no una por proyecto). " +
-      "`truncated: true` significa que INFOBRAS devolvió más de 500 obras candidatas y el cruce está incompleto — " +
-      "bajar `departamento` o subir `umbral_score` acota el resultado. Requiere la base de `infobras`: sin ella " +
-      "responde 503, no cero. " + SIN_SCHEDULER,
+      "cause esa obra. La coincidencia es por token completo, no por subcadena: `crea` no matchea `CREACION`. " +
+      "No hay tope de candidatas —el cruce cubre el conjunto completo y pagina sobre él con orden estable—, así que " +
+      "`total` es el conteo real y no existe `truncated`. Para acotar el resultado, subir `umbral_score` o " +
+      "`matched_minimo`. `departamento` debe estar en el catálogo peruano (400 si no); se aceptan alias como " +
+      "'P C DEL CALLAO'. Requiere la base de `infobras`: sin ella responde 503, no cero. " + SIN_SCHEDULER,
     pathTemplate: "/api/cruces/proyectos-infobras",
     pathParams: [],
     querySchema: {
       departamento: z.string().min(1).optional().describe("Default 'LA LIBERTAD'."),
       periodo: z.coerce.number().int().optional().describe("perParId (default 2026)."),
-      umbral_score: z.coerce.number().min(0).max(1).optional().describe("Default 0.3."),
+      umbral_score: z.coerce.number().min(0).max(1).optional().describe("Default 0.5."),
+      matched_minimo: z.coerce.number().int().min(1).optional().describe("Mínimo de keywords coincidentes (default 2)."),
       limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
       offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
@@ -3277,7 +3279,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: ["periodo", "numero"],
     querySchema: {
       departamento: z.string().min(1).optional().describe("Default 'LA LIBERTAD'."),
-      umbral_score: z.coerce.number().min(0).max(1).optional().describe("Default 0.3."),
+      umbral_score: z.coerce.number().min(0).max(1).optional().describe("Default 0.5."),
+      matched_minimo: z.coerce.number().int().min(1).optional().describe("Mínimo de keywords coincidentes (default 2)."),
     },
   },
 

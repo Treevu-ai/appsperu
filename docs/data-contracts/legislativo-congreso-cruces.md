@@ -30,11 +30,12 @@ inaccesible responde 503, no `200` con `total: 0`.
 GET /api/cruces/proyectos-infobras
     ?departamento=LA LIBERTAD   default LA LIBERTAD
     &periodo=2026               per_par_id, default 2026
-    &umbral_score=0.3           0.0-1.0, default 0.3
+    &umbral_score=0.5           0.0-1.0, default 0.5
+    &matched_minimo=2           mínimo de keywords coincidentes, default 2
     &limit=200 &offset=0        limit máx 1000
 
 GET /api/cruces/proyectos-infobras/{periodo}/{numero}
-    ?departamento=LA LIBERTAD&umbral_score=0.3
+    ?departamento=LA LIBERTAD&umbral_score=0.5&matched_minimo=2
 ```
 
 Herramienta MCP: `legislativo_congreso_cruces_infobras` y
@@ -45,7 +46,7 @@ Herramienta MCP: `legislativo_congreso_cruces_infobras` y
 ```json
 {
   "total": 2, "limit": 200, "offset": 0, "periodo": 2026,
-  "hasMore": false, "truncated": false,
+  "hasMore": false,
   "resultados": [
     { "proyecto": { "perParId": 2026, "pleyNum": 1001, "titulo": "..." },
       "obra": { "codigoInfobras": "OBR-001", "nombreObra": "...", "montoViable": 1500000.5 },
@@ -55,113 +56,142 @@ Herramienta MCP: `legislativo_congreso_cruces_infobras` y
 }
 ```
 
-### `truncated`
+### No hay `truncated`
 
-La query a INFOBRAS pide `LIMIT 501` y corta en 500. Si un departamento tiene
-más de 500 obras candidatas, `truncated: true` lo declara. **Ausencia de dato ≠
-cero**: un `truncated: true` con `total: 0` significa "el departamento excedió el
-tope y ninguna de las 500 obras alcanzaba el umbral", no "no hay obras".
+El campo se eliminó junto con el tope que lo justificaba. Antes la query pedía
+`LIMIT 501` y cortaba en 500, y `truncated: true` avisaba de ese corte; el
+problema era que el corte era **por `codigo_infobras`, no por relevancia**, así
+que en un departamento de 10,134 obras el cruce consistía en las 500 de código
+más bajo: sesgado, no solo incompleto.
 
-El 404 del endpoint de un proyecto concreto también incluye `truncated` en el
-cuerpo. Antes no lo hacía, y con datos reales eso convertía un truncamiento en
-un cero indistinguible: el proyecto 14849 devolvía 0 cruces con 501 candidatas
-agotadas, y el cliente no tenía forma de saber que el tope se había tocado.
-
+Ahora se puntúa el conjunto completo y se pagina sobre él con orden total
+estable (score desc, luego `pley_num`, luego `codigo_infobras`), de modo que
+`total` es el conteo real y dos páginas consecutivas no se solapan ni repiten.
+Solo se hidratan los objetos de la página pedida.
 
 ## Cómo se calcula el score
 
 1. `extractKeywords(titulo)`: minúsculas, sin diacríticos, sin stopwords, sin
    números puros, sin palabras de <3 caracteres, deduplicado.
-2. Una **única** query a INFOBRAS por departamento con `nombre_obra ILIKE %kw%`
-   OR por cada keyword (no una query por proyecto).
-3. `matchScore = keywords_coincidentes / keywords_del_título`.
+2. Las obras del departamento se leen una vez y sus nombres se tokenizan en un
+   **índice invertido** (token normalizado → lista de obras), sin límite de
+   candidatas.
+3. Cada proyecto se puntúa recorriendo solo los postings de sus keywords.
+4. Filtros: `matchScore = keywords_coincidentes / keywords_del_título` contra
+   `umbral_score`, **y** `keywords_coincidentes >= matched_minimo`.
+5. `matchScore` se reporta; el IDF se calcula en el índice pero hoy solo como
+   diagnóstico interno, no altera el score.
 
-`matchedKeywords` pasa por la misma normalización que el score. Sin eso, una obra
-con acentos puntúa > 0 y reporta `matchedKeywords: []` — contradicción que ya
-ocurrió y está cubierta por test.
+### Coincidencia por token completo
+
+La coincidencia es por token, no por subcadena. Los tokens se singularizan por
+sufijo (`saneamientos` → `saneamiento`), nunca por prefijo.
+
+Con subcadena, `"crea"` matcheaba `"CREACION"` y la ley *"que crea la Universidad
+Nacional de Ciencias de la Salud"* puntuaba **0.40** contra *"CREACION DE LOS
+SERVICIOS DE SALUD"*. Medido sobre la ingesta real: el token exacto elimina
+23,078 cruces de 74,945 (31%) y **no introduce ninguno nuevo** — es subconjunto
+estricto, solo se va el ruido.
+
+Tolerar plurales ampliando el prefijo se descartó: reintroduce el artefacto
+("crea" vuelve a matchear "CREACION") y sube los cruces de 51,867 a 67,763.
+
+### Tokens administrativos excluidos del índice
+
+Cada nombre de obra embebe su ubicación ("DEL DISTRITO DE … PROVINCIA …
+DEPARTAMENTO …"). Dentro de un departamento no distinguen una obra de otra —la
+ubicación ya es el filtro— y matched contra títulos legislativos que también los
+mencionan. Se excluyen del índice: `distrito`, `provincia`, `departamento`,
+`municipalidad`, `municipal`, `gobierno`, `nivel`, `region`, `provincial`,
+`localidad`, `caserio`, `centro`, `poblado`, `comunidad`, `ubicacion`,
+`geografico`.
+
+Efecto medido en LA LIBERTAD periodo 2021: **675,856 → 26,693 cruces (96% menos)**.
+Ese era el ruido dominante, muy por encima del subcadena.
+
+### `matched_minimo`
+
+La fracción sola no alcanza como filtro: 1 keyword sobre 3 puntúa 0.33 y pasaba el
+corte de 0.3. `matched_minimo` (default 2) exige además una cantidad absoluta.
+Con los defaults, LA LIBERTAD 2021 pasa de 26,693 a **567 cruces** sobre 1,029
+proyectos con al menos un cruce.
+
+### `departamento`
+
+Se canonicaliza contra el catálogo peruano y se **rechaza con 400** lo que no
+está en él. Antes pasaba tal cual a la query y devolvía `0` cruces sin error,
+idéntico a "ese departamento no tiene obras"; el alias `"P C DEL CALLAO"` del
+XLSX de INFOBRAS caía justo ahí. Ahora `"P C DEL CALLAO"` resuelve a `CALLAO`
+(verificado: 135 cruces en ambos casos).
 
 ## Verificación en vivo (2026-10-04)
 
 Postgres 16 real con las **migraciones reales** de ambas apps aplicadas
-(`legislativo_congreso/001_init.sql`, `infobras/001`–`005`). Dos corridas: una
-con datos de prueba, otra con las **ingestas reales** completas.
-
-### Corrida con datos de prueba
-
-| Caso | Resultado |
-|---|---|
-| Las 22 columnas de `public_works` y las 8 de `legislativo_congreso_proyectos` existen | ✅ contrastadas contra `information_schema` |
-| Acentos en `nombre_obra` | ✅ la obra "Construcción de obras públicas" entra como candidata y puntúa `matchScore 0.571` con 4 keywords. **No** porque la query mande `%públicas%`: `extractKeywords` quita los diacríticos, así que el patrón real es `%publicas%`, y `ILIKE` es sensible a acentos. La obra entra por `%obras%`; recién en el scoring en memoria se normalizan ambos lados |
-| Filtro `departamento` (mayúsculas) | ✅ `LA LIBERTAD`→OBR-001/002, `LIMA`→OBR-004, sin cruce cruzado |
-| `periodo` parametrizado (antes hardcodeado 2026) | ✅ 2026→1001/1002, 2025→2001 |
-| `NUMERIC` de Postgres viene como string y se convierte | ✅ `montoViable 1500000.5`, `avanceFisicoRealPct 45.5` |
-| `truncated` con 523 obras | ✅ `truncated: true`, exactamente 500 cruces |
-| Sin `INFOBRAS_DATABASE_URL` | ✅ **503** en ambos endpoints |
-| 400 departamento vacío / 404 proyecto inexistente | ✅ |
-| Paginación `limit=1` | ✅ `total 2`, `hasMore true` |
-
-### Corrida con ingesta real
+(`legislativo_congreso/001_init.sql`, `infobras/001`–`005`), contra las
+**ingestas reales** completas.
 
 | Fuente | Resultado |
 |---|---|
 | Congreso (`api.congreso.gob.pe/spley-portal-service`) | 14,870 filas, **0 rechazadas** (6 de 2026 + 14,864 de 2021) |
 | INFOBRAS (XLSX de Contraloría) | 191,180 leídas → **178,616 aceptadas**, 12,218 `skippedOtherDepartamento`, 346 rechazadas, `isPartial: false` |
 
-La ingesta de INFOBRAS se corrió sobre el XLSX local `DataSet-Obras-Publicas
-16-08-2026.xlsx` (54.7 MB). El corte temporal es **2026-08-16**, no la fecha de
-esta verificación; el nombre y checksum quedan en `raw_infobras_batches`.
+El XLSX local fue `DataSet-Obras-Publicas 16-08-2026.xlsx` (54.7 MB): el corte
+temporal es **2026-08-16**, no la fecha de la verificación. Nombre y checksum
+quedan en `raw_infobras_batches`.
 
-## Rendimiento real (defecto abierto)
+### Comportamiento verificado
 
-El cruce por departamento es inviable a escala nacional. Medido:
+| Caso | Resultado |
+|---|---|
+| Las 22 columnas de `public_works` y las 8 de `legislativo_congreso_proyectos` existen | ✅ contrastadas contra `information_schema` |
+| `NUMERIC` de Postgres viene como string y se convierte | ✅ `montoViable 1500000.5`, `avanceFisicoRealPct 45.5` |
+| Acentos en ambos lados | ✅ obra con y sin acentos puntúa igual; el token se normaliza al indexar |
+| Sin coincidencia por subcadena | ✅ `"crea"` no matchea `"CREACION"` en app ni en MCP |
+| Filtro `departamento` | ✅ `LA LIBERTAD` y `LIMA` dan totales distintos; sin cruce cruzado |
+| Alias `"P C DEL CALLAO"` | ✅ 135 cruces, idéntico a `"CALLAO"` |
+| Departamento inexistente | ✅ **400**, sin tocar la BD |
+| `periodo` parametrizado | ✅ 2021 y 2026 con resultados distintos |
+| Paginación estable | ✅ páginas 1 y 2 sin solape; orden por score, proyecto y obra |
+| Sin tope de candidatas | ✅ 1,500 obras que matchean → `total 1500` |
+| Sin `INFOBRAS_DATABASE_URL` | ✅ **503** en ambos endpoints, incluso con periodo vacío |
+| Paridad MCP ↔ app | ✅ mismo `matchScore` y `matchedKeywords` sobre el mismo corpus |
 
-| Consulta | Tiempo | Cruces | `truncated` |
-|---|---|---|---|
-| `LA LIBERTAD` periodo 2021 (14,864 proyectos) | **75,613 ms** | 39,670 | `true` |
-| `LIMA` periodo 2021 | **58,318 ms** | 47,898 | `true` |
-| `CALLAO` periodo 2021 | 57,610 ms | 61,971 | `true` |
-| `LA LIBERTAD` periodo 2026 (6 proyectos) | 360 ms | 14 | `true` |
-| Un proyecto concreto | 513 ms | 0 | `true` |
+## Rendimiento real
 
-Causa medida, no supuesta. Los 14,864 títulos del periodo 2021 producen **12,888
-keywords únicas**, y cada una entra como un `OR` de `ILIKE`:
+| Consulta | Antes | Ahora |
+|---|---|---|
+| `LA LIBERTAD` 2021 (14,864 proyectos × 10,134 obras) | 75,613 ms | **2,606 ms** |
+| `LIMA` 2021 | 58,318 ms | **6,941 ms** |
+| `CALLAO` 2021 | 57,610 ms | **838 ms** |
+| `LA LIBERTAD` 2026 (6 proyectos) | 360 ms | 191 ms |
+| Un proyecto concreto | 513 ms | 242 ms |
 
-- La **query** con 12,888 `OR ILIKE` tarda **17,228 ms**. El `EXPLAIN` muestra
-  `Bitmap Index Scan` sobre `departamento` (10,134 filas) y después un `Filter`
-  que descarta 9,702: no hay índice trigram, así que cada `ILIKE '%kw%'` es un
-  barrido de la partición del departamento. Un solo `ILIKE` aislado ya cuesta
-  119 ms; el `COUNT` por departamento, 11 ms.
-- Los ~58 s restantes son el scoring en memoria: 14,864 proyectos × 500
-  candidatas ≈ **7.4 M** llamadas a `calculateMatchScore`.
+Causa de la mejora, medida: el índice se construye en **158 ms** y el scoring es
+proporcional a las coincidencias reales, no a 12,888 cláusulas `OR ILIKE`
+(17,228 ms) ni a 7.4 M de scorings sobre 500 candidatas.
 
-La estrategia de una sola query evita el N+1 y el test lo cubre, pero no escala
-con el número de keywords. Sin índice trigram, límite de keywords, o
-precomputado, el endpoint no es usable por HTTP en un periodo completo.
+**No hay caché.** El primer request de cada combinación
+`(departamento, periodo, umbral, matched_minimo)` paga el coste completo; los
+siguientes también, porque cada llamada reconstruye el índice. Es asumible a
+2.6 s para el peor caso medido, pero un periodo con muchos más proyectos sí
+necesitaría precomputado (`crossref:build`, el patrón que ya usan 3 apps) o
+caché por clave.
 
 ## Límites conocidos
 
-- **El tope de 500 candidatas no es un caso borde: es el caso normal.**
-  `LA LIBERTAD` tiene 10,134 obras reales, así que `truncated: true` es la
-  respuesta habitual en cualquier departamento mediano, y 500 candidatas son
-  ~5% de su obras. El tope está sin calibrar contra el volumen real.
-- `departamento` se compara contra el valor canónico uppercase del catálogo
-  peruano. El alias de fuente `"P C DEL CALLAO"` se resuelve en la ingesta, no
-  en esta query: pasarlo devuelve 0 cruces **sin error** y `truncated: false`
-  (medido: 0 cruces en 6,403 ms, frente a 61,971 cruces de `CALLAO`). Un 0 sin
-  error y sin `truncated` es indistinguible de "ese departamento no tiene obras".
-- La paginación es en memoria sobre un conjunto acotado a 500 obras candidatas,
-  pero el array completo de cruces se materializa antes de paginar: `CALLAO`
-  2021 construye 61,971 objetos para devolver 200.
-- **La recuperación de candidatas no es insensible a acentos.** La query manda
-  keywords ya normalizadas sin diacrítico (`%publicas%`), y `ILIKE` es sensible a
-  acentos en Postgres: una obra cuyo `nombre_obra` solo difiera del título en la
-  acentuación no entra como candidata aunque el scoring en memoria la habría
-  empatado. Hoy la entrada la rescued keywords sin acento comunes (`obras`,
-  `saneamiento`), pero un título cuyas keywords sean todas variantes acentuadas
-  de las de la obra puede quedarse sin candidatas y devolver `total: 0`.
-- **La degradación se declara antes que el fast path.** El pool de INFOBRAS se
-  resuelve antes de evaluar si el periodo tiene proyectos con keywords, en los
-  dos endpoints y en los dos handlers MCP. Sin eso, un periodo vacío con
-  `INFOBRAS_DATABASE_URL` ausente devolvía `200` con `total: 0`, que es el estado
-  que este contrato declara imposible.
-- El score no distingue "puente" de "construcción de puente": es substring.
+- **El score sigue siendo léxico.** Un `matchScore` alto prueba que comparten
+  tokens, no que el proyecto cause la obra.
+- **La granularidad es la del título.** Dos proyectos con títulos casi idénticos
+  cruzan contra las mismas obras; no hay desambiguación por entidad, provincia
+  ni monto.
+- **`matchScore` no pondera por IDF.** Se calcula en el índice pero no altera el
+  score, así que una keyword presente en casi todas las obras del departamento
+  pesa igual que una rara.
+- **La singularización por sufijo es aproximada.** "saneamiento"/"saneamientos"
+  convergen, pero no cubre irregulares del español.
+- **El primer request paga el índice entero.** Ver "Rendimiento real".
+- **La duplicación con `mcp-server` es real.** Su `rootDir: src` impide importar
+  la app sin romper el bundle del Worker, igual que con `packages/shared-queries`
+  (ADR-0019). `mcp-server/src/__tests__/cruces-paridad.test.ts` es la red: si el
+  matcher de un lado cambia y el otro no, el test falla.
+

@@ -37,19 +37,92 @@ export function normalizeText(text: string): string {
 }
 
 /**
+ * Sufijos plurales y su forma singular, para que "saneamientos" y
+ * "saneamiento" sean el mismo token. El mapeo es explícito a propósito: quitar
+ * un único sufijo no basta, porque "saneamientos" recortando "s" queda
+ * "saneamiento" pero recortando "amientos" queda "sane", y los dos ya no
+ * coinciden consigo mismos.
+ *
+ * Se recorta por sufijo y no por prefijo a propósito: tolerar plurales ampliando
+ * el prefijo haría que "crea" volviera a matchear "creacion", que es justo el
+ * artefacto que el matching por token elimina.
+ */
+const SUFIJOS_PLURAL: ReadonlyArray<readonly [plural: string, singular: string]> = [
+  ["amientos", "amiento"],
+  ["imientos", "imiento"],
+  ["aciones", "acion"],
+  ["uciones", "ucion"],
+  ["ancias", "ancia"],
+  ["encias", "encia"],
+  ["ismos", "ismo"],
+  ["anzas", "anza"],
+  ["es", ""],
+  ["s", ""],
+];
+
+/**
+ * Reduce un token a una forma singular canónica: "saneamientos" y "saneamiento"
+ * → "saneamiento"; "obras" y "obra" → "obra". Solo para tokens de 5+ caracteres,
+ * para no deformar "tres" en "tre" ni "pues" en "pu".
+ */
+export function normalizeToken(token: string): string {
+  const t = normalizeText(token);
+  if (t.length < 5) return t;
+  for (const [plural, singular] of SUFIJOS_PLURAL) {
+    if (t.endsWith(plural) && t.length - plural.length >= 4) {
+      return t.slice(0, t.length - plural.length) + singular;
+    }
+  }
+  return t;
+}
+
+/**
+ * Divide un texto en tokens normalizados y singularizados.
+ *
+ * Separar por token completo, en vez de buscar subcadena, es lo que elimina
+ * los falsos positivos medidos contra la ingesta real: con subcadena "crea"
+ * matcheaba "CREACION" y la ley "que crea la Universidad Nacional de Ciencias
+ * de la Salud" puntuaba 0.40 contra un puesto de salud. Con token completo ese
+ * cruce desaparece y no aparece ninguno nuevo a cambio.
+ */
+export function tokenize(text: string): string[] {
+  const normalizado = normalizeText(text);
+  if (!normalizado) return [];
+  const tokens: string[] = [];
+  for (const bruto of normalizado.split(/[^a-z0-9]+/)) {
+    if (bruto.length > 2 && !STOPWORDS.has(bruto)) tokens.push(normalizeToken(bruto));
+  }
+  return tokens;
+}
+
+/**
  * Extrae palabras clave de un texto (tokenización simple).
  * Elimina stopwords, números puros, palabras cortas (<3 caracteres).
+ *
+ * Deduplica por `normalizeToken`, no por la palabra cruda: sin esto, un
+ * título con "obra" y "obras" conserva ambas como keywords distintas, y en
+ * `puntuarProyecto` las dos buscan el mismo posting ("obra") y cuentan como
+ * dos coincidencias para una sola palabra — infla `matched` y permite que
+ * `matchScore` llegue a 1.0 o pase `matched_minimo` sin dos conceptos
+ * distintos coincidiendo.
  */
 export function extractKeywords(text: string): string[] {
   if (!text) return [];
-  return normalizeText(text)
-    .split(/[\s,;:.()\-–—_\/"']/)
-    .filter((word) => word.length > 2 && !STOPWORDS.has(word) && !/^\d+$/.test(word))
-    .filter((word, i, arr) => arr.indexOf(word) === i); // Remove duplicates
+  const vistos = new Set<string>();
+  const keywords: string[] = [];
+  for (const word of normalizeText(text).split(/[\s,;:.()\-–—_\/"']/)) {
+    if (word.length <= 2 || STOPWORDS.has(word) || /^\d+$/.test(word)) continue;
+    const canonico = normalizeToken(word);
+    if (vistos.has(canonico)) continue;
+    vistos.add(canonico);
+    keywords.push(word);
+  }
+  return keywords;
 }
 
 /**
  * Calcula score de match (0.0 a 1.0) basado en palabras clave coincidentes.
+ * La coincidencia es por token completo ya singularizado.
  */
 export function calculateMatchScore(projectKeywords: string[], targetText: string): number {
   if (projectKeywords.length === 0) return 0;
@@ -57,14 +130,14 @@ export function calculateMatchScore(projectKeywords: string[], targetText: strin
 }
 
 /**
- * Devuelve las keywords del proyecto que aparecen en el texto objetivo.
- * Usa normalizeText en ambos lados: sin esto, un título con acentos
- * puntúa > 0 pero reportaría matchedKeywords vacío.
+ * Devuelve las keywords del proyecto cuyo token aparece en el texto objetivo.
+ * Usa tokenize en ambos lados: sin normalizar, un título con acentos puntúa
+ * > 0 pero reportaría matchedKeywords vacío.
  */
 export function findMatchedKeywords(projectKeywords: string[], targetText: string): string[] {
-  const target = normalizeText(targetText);
-  if (!target) return [];
-  return projectKeywords.filter((kw) => target.includes(kw));
+  const objetivo = new Set(tokenize(targetText));
+  if (objetivo.size === 0) return [];
+  return projectKeywords.filter((kw) => objetivo.has(normalizeToken(kw)));
 }
 
 /**
