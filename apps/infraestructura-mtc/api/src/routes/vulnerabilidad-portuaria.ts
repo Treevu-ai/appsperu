@@ -149,10 +149,10 @@ vulnerabilidadRouter.get(
     const { rows } = await pool.query(
       `SELECT
          iv.*,
-         ROW_NUMBER() OVER (ORDER BY iv.score_vulnerabilidad DESC) AS ranking
+         ROW_NUMBER() OVER (ORDER BY iv.score_vulnerabilidad DESC, iv.codigo_puerto ASC) AS ranking
        FROM indice_vulnerabilidad_portuaria iv
        ${where}
-       ORDER BY iv.score_vulnerabilidad DESC
+       ORDER BY iv.score_vulnerabilidad DESC, iv.codigo_puerto ASC
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limit, offset]
     );
@@ -800,10 +800,10 @@ vulnerabilidadRouter.get(
     const { rows: terminales } = await pool.query(
       `SELECT
          iv.*,
-         ROW_NUMBER() OVER (ORDER BY iv.score_vulnerabilidad DESC) AS ranking
+         ROW_NUMBER() OVER (ORDER BY iv.score_vulnerabilidad DESC, iv.codigo_puerto ASC) AS ranking
        FROM indice_vulnerabilidad_portuaria iv
        ${where}
-       ORDER BY iv.score_vulnerabilidad DESC
+       ORDER BY iv.score_vulnerabilidad DESC, iv.codigo_puerto ASC
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limit, offset]
     );

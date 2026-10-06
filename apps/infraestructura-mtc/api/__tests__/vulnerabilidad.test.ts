@@ -60,6 +60,27 @@ describe.skipIf(!CON_DB)("Índice de Vulnerabilidad Portuaria", () => {
     }
   });
 
+  // ─── Test: paginación determinista cuando hay empate de score ──────────────
+  it("la paginación no repite ni se salta terminales cuando hay empate de score (hallazgo real: 52 terminales con el mismo 22.75 en v1)", async () => {
+    const pagina1a = await import("supertest").then((m) =>
+      m.default(app).get(baseUrl).query({ limit: 5, offset: 0 })
+    );
+    const pagina1b = await import("supertest").then((m) =>
+      m.default(app).get(baseUrl).query({ limit: 5, offset: 0 })
+    );
+    expect(pagina1a.body.resultados.map((r: { codigoPuerto: string }) => r.codigoPuerto)).toEqual(
+      pagina1b.body.resultados.map((r: { codigoPuerto: string }) => r.codigoPuerto)
+    );
+
+    const pagina2 = await import("supertest").then((m) =>
+      m.default(app).get(baseUrl).query({ limit: 5, offset: 5 })
+    );
+    const codigosPagina1 = new Set(pagina1a.body.resultados.map((r: { codigoPuerto: string }) => r.codigoPuerto));
+    for (const r of pagina2.body.resultados) {
+      expect(codigosPagina1.has(r.codigoPuerto)).toBe(false);
+    }
+  });
+
   // ─── Test: Filtro por departamento ──────────────────────────────────────────
   it("debe filtrar correctamente por departamento", async () => {
     // Primero obtener un código de departamento válido
