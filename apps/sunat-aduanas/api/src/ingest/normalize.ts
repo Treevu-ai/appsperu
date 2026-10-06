@@ -170,6 +170,15 @@ export function normalizeCdro15(ws: Sheet): Cdro15Row[] {
 //     [6]=cif2023, [7]=cif2024, [8]=var_pct, [9]=estructura
 // ---------------------------------------------------------------------------
 
+/**
+ * Versión del parser de cdro_16 — incrementar cada vez que cambie la lógica de
+ * `normalizeCdro16`. El checksum del XLSX no cambia cuando se corrige el parser, solo cuando
+ * cambia el archivo fuente — sin este número, `sunat-connector.ts` saltaría indefinidamente la
+ * reingesta de un batch ya existente aunque el parser que lo produjo tuviera un bug ya
+ * corregido (hallazgo real de CodeRabbit, bug de columnas desalineadas corregido 2026-10-05).
+ */
+export const NORMALIZER_VERSION_CDRO16 = 2;
+
 export function normalizeCdro16(ws: Sheet): Cdro16Row[] {
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as RawRow[];
 

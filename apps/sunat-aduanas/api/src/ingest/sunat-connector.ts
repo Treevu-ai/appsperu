@@ -14,7 +14,7 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import XLSX from "xlsx";
 import { pool } from "../db/pool.js";
-import { normalizeCdro15, normalizeCdro16 } from "./normalize.js";
+import { normalizeCdro15, normalizeCdro16, NORMALIZER_VERSION_CDRO16 } from "./normalize.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = process.env.SUNAT_DATA_DIR ?? join(__dirname, "..", "..", "..", "data", "sunat");
@@ -85,17 +85,40 @@ async function main() {
     const ws = wb.Sheets[wb.SheetNames[0]];
     const data = normalizeCdro16(ws);
 
+    // El checksum identifica el ARCHIVO, no el parser que lo produjo: un fix en
+    // normalizeCdro16() (como el de NORMALIZER_VERSION_CDRO16 2026-10-05) no cambia el
+    // checksum, así que sin el filtro por normalizer_version este SKIP perpetuaría
+    // indefinidamente datos producidos por una versión de parser ya corregida.
     const existing = await pool.query<{ id: string }>(
-      "SELECT id FROM raw_batches WHERE source_file = $1 AND checksum = $2",
-      ["cdro_16.xlsx", checksum]
+      "SELECT id FROM raw_batches WHERE source_file = $1 AND checksum = $2 AND normalizer_version = $3",
+      ["cdro_16.xlsx", checksum, NORMALIZER_VERSION_CDRO16]
     );
     if (existing.rowCount && existing.rowCount > 0) {
-      console.log("  [SKIP] cdro_16.xlsx ya ingestado (checksum igual)");
+      console.log("  [SKIP] cdro_16.xlsx ya ingestado (checksum y version de parser iguales)");
     } else {
+      // Puede haber un batch previo del mismo archivo producido por una version de parser
+      // vieja (checksum igual, normalizer_version distinta) — sus filas usan una clave de
+      // agrupacion distinta (p.ej. texto de descripcion en vez de codigo arancelario) y NO
+      // colisionan con el ON CONFLICT de abajo, asi que quedarian duplicadas si no se
+      // eliminan explicitamente antes de insertar las nuevas.
+      const batchesViejos = await pool.query<{ id: string }>(
+        "SELECT id FROM raw_batches WHERE source_file = $1 AND normalizer_version < $2",
+        ["cdro_16.xlsx", NORMALIZER_VERSION_CDRO16]
+      );
+      if (batchesViejos.rowCount && batchesViejos.rowCount > 0) {
+        const idsViejos = batchesViejos.rows.map((r) => Number(r.id));
+        const { rowCount: filasEliminadas } = await pool.query(
+          "DELETE FROM port_subpartida_imports WHERE batch_id = ANY($1)",
+          [idsViejos]
+        );
+        await pool.query("DELETE FROM raw_batches WHERE id = ANY($1)", [idsViejos]);
+        console.log(`  cdro_16.xlsx: ${filasEliminadas} filas de version(es) de parser vieja(s) eliminadas`);
+      }
+
       const batch = await pool.query<{ id: string }>(
-        `INSERT INTO raw_batches (source_file, year, checksum, row_count)
-         VALUES ($1, $2, $3, $4) RETURNING id`,
-        ["cdro_16.xlsx", 2024, checksum, data.length]
+        `INSERT INTO raw_batches (source_file, year, checksum, row_count, normalizer_version)
+         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        ["cdro_16.xlsx", 2024, checksum, data.length, NORMALIZER_VERSION_CDRO16]
       );
       const batchId = Number(batch.rows[0].id);
 
