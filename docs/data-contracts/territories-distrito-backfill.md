@@ -72,6 +72,43 @@ Corrido dos veces (Postgres local y Neon producción `geo_intersections`), resul
   → `distrito` completado a "ALTO NANAY", `provincia` preservada como "MAYNAS" (el valor que
   ya traía SERFOR OCAPAS, no sobrescrito — confirma que el backfill respeta datos existentes).
 
+## Hallazgos reales de revisión (PR #246) y corrección
+
+Copilot y CodeRabbit marcaron, independientemente, el mismo problema de fondo antes de
+mergear:
+
+1. **El backfill se deshacía solo con volver a correr el ingest de comunidades.**
+   `ocapas-connector.ts` hace `DELETE FROM rural_communities WHERE capa = $1` + reinsert en
+   cada corrida de `npm run ingest:ocapas:comunidades` — las filas nuevas vuelven a traer
+   `distrito = NULL` de la fuente, deshaciendo este backfill hasta que alguien recordara
+   correr `ingest:territories` a mano otra vez. **Corregido**: `ingestOcapas()` ahora llama a
+   `backfillDistrito()` automáticamente al final de cada corrida, usando lo que ya esté
+   replicado localmente en `territories` (no requiere `CEPLAN_GEO_DATABASE_URL` en ese punto —
+   solo lectura local).
+2. **`geometry_valid` tampoco se repoblaba tras un re-ingest.** La migración 006 solo la
+   pobló una vez, al aplicarse. Un `DELETE` + reinsert posterior dejaba `geometry_valid = NULL`
+   para las filas nuevas — `compute-community-intersections.ts` las excluía silenciosamente
+   (`WHERE geometry_valid IS NOT NULL`) y el backfill de distrito tampoco matcheaba nada.
+   **Corregido**: `ingestCapa()` ahora puebla `geometry_valid` con `ST_MakeValid` justo después
+   de insertar cada capa, mismo patrón que ya usaba para `area_km2`.
+3. **`ST_Intersects` sin filtrar área real.** `ST_Intersects` es verdadero incluso cuando dos
+   polígonos solo se tocan en un borde o un punto (área de solapamiento cero) — sin filtrar
+   esto, una comunidad podía quedar asignada a un distrito con el que apenas comparte un
+   borde. **Corregido**: `backfillDistrito()` ahora exige
+   `ST_Area(ST_Intersection(...)::geography) > 0`.
+4. **Match contra un territorio sin distrito poblado.** Si el mejor match por área fuera una
+   fila de `territories` con `distrito IS NULL`, el `UPDATE` igual contaba la comunidad como
+   "actualizada" sin dejarle un distrito real. **Corregido**: se exige `t.distrito IS NOT NULL`
+   entre los candidatos.
+
+**Verificación de la corrección #1/#2 (regresión real, no solo lectura de código)**: se
+re-corrió `npm run ingest:ocapas:comunidades comunidades_nativas` contra Postgres local
+después de que el backfill inicial ya había completado las 9 comunidades sin distrito. El
+`DELETE` + reinsert volvió a dejarlas en `NULL` como se esperaba, y el backfill automático al
+final de `ingestOcapas()` las corrigió solo en la misma corrida — log real: `✓ 9 comunidades
+actualizadas con distrito/provincia (backfill automático)`. `geometry_valid` confirmado
+repoblado (`0` filas en `NULL` después de la corrida).
+
 ## Pendiente
 
 - `territories` queda disponible como tabla reutilizable para futuros cruces (ej. el candidato

@@ -14,6 +14,7 @@ import { pathToFileURL } from "node:url";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
 import { normalizeOcapasFeatures, type CanonicalCommunity, type RejectedRow } from "./normalize-ocapas.js";
+import { backfillDistrito } from "./replicate-territories.js";
 
 const OCAPAS_BASE = "https://geo.serfor.gob.pe/geoservicios/rest/services/Visor/OCAPAS_MIDAGRI/MapServer";
 
@@ -211,6 +212,18 @@ async function ingestCapa(capa: string, layerId: number): Promise<CapaIngestSumm
       [batchId]
     );
 
+    // geometry_valid: la migración 006 solo la pobló UNA VEZ al momento de aplicarse. Sin
+    // esto, cada re-ingesta de una capa (DELETE + reinsert, arriba) deja geometry_valid en
+    // NULL para las filas nuevas — compute-community-intersections.ts las excluye
+    // silenciosamente (WHERE geometry_valid IS NOT NULL) y el backfill de distrito de abajo
+    // tampoco matchea nada (hallazgo real de revisión, Copilot, PR #246).
+    await client.query(
+      `UPDATE rural_communities
+       SET geometry_valid = ST_MakeValid(geometry)
+       WHERE source_batch_id = $1 AND geometry_valid IS NULL`,
+      [batchId]
+    );
+
     await client.query("UPDATE raw_ocapas_batches SET record_count = $1 WHERE id = $2", [features.length, batchId]);
 
     await client.query("COMMIT");
@@ -245,6 +258,27 @@ export async function ingestOcapas(capas?: string[]): Promise<IngestSummary> {
 
   if (errores.length > 0) {
     throw new Error(`Fallaron ${errores.length} de ${capasAIngerir.length} capa(s): ${errores.join("; ")}`);
+  }
+
+  // Reaplica el backfill de distrito/provincia (ver replicate-territories.ts) contra lo que
+  // ya esté replicado localmente en `territories`. Sin esto, cada re-ingesta de comunidades
+  // (DELETE + reinsert arriba) deshacía silenciosamente el backfill hasta que alguien volviera
+  // a correr `npm run ingest:territories` a mano (hallazgo real de revisión, Copilot/
+  // CodeRabbit, PR #246). Es local-only y barato — si `territories` está vacía (nunca se
+  // corrió ese ingest), simplemente no matchea nada, no falla.
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const comunidadesActualizadas = await backfillDistrito(client);
+    await client.query("COMMIT");
+    if (comunidadesActualizadas > 0) {
+      console.log(`✓ ${comunidadesActualizadas} comunidades actualizadas con distrito/provincia (backfill automático).`);
+    }
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
 
   return { capas: resultados };

@@ -132,18 +132,39 @@ async function replicateTerritories(): Promise<ReplicateSummary> {
 
 /**
  * Completa distrito/provincia donde la fuente SERFOR OCAPAS no los trae, usando el territorio
- * con mayor área de solapamiento real (no el primero que matchee) -- una comunidad puede
- * intersectar más de un distrito en sus bordes. Nunca pisa un valor ya existente
+ * con mayor área de solapamiento REAL (no el primero que matchee) -- una comunidad puede
+ * tocar más de un distrito en sus bordes. Nunca pisa un valor ya existente
  * (`WHERE rc.distrito IS NULL` / `COALESCE(rc.provincia, ...)`), así que es seguro re-correr.
+ *
+ * Dos guardas agregadas tras revisión real (CodeRabbit/Copilot, PR #246):
+ * - `ST_Area(ST_Intersection(...)) > 0`: `ST_Intersects` también es verdadero cuando dos
+ *   polígonos solo se tocan en un borde o un punto (área cero) -- sin este filtro, una
+ *   comunidad podía quedar asignada a un distrito con el que apenas comparte un borde, y
+ *   `WHERE rc.distrito IS NULL` impedía corregirlo en una corrida posterior.
+ * - `t.distrito IS NOT NULL`: si el mejor match por área fuera un territorio sin distrito
+ *   poblado, el UPDATE igual contaría la fila como "actualizada" sin dejarle un distrito real.
+ *
+ * Exportada (no solo de uso interno): `ocapas-connector.ts` la reutiliza después de cada
+ * re-ingesta de comunidades -- ver el comentario en `ingestOcapas()` sobre por qué un DELETE +
+ * reinsert de capa borraría este backfill si no se reaplicara automáticamente.
  */
-async function backfillDistrito(client: PoolClient): Promise<number> {
+export async function backfillDistrito(client: PoolClient): Promise<number> {
   const result = await client.query(`
-    WITH mejor_match AS (
-      SELECT DISTINCT ON (rc.id) rc.id, t.distrito, t.provincia
+    WITH candidatos AS (
+      SELECT rc.id, t.distrito, t.provincia,
+        ST_Area(ST_Intersection(rc.geometry_valid, t.geometry_valid)::geography) AS overlap_m2
       FROM rural_communities rc
       JOIN territories t ON ST_Intersects(rc.geometry_valid, t.geometry_valid)
       WHERE rc.distrito IS NULL
-      ORDER BY rc.id, ST_Area(ST_Intersection(rc.geometry_valid, t.geometry_valid)::geography) DESC
+        AND t.distrito IS NOT NULL
+        AND rc.geometry_valid IS NOT NULL
+        AND t.geometry_valid IS NOT NULL
+    ),
+    mejor_match AS (
+      SELECT DISTINCT ON (id) id, distrito, provincia
+      FROM candidatos
+      WHERE overlap_m2 > 0
+      ORDER BY id, overlap_m2 DESC
     )
     UPDATE rural_communities rc
     SET distrito = m.distrito,
