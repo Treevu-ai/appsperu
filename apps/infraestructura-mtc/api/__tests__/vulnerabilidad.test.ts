@@ -84,6 +84,52 @@ describe.skipIf(!CON_DB)("Índice de Vulnerabilidad Portuaria", () => {
     }
   });
 
+  // ─── Test: /:codigo sin ?fuente= es determinístico cuando coexisten varias fuentes ──
+  it("/:codigo sin ?fuente= siempre devuelve MTC_2025, no una fuente arbitraria", async () => {
+    const { pool } = await import("../src/db/pool.js");
+
+    const listRes = await import("supertest").then((m) =>
+      m.default(app).get(baseUrl).query({ limit: 1 })
+    );
+    if (!listRes.body.resultados?.length) return;
+    const codigo = listRes.body.resultados[0].codigoPuerto;
+
+    const FUENTE_FAKE = "TEST_OTRA_FUENTE";
+    try {
+      // Clona la fila existente con otra fuente y un score muy distinto — simula lo que
+      // pasa en producción cuando v1/v2/v3 coexisten para el mismo terminal (hallazgo real
+      // verificado en vivo 2026-10-05: sin default, /:codigo devolvía v3 para terminales
+      // donde antes devolvía v1, sin que el caller pidiera v3 explícitamente).
+      await pool.query(
+        `INSERT INTO indice_vulnerabilidad_portuaria
+           (codigo_puerto, nombre_terminal, id_departamento, departamento, ambito, alcance,
+            estado_conservacion, es_concesionado, tiene_geolocalizacion, score_vulnerabilidad,
+            componentes, fuente_datos, fecha_corte)
+         SELECT codigo_puerto, nombre_terminal, id_departamento, departamento, ambito, alcance,
+                estado_conservacion, es_concesionado, tiene_geolocalizacion, 999,
+                componentes, $2, fecha_corte
+         FROM indice_vulnerabilidad_portuaria WHERE codigo_puerto = $1 AND fuente_datos = 'MTC_2025'
+         ON CONFLICT (codigo_puerto, fuente_datos) DO UPDATE SET score_vulnerabilidad = 999`,
+        [codigo, FUENTE_FAKE]
+      );
+
+      const sinFuente = await import("supertest").then((m) => m.default(app).get(`${baseUrl}/${codigo}`));
+      expect(sinFuente.status).toBe(200);
+      expect(sinFuente.body.fuenteDatos).toBe("MTC_2025");
+      expect(sinFuente.body.scoreVulnerabilidad).not.toBe(999);
+
+      const conFuenteFake = await import("supertest").then((m) =>
+        m.default(app).get(`${baseUrl}/${codigo}`).query({ fuente: FUENTE_FAKE })
+      );
+      expect(conFuenteFake.body.scoreVulnerabilidad).toBe(999);
+    } finally {
+      await pool.query(
+        `DELETE FROM indice_vulnerabilidad_portuaria WHERE codigo_puerto = $1 AND fuente_datos = $2`,
+        [codigo, FUENTE_FAKE]
+      );
+    }
+  });
+
   // ─── Test: /:codigo devuelve los componentes del score ─────────────────────
   it("debe devolver componentes del score para un código específico", async () => {
     // Obtener un código válido

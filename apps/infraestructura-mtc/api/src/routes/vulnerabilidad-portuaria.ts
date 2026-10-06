@@ -189,17 +189,17 @@ vulnerabilidadRouter.get(
   "/:codigo",
   asyncHandler(async (req, res) => {
     const { codigo } = req.params;
-    const { fuente } = req.query;
+    // Mismo default que el endpoint de listado (`GET /`) — sin esto, un terminal con más de
+    // una fuente publicada (v1 + v2 + v3 coexistiendo) devolvía `rows[0]` sin ORDER BY, es
+    // decir, cualquiera de las fuentes de forma no determinística. Hallazgo real verificado en
+    // vivo 2026-10-05: tras calcular v3 localmente, este endpoint empezó a devolver el score v3
+    // para terminales donde antes devolvía v1, sin que el caller pidiera v3 explícitamente.
+    const fuente = typeof req.query.fuente === "string" ? req.query.fuente : "MTC_2025";
 
-    const params: unknown[] = [codigo];
-    let query = `SELECT * FROM indice_vulnerabilidad_portuaria WHERE codigo_puerto = $1`;
-    
-    if (fuente && typeof fuente === "string") {
-      params.push(fuente);
-      query += ` AND fuente_datos = $${params.length}`;
-    }
-
-    const { rows } = await pool.query(query, params);
+    const { rows } = await pool.query(
+      `SELECT * FROM indice_vulnerabilidad_portuaria WHERE codigo_puerto = $1 AND fuente_datos = $2`,
+      [codigo, fuente]
+    );
 
     if (rows.length === 0) {
       res.status(404).json({ error: `No se encontró índice para el código '${codigo}'.` });
