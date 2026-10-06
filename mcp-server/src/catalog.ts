@@ -3547,6 +3547,65 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: ["capa", "objectid"],
     querySchema: {},
   },
+  // ---- geo-intersections (SERFOR OCAPAS_MIDAGRI — comunidades campesinas/nativas) ----
+  {
+    name: "geo_intersections_comunidades",
+    handler: "communities:list",
+    app: "geo-intersections",
+    description:
+      "Comunidades Campesinas y Nativas de SERFOR OCAPAS_MIDAGRI (réplica SERFOR de datos MIDAGRI, " +
+      "no el catastro oficial MIDAGRI directo). Filtra por `capa` (`comunidades_campesinas`/" +
+      "`comunidades_nativas`) o `departamento` (ILIKE). `departamento`/`provincia`/`distrito` " +
+      "vienen ya separados de la fuente (no requieren parseo); ~76% de `comunidades_campesinas` " +
+      "no trae `distrito` poblado en la fuente (dato real, no bug). `titulo` (resolución de " +
+      "título comunal) solo existe para `comunidades_nativas` — la fuente no lo expone para " +
+      "`comunidades_campesinas`. Verificado en vivo 2026-10-06: 3,090 comunidades_campesinas + " +
+      "1,402 comunidades_nativas insertadas, 0 rechazadas. " + SIN_SCHEDULER,
+    pathTemplate: "/api/communities",
+    pathParams: [],
+    querySchema: {
+      capa: z.enum(["comunidades_campesinas", "comunidades_nativas"]).optional(),
+      departamento: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 100, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "geo_intersections_comunidad_detalle",
+    handler: "communities:detalle",
+    app: "geo-intersections",
+    description:
+      "Detalle de una comunidad campesina o nativa específica por `objectid` (ID de ArcGIS). " +
+      "Responde 404 si no existe. " + SIN_SCHEDULER,
+    pathTemplate: "/api/communities/{objectid}",
+    pathParams: ["objectid"],
+    querySchema: {},
+  },
+  {
+    name: "geo_intersections_comunidades_intersect",
+    handler: "communities:intersect",
+    app: "geo-intersections",
+    description:
+      "Comunidades campesinas/nativas que intersectan una geometría GeoJSON dada (PostGIS " +
+      "ST_Intersects) — útil para cruzar territorio comunal con un punto, polígono de proyecto " +
+      "de inversión, u otra capa geoespacial del catálogo. " + SIN_SCHEDULER,
+    pathTemplate: "/api/communities/intersect",
+    pathParams: [],
+    querySchema: {
+      geometry: z.string().min(1).describe("GeoJSON (Point, Polygon, etc.) como string."),
+    },
+  },
+  {
+    name: "geo_intersections_comunidades_stats",
+    handler: "communities:stats",
+    app: "geo-intersections",
+    description:
+      "Resumen por capa de comunidades campesinas/nativas: total de filas, cuántas tienen " +
+      "geometría y área total en km². " + SIN_SCHEDULER,
+    pathTemplate: "/api/communities/stats",
+    pathParams: [],
+    querySchema: {},
+  },
   // ---- emergencias-indeci (SINPAD, emergencias históricas nacionales) ----
   {
     name: "emergencias_indeci",

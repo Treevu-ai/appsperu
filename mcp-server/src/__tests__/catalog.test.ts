@@ -294,6 +294,10 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "emergencias_indeci_preparacion_riesgo",
   ],
   "geo-intersections": [
+    "geo_intersections_comunidad_detalle",
+    "geo_intersections_comunidades",
+    "geo_intersections_comunidades_intersect",
+    "geo_intersections_comunidades_stats",
     "geo_intersections_cruce_punto",
     "geo_intersections_forestal",
     "geo_intersections_minero",

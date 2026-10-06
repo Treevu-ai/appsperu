@@ -48,6 +48,7 @@ import * as compras_publicas_suppliers from "./compras-publicas/suppliers.js";
 import * as compras_publicas_unsuccessful_tenders from "./compras-publicas/unsuccessful-tenders.js";
 import * as emergencias_indeci_crossref from "./emergencias-indeci/crossref.js";
 import * as emergencias_indeci_emergencias from "./emergencias-indeci/emergencias.js";
+import * as geo_intersections_communities from "./geo-intersections/communities.js";
 import * as geo_intersections_intersections from "./geo-intersections/intersections.js";
 import * as identidad_fiscal_contribuyentes from "./identidad-fiscal/contribuyentes.js";
 import * as identidad_fiscal_crossref from "./identidad-fiscal/crossref.js";
@@ -183,6 +184,7 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "compras-publicas/unsuccessful-tenders": compras_publicas_unsuccessful_tenders,
   "emergencias-indeci/crossref": emergencias_indeci_crossref,
   "emergencias-indeci/emergencias": emergencias_indeci_emergencias,
+  "geo-intersections/communities": geo_intersections_communities,
   "geo-intersections/intersections": geo_intersections_intersections,
   "identidad-fiscal/contribuyentes": identidad_fiscal_contribuyentes,
   "identidad-fiscal/crossref": identidad_fiscal_crossref,
