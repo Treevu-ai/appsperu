@@ -90,9 +90,10 @@ posibles, ninguna descartable con la evidencia actual:
 2. Dos años (2023-2024) y 17 aduanas no dan suficiente varianza estadística para que el método
    de mediana-nacional detecte algo, incluso si existiera.
 
-**Conclusión práctica**: la dimensión queda implementada, probada y conectada end-to-end (38/151
-terminales con match de aduana, con datos de SUNAT ya corregidos), pero **hoy no aporta señal
-real** — es infraestructura lista para cuando haya más años de datos SUNAT o, mejor, un cruce
+**Conclusión práctica**: la dimensión queda implementada, probada y conectada end-to-end (34/151
+terminales con score TBML válido, con datos de SUNAT ya corregidos — ver §7 para el detalle de
+cobertura), pero **hoy no aporta señal real** — es infraestructura lista para cuando haya más
+años de datos SUNAT o, mejor, un cruce
 con un benchmark de precios externo (UN Comtrade/Banco Mundial), que es lo que FATF realmente
 recomienda y lo que PRD-004 original nunca tuvo presupuestado.
 
@@ -147,20 +148,41 @@ pesos bastante distinto al elegido, lo que es la señal que el Handbook pide ant
 - **Pesos vía ANP/comparación pareada de expertos**: descartado por alcance (requiere panel de
   expertos), se usó compresión proporcional documentada en su lugar.
 
-## 7. Verificación en vivo (2026-10-05, local, con el bug de `sunat-aduanas` ya corregido)
+## 7. Verificación en vivo (2026-10-06, local, con el bug de `sunat-aduanas` ya corregido)
 
 - `POST /api/terminales/vulnerabilidad/calcular {"fuente":"MTC+CARGAS+SUNAT_V3"}`: 151/151
-  terminales procesados e insertados. Cobertura tráfico 60/151 (igual que v2). Cobertura TBML
-  38/151 (tras corregir el matcher de aduana para incluir los 9 overrides de la bahía del
-  Callao y el alias `mollendo` — sin los overrides de Callao, 23/151).
-- Guard nuevo: `POST /calcular` con `fuente:"MTC+CARGAS+SUNAT_V3"` devuelve 409 si
-  `port_subpartida_imports` no tiene filas o no hay ningún grupo (subpartida, año) con
-  benchmark robusto — nunca un v3 degradado en silencio a `tbmlScore: null` en todos los
-  terminales (mismo patrón que el guard de tráfico de v2, hallazgo de review de este PR).
-- `apps/infraestructura-mtc/api` — 113 tests en verde (22 se saltan sin `DATABASE_URL`).
+  terminales procesados e insertados. Cobertura tráfico 60/151 (igual que v2). 36/151 terminales
+  matchean alguna aduana (overrides de la bahía del Callao + alias `mollendo`), pero solo
+  **34/151** terminan con un score TBML válido — 2 terminales de Pucallpa matchean la aduana
+  PUCALLPA, pero su única fila de importación tiene FOB=0 (se descarta por ratio indefinida,
+  no es un bug: `pctValorAnomalo`/`tbmlScore` exigen al menos una fila con FOB>0).
+- Guard 409 en `POST /calcular` para `fuente:"MTC+CARGAS+SUNAT_V3"` — reforzado tras review:
+  rechaza el recálculo si `port_subpartida_imports` no tiene filas, si no hay ningún grupo
+  (subpartida, año) con benchmark robusto, **o si ningún terminal real matchea una aduana con
+  score TBML válido** (hallazgo real de CodeRabbit: los dos primeros checks no bastan — puede
+  haber benchmark pero ninguna aduana coincidir con los terminales actuales). Nunca un v3
+  degradado en silencio a `tbmlScore: null` en todos los terminales.
+- Ranking consistente entre `GET /` (listado) y `GET /:codigo` (detalle) cuando hay empate de
+  score: ambos desempatan por `codigo_puerto ASC` — antes el listado y el detalle podían
+  asignar números de ranking distintos al mismo par de terminales empatados (hallazgo real de
+  CodeRabbit). Mismo fix replicado en el handler MCP (`mcp-server/.../vulnerabilidad.ts`), que
+  duplica este SQL para no pegarle a la API HTTP.
+- Paginación determinista: `ORDER BY score_vulnerabilidad DESC` sin desempate no es estable
+  entre llamadas cuando hay empates reales (52 terminales comparten 22.75 en v1) — un terminal
+  podía aparecer en dos páginas o en ninguna según el plan de ejecución de Postgres. Mismo fix
+  `codigo_puerto ASC`, con test que verifica orden ascendente exacto dentro de cada grupo
+  empatado (no solo que dos llamadas coincidan entre sí, que no prueba nada).
+- `sunat-connector.ts` ahora versiona la ingesta (`NORMALIZER_VERSION_CDRO16`, migración
+  `002_normalizer_version.sql`): el checksum de un XLSX no cambia cuando se corrige el PARSER,
+  así que sin esto el `[SKIP] ya ingestado` perpetuaría datos de una versión de parser ya
+  corregida en cualquier entorno donde el batch ya existiera — incluyendo producción, si
+  llegara a correr el ingest ahí sin este fix (hallazgo real de CodeRabbit, "Major").
+- `apps/infraestructura-mtc/api` — 115 tests en verde (22 se saltan sin `DATABASE_URL`).
 - `apps/sunat-aduanas/api` — 2 tests nuevos de regresión para `normalizeCdro16` (el bug del
-  column-swap), suite completa en verde.
-- `tsc --noEmit` limpio en ambas apps.
+  column-swap), suite completa en verde (29 tests).
+- `mcp-server` — 574 tests en verde, incluyendo el test de fidelidad SQL que detectó la
+  desincronización entre el handler y la ruta de origen.
+- `tsc --noEmit` limpio en las tres apps.
 - Re-análisis de sensibilidad (§5) corrido contra los datos de SUNAT ya corregidos: mismos
   resultados (8/10 y 10/10) — confirma que el hallazgo de señal TBML ~0 no era un artefacto de
   la corrupción de datos.

@@ -119,12 +119,15 @@ export async function byCodigo(ctx: ToolHandlerContext): Promise<HandlerResult> 
 
   const r = rows[0];
 
+  // Mismo desempate codigo_puerto ASC que el listado — ver fix equivalente en
+  // apps/infraestructura-mtc/api/src/routes/vulnerabilidad-portuaria.ts.
   const { rows: rankRows } = await db.query<{ ranking: string }>(
     `SELECT COUNT(*) + 1 AS ranking
      FROM indice_vulnerabilidad_portuaria
-     WHERE score_vulnerabilidad > $1
-       AND fuente_datos = $2`,
-    [r.score_vulnerabilidad, r.fuente_datos],
+     WHERE fuente_datos = $2
+       AND (score_vulnerabilidad > $1
+            OR (score_vulnerabilidad = $1 AND codigo_puerto < $3))`,
+    [r.score_vulnerabilidad, r.fuente_datos, r.codigo_puerto],
   );
 
   return {

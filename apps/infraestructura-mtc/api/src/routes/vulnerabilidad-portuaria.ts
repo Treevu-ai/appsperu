@@ -208,13 +208,17 @@ vulnerabilidadRouter.get(
 
     const r = rows[0];
 
-    // Obtener ranking global
+    // Obtener ranking global — mismo desempate codigo_puerto ASC que el listado (`GET /`),
+    // para que un terminal reciba el mismo número de ranking en ambos endpoints cuando hay
+    // empate de score (hallazgo real de CodeRabbit: sin esto, dos terminales con igual score
+    // recibían rankings distintos en el listado pero el mismo en el detalle).
     const { rows: rankRows } = await pool.query<{ ranking: string }>(
       `SELECT COUNT(*) + 1 AS ranking
        FROM indice_vulnerabilidad_portuaria
-       WHERE score_vulnerabilidad > $1
-         AND fuente_datos = $2`,
-      [r.score_vulnerabilidad, r.fuente_datos]
+       WHERE fuente_datos = $2
+         AND (score_vulnerabilidad > $1
+              OR (score_vulnerabilidad = $1 AND codigo_puerto < $3))`,
+      [r.score_vulnerabilidad, r.fuente_datos, r.codigo_puerto]
     );
 
     res.json({
@@ -558,15 +562,20 @@ vulnerabilidadRouter.post(
       tbmlPorAduana = computeTbmlScoresByAduana(importsParaScore);
       aduanasDisponibles = [...new Set(importRows.map((r) => r.aduana_name))];
 
-      // Sin filas de SUNAT, o sin ningún grupo (subpartida, año) con suficientes aduanas
-      // para una mediana robusta, el recálculo degeneraría en v3 con tbmlScore:null en todos
-      // los terminales — mismo riesgo de "degradación silenciosa" que el guard de tráfico de
-      // arriba. pctValorAnomalo === 0 en una aduana SÍ es un resultado legítimo (cero anomalías
+      // Sin filas de SUNAT, sin ningún grupo (subpartida, año) con suficientes aduanas para
+      // una mediana robusta, o — hallazgo real de CodeRabbit — con benchmark pero ninguna
+      // aduana que matchee alguno de los terminales actuales, el recálculo degeneraría en v3
+      // con tbmlScore:null en TODOS los terminales, igual de silencioso que los otros dos
+      // casos. pctValorAnomalo === 0 en una aduana SÍ es un resultado legítimo (cero anomalías
       // detectadas, no ausencia de datos), así que no se rechaza por eso — solo por ausencia
-      // total de datos o de benchmark.
-      if (importRows.length === 0 || tbmlPorAduana.size === 0) {
+      // total de señal.
+      const algunTerminalConTbml = terminales.some((t) => {
+        const aduanaMatch = matchTerminalToAduana(t.nombre_terminal, t.label_terminal, aduanasDisponibles);
+        return aduanaMatch !== null && computeTbmlScore(tbmlPorAduana.get(aduanaMatch) ?? null) !== null;
+      });
+      if (importRows.length === 0 || tbmlPorAduana.size === 0 || !algunTerminalConTbml) {
         res.status(409).json({
-          error: `No hay datos de SUNAT-aduanas benchmarkeables para calcular '${fuente}'. Verifica que 'port_subpartida_imports' tenga filas y suficientes aduanas por subpartida.`,
+          error: `No hay datos de SUNAT-aduanas benchmarkeables para calcular '${fuente}'. Verifica que 'port_subpartida_imports' tenga filas y suficientes aduanas por subpartida, y que al menos un terminal matchee una aduana.`,
         });
         return;
       }

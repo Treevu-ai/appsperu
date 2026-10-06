@@ -61,23 +61,33 @@ describe.skipIf(!CON_DB)("Índice de Vulnerabilidad Portuaria", () => {
   });
 
   // ─── Test: paginación determinista cuando hay empate de score ──────────────
-  it("la paginación no repite ni se salta terminales cuando hay empate de score (hallazgo real: 52 terminales con el mismo 22.75 en v1)", async () => {
-    const pagina1a = await import("supertest").then((m) =>
-      m.default(app).get(baseUrl).query({ limit: 5, offset: 0 })
+  it("entre empates de score, codigoPuerto es ascendente exacto — también cruzando el límite de página (hallazgo real: 52 terminales con el mismo 22.75 en v1)", async () => {
+    // Página grande sin offset: referencia del orden "verdadero" completo.
+    const completo = await import("supertest").then((m) =>
+      m.default(app).get(baseUrl).query({ limit: 200, offset: 0 })
     );
-    const pagina1b = await import("supertest").then((m) =>
-      m.default(app).get(baseUrl).query({ limit: 5, offset: 0 })
-    );
-    expect(pagina1a.body.resultados.map((r: { codigoPuerto: string }) => r.codigoPuerto)).toEqual(
-      pagina1b.body.resultados.map((r: { codigoPuerto: string }) => r.codigoPuerto)
-    );
+    const resultados = completo.body.resultados as { codigoPuerto: string; scoreVulnerabilidad: number }[];
 
-    const pagina2 = await import("supertest").then((m) =>
-      m.default(app).get(baseUrl).query({ limit: 5, offset: 5 })
-    );
-    const codigosPagina1 = new Set(pagina1a.body.resultados.map((r: { codigoPuerto: string }) => r.codigoPuerto));
-    for (const r of pagina2.body.resultados) {
-      expect(codigosPagina1.has(r.codigoPuerto)).toBe(false);
+    // Comparar contra las mismas dos filas obtenidas en páginas separadas (limit=1) no
+    // demuestra el desempate si Postgres simplemente repite el mismo plan de ejecución entre
+    // llamadas idénticas — hay que comprobar el orden ascendente exacto dentro de cada grupo
+    // de score empatado, no solo que dos llamadas coincidan entre sí.
+    let huboEmpate = false;
+    for (let i = 1; i < resultados.length; i++) {
+      if (resultados[i].scoreVulnerabilidad === resultados[i - 1].scoreVulnerabilidad) {
+        huboEmpate = true;
+        expect(resultados[i].codigoPuerto > resultados[i - 1].codigoPuerto).toBe(true);
+      }
+    }
+    expect(huboEmpate).toBe(true); // si esto falla, los datos de prueba cambiaron y el test ya no cubre el caso
+
+    // Cruzando el límite de página (limit=1 por fila) debe reproducir exactamente el mismo
+    // orden que la página grande, fila por fila — incluso dentro de un grupo empatado.
+    for (let offset = 0; offset < Math.min(10, resultados.length); offset++) {
+      const pagina = await import("supertest").then((m) =>
+        m.default(app).get(baseUrl).query({ limit: 1, offset })
+      );
+      expect(pagina.body.resultados[0].codigoPuerto).toBe(resultados[offset].codigoPuerto);
     }
   });
 
@@ -115,7 +125,10 @@ describe.skipIf(!CON_DB)("Índice de Vulnerabilidad Portuaria", () => {
     if (!listRes.body.resultados?.length) return;
     const codigo = listRes.body.resultados[0].codigoPuerto;
 
-    const FUENTE_FAKE = "TEST_OTRA_FUENTE";
+    // Fuente única por ejecución — evita que una corrida anterior interrumpida (que dejó la
+    // fila sin limpiar) haga que este INSERT caiga en el ON CONFLICT DO UPDATE y que el
+    // `finally` termine borrando una fila que este test no creó.
+    const FUENTE_FAKE = `TEST_OTRA_FUENTE_${process.pid}_${Date.now()}`;
     try {
       // Clona la fila existente con otra fuente y un score muy distinto — simula lo que
       // pasa en producción cuando v1/v2/v3 coexisten para el mismo terminal (hallazgo real
@@ -129,8 +142,7 @@ describe.skipIf(!CON_DB)("Índice de Vulnerabilidad Portuaria", () => {
          SELECT codigo_puerto, nombre_terminal, id_departamento, departamento, ambito, alcance,
                 estado_conservacion, es_concesionado, tiene_geolocalizacion, 999,
                 componentes, $2, fecha_corte
-         FROM indice_vulnerabilidad_portuaria WHERE codigo_puerto = $1 AND fuente_datos = 'MTC_2025'
-         ON CONFLICT (codigo_puerto, fuente_datos) DO UPDATE SET score_vulnerabilidad = 999`,
+         FROM indice_vulnerabilidad_portuaria WHERE codigo_puerto = $1 AND fuente_datos = 'MTC_2025'`,
         [codigo, FUENTE_FAKE]
       );
 
