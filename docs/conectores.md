@@ -1257,6 +1257,22 @@ Investigado y construido 2026-10-06 (`docs/investigacion-agro-digital-2026-10-06
 | **Neon producción** | Migración + ingest corridos 2026-10-06 contra la base Neon `geo_intersections` (proyecto `appsperu`, branch `production`) — la misma que consultan los handlers MCP reales. Mismos números que la verificación local: 3,090/3,090 + 1,402/1,402 filas, 0 rechazadas. Los 4 handlers MCP invocados directamente contra esta data (no solo SQL manual), incluyendo el caso `objectid=1` ambiguo y el multi-shell de PUERTO ANGEL vía `intersect`. |
 | **Fuera de alcance** | Predios por departamento (capas 1-25, Fase 2 del plan), AgroDigital/PPA (Fase 3, requiere contacto oficial MIDAGRI), Georural Catastro Rural (fuente oficial MIDAGRI distinta, requiere paginación por `MaxRecordCount=1000`) — ver investigación. |
 
+### `compute-community-intersections.ts` — Comunidades ∩ minero/forestal
+
+Tercera dimensión del cruce geoespacial existente (`mining_rights ∩ forest_titles`), agregando
+`rural_communities` a ambos lados. Investigado 2026-10-06 con exploración ad-hoc (`ST_Intersects`
+vía MCP de Neon) **antes** de escribir código, para confirmar señal real antes de construir.
+
+| | |
+|---|---|
+| **Hallazgo real — señal fuerte confirmada antes de construir** | 1,930/4,492 comunidades (43%) tocan al menos un derecho minero titulado. Filtrando a comunidades ≥10 km² con alta cobertura: casos de 100% del territorio cubierto por 4-20 derechos, concentrados en Espinar, Cusco (zona de conflicto minero históricamente documentada). Titular con más comunidades afectadas: MINERA BARRICK PERU S.A. (108 comunidades, 196 concesiones). Ver `docs/data-contracts/comunidades-cruce-minero-forestal.md` para la lista completa de titulares y el desglose forestal. |
+| **Bug real corregido — `ST_Intersection` devuelve `GeometryCollection`** | `ST_Multi(ST_Intersection(a,b))` no alcanza: cuando el overlap real viene acompañado de un artefacto de borde (línea/punto), `ST_Intersection` devuelve una `GeometryCollection` que la columna `GEOMETRY(MultiPolygon,4326)` rechaza — confirmado en vivo, corrida real abortada a mitad de camino. Corregido con `ST_Multi(ST_CollectionExtract(ST_Intersection(a,b), 3))` + filtro `ST_Area(...) > 0` en el JOIN. |
+| **Solo derechos mineros titulados** | `WHERE m.estado = 'T'` — mismo criterio que la exploración inicial, no incluye concesiones en trámite. |
+| **Frecuencia** | Manual (`npm run ingest:comunidad-cruce` en `apps/geo-intersections/api`). Sin scheduler. |
+| **Cobertura real** | Verificado en vivo 2026-10-06 contra Postgres local Y Neon producción, resultados idénticos en ambos: **14,650 pares comunidad-minero (1,930 comunidades afectadas), 859 pares comunidad-forestal (320 comunidades afectadas)**. |
+| **API expuesta** | `GET /api/cruce/comunidad/:capa/:objectid`, `GET /api/cruce/comunidad-minero/report` (filtros capa/departamento/titular ILIKE/min_area/min_pct), `GET /api/cruce/comunidad-forestal/report` (análogo con forest_capa), `GET /api/cruce/comunidad/stats`. 4 tools MCP registradas con SQL idéntico. Probado en vivo contra ambas bases. |
+| **Limitaciones** | No distingue si la superposición es anterior o posterior a la formalización comunal; no confirma por sí sola si existe servidumbre/consulta previa — solo señala superposición geométrica. |
+
 ---
 
 <a id="emergencias-indeci"></a>
