@@ -1273,6 +1273,19 @@ vía MCP de Neon) **antes** de escribir código, para confirmar señal real ante
 | **API expuesta** | `GET /api/cruce/comunidad/:capa/:objectid`, `GET /api/cruce/comunidad-minero/report` (filtros capa/departamento/titular ILIKE/min_area/min_pct), `GET /api/cruce/comunidad-forestal/report` (análogo con forest_capa), `GET /api/cruce/comunidad/stats`. 4 tools MCP registradas con SQL idéntico. Probado en vivo contra ambas bases. |
 | **Limitaciones** | No distingue si la superposición es anterior o posterior a la formalización comunal; no confirma por sí sola si existe servidumbre/consulta previa — solo señala superposición geométrica. |
 
+### `replicate-territories.ts` — réplica de territories + backfill de distrito
+
+Ver `docs/data-contracts/territories-distrito-backfill.md` para el detalle completo.
+
+| | |
+|---|---|
+| **Motivación** | 76% de `comunidades_campesinas` (2,337/3,090) y 9/1,402 `comunidades_nativas` llegaban sin `distrito` de SERFOR OCAPAS (campo vacío en la fuente). |
+| **Por qué réplica local, no cruce cross-base en vivo** | `external-pools.ts` (catastro-forestal) cruza `ceplan_geo.territories` por texto (UBIGEO), pero PostGIS no compara `geometry` entre dos bases Postgres distintas en una sola consulta — hace falta una copia local real para `ST_Intersects`. |
+| **Exploración con `ROLLBACK` antes de construir** | Se probó el join completo en una `TEMP TABLE` + `ROLLBACK`, sin tocar nada persistente, antes de escribir migración/conector. Confirmó 100% de match antes de invertir en construirlo. |
+| **Frecuencia** | Manual (`CEPLAN_GEO_DATABASE_URL=... npm run ingest:territories`). Sin scheduler. |
+| **Cobertura real** | Verificado en vivo 2026-10-06 en Postgres local Y Neon producción, idéntico en ambos: 1,874 territorios replicados, **2,346 comunidades actualizadas (100% de las que tenían distrito=NULL)**, 0 restantes sin distrito. Idempotencia confirmada (segunda corrida: 0 actualizaciones). |
+| **Backfill** | Usa el territorio con mayor área de solapamiento real (`ST_Intersection` + `ORDER BY ... DESC`), no el primero que matchee. Nunca pisa `provincia`/`distrito` ya poblados. |
+
 ---
 
 <a id="emergencias-indeci"></a>
