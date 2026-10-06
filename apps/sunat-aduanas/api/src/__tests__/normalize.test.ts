@@ -15,7 +15,8 @@ import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import type { Express } from "express";
 import type { Pool } from "pg";
 import request from "supertest";
-import { findKnownAduanaCode } from "../ingest/normalize.js";
+import XLSX from "xlsx";
+import { findKnownAduanaCode, normalizeCdro16 } from "../ingest/normalize.js";
 
 const CON_DB = Boolean(process.env.DATABASE_URL);
 
@@ -55,6 +56,66 @@ describe("findKnownAduanaCode", () => {
 
   it("match parcial: nombre contenido en key", () => {
     expect(findKnownAduanaCode("TERMINAL SALAVERRY")).toBe(8);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests unitarios de normalizeCdro16 — regresión del bug de 2026-10-05:
+// el parser asumía una columna vacía en idx 1 que no existe en el XLSX real,
+// lo que desalineaba subpartida (código) con product_desc (texto) una
+// posición. Esta fila es la estructura real verificada en vivo contra
+// cdro_16.xlsx (fila de ACEITES CRUDOS, aduana MARITIMA DEL CALLAO).
+// ---------------------------------------------------------------------------
+describe("normalizeCdro16", () => {
+  function sheetFromRows(rows: unknown[][]) {
+    return XLSX.utils.aoa_to_sheet(rows);
+  }
+
+  it("asigna subpartida al código (no a la descripción) y product_desc al texto (no a un número)", () => {
+    const filas = [
+      ["header fila 0"],
+      ["header fila 1"],
+      ["header fila 2"],
+      ["header fila 3"],
+      ["Total MARITIMA DEL CALLAO"],
+      [
+        "MARITIMA DEL CALLAO",
+        1,
+        "2709000000",
+        "ACEITES CRUDOS DE PETROLEO O DE MINERAL BITUMINOSO",
+        2273196709.909,
+        2435272906.345,
+        2397740313.896,
+        2557788978.214,
+        0.066749,
+        0.04645,
+      ],
+    ];
+    const resultado = normalizeCdro16(sheetFromRows(filas));
+
+    expect(resultado).toHaveLength(1);
+    expect(resultado[0].subpartida).toBe("2709000000");
+    expect(resultado[0].product_desc).toBe("ACEITES CRUDOS DE PETROLEO O DE MINERAL BITUMINOSO");
+    expect(resultado[0].value_fob_usd).toBe(2435272906.345);
+    expect(resultado[0].value_cif_usd).toBe(2557788978.214);
+    expect(resultado[0].aduana_name).toBe("MARITIMA DEL CALLAO");
+  });
+
+  it("hereda el nombre de aduana del grupo 'Total XXXX' cuando la fila de detalle no repite el nombre", () => {
+    const filas = [
+      ["header fila 0"],
+      ["header fila 1"],
+      ["header fila 2"],
+      ["header fila 3"],
+      ["Total SALAVERRY"],
+      ["", 1, "1005901100", "MAIZ DURO AMARILLO", 100, 200, 300, 400, 0.1, 0.05],
+    ];
+    const resultado = normalizeCdro16(sheetFromRows(filas));
+
+    expect(resultado).toHaveLength(1);
+    expect(resultado[0].aduana_name).toBe("SALAVERRY");
+    expect(resultado[0].subpartida).toBe("1005901100");
+    expect(resultado[0].product_desc).toBe("MAIZ DURO AMARILLO");
   });
 });
 

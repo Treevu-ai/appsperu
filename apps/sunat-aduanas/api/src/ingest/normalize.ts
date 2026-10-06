@@ -160,11 +160,14 @@ export function normalizeCdro15(ws: Sheet): Cdro15Row[] {
 //   Fila 6 (idx 5): header "Aduana / Subpartidas"
 //   Fila 7 (idx 6): subheader con "Valor FOB", "Valor CIF", etc.
 //   Filas "Total XXXX" = inicio de grupo (capturar nombre para siguientes subpartidas)
-//   Filas con idx numérico en col[2] = detalle de subpartida
-//   cols (0-indexed):
-//     [0]=aduana_name (o "Total XXX"), [1]=empty, [2]=idx_num,
-//     [3]=subpartida, [4]=descripcion, [5]=fob2023, [6]=fob2024,
-//     [7]=cif2023, [8]=cif2024, [9]=var_pct, [10]=estructura
+//   Filas con idx numérico en col[1] = detalle de subpartida
+//   cols (0-indexed) — verificado en vivo 2026-10-05 contra el XLSX real
+//   (`XLSX.utils.sheet_to_json(ws, {header:1})`, sin columna vacía intermedia —
+//   el comentario anterior documentaba un `[1]=empty` que no existe en el
+//   archivo real, lo que desalineaba todo lo que sigue por una posición):
+//     [0]=aduana_name (o "Total XXX"), [1]=idx_num, [2]=subpartida (código,
+//     ej. "2709000000"), [3]=descripcion, [4]=fob2023, [5]=fob2024,
+//     [6]=cif2023, [7]=cif2024, [8]=var_pct, [9]=estructura
 // ---------------------------------------------------------------------------
 
 export function normalizeCdro16(ws: Sheet): Cdro16Row[] {
@@ -179,28 +182,23 @@ export function normalizeCdro16(ws: Sheet): Cdro16Row[] {
     if (!row) continue;
 
     const col0 = clean(row[0]);
-    const col2 = clean(row[2]);
-    const subpartida = clean(row[3]);
-    const desc = clean(row[4]);
+    const subpartida = clean(row[2]);
+    const desc = clean(row[3]);
 
     // Skip empty
-    if (!col0 && !col2) continue;
+    if (!col0 && !subpartida) continue;
 
-    // "Total XXXX" rows — inicio de grupo de aduana (col[2]=undefined, col[3]=undefined)
+    // "Total XXXX" rows — inicio de grupo de aduana (col[1]=undefined, col[2]=undefined)
     if (col0.startsWith("Total ")) {
       currentAduana = col0.replace("Total ", "").trim();
       currentAduanaCode = findKnownAduanaCode(currentAduana);
       continue;
     }
 
-    // Subpartida rows: col[3] es la descripción (string), col[2] es el código numérico
-    // Total rows también pueden tener col[2]=número pero col[3]=undefined → skip
-    if (row[3] === undefined || row[3] === null) continue;
-
-    // Código de subpartida en col[2] (string como "1005901100")
+    // Subpartida rows: col[2] es el código (string como "1005901100"), col[3] la descripción.
+    // Total rows también pueden tener col[1]=número pero col[2]=undefined → skip.
+    if (row[2] === undefined || row[2] === null) continue;
     if (!subpartida) continue;
-    const idxRaw = parseInt(col2, 10);
-    if (Number.isNaN(idxRaw)) continue;
 
     // [4]=FOB2023, [5]=FOB2024, [6]=CIF2023, [7]=CIF2024, [8]=var%, [9]=estructura%
     const fob2023 = num(row[4]);
