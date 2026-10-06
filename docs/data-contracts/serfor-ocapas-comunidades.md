@@ -5,8 +5,10 @@
 - Owner del conector: `apps/geo-intersections/api` (mismo pool PostGIS que INGEMMET/SERFOR forestal).
 - Verificado en vivo el 2026-10-06: migración + ingest corridos contra Postgres real
   (`geo-intersections-postgres-1`), con los 4 endpoints probados contra datos reales.
+- **Migración + ingest corridos también contra la base Neon de producción
+  (`geo_intersections`, proyecto `appsperu`) el 2026-10-06** — ver sección final.
 
-## Estado: IMPLEMENTADO Y VERIFICADO EN VIVO CONTRA POSTGRES REAL
+## Estado: IMPLEMENTADO, VERIFICADO EN VIVO (POSTGRES LOCAL + NEON PRODUCCIÓN)
 
 ## Capas y schema real (corregido tras la v1 de la investigación)
 
@@ -190,11 +192,28 @@ Esto no era opcional: `mcp-server/src/__tests__/routes-vs-catalog.test.ts` (CX-1
 CI que falla si cualquier endpoint GET real de una app del catálogo no tiene tool MCP — el job
 `mcp-server` falló en el primer push de este PR por dejarlo pendiente.
 
+## Migración + ingest en Neon producción (2026-10-06)
+
+Corridos contra el proyecto Neon `appsperu` (`jolly-breeze-71813141`), branch `production`,
+base `geo_intersections` — la misma que consultan los handlers MCP en producción:
+
+- `005_rural_communities.sql` aplicada (3 tablas: `rural_communities`, `raw_ocapas_batches`,
+  `rural_communities_rejected`; ya existían `mining_rights`/`forest_titles`/etc. de 001-004,
+  no se re-corrieron — solo se aplicó el `CREATE TABLE/INDEX IF NOT EXISTS` de 005).
+- Ingest real: **3,090/3,090 filas (comunidades_campesinas), 1,402/1,402
+  (comunidades_nativas), 0 rechazadas** — mismos números que la verificación local.
+- `ST_IsValid(geometry) = false` en 21 + 4 = 25 filas — idéntico a la verificación local.
+- Confirmado contra Neon: OBJECTID 7 "PUERTO ANGEL" es `MultiPolygon` con
+  `ST_NumGeometries = 2`; `objectid=1` existe en ambas capas (PUCA URCO / LAS MALVINAS).
+- **Los 4 handlers MCP invocados directamente contra esta data (no solo SQL manual)**:
+  `list` (200, filas reales), `detalle` sin `capa` (400), `detalle` con `capa` distinta para el
+  mismo `objectid=1` (200, devuelve la fila correcta en cada caso), `stats` (200, totales
+  correctos), `intersect` con geometry inválida (400), `intersect` con un punto dentro del
+  segundo shell de PUERTO ANGEL (200, devuelve exactamente esa fila — confirma el fix de
+  multi-shell funcionando en la base real que consulta producción).
+
 ## Pendiente
 
-- Correr la migración `005_rural_communities.sql` + el ingest real contra la base Neon
-  `geo_intersections` — los handlers MCP consultan Neon, no el Postgres docker usado para
-  verificar el conector end-to-end. Paso manual de deploy, sin automatización en CI.
 - `ST_GeomFromGeoJSON` acepta las geometrías reales sin error de inserción, pero 25/4,492
   (`ST_IsValid(geometry) = false`) son geométricamente inválidas (polígonos self-intersecting) —
   el `UPDATE` de `area_km2` usa `ST_MakeValid` para el cálculo de área, pero la columna
