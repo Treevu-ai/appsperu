@@ -289,6 +289,110 @@ describe("GET /api/cruce/stats", () => {
   });
 });
 
+describe("GET /api/cruce/comunidad/:capa/:objectid", () => {
+  it("devuelve la comunidad con sus superposiciones minero y forestal", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ capa: "comunidades_campesinas", objectid: 2046, nombre: "MOLLOCCAHUA" }] })
+      .mockResolvedValueOnce({ rows: [{ mining_codigou: "010080425", mining_titular: "MINERA BARRICK PERU S.A." }] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(createApp()).get("/api/cruce/comunidad/comunidades_campesinas/2046");
+
+    expect(res.status).toBe(200);
+    expect(res.body.comunidad.nombre).toBe("MOLLOCCAHUA");
+    expect(res.body.superposiciones_minero).toHaveLength(1);
+    expect(res.body.superposiciones_forestal).toHaveLength(0);
+  });
+
+  it("devuelve 404 si la comunidad no existe", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+    const res = await request(createApp()).get("/api/cruce/comunidad/comunidades_nativas/999999");
+    expect(res.status).toBe(404);
+  });
+
+  it("devuelve 400 con capa inválida", async () => {
+    const res = await request(createApp()).get("/api/cruce/comunidad/no-existe/1");
+    expect(res.status).toBe(400);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/cruce/comunidad-minero/report", () => {
+  it("filtra por titular (ILIKE) y pagina", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "2" }] })
+      .mockResolvedValueOnce({ rows: [{ mining_titular: "MINERA BARRICK PERU S.A.", community_nombre: "MOLLOCCAHUA" }] });
+
+    const res = await request(createApp())
+      .get("/api/cruce/comunidad-minero/report")
+      .query({ titular: "barrick", limit: 1 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(2);
+    expect(res.body.resultados).toHaveLength(1);
+    expect(queryMock.mock.calls[0][0]).toMatch(/community_mining_intersections/);
+    expect(queryMock.mock.calls[0][1]).toEqual(["%barrick%"]);
+  });
+
+  it("devuelve 400 con capa inválida", async () => {
+    const res = await request(createApp())
+      .get("/api/cruce/comunidad-minero/report")
+      .query({ capa: "no-existe" });
+    expect(res.status).toBe(400);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/cruce/comunidad-forestal/report", () => {
+  it("filtra por forest_capa y pagina", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "1" }] })
+      .mockResolvedValueOnce({ rows: [{ forest_capa: "modalidad_concesiones_forestales", community_nombre: "BAMBAMARCA" }] });
+
+    const res = await request(createApp())
+      .get("/api/cruce/comunidad-forestal/report")
+      .query({ forest_capa: "modalidad_concesiones_forestales" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(1);
+    expect(queryMock.mock.calls[0][0]).toMatch(/community_forest_intersections/);
+  });
+});
+
+describe("GET /api/cruce/comunidad/stats", () => {
+  it("agrega resumen, top titulares y por capa forestal", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ count: "4492" }] }) // comunidadesCount
+      .mockResolvedValueOnce({ rows: [{ count: "14650" }] }) // mineroCount
+      .mockResolvedValueOnce({ rows: [{ count: "859" }] }) // forestalCount
+      .mockResolvedValueOnce({ rows: [{ count: "1930" }] }) // comunidadesAfectadasMinero
+      .mockResolvedValueOnce({ rows: [{ count: "320" }] }) // comunidadesAfectadasForestal
+      .mockResolvedValueOnce({ rows: [{ mining_titular: "MINERA BARRICK PERU S.A.", count: "108" }] })
+      .mockResolvedValueOnce({ rows: [{ forest_capa: "modalidad_concesiones_forestales", count: "87" }] })
+      .mockResolvedValueOnce({ rows: [{ computed_at: "2026-10-06T22:56:30.032Z" }] })
+      .mockResolvedValueOnce({ rows: [{ computed_at: "2026-10-06T22:56:43.988Z" }] });
+
+    const res = await request(createApp()).get("/api/cruce/comunidad/stats");
+
+    expect(res.status).toBe(200);
+    expect(res.body.resumen).toEqual({
+      comunidades_total: 4492,
+      pares_comunidad_minero: 14650,
+      pares_comunidad_forestal: 859,
+      comunidades_afectadas_minero: 1930,
+      comunidades_afectadas_forestal: 320,
+    });
+    expect(res.body.top_titulares_mineros[0]).toEqual({
+      titular: "MINERA BARRICK PERU S.A.",
+      comunidades_afectadas: 108,
+    });
+    expect(res.body.ultima_corrida).toEqual({
+      minero: "2026-10-06T22:56:30.032Z",
+      forestal: "2026-10-06T22:56:43.988Z",
+    });
+  });
+});
+
 describe("ruta inexistente", () => {
   it("responde 404 con el catch-all, no un 500", async () => {
     const res = await request(createApp()).get("/api/cruce/inexistente");

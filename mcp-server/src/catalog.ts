@@ -3613,6 +3613,82 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: [],
     querySchema: {},
   },
+  // ---- geo-intersections (comunidades ∩ minero/forestal) ----
+  {
+    name: "geo_intersections_comunidad_cruce",
+    handler: "community-crossref:detalle",
+    app: "geo-intersections",
+    description:
+      "Superposiciones (minero + forestal) de una comunidad campesina o nativa específica, por " +
+      "`capa` + `objectid`. Precomputado (ver `npm run ingest:comunidad-cruce`), solo considera " +
+      "derechos mineros TITULADOS (`estado='T'`). Verificado en vivo 2026-10-06: 1,930 de 4,492 " +
+      "comunidades (43%) tocan al menos un derecho minero titulado; casos de comunidades grandes " +
+      "(10-50 km²) con el 100% de su territorio cubierto, concentrados en Espinar, Cusco (zona de " +
+      "conflicto minero históricamente documentada — Antapaccay/Tintaya). " + SIN_SCHEDULER,
+    pathTemplate: "/api/cruce/comunidad/{capa}/{objectid}",
+    pathParams: ["capa", "objectid"],
+    querySchema: {},
+  },
+  {
+    name: "geo_intersections_comunidad_minero_reporte",
+    handler: "community-crossref:reporteMinero",
+    app: "geo-intersections",
+    description:
+      "Reporte paginado de comunidades ∩ derechos mineros titulados — filtra por `capa`, " +
+      "`departamento`, `titular` (ILIKE, ej. 'barrick'), `min_area_km2` o " +
+      "`min_community_overlap_pct` (% del territorio de la comunidad cubierto). Titulares reales " +
+      "con más comunidades afectadas (verificado 2026-10-06): MINERA BARRICK PERU S.A. (108), " +
+      "FRESNILLO PERU S.A.C. (78), VALE EXPLORATION PERU S.A.C. (74), COMPAÑIA MINERA CHUNGAR " +
+      "S.A.C. (47), TECK PERU S.A. (41), HUDBAY PERU S.A.C. (38), RIO TINTO MINING AND " +
+      "EXPLORATION S.A.C. (36), COMPAÑIA DE MINAS BUENAVENTURA S.A.A. (33). " + SIN_SCHEDULER,
+    pathTemplate: "/api/cruce/comunidad-minero/report",
+    pathParams: [],
+    querySchema: {
+      capa: z.enum(["comunidades_campesinas", "comunidades_nativas"]).optional(),
+      departamento: z.string().min(1).optional(),
+      titular: z.string().min(1).optional().describe("Búsqueda parcial (ILIKE)."),
+      min_area_km2: z.coerce.number().min(0).optional(),
+      min_community_overlap_pct: z.coerce.number().min(0).max(100).optional()
+        .describe("% mínimo del territorio de la comunidad cubierto por el derecho minero."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "geo_intersections_comunidad_forestal_reporte",
+    handler: "community-crossref:reporteForestal",
+    app: "geo-intersections",
+    description:
+      "Reporte paginado de comunidades ∩ títulos forestales — filtra por `capa`, " +
+      "`departamento`, `forest_capa` (ej. 'modalidad_concesiones_forestales', la categoría más " +
+      "sensible: concesiones de tala comercial a terceros sobre territorio indígena/comunal), " +
+      "`min_area_km2` o `min_community_overlap_pct`. Verificado en vivo 2026-10-06: 320 " +
+      "comunidades afectadas en total, 87 específicamente por concesiones forestales " +
+      "comerciales. " + SIN_SCHEDULER,
+    pathTemplate: "/api/cruce/comunidad-forestal/report",
+    pathParams: [],
+    querySchema: {
+      capa: z.enum(["comunidades_campesinas", "comunidades_nativas"]).optional(),
+      departamento: z.string().min(1).optional(),
+      forest_capa: z.string().min(1).optional().describe("Ej. 'modalidad_concesiones_forestales'."),
+      min_area_km2: z.coerce.number().min(0).optional(),
+      min_community_overlap_pct: z.coerce.number().min(0).max(100).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "geo_intersections_comunidad_cruce_stats",
+    handler: "community-crossref:stats",
+    app: "geo-intersections",
+    description:
+      "Resumen del cruce comunidades ∩ minero/forestal: comunidades afectadas, top titulares " +
+      "mineros por número de comunidades afectadas, desglose por capa forestal, fecha de la " +
+      "última corrida de `npm run ingest:comunidad-cruce`. " + SIN_SCHEDULER,
+    pathTemplate: "/api/cruce/comunidad/stats",
+    pathParams: [],
+    querySchema: {},
+  },
   // ---- emergencias-indeci (SINPAD, emergencias históricas nacionales) ----
   {
     name: "emergencias_indeci",

@@ -12,6 +12,7 @@
     "ingest:intersections": "tsx src/ingest/compute-intersections.ts",
     "ingest:ocapas": "tsx src/ingest/ocapas-connector.ts",
     "ingest:ocapas:comunidades": "tsx src/ingest/ocapas-connector.ts comunidades_campesinas comunidades_nativas",
+    "ingest:comunidad-cruce": "tsx src/ingest/compute-community-intersections.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

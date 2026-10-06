@@ -14,4 +14,8 @@ app.listen(PORT, () => {
   console.log(`  GET /api/communities/:objectid`);
   console.log(`  GET /api/communities/intersect?geometry=`);
   console.log(`  GET /api/communities/stats`);
+  console.log(`  GET /api/cruce/comunidad/:capa/:objectid`);
+  console.log(`  GET /api/cruce/comunidad-minero/report`);
+  console.log(`  GET /api/cruce/comunidad-forestal/report`);
+  console.log(`  GET /api/cruce/comunidad/stats`);
 });
