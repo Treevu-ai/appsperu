@@ -17,7 +17,12 @@ CREATE TABLE IF NOT EXISTS rural_communities (
   coordenada_x NUMERIC, -- centroide_e
   coordenada_y NUMERIC, -- centroide_n
   geometry GEOMETRY(Polygon, 4326),
-  area_km2 NUMERIC GENERATED ALWAYS AS (ST_Area(geometry::geography) / 1_000_000) STORED,
+  -- Columna plana, no GENERATED: ST_Area(geometry::geography) directo revienta con
+  -- "lwgeom_area_spher(oid) returned area < 0.0" ante polígonos self-intersecting/inválidos
+  -- (confirmado en vivo contra datos reales de SERFOR OCAPAS). Se puebla en un UPDATE
+  -- posterior al insert con ST_MakeValid, mismo patrón que mining_rights/forest_titles
+  -- en replicate-geometries.ts.
+  area_km2 NUMERIC,
   atributos_extra JSONB,
   source_batch_id BIGINT NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now(),

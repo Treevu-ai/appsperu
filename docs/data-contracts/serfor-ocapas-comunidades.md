@@ -3,12 +3,10 @@
 - Fuente: SERFOR (réplica de datos MIDAGRI, no el catastro oficial MIDAGRI directo).
 - URL del servicio: `https://geo.serfor.gob.pe/geoservicios/rest/services/Visor/OCAPAS_MIDAGRI/MapServer`
 - Owner del conector: `apps/geo-intersections/api` (mismo pool PostGIS que INGEMMET/SERFOR forestal).
-- Verificado en vivo el 2026-10-06: normalizador corrido contra el dataset completo real de
-  ambas capas. **No** se ha corrido la migración ni el ingest contra Postgres (sin acceso a
-  `DATABASE_URL` desde el entorno donde se hizo esta verificación — pendiente en un entorno con
-  el stack docker-compose levantado).
+- Verificado en vivo el 2026-10-06: migración + ingest corridos contra Postgres real
+  (`geo-intersections-postgres-1`), con los 4 endpoints probados contra datos reales.
 
-## Estado: NORMALIZADOR VERIFICADO EN VIVO — INGEST A POSTGRES PENDIENTE
+## Estado: IMPLEMENTADO Y VERIFICADO EN VIVO CONTRA POSTGRES REAL
 
 ## Capas y schema real (corregido tras la v1 de la investigación)
 
@@ -70,6 +68,43 @@ respuestas de este tamaño en el entorno de verificación; `curl` las trajo sin 
 producción, subir el timeout de 60s o investigar si el entorno de ejecución tiene la misma
 sensibilidad que se vio aquí.
 
+## Verificación en vivo (2026-10-06) — ingest real contra Postgres
+
+Migración (`005_rural_communities.sql`) y `npm run ingest:ocapas:comunidades` corridos contra
+`geo-intersections-postgres-1` (el contenedor estaba `Up` pero sin publicar el puerto 5466 que
+el `docker-compose.yml` ya declaraba — recreado con `docker compose up -d`, volumen preservado).
+
+**Primer intento falló**: `area_km2` estaba definida como columna `GENERATED ALWAYS AS
+(ST_Area(geometry::geography) / 1_000_000) STORED`. PostGIS devolvió
+`lwgeom_area_spher(oid) returned area < 0.0` en **ambas** capas (3,090 y 1,402 filas, toda la
+transacción revertida) — mismo error documentado en `replicate-geometries.ts` para
+`mining_rights`/`forest_titles`: polígonos self-intersecting/inválidos hacen que
+`ST_Area(::geography)` devuelva área negativa. Corregido: `area_km2` pasó a columna plana,
+poblada en un `UPDATE ... SET area_km2 = ST_Area(ST_MakeValid(geometry)::geography) / 1e6
+WHERE source_batch_id = $1 AND area_km2 IS NULL` después del insert — mismo patrón que el resto
+del conector de geometrías.
+
+**Segundo intento, exitoso**:
+
+```json
+{"capa":"comunidades_campesinas","batchId":"1","filasOrigen":3090,"filasInsertadas":3090,"filasRechazadas":0}
+{"capa":"comunidades_nativas","batchId":"2","filasOrigen":1402,"filasInsertadas":1402,"filasRechazadas":0}
+```
+
+Contra Postgres real: `rural_communities` tiene 3,090 + 1,402 = 4,492 filas, **todas** con
+`area_km2` poblado (0 `NULL`), 0 filas en `rural_communities_rejected`. `area_ha / 100 ≈
+area_km2` consistente (ej. objectid 1, comunidades_nativas: 258.05 ha → 2.58 km²).
+
+Los 4 endpoints probados contra el servidor real levantado con estos datos:
+- `GET /api/communities?limit=2` → 200, filas reales.
+- `GET /api/communities/stats` → 200, `{"capa":"comunidades_campesinas","total":"3090",...}` /
+  `{"capa":"comunidades_nativas","total":"1402",...}` — confirma que la ruta llega al handler
+  correcto, no a `/:objectid`.
+- `GET /api/communities/1` → 200, PUCA URCO (comunidades_campesinas).
+- `GET /api/communities/999999999` → 404.
+- `GET /api/communities/intersect?geometry=<point>` sin parámetro → 400. Con un punto real
+  (`ST_PointOnSurface` del polígono de PUCA URCO) → 200, devuelve exactamente esa fila.
+
 ## Normalizador (`src/ingest/normalize-ocapas.ts`)
 
 - `OBJECTID` ausente → fila rechazada (`rural_communities_rejected`).
@@ -103,22 +138,20 @@ sensibilidad que se vio aquí.
 - `GET /api/communities/stats` — mismo motivo, debe ir antes de `/:objectid`.
 - `GET /api/communities/:objectid`
 
-No verificado contra un servidor real levantado con datos ingeridos (pendiente, requiere DB).
+Verificado en vivo contra servidor real con datos ingeridos (ver sección anterior).
 
 ## MCP
 
-No registrado aún en `mcp-server/src/catalog.ts`. Pendiente de decidir si corresponde, una vez
-que el ingest real esté verificado contra Postgres.
+No registrado aún en `mcp-server/src/catalog.ts`. Pendiente de decidir si corresponde.
 
-## Pendiente (bloqueado por falta de acceso a Postgres desde este entorno)
+## Pendiente
 
-- Correr `npm run migrate` (aplica `005_rural_communities.sql`).
-- Correr `npm run ingest:ocapas:comunidades` contra la DB real y verificar
-  `SELECT COUNT(*) FROM rural_communities` / `rural_communities_rejected`.
-- Probar los 4 endpoints contra el servidor real levantado con datos reales.
-- Confirmar que `ST_GeomFromGeoJSON` acepta las ~3,090 + ~1,402 geometrías reales sin errores de
-  geometría inválida (polígonos self-intersecting, etc.) — el normalizador cierra anillos pero
-  no valida con `ST_IsValid`/`ST_MakeValid`.
+- Registrar tools MCP en `mcp-server/src/catalog.ts` si corresponde al alcance del catálogo.
+- `ST_GeomFromGeoJSON` acepta las geometrías reales sin error de inserción, pero no se verificó
+  `ST_IsValid` sobre las ~4,492 geometrías insertadas — el `UPDATE` de `area_km2` usa
+  `ST_MakeValid` para el cálculo de área, pero la columna `geometry` en sí se guarda tal cual
+  llega de la fuente (mismo criterio que `mining_rights`/`forest_titles`, no es una regresión de
+  este conector).
 
 ## Fuera de alcance de este conector
 

@@ -187,6 +187,16 @@ async function ingestCapa(capa: string, layerId: number): Promise<CapaIngestSumm
       await insertRejectedBatch(client, batchId, rejected.slice(i, i + INSERT_BATCH_SIZE));
     }
 
+    // ST_MakeValid repara polígonos self-intersecting/inválidos que hacen que
+    // ST_Area(::geography) devuelva area < 0 (error PostGIS XX000) — mismo patrón
+    // que mining_rights/forest_titles en replicate-geometries.ts.
+    await client.query(
+      `UPDATE rural_communities
+       SET area_km2 = ST_Area(ST_MakeValid(geometry)::geography) / 1_000_000
+       WHERE source_batch_id = $1 AND area_km2 IS NULL`,
+      [batchId]
+    );
+
     await client.query("UPDATE raw_ocapas_batches SET record_count = $1 WHERE id = $2", [features.length, batchId]);
 
     await client.query("COMMIT");
