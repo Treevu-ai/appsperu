@@ -112,7 +112,7 @@ que el ingest real esté verificado contra Postgres.
 
 ## Pendiente (bloqueado por falta de acceso a Postgres desde este entorno)
 
-- Correr `npm run migrate` (aplica `003_rural_communities.sql`).
+- Correr `npm run migrate` (aplica `005_rural_communities.sql`).
 - Correr `npm run ingest:ocapas:comunidades` contra la DB real y verificar
   `SELECT COUNT(*) FROM rural_communities` / `rural_communities_rejected`.
 - Probar los 4 endpoints contra el servidor real levantado con datos reales.

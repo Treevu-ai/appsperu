@@ -39,7 +39,7 @@ apps/geo-intersections/api/src/
 │   ├── migrations/
 │   │   ├── 001_init.sql                # Existente
 │   │   ├── 002_fix_serfor_types.sql    # Existente
-│   │   └── 003_rural_communities.sql   # NUEVO
+│   │   └── 005_rural_communities.sql   # NUEVO
 │   └── pool.ts                         # Existente
 └── routes/
     ├── index.ts                        # Existente
@@ -53,7 +53,7 @@ apps/geo-intersections/api/src/
 ### 2.1 Tabla principal: `rural_communities`
 
 ```sql
--- apps/geo-intersections/api/src/db/migrations/003_rural_communities.sql
+-- apps/geo-intersections/api/src/db/migrations/005_rural_communities.sql
 
 CREATE TABLE IF NOT EXISTS rural_communities (
   id BIGSERIAL PRIMARY KEY,
@@ -647,7 +647,7 @@ psql -d geo_intersections -c "SELECT COUNT(*) FROM rural_communities_rejected;"
 
 ## 9. Checklist de Implementación
 
-- [ ] Crear migración `003_rural_communities.sql`
+- [ ] Crear migración `005_rural_communities.sql`
 - [ ] Crear `ocapas-connector.ts`
 - [ ] Crear `normalize-ocapas.ts`
 - [ ] Crear `rural-communities.ts` (rutas)

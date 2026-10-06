@@ -1,4 +1,4 @@
--- 003_rural_communities.sql
+-- 005_rural_communities.sql
 -- Tablas para datos de Comunidades Campesinas/Nativas de SERFOR OCAPAS_MIDAGRI
 
 -- Tabla principal de comunidades rurales
