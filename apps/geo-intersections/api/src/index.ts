@@ -10,4 +10,8 @@ app.listen(PORT, () => {
   console.log(`  GET /api/cruce/forestal/:capa/:objectid`);
   console.log(`  GET /api/cruce/report`);
   console.log(`  GET /api/cruce/stats`);
+  console.log(`  GET /api/communities?capa=&departamento=`);
+  console.log(`  GET /api/communities/:objectid`);
+  console.log(`  GET /api/communities/intersect?geometry=`);
+  console.log(`  GET /api/communities/stats`);
 });
