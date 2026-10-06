@@ -2,7 +2,7 @@
  * normalize-ocapas.ts — Normaliza features de SERFOR OCAPAS_MIDAGRI.
  *
  * Convierte features de ArcGIS REST a formato canónico para la tabla rural_communities.
- * Maneja geometría rings[] → GeoJSON Polygon, cierra anillos, y extrae campos específicos.
+ * Maneja geometría rings[] → GeoJSON MultiPolygon, cierra anillos, y extrae campos específicos.
  *
  * Schema de campos confirmado contra la API en vivo (2026-10-06), capas 26 y 27:
  *   nomcom, painre, ofinre, depar, provi, distr, ubidis (código UBIGEO distrital),
@@ -32,7 +32,7 @@ export interface CanonicalCommunity {
   zona_utm: number | null;
   coordenada_x: number | null;
   coordenada_y: number | null;
-  geometry: string; // GeoJSON Polygon
+  geometry: string; // GeoJSON MultiPolygon
   atributos_extra: Record<string, unknown> | null;
 }
 
@@ -41,15 +41,65 @@ export interface RejectedRow {
   reason: string;
 }
 
-/**
- * Convierte un polygon rings[] de ArcGIS a GeoJSON Polygon.
- * rings[0] = exterior ring; rings[1+] = holes (interiores, si existen).
- */
-function ringsToGeoJSON(rings: number[][][]): string {
-  const coords = rings.map((ring) =>
-    ring.map(([x, y]) => [x, y] as [number, number])
+function isValidRing(ring: unknown): ring is number[][] {
+  return (
+    Array.isArray(ring) &&
+    ring.length >= 3 &&
+    ring.every(
+      (p) => Array.isArray(p) && p.length === 2 && typeof p[0] === "number" && typeof p[1] === "number"
+    )
   );
-  return JSON.stringify({ type: "Polygon", coordinates: coords });
+}
+
+/** Área con signo (fórmula del "shoelace"). El signo (no la magnitud) es lo que importa aquí. */
+function signedArea(ring: number[][]): number {
+  let sum = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [x1, y1] = ring[i];
+    const [x2, y2] = ring[i + 1];
+    sum += (x2 - x1) * (y2 + y1);
+  }
+  return sum / 2;
+}
+
+interface Shell {
+  exterior: number[][];
+  holes: number[][][];
+}
+
+/**
+ * Agrupa rings de ArcGIS en shells (exterior + holes) siguiendo la convención
+ * de orientación de Esri: un anillo clockwise abre un shell exterior nuevo;
+ * un anillo counter-clockwise es un hole del shell exterior más reciente.
+ *
+ * Confirmado en vivo contra datos reales (2026-10-06): 212/4,492 features
+ * (comunidades_campesinas + comunidades_nativas) tienen más de un ring, y NO
+ * todos son holes — ej. OBJECTID 7 "PUERTO ANGEL" (comunidades_campesinas)
+ * tiene 2 rings, AMBOS clockwise (dos shells exteriores disjuntos, no un
+ * hole). La v1 de este normalizador trataba ring[1+] siempre como hole —
+ * con esa feature real, el segundo polígono se habría leído como agujero
+ * del primero, corrompiendo la geometría consultada directamente por
+ * `/intersect`.
+ */
+function groupRingsIntoShells(rings: number[][][]): Shell[] {
+  const shells: Shell[] = [];
+  for (const ring of rings) {
+    const isExterior = shells.length === 0 || signedArea(ring) > 0;
+    if (isExterior) {
+      shells.push({ exterior: ring, holes: [] });
+    } else {
+      shells[shells.length - 1].holes.push(ring);
+    }
+  }
+  return shells;
+}
+
+/** Convierte shells agrupados a GeoJSON MultiPolygon (siempre, incluso con un solo shell, por consistencia de tipo en la columna de PostGIS). */
+function shellsToGeoJSON(shells: readonly Shell[]): string {
+  return JSON.stringify({
+    type: "MultiPolygon",
+    coordinates: shells.map((s) => [s.exterior, ...s.holes]),
+  });
 }
 
 function trimOrNull(value: unknown): string | null {
@@ -88,9 +138,15 @@ export function normalizeOcapasFeatures(
       continue;
     }
 
+    // Rechazar features con algún ring malformado (no array, <3 puntos, o puntos no numéricos) —
+    // sin esto, un ring inválido llega a ST_GeomFromGeoJSON y hace fallar/rollback todo el batch.
+    if (!f.geometry.rings.every(isValidRing)) {
+      rejected.push({ raw: f, reason: "geometry.rings contiene un anillo inválido" });
+      continue;
+    }
+
     // Cerrar anillos si no están cerrados
     const rings = f.geometry.rings.map((ring) => {
-      if (ring.length < 3) return ring;
       const first = ring[0];
       const last = ring[ring.length - 1];
       if (first[0] !== last[0] || first[1] !== last[1]) {
@@ -99,8 +155,9 @@ export function normalizeOcapasFeatures(
       return ring;
     });
 
-    // Convertir a GeoJSON
-    const geojson = ringsToGeoJSON(rings);
+    // Agrupar en shells (exterior + holes) y convertir a GeoJSON MultiPolygon
+    const shells = groupRingsIntoShells(rings);
+    const geojson = shellsToGeoJSON(shells);
 
     const atributosExtra: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(a)) {

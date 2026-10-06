@@ -50,6 +50,16 @@ apps/geo-intersections/api/src/
 
 ## 2. Schema de Base de Datos
 
+> ⚠️ **SQL de esta sección SUPERADO (2026-10-06)** — ver el archivo real
+> `apps/geo-intersections/api/src/db/migrations/005_rural_communities.sql` para el schema
+> implementado. Dos diferencias encontradas en verificación en vivo que este ejemplo no refleja:
+> 1. `area_km2` NO es `GENERATED ALWAYS AS (...)` — esa forma falla con
+>    `lwgeom_area_spher(oid) returned area < 0.0` ante polígonos self-intersecting reales y aborta
+>    el INSERT completo. Es una columna plana, poblada en un `UPDATE` posterior con `ST_MakeValid`.
+> 2. `geometry` es `GEOMETRY(MultiPolygon, 4326)`, no `GEOMETRY(Polygon, 4326)` — ~4.7% de las
+>    comunidades reales (212/4,492) tienen más de un ring, y no todos son holes (hay shells
+>    exteriores disjuntos reales, ej. OBJECTID 7 "PUERTO ANGEL").
+
 ### 2.1 Tabla principal: `rural_communities`
 
 ```sql
@@ -337,6 +347,13 @@ export async function ingestOcapas(capas?: string[]) {
 > (comunidades_campesinas) y 27 (comunidades_nativas) — que son las que implementa esta
 > Fase 1 — el schema real es distinto. Ver el mapeo corregido abajo y el data contract
 > actualizado en la sección 7.
+>
+> **Segunda actualización 2026-10-06**: el código de `ringsToGeoJSON` de abajo también quedó
+> superado — trataba todo ring después del primero como "hole", pero ~4.7% de las comunidades
+> reales (212/4,492) tienen más de un ring y no todos son holes (hay shells exteriores
+> disjuntos reales). Ver `apps/geo-intersections/api/src/ingest/normalize-ocapas.ts` para la
+> versión real, que agrupa rings por orientación (CW=nuevo shell exterior, CCW=hole del shell
+> más reciente) y emite `MultiPolygon`.
 
 ### 4.1 Schema real confirmado (capas 26 y 27, consultado en vivo)
 

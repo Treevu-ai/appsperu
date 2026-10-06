@@ -109,7 +109,21 @@ Los 4 endpoints probados contra el servidor real levantado con estos datos:
 
 - `OBJECTID` ausente → fila rechazada (`rural_communities_rejected`).
 - `geometry.rings` ausente o vacío → fila rechazada.
+- Cada ring se valida (array, ≥3 puntos, puntos `[number, number]`) — un ring inválido rechaza
+  la fila entera, en vez de llegar a `ST_GeomFromGeoJSON` y hacer fallar/rollback todo el batch
+  (hallazgo real de revisión CodeRabbit/Copilot).
 - Anillos no cerrados se cierran automáticamente antes de convertir a GeoJSON.
+- **Geometría de salida: `MultiPolygon`, no `Polygon`** — hallazgo real de revisión, confirmado
+  contra el dataset completo: 212/4,492 features (≈4.7%) tienen más de un ring, y no todos son
+  holes. Ej. real: OBJECTID 7 "PUERTO ANGEL" (comunidades_campesinas) tiene 2 rings, **ambos
+  clockwise** (dos shells exteriores disjuntos, confirmado con `ST_NumGeometries(geometry) = 2`
+  tras el fix). La v1 trataba todo ring después del primero como hole sin importar su
+  orientación — con esta feature real, el segundo polígono se habría leído como agujero del
+  primero, corrompiendo la geometría que `/intersect` consulta directamente (`ST_MakeValid` solo
+  repara el cálculo de área, no la semántica del hole mal asignado). El normalizador agrupa
+  rings por orientación (regla de Esri: clockwise = nuevo shell exterior, counter-clockwise =
+  hole del shell exterior más reciente) y siempre emite `MultiPolygon` (incluso con un solo
+  shell), para tipo consistente en la columna `GEOMETRY(MultiPolygon, 4326)`.
 - `titulo` solo se puebla para `comunidades_nativas` (desde `titcom`); queda `null` para
   `comunidades_campesinas` (la capa no tiene campo equivalente).
 - `zona_utm` y `perimetro` quedan siempre `null` — la fuente no los expone para estas capas.
@@ -128,30 +142,64 @@ Los 4 endpoints probados contra el servidor real levantado con estos datos:
    pasar el string GeoJSON crudo como parámetro sin ese cast (bug real encontrado y corregido en
    esta misma implementación: PostGIS no castea un string JSON a `GEOMETRY` implícitamente).
 5. Guarda batch en `raw_ocapas_batches`, filas rechazadas en `rural_communities_rejected`.
+6. Si la fuente devuelve `features: []`, el ingest se aborta ANTES de tocar la tabla (lanza error,
+   no hace `DELETE`) — sin esto, un `features=[]` transitorio (ej. blip de red que igual
+   responde HTTP 200) habría borrado todo lo ya ingerido para esa capa y confirmado una tabla
+   vacía (hallazgo real de revisión CodeRabbit).
+7. `batchId` se trata como `string` en todo el conector (`CapaIngestSummary.batchId: string`),
+   no `number` — `raw_ocapas_batches.id` es `BIGSERIAL` y node-postgres lo devuelve como string
+   sin un parser numérico registrado (hallazgo real de revisión CodeRabbit).
 
 ## API (`src/routes/rural-communities.ts`)
 
-- `GET /api/communities?capa=&departamento=&limit=&offset=`
-- `GET /api/communities/intersect?geometry=<geojson>` — **debe** declararse antes de
-  `/:objectid` en el router (bug real encontrado y corregido: Express matcheaba
-  `objectid="intersect"` y nunca llegaba al handler real).
-- `GET /api/communities/stats` — mismo motivo, debe ir antes de `/:objectid`.
-- `GET /api/communities/:objectid`
+- `GET /api/communities?capa=&departamento=&limit=&offset=` — `limit` validado (1-1000, default
+  100) y `offset` (≥0, default 0) con Zod; valores inválidos (`limit=abc`, `limit=5000`) → 400
+  antes de tocar la DB (hallazgo real de revisión: `parseInt` sin validar dejaba pasar `NaN`/
+  valores sin cota hasta Postgres). `ORDER BY nombre, capa, objectid` — tie-breaker agregado
+  porque `nombre` no es único y paginar solo por él podía repetir/omitir filas entre páginas
+  (hallazgo real de revisión).
+- `GET /api/communities/intersect?geometry=<geojson>&limit=&offset=` — **debe** declararse
+  antes de `/:objectid` en el router (bug real encontrado y corregido: Express matcheaba
+  `objectid="intersect"` y nunca llegaba al handler real). `geometry` se valida como JSON con
+  un campo `type` reconocido de GeoJSON antes de llegar a `ST_GeomFromGeoJSON` (hallazgo real:
+  JSON malformado o no-geometría causaba 500 en vez de 400). Ahora pagina con `limit`/`offset`
+  igual que el listado — antes devolvía TODAS las filas que intersectan sin cota, incluyendo su
+  geometría completa (hallazgo real: una geometría que cubre todo Perú podía devolver las 4,492
+  filas con sus polígonos completos en una sola respuesta).
+- `GET /api/communities/stats` — mismo motivo que `/intersect`, debe ir antes de `/:objectid`.
+- `GET /api/communities/:objectid?capa=` — **`capa` es obligatorio** (hallazgo real y confirmado
+  con datos reales: `objectid=1` existe en AMBAS capas — PUCA URCO en comunidades_campesinas,
+  LAS MALVINAS en comunidades_nativas — porque la tabla garantiza `UNIQUE(capa, objectid)`, no
+  `UNIQUE(objectid)` a solas; sin `capa` la ruta devolvía una fila arbitraria de las dos).
+  `objectid` se valida como entero dentro del rango int32 de Postgres antes de la query
+  (hallazgo real: `/api/communities/abc` llegaba a una comparación `INTEGER` inválida y daba 500).
 
-Verificado en vivo contra servidor real con datos ingeridos (ver sección anterior).
+Verificado en vivo contra servidor real con datos ingeridos (ver sección anterior), incluyendo
+todos los casos de validación arriba y el caso de ambigüedad `objectid=1`.
 
-## MCP
+## MCP (`mcp-server/src/handlers/geo-intersections/communities.ts`)
 
-No registrado aún en `mcp-server/src/catalog.ts`. Pendiente de decidir si corresponde.
+4 tools registradas en `mcp-server/src/catalog.ts`: `geo_intersections_comunidades`,
+`geo_intersections_comunidad_detalle` (con `capa` obligatorio en el querySchema, mismo motivo
+que la ruta Express), `geo_intersections_comunidades_intersect` (con `limit`/`offset`),
+`geo_intersections_comunidades_stats`. SQL y validaciones idénticas a `rural-communities.ts` —
+los handlers MCP ejecutan contra Neon directamente (no proxy HTTP a la app Express), así que
+necesitan las mismas validaciones por su cuenta, no las heredan de la ruta.
+
+Esto no era opcional: `mcp-server/src/__tests__/routes-vs-catalog.test.ts` (CX-15) es un gate de
+CI que falla si cualquier endpoint GET real de una app del catálogo no tiene tool MCP — el job
+`mcp-server` falló en el primer push de este PR por dejarlo pendiente.
 
 ## Pendiente
 
-- Registrar tools MCP en `mcp-server/src/catalog.ts` si corresponde al alcance del catálogo.
-- `ST_GeomFromGeoJSON` acepta las geometrías reales sin error de inserción, pero no se verificó
-  `ST_IsValid` sobre las ~4,492 geometrías insertadas — el `UPDATE` de `area_km2` usa
-  `ST_MakeValid` para el cálculo de área, pero la columna `geometry` en sí se guarda tal cual
-  llega de la fuente (mismo criterio que `mining_rights`/`forest_titles`, no es una regresión de
-  este conector).
+- Correr la migración `005_rural_communities.sql` + el ingest real contra la base Neon
+  `geo_intersections` — los handlers MCP consultan Neon, no el Postgres docker usado para
+  verificar el conector end-to-end. Paso manual de deploy, sin automatización en CI.
+- `ST_GeomFromGeoJSON` acepta las geometrías reales sin error de inserción, pero 25/4,492
+  (`ST_IsValid(geometry) = false`) son geométricamente inválidas (polígonos self-intersecting) —
+  el `UPDATE` de `area_km2` usa `ST_MakeValid` para el cálculo de área, pero la columna
+  `geometry` en sí se guarda tal cual llega de la fuente (mismo criterio que
+  `mining_rights`/`forest_titles`, no es una regresión de este conector).
 
 ## Fuera de alcance de este conector
 

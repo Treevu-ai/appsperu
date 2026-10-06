@@ -3575,11 +3575,16 @@ export const TOOL_CATALOG: ToolSpec[] = [
     handler: "communities:detalle",
     app: "geo-intersections",
     description:
-      "Detalle de una comunidad campesina o nativa específica por `objectid` (ID de ArcGIS). " +
-      "Responde 404 si no existe. " + SIN_SCHEDULER,
+      "Detalle de una comunidad campesina o nativa específica por `objectid` (ID de ArcGIS) + " +
+      "`capa` (obligatorio). `objectid` por sí solo NO es clave única — la tabla garantiza " +
+      "UNIQUE(capa, objectid), no UNIQUE(objectid) a solas; hay comunidades reales con el mismo " +
+      "`objectid` en capas distintas (ej. objectid=1 existe en comunidades_campesinas Y en " +
+      "comunidades_nativas). Responde 404 si no existe esa combinación. " + SIN_SCHEDULER,
     pathTemplate: "/api/communities/{objectid}",
     pathParams: ["objectid"],
-    querySchema: {},
+    querySchema: {
+      capa: z.enum(["comunidades_campesinas", "comunidades_nativas"]).describe("Obligatorio — ver descripción."),
+    },
   },
   {
     name: "geo_intersections_comunidades_intersect",
@@ -3592,7 +3597,9 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathTemplate: "/api/communities/intersect",
     pathParams: [],
     querySchema: {
-      geometry: z.string().min(1).describe("GeoJSON (Point, Polygon, etc.) como string."),
+      geometry: z.string().min(1).describe('GeoJSON (Point, Polygon, etc.) como string, con campo "type" reconocido.'),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 100, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
   {

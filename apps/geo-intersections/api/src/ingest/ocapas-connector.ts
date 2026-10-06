@@ -96,8 +96,11 @@ async function fetchLayerFeatures(capa: string, layerId: number): Promise<ArcGIS
   return payload.features;
 }
 
-async function saveRawBatch(client: PoolClient, capa: string, layerId: number): Promise<number> {
-  const result = await client.query<{ id: number }>(
+async function saveRawBatch(client: PoolClient, capa: string, layerId: number): Promise<string> {
+  // node-postgres devuelve BIGSERIAL como string (no hay parser numérico seguro para
+  // int8 — perdería precisión fuera del rango de Number). batchId se trata como string
+  // en todo el conector para reflejar eso, no "number" como antes.
+  const result = await client.query<{ id: string }>(
     `INSERT INTO raw_ocapas_batches (source_url, capa, record_count)
      VALUES ($1, $2, 0) RETURNING id`,
     [`${OCAPAS_BASE}/${layerId}/query`, capa]
@@ -111,7 +114,7 @@ const INSERT_COLUMNS = [
   "geometry", "atributos_extra", "source_batch_id",
 ] as const;
 
-async function insertBatch(client: PoolClient, batchId: number, rows: readonly CanonicalCommunity[]): Promise<void> {
+async function insertBatch(client: PoolClient, batchId: string, rows: readonly CanonicalCommunity[]): Promise<void> {
   if (rows.length === 0) return;
 
   const values: unknown[] = [];
@@ -142,7 +145,7 @@ async function insertBatch(client: PoolClient, batchId: number, rows: readonly C
   );
 }
 
-async function insertRejectedBatch(client: PoolClient, batchId: number, rejected: readonly RejectedRow[]): Promise<void> {
+async function insertRejectedBatch(client: PoolClient, batchId: string, rejected: readonly RejectedRow[]): Promise<void> {
   for (const bad of rejected) {
     await client.query(
       `INSERT INTO rural_communities_rejected (source_batch_id, raw_row, reason)
@@ -154,7 +157,7 @@ async function insertRejectedBatch(client: PoolClient, batchId: number, rejected
 
 export interface CapaIngestSummary {
   capa: string;
-  batchId: number;
+  batchId: string;
   filasOrigen: number;
   filasInsertadas: number;
   filasRechazadas: number;
@@ -170,6 +173,17 @@ export interface IngestSummary {
  */
 async function ingestCapa(capa: string, layerId: number): Promise<CapaIngestSummary> {
   const features = await fetchLayerFeatures(capa, layerId);
+
+  // Protege un snapshot ya poblado de una respuesta vacía inesperada: sin esto, un
+  // features=[] transitorio (ej. blip de red que igual devuelve HTTP 200) borraba
+  // todo lo ya ingerido para esta capa y confirmaba una tabla vacía.
+  if (features.length === 0) {
+    throw new Error(
+      `SERFOR OCAPAS devolvió 0 features para capa "${capa}" -- se aborta para no reemplazar ` +
+        "datos ya ingeridos con un snapshot vacío"
+    );
+  }
+
   const { rows, rejected } = normalizeOcapasFeatures(features, capa);
 
   const client = await pool.connect();

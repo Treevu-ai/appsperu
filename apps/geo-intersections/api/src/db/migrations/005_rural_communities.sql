@@ -16,7 +16,10 @@ CREATE TABLE IF NOT EXISTS rural_communities (
   zona_utm INTEGER, -- sin fuente; la API no expone zona UTM para estas capas
   coordenada_x NUMERIC, -- centroide_e
   coordenada_y NUMERIC, -- centroide_n
-  geometry GEOMETRY(Polygon, 4326),
+  -- MultiPolygon, no Polygon: ~4.7% de las comunidades reales (212/4,492) tienen más de
+  -- un ring, y no todos son holes (ej. OBJECTID 7 "PUERTO ANGEL" tiene 2 shells exteriores
+  -- disjuntos) — el normalizador agrupa por orientación y siempre emite MultiPolygon.
+  geometry GEOMETRY(MultiPolygon, 4326),
   -- Columna plana, no GENERATED: ST_Area(geometry::geography) directo revienta con
   -- "lwgeom_area_spher(oid) returned area < 0.0" ante polígonos self-intersecting/inválidos
   -- (confirmado en vivo contra datos reales de SERFOR OCAPAS). Se puebla en un UPDATE
