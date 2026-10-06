@@ -1230,6 +1230,34 @@ Investigado y construido 2026-09-22 (tickets ADS-01 desbloqueo + ADS-02 ingesta,
 
 ---
 
+<a id="geo-intersections-comunidades"></a>
+## geo-intersections (extensión) — Comunidades Campesinas/Nativas (SERFOR OCAPAS_MIDAGRI)
+
+Investigado y construido 2026-10-06 (`docs/investigacion-agro-digital-2026-10-06.md` +
+`docs/plan-implementacion-catastro-rural-v1.md`, Fase 1). Extiende `apps/geo-intersections/api`
+(mismo pool PostGIS que INGEMMET/SERFOR forestal) en vez de crear una app nueva.
+
+### `ocapas-connector.ts`
+
+| | |
+|---|---|
+| **Descripción** | Comunidades Campesinas (capa 26) y Comunidades Nativas (capa 27) de SERFOR OCAPAS_MIDAGRI — réplica SERFOR de datos MIDAGRI, no el catastro oficial MIDAGRI directo. |
+| **Hallazgo real — el schema de campos documentado en la investigación v1 era de otra capa** | La investigación inicial y el plan v1 asumieron campos (`NOMPRE`, `AREA`, `PERIME`, `TITULO`, `ZUTM`, `COORX`/`COORY`) de las capas de predios por departamento (IDs 1-25). Confirmado contra la API en vivo que las capas de comunidades (26, 27) usan un schema distinto: `nomcom`, `depar`/`provi`/`distr` (ya separados, sin parsear `ubidis`), `ubidis` (código UBIGEO, no nombre), `Aarea` (hectáreas), `centroide_e`/`centroide_n`, `titcom` (título comunal, solo capa 27). Ver `docs/data-contracts/serfor-ocapas-comunidades.md`. |
+| **Sin paginación necesaria** | `maxRecordCount: 1,000,000` — verificado trayendo el dataset completo de ambas capas en una sola consulta, sin `exceededTransferLimit`. |
+| **Bug real corregido — geometría insertada sin cast** | La columna `geometry` se insertaba con el string GeoJSON crudo como parámetro, sin `ST_GeomFromGeoJSON()` — PostGIS no castea un string JSON a `GEOMETRY` implícitamente. Corregido para envolver el placeholder explícitamente, mismo patrón que `replicate-geometries.ts`. |
+| **Bug real corregido — orden de rutas Express** | `/api/communities/intersect` y `/api/communities/stats` estaban declaradas después de `/api/communities/:objectid` — Express las matcheaba como `objectid="intersect"`/`"stats"` y nunca llegaban al handler real. Corregido reordenando las rutas específicas antes de la paramétrica. |
+| **Bug real corregido — `objectid` no es clave única por sí solo** | La tabla garantiza `UNIQUE(capa, objectid)`, no `UNIQUE(objectid)` — confirmado con datos reales: `objectid=1` existe en comunidades_campesinas (PUCA URCO) Y en comunidades_nativas (LAS MALVINAS). `/api/communities/:objectid` devolvía una fila arbitraria de las dos. `capa` ahora es obligatorio (query param en la ruta Express, argumento requerido en el tool MCP). |
+| **Bug real corregido — geometría multi-shell tratada como hole** | 212/4,492 features reales (≈4.7%) tienen más de un ring; no todos son holes — ej. OBJECTID 7 "PUERTO ANGEL" tiene 2 rings, ambos clockwise (dos shells exteriores disjuntos). El normalizador agrupa por orientación (Esri: CW=shell nuevo, CCW=hole) y emite `MultiPolygon` siempre; la columna pasó de `GEOMETRY(Polygon,4326)` a `GEOMETRY(MultiPolygon,4326)`. |
+| **Hallazgos de revisión adicionales corregidos** | Validación de `limit`/`offset` (antes `parseInt` sin cota dejaba pasar `NaN`/valores arbitrarios), validación de `geometry` como GeoJSON antes de `ST_GeomFromGeoJSON` (antes 500 en vez de 400), `ORDER BY` con tie-breaker `capa, objectid` (antes solo `nombre`, no único), paginación en `/intersect` (antes sin cota), guarda contra `features: []` vaciando un snapshot poblado, `batchId` tipado como `string` (BIGSERIAL vía node-postgres). Ver `docs/data-contracts/serfor-ocapas-comunidades.md`. |
+| **Bug real corregido — `area_km2` como columna `GENERATED`** | `area_km2 GENERATED ALWAYS AS (ST_Area(geometry::geography) / 1e6) STORED` revienta con `lwgeom_area_spher(oid) returned area < 0.0` ante polígonos self-intersecting/inválidos — y al ser `GENERATED`, aborta el `INSERT` completo (confirmado: ambas capas, 3,090 + 1,402 filas, transacción revertida). Corregido a columna plana poblada en un `UPDATE` posterior con `ST_MakeValid`, mismo patrón que `mining_rights`/`forest_titles` en `replicate-geometries.ts`. |
+| **Frecuencia** | Manual (`npm run ingest:ocapas:comunidades` en `apps/geo-intersections/api`). Sin scheduler. |
+| **Fuente de datos** | `geo.serfor.gob.pe` (SERFOR, réplica OCAPAS_MIDAGRI). |
+| **Verificación real contra Postgres** | Verificado en vivo 2026-10-06, migración + ingest corridos contra `geo-intersections-postgres-1`: **3,090/3,090 filas insertadas (comunidades_campesinas), 1,402/1,402 (comunidades_nativas), 0 rechazadas**, 100% con `area_km2` poblado. Los 4 endpoints probados contra el servidor real con estos datos (`stats` agrupa correctamente por capa, `intersect` devuelve la fila correcta para un punto real dentro del polígono, `:objectid` da 404 para IDs inexistentes). |
+| **API expuesta** | `GET /api/communities` (filtros `capa`/`departamento`, paginado `limit`/`offset`), `GET /api/communities/:objectid?capa=` (capa obligatoria), `GET /api/communities/intersect?geometry=<geojson>&limit=&offset=`, `GET /api/communities/stats`. Probada en vivo contra datos reales. 4 tools MCP registradas en `mcp-server/src/catalog.ts` con las mismas validaciones (los handlers MCP consultan Neon directo, no HTTP proxy — necesitan su propia validación). |
+| **Fuera de alcance** | Predios por departamento (capas 1-25, Fase 2 del plan), AgroDigital/PPA (Fase 3, requiere contacto oficial MIDAGRI), Georural Catastro Rural (fuente oficial MIDAGRI distinta, requiere paginación por `MaxRecordCount=1000`) — ver investigación. |
+
+---
+
 <a id="emergencias-indeci"></a>
 ## emergencias-indeci — Emergencias y daños históricos (INDECI/SINPAD)
 

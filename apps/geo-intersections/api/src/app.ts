@@ -4,6 +4,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import express from "express";
 import { intersectionsRouter } from "./routes/intersections.js";
+import { ruralCommunitiesRouter } from "./routes/rural-communities.js";
 import { pool } from "./db/pool.js";
 
 export function createApp() {
@@ -35,6 +36,7 @@ export function createApp() {
 
   // Rutas
   app.use("/api/cruce", intersectionsRouter);
+  app.use("/api/communities", ruralCommunitiesRouter);
 
   // 404 catch-all
   app.use((_req, res) => res.status(404).json({ error: "No encontrado." }));

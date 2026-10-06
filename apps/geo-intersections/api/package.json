@@ -10,6 +10,8 @@
     "migrate": "tsx src/db/migrate.ts",
     "ingest:geometries": "tsx src/ingest/replicate-geometries.ts",
     "ingest:intersections": "tsx src/ingest/compute-intersections.ts",
+    "ingest:ocapas": "tsx src/ingest/ocapas-connector.ts",
+    "ingest:ocapas:comunidades": "tsx src/ingest/ocapas-connector.ts comunidades_campesinas comunidades_nativas",
     "test": "vitest run",
     "test:watch": "vitest"
   },
