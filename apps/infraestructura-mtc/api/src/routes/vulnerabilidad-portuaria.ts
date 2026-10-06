@@ -557,6 +557,19 @@ vulnerabilidadRouter.post(
 
       tbmlPorAduana = computeTbmlScoresByAduana(importsParaScore);
       aduanasDisponibles = [...new Set(importRows.map((r) => r.aduana_name))];
+
+      // Sin filas de SUNAT, o sin ningún grupo (subpartida, año) con suficientes aduanas
+      // para una mediana robusta, el recálculo degeneraría en v3 con tbmlScore:null en todos
+      // los terminales — mismo riesgo de "degradación silenciosa" que el guard de tráfico de
+      // arriba. pctValorAnomalo === 0 en una aduana SÍ es un resultado legítimo (cero anomalías
+      // detectadas, no ausencia de datos), así que no se rechaza por eso — solo por ausencia
+      // total de datos o de benchmark.
+      if (importRows.length === 0 || tbmlPorAduana.size === 0) {
+        res.status(409).json({
+          error: `No hay datos de SUNAT-aduanas benchmarkeables para calcular '${fuente}'. Verifica que 'port_subpartida_imports' tenga filas y suficientes aduanas por subpartida.`,
+        });
+        return;
+      }
     }
 
     // Limpiar índice existente para esta fuente

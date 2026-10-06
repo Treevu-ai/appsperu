@@ -36,7 +36,12 @@ export interface AduanaTbmlScore {
   fobTotal: number;
 }
 
-/** Umbral de desviación relativa frente a la mediana nacional de la subpartida — el mismo 20% que usa FATF para "discrepancia significativa" en sus red flags de TBML. */
+/**
+ * Umbral de desviación relativa frente a la mediana nacional de la subpartida.
+ * FATF (Trade-Based Money Laundering Risk Indicators, 2021) solo describe el
+ * red flag como "discrepancia significativa de valor" sin fijar un número —
+ * 20% es una elección propia de este índice, no un valor tomado de FATF.
+ */
 export const UMBRAL_DESVIACION = 0.20;
 
 /** Mínimo de aduanas reportando la misma subpartida para que su mediana sea representativa — por debajo de esto, la "mediana" de 1-2 observaciones no es un benchmark, es ruido. */
@@ -150,6 +155,7 @@ function escapeRegExp(s: string): string {
 const ALIAS_ADUANA: Readonly<Record<string, string>> = {
   callao: "MARITIMA DEL CALLAO",
   matarani: "MOLLENDO - MATARANI",
+  mollendo: "MOLLENDO - MATARANI",
 };
 
 /**

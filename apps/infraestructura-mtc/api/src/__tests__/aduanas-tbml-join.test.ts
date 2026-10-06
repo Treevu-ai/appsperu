@@ -145,7 +145,7 @@ describe("matchTerminalToAduana", () => {
 });
 
 describe("constantes documentadas", () => {
-  it("UMBRAL_DESVIACION es 0.20 (el mismo que usa FATF para 'discrepancia significativa')", () => {
+  it("UMBRAL_DESVIACION es 0.20 (elección propia del índice, FATF no fija un número)", () => {
     expect(UMBRAL_DESVIACION).toBe(0.2);
   });
 });

@@ -26,7 +26,7 @@ se adoptó y por qué:
 | Fuente | Qué aporta | Uso en v3 |
 |---|---|---|
 | OECD/JRC *Handbook on Constructing Composite Indicators* | Normalización 0-1 antes de ponderar, pesos documentados, análisis de sensibilidad obligatorio | Base metodológica de toda la sección 3-4 |
-| FATF *Trade-Based Money Laundering Risk Indicators* (2021) | Red flag: discrepancia >20% entre valor declarado y benchmark | Umbral `UMBRAL_DESVIACION=0.20` en `aduanas-tbml-join.ts` |
+| FATF *Trade-Based Money Laundering Risk Indicators* (2021) | Red flag: "discrepancia significativa" entre valor declarado y benchmark (FATF no fija un número) | Umbral `UMBRAL_DESVIACION=0.20` en `aduanas-tbml-join.ts` — el 20% es una elección propia de este índice, no un valor tomado de FATF |
 | GAFILAT *Informe de Amenazas Regionales LA/FT* | Tipologías regionales (empresas fachada, testaferros) — NO implementado esta sesión | Pendiente, ver §6 |
 | Nautical Port Risk Index (ANP) | Pesos derivados de comparación pareada de expertos en vez de fijos | **No adoptado**: requiere panel de expertos, fuera de alcance de esta sesión. Se usó compresión proporcional en su lugar (§3) |
 | PortMATE (TRAFFIC) | 9 categorías de capacidad de interdicción — mayoría requiere auditoría de campo | No aplicable con datos abiertos, salvo "integridad/anticorrupción" (ya cubierto indirectamente por sanciones del operador, no implementado aquí) |
@@ -50,7 +50,7 @@ red flag FATF de "discrepancia significativa de valor declarado".
   internacional varía por año.
 - Solo se calcula mediana con ≥3 aduanas reportando esa subpartida/año (`MIN_ADUANAS_PARA_MEDIANA`)
   — con 1-2 observaciones, "mediana" es ruido, no un benchmark.
-- Umbral de anomalía: desviación relativa >20% (`UMBRAL_DESVIACION`), el mismo que usa FATF.
+- Umbral de anomalía: desviación relativa >20% (`UMBRAL_DESVIACION`) — elección propia de este índice; FATF solo describe el red flag como "discrepancia significativa" sin fijar un número.
 - Agregación por aduana: fracción del **valor FOB** (no del conteo de filas) que cae en
   subpartidas anómalas — una fila grande anómala pesa más que diez chicas normales.
 - Match terminal→aduana en `matchTerminalToAduana`: overrides verificados (mismas 9 entradas de
@@ -60,16 +60,26 @@ red flag FATF de "discrepancia significativa de valor declarado".
 
 ### Hallazgo real, honesto: la señal actual es casi nula
 
-Corrida completa contra los datos reales locales (627 filas, 17 aduanas, 2023-2024):
+**Nota sobre un bug corregido en el camino**: la primera corrida de esta sección (y toda la
+investigación inicial) se hizo contra datos de `sunat-aduanas` corruptos — el parser
+`normalizeCdro16()` asumía una columna vacía en el XLSX que no existe en el archivo real,
+desalineando `subpartida` (quedaba con el texto de la descripción) y `product_desc` (quedaba
+con un número). CodeRabbit lo señaló en la review de este PR; se verificó en vivo contra el
+XLSX real con `XLSX.utils.sheet_to_json`, se corrigió el parser, se agregó test de regresión y
+se re-ingestó `sunat-aduanas` localmente (627 → 712 filas correctas). Los números de abajo son
+de la corrida **después** de ese fix — ver también `apps/sunat-aduanas/api/src/ingest/normalize.ts`.
+
+Corrida completa contra los datos reales locales, ya corregidos (712 filas, 19 aduanas, 2023-2024):
 
 | Aduana | % valor anómalo | Filas evaluadas |
 |---|---:|---:|
 | DESAGUADERO | 1.4% | 9 |
-| **Las otras 14 aduanas con benchmark** | **0.0%** | 1-22 cada una |
+| **Las otras 16 aduanas con benchmark** | **0.0%** | 2-27 cada una |
 
-De 454 combinaciones (subpartida, año), solo 38 tienen ≥3 aduanas reportando (benchmark
-robusto). Para la más grande de esas 38 (DIESEL B5, 6 aduanas), las razones CIF/FOB van de
-1.0798 a 1.0884 — una dispersión de ~1%, muy por debajo del umbral de 20%.
+De 455 combinaciones (subpartida, año), solo 53 tienen ≥3 aduanas reportando (benchmark
+robusto). El hallazgo cualitativo es el mismo que con los datos corruptos — la razón CIF/FOB es
+estable entre aduanas para casi todas las subpartidas — pero ahora está respaldado por códigos
+arancelarios reales, no por texto de descripción colisionando como clave de agrupación.
 
 **Esto no es un bug: es el resultado real del proxy con los datos disponibles.** Dos lecturas
 posibles, ninguna descartable con la evidencia actual:
@@ -80,11 +90,11 @@ posibles, ninguna descartable con la evidencia actual:
 2. Dos años (2023-2024) y 17 aduanas no dan suficiente varianza estadística para que el método
    de mediana-nacional detecte algo, incluso si existiera.
 
-**Conclusión práctica**: la dimensión queda implementada, probada y conectada end-to-end (33/151
-terminales con match de aduana), pero **hoy no aporta señal real** — es infraestructura lista
-para cuando haya más años de datos SUNAT o, mejor, un cruce con un benchmark de precios externo
-(UN Comtrade/Banco Mundial), que es lo que FATF realmente recomienda y lo que PRD-004 original
-nunca tuvo presupuestado.
+**Conclusión práctica**: la dimensión queda implementada, probada y conectada end-to-end (38/151
+terminales con match de aduana, con datos de SUNAT ya corregidos), pero **hoy no aporta señal
+real** — es infraestructura lista para cuando haya más años de datos SUNAT o, mejor, un cruce
+con un benchmark de precios externo (UN Comtrade/Banco Mundial), que es lo que FATF realmente
+recomienda y lo que PRD-004 original nunca tuvo presupuestado.
 
 ## 4. Normalización y pesos (OECD/JRC)
 
@@ -110,8 +120,8 @@ PESOS_V3 = {
 
 ## 5. Análisis de sensibilidad (OECD/JRC, obligatorio antes de publicar un ranking)
 
-Corrido contra los 151 terminales reales (local, 2026-10-05), comparando el top-10 del ranking
-base contra dos escenarios alternativos:
+Corrido contra los 151 terminales reales (local, 2026-10-05, con los datos de SUNAT ya
+corregidos), comparando el top-10 del ranking base contra dos escenarios alternativos:
 
 | Escenario | Overlap top-10 vs. base |
 |---|---:|
@@ -137,15 +147,23 @@ pesos bastante distinto al elegido, lo que es la señal que el Handbook pide ant
 - **Pesos vía ANP/comparación pareada de expertos**: descartado por alcance (requiere panel de
   expertos), se usó compresión proporcional documentada en su lugar.
 
-## 7. Verificación en vivo (2026-10-05, local)
+## 7. Verificación en vivo (2026-10-05, local, con el bug de `sunat-aduanas` ya corregido)
 
 - `POST /api/terminales/vulnerabilidad/calcular {"fuente":"MTC+CARGAS+SUNAT_V3"}`: 151/151
   terminales procesados e insertados. Cobertura tráfico 60/151 (igual que v2). Cobertura TBML
-  33/151 (tras corregir el matcher de aduana para incluir los 9 overrides de la bahía del
-  Callao — sin ellos, 23/151).
-- `apps/infraestructura-mtc/api` — 111 tests en verde (16 nuevos: `aduanas-tbml-join.test.ts`;
-  5 nuevos en `vulnerabilidad-scoring.test.ts` para v3 y `PESOS_V3`).
-- `tsc --noEmit` limpio.
+  38/151 (tras corregir el matcher de aduana para incluir los 9 overrides de la bahía del
+  Callao y el alias `mollendo` — sin los overrides de Callao, 23/151).
+- Guard nuevo: `POST /calcular` con `fuente:"MTC+CARGAS+SUNAT_V3"` devuelve 409 si
+  `port_subpartida_imports` no tiene filas o no hay ningún grupo (subpartida, año) con
+  benchmark robusto — nunca un v3 degradado en silencio a `tbmlScore: null` en todos los
+  terminales (mismo patrón que el guard de tráfico de v2, hallazgo de review de este PR).
+- `apps/infraestructura-mtc/api` — 113 tests en verde (22 se saltan sin `DATABASE_URL`).
+- `apps/sunat-aduanas/api` — 2 tests nuevos de regresión para `normalizeCdro16` (el bug del
+  column-swap), suite completa en verde.
+- `tsc --noEmit` limpio en ambas apps.
+- Re-análisis de sensibilidad (§5) corrido contra los datos de SUNAT ya corregidos: mismos
+  resultados (8/10 y 10/10) — confirma que el hallazgo de señal TBML ~0 no era un artefacto de
+  la corrupción de datos.
 
 ## Fuentes de la investigación de metodologías
 
