@@ -60,6 +60,37 @@ describe.skipIf(!CON_DB)("Índice de Vulnerabilidad Portuaria", () => {
     }
   });
 
+  // ─── Test: paginación determinista cuando hay empate de score ──────────────
+  it("entre empates de score, codigoPuerto es ascendente exacto — también cruzando el límite de página (hallazgo real: 52 terminales con el mismo 22.75 en v1)", async () => {
+    // Página grande sin offset: referencia del orden "verdadero" completo.
+    const completo = await import("supertest").then((m) =>
+      m.default(app).get(baseUrl).query({ limit: 200, offset: 0 })
+    );
+    const resultados = completo.body.resultados as { codigoPuerto: string; scoreVulnerabilidad: number }[];
+
+    // Comparar contra las mismas dos filas obtenidas en páginas separadas (limit=1) no
+    // demuestra el desempate si Postgres simplemente repite el mismo plan de ejecución entre
+    // llamadas idénticas — hay que comprobar el orden ascendente exacto dentro de cada grupo
+    // de score empatado, no solo que dos llamadas coincidan entre sí.
+    let huboEmpate = false;
+    for (let i = 1; i < resultados.length; i++) {
+      if (resultados[i].scoreVulnerabilidad === resultados[i - 1].scoreVulnerabilidad) {
+        huboEmpate = true;
+        expect(resultados[i].codigoPuerto > resultados[i - 1].codigoPuerto).toBe(true);
+      }
+    }
+    expect(huboEmpate).toBe(true); // si esto falla, los datos de prueba cambiaron y el test ya no cubre el caso
+
+    // Cruzando el límite de página (limit=1 por fila) debe reproducir exactamente el mismo
+    // orden que la página grande, fila por fila — incluso dentro de un grupo empatado.
+    for (let offset = 0; offset < Math.min(10, resultados.length); offset++) {
+      const pagina = await import("supertest").then((m) =>
+        m.default(app).get(baseUrl).query({ limit: 1, offset })
+      );
+      expect(pagina.body.resultados[0].codigoPuerto).toBe(resultados[offset].codigoPuerto);
+    }
+  });
+
   // ─── Test: Filtro por departamento ──────────────────────────────────────────
   it("debe filtrar correctamente por departamento", async () => {
     // Primero obtener un código de departamento válido
@@ -81,6 +112,54 @@ describe.skipIf(!CON_DB)("Índice de Vulnerabilidad Portuaria", () => {
           expect(item.idDepartamento).toBe(dpto);
         }
       }
+    }
+  });
+
+  // ─── Test: /:codigo sin ?fuente= es determinístico cuando coexisten varias fuentes ──
+  it("/:codigo sin ?fuente= siempre devuelve MTC_2025, no una fuente arbitraria", async () => {
+    const { pool } = await import("../src/db/pool.js");
+
+    const listRes = await import("supertest").then((m) =>
+      m.default(app).get(baseUrl).query({ limit: 1 })
+    );
+    if (!listRes.body.resultados?.length) return;
+    const codigo = listRes.body.resultados[0].codigoPuerto;
+
+    // Fuente única por ejecución — evita que una corrida anterior interrumpida (que dejó la
+    // fila sin limpiar) haga que este INSERT caiga en el ON CONFLICT DO UPDATE y que el
+    // `finally` termine borrando una fila que este test no creó.
+    const FUENTE_FAKE = `TEST_OTRA_FUENTE_${process.pid}_${Date.now()}`;
+    try {
+      // Clona la fila existente con otra fuente y un score muy distinto — simula lo que
+      // pasa en producción cuando v1/v2/v3 coexisten para el mismo terminal (hallazgo real
+      // verificado en vivo 2026-10-05: sin default, /:codigo devolvía v3 para terminales
+      // donde antes devolvía v1, sin que el caller pidiera v3 explícitamente).
+      await pool.query(
+        `INSERT INTO indice_vulnerabilidad_portuaria
+           (codigo_puerto, nombre_terminal, id_departamento, departamento, ambito, alcance,
+            estado_conservacion, es_concesionado, tiene_geolocalizacion, score_vulnerabilidad,
+            componentes, fuente_datos, fecha_corte)
+         SELECT codigo_puerto, nombre_terminal, id_departamento, departamento, ambito, alcance,
+                estado_conservacion, es_concesionado, tiene_geolocalizacion, 999,
+                componentes, $2, fecha_corte
+         FROM indice_vulnerabilidad_portuaria WHERE codigo_puerto = $1 AND fuente_datos = 'MTC_2025'`,
+        [codigo, FUENTE_FAKE]
+      );
+
+      const sinFuente = await import("supertest").then((m) => m.default(app).get(`${baseUrl}/${codigo}`));
+      expect(sinFuente.status).toBe(200);
+      expect(sinFuente.body.fuenteDatos).toBe("MTC_2025");
+      expect(sinFuente.body.scoreVulnerabilidad).not.toBe(999);
+
+      const conFuenteFake = await import("supertest").then((m) =>
+        m.default(app).get(`${baseUrl}/${codigo}`).query({ fuente: FUENTE_FAKE })
+      );
+      expect(conFuenteFake.body.scoreVulnerabilidad).toBe(999);
+    } finally {
+      await pool.query(
+        `DELETE FROM indice_vulnerabilidad_portuaria WHERE codigo_puerto = $1 AND fuente_datos = $2`,
+        [codigo, FUENTE_FAKE]
+      );
     }
   });
 

@@ -10,13 +10,33 @@ import {
   matchTerminalToPuerto,
   type PuertoSeriesMap,
 } from "../ingest/cargas-portuarias-join.js";
-import { calcularScoreVulnerabilidad, calcularScoreVulnerabilidadTrafico } from "../lib/vulnerabilidad-scoring.js";
+import {
+  computeTbmlScore,
+  computeTbmlScoresByAduana,
+  matchTerminalToAduana,
+  type AduanaTbmlScore,
+  type ImportRow,
+} from "../ingest/aduanas-tbml-join.js";
+import {
+  calcularScoreVulnerabilidad,
+  calcularScoreVulnerabilidadTrafico,
+  calcularScoreVulnerabilidadV3,
+} from "../lib/vulnerabilidad-scoring.js";
+import { requireCrossAppPool, CrossAppUnavailableError } from "../lib/cross-app-pool.js";
 
-export { calcularScoreVulnerabilidad, calcularScoreVulnerabilidadTrafico };
+export { calcularScoreVulnerabilidad, calcularScoreVulnerabilidadTrafico, calcularScoreVulnerabilidadV3 };
 
 /** Fuente que activa el enriquecimiento VUL-11/12 (join con cargas_portuarias_historico). Ver
  * cargas-portuarias-join.ts — distinto del "v2" de riesgo climático (`/vulnerabilidad/clima`). */
 const FUENTE_TRAFICO = "MTC+CARGAS_2017";
+
+/**
+ * v3: extiende v2-tráfico con la dimensión TBML (SUNAT aduanas) y normalización OCDE. Ver
+ * docs/indice-vulnerabilidad-v3-oecd-tbml.md. Requiere `SUNAT_ADUANAS_DATABASE_URL` — sin ella,
+ * 503, no un v3 silenciosamente degradado a v2 (mismo criterio que usa legislativo-congreso para
+ * su cruce con infobras).
+ */
+const FUENTE_V3 = "MTC+CARGAS+SUNAT_V3";
 
 // ─── Tipos para datos ANA SNIRH ─────────────────────────────────────────────
 
@@ -129,10 +149,10 @@ vulnerabilidadRouter.get(
     const { rows } = await pool.query(
       `SELECT
          iv.*,
-         ROW_NUMBER() OVER (ORDER BY iv.score_vulnerabilidad DESC) AS ranking
+         ROW_NUMBER() OVER (ORDER BY iv.score_vulnerabilidad DESC, iv.codigo_puerto ASC) AS ranking
        FROM indice_vulnerabilidad_portuaria iv
        ${where}
-       ORDER BY iv.score_vulnerabilidad DESC
+       ORDER BY iv.score_vulnerabilidad DESC, iv.codigo_puerto ASC
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limit, offset]
     );
@@ -169,17 +189,17 @@ vulnerabilidadRouter.get(
   "/:codigo",
   asyncHandler(async (req, res) => {
     const { codigo } = req.params;
-    const { fuente } = req.query;
+    // Mismo default que el endpoint de listado (`GET /`) — sin esto, un terminal con más de
+    // una fuente publicada (v1 + v2 + v3 coexistiendo) devolvía `rows[0]` sin ORDER BY, es
+    // decir, cualquiera de las fuentes de forma no determinística. Hallazgo real verificado en
+    // vivo 2026-10-05: tras calcular v3 localmente, este endpoint empezó a devolver el score v3
+    // para terminales donde antes devolvía v1, sin que el caller pidiera v3 explícitamente.
+    const fuente = typeof req.query.fuente === "string" ? req.query.fuente : "MTC_2025";
 
-    const params: unknown[] = [codigo];
-    let query = `SELECT * FROM indice_vulnerabilidad_portuaria WHERE codigo_puerto = $1`;
-    
-    if (fuente && typeof fuente === "string") {
-      params.push(fuente);
-      query += ` AND fuente_datos = $${params.length}`;
-    }
-
-    const { rows } = await pool.query(query, params);
+    const { rows } = await pool.query(
+      `SELECT * FROM indice_vulnerabilidad_portuaria WHERE codigo_puerto = $1 AND fuente_datos = $2`,
+      [codigo, fuente]
+    );
 
     if (rows.length === 0) {
       res.status(404).json({ error: `No se encontró índice para el código '${codigo}'.` });
@@ -188,13 +208,17 @@ vulnerabilidadRouter.get(
 
     const r = rows[0];
 
-    // Obtener ranking global
+    // Obtener ranking global — mismo desempate codigo_puerto ASC que el listado (`GET /`),
+    // para que un terminal reciba el mismo número de ranking en ambos endpoints cuando hay
+    // empate de score (hallazgo real de CodeRabbit: sin esto, dos terminales con igual score
+    // recibían rankings distintos en el listado pero el mismo en el detalle).
     const { rows: rankRows } = await pool.query<{ ranking: string }>(
       `SELECT COUNT(*) + 1 AS ranking
        FROM indice_vulnerabilidad_portuaria
-       WHERE score_vulnerabilidad > $1
-         AND fuente_datos = $2`,
-      [r.score_vulnerabilidad, r.fuente_datos]
+       WHERE fuente_datos = $2
+         AND (score_vulnerabilidad > $1
+              OR (score_vulnerabilidad = $1 AND codigo_puerto < $3))`,
+      [r.score_vulnerabilidad, r.fuente_datos, r.codigo_puerto]
     );
 
     res.json({
@@ -453,7 +477,8 @@ vulnerabilidadRouter.post(
   "/calcular",
   asyncHandler(async (req, res) => {
     const { fuente } = req.body?.fuente ? { fuente: req.body.fuente } : { fuente: "MTC_2025" };
-    const esTrafico = fuente === FUENTE_TRAFICO;
+    const esV3 = fuente === FUENTE_V3;
+    const esTrafico = fuente === FUENTE_TRAFICO || esV3; // v3 extiende v2: necesita la misma serie de tráfico
 
     // Obtener todos los terminales del corte más reciente
     const { rows: terminales } = await pool.query(
@@ -494,7 +519,63 @@ vulnerabilidadRouter.post(
       const tieneDato2017 = [...seriesPorPuerto.values()].some((serie) => serie[2017] !== undefined);
       if (puertosDisponibles.length === 0 || !tieneDato2017) {
         res.status(409).json({
-          error: `No hay datos de 2017 en cargas_portuarias_historico para calcular '${FUENTE_TRAFICO}'. Corre primero 'npm run ingest:cargas-portuarias'.`,
+          error: `No hay datos de 2017 en cargas_portuarias_historico para calcular '${fuente}'. Corre primero 'npm run ingest:cargas-portuarias'.`,
+        });
+        return;
+      }
+    }
+
+    // Para v3, precargar además los scores TBML por aduana (VUL-17/18/19) desde sunat-aduanas.
+    // 503 si la app cruzada no está configurada — nunca un v3 degradado a v2 en silencio.
+    let tbmlPorAduana: Map<string, AduanaTbmlScore> = new Map();
+    let aduanasDisponibles: string[] = [];
+    if (esV3) {
+      let sunatAduanasDb;
+      try {
+        sunatAduanasDb = requireCrossAppPool("sunat_aduanas", process.env);
+      } catch (err) {
+        if (err instanceof CrossAppUnavailableError) {
+          res.status(503).json({ error: "Cruce no disponible", detalle: "SUNAT-ADUANAS no está accesible" });
+          return;
+        }
+        throw err;
+      }
+
+      const { rows: importRows } = await sunatAduanasDb.query<{
+        aduana_code: number;
+        aduana_name: string;
+        year: number;
+        subpartida: string;
+        value_fob_usd: string;
+        value_cif_usd: string;
+      }>(`SELECT aduana_code, aduana_name, year, subpartida, value_fob_usd, value_cif_usd FROM port_subpartida_imports`);
+
+      const importsParaScore: ImportRow[] = importRows.map((r) => ({
+        aduanaCode: r.aduana_code,
+        aduanaName: r.aduana_name,
+        year: r.year,
+        subpartida: r.subpartida,
+        fobUsd: Number(r.value_fob_usd),
+        cifUsd: Number(r.value_cif_usd),
+      }));
+
+      tbmlPorAduana = computeTbmlScoresByAduana(importsParaScore);
+      aduanasDisponibles = [...new Set(importRows.map((r) => r.aduana_name))];
+
+      // Sin filas de SUNAT, sin ningún grupo (subpartida, año) con suficientes aduanas para
+      // una mediana robusta, o — hallazgo real de CodeRabbit — con benchmark pero ninguna
+      // aduana que matchee alguno de los terminales actuales, el recálculo degeneraría en v3
+      // con tbmlScore:null en TODOS los terminales, igual de silencioso que los otros dos
+      // casos. pctValorAnomalo === 0 en una aduana SÍ es un resultado legítimo (cero anomalías
+      // detectadas, no ausencia de datos), así que no se rechaza por eso — solo por ausencia
+      // total de señal.
+      const algunTerminalConTbml = terminales.some((t) => {
+        const aduanaMatch = matchTerminalToAduana(t.nombre_terminal, t.label_terminal, aduanasDisponibles);
+        return aduanaMatch !== null && computeTbmlScore(tbmlPorAduana.get(aduanaMatch) ?? null) !== null;
+      });
+      if (importRows.length === 0 || tbmlPorAduana.size === 0 || !algunTerminalConTbml) {
+        res.status(409).json({
+          error: `No hay datos de SUNAT-aduanas benchmarkeables para calcular '${fuente}'. Verifica que 'port_subpartida_imports' tenga filas y suficientes aduanas por subpartida, y que al menos un terminal matchee una aduana.`,
         });
         return;
       }
@@ -509,6 +590,7 @@ vulnerabilidadRouter.post(
     // Calcular e insertar scores
     let insertados = 0;
     let terminalesConCoberturaTrafico = 0;
+    let terminalesConCoberturaTbml = 0;
     const errores: string[] = [];
 
     for (const t of terminales) {
@@ -517,7 +599,28 @@ vulnerabilidadRouter.post(
       let score: number;
       let componentes: Record<string, unknown>;
 
-      if (esTrafico) {
+      if (esV3) {
+        const puertoMatch = matchTerminalToPuerto(t.nombre_terminal, t.label_terminal, puertosDisponibles);
+        const serie = puertoMatch ? seriesPorPuerto.get(puertoMatch) ?? null : null;
+        if (puertoMatch) terminalesConCoberturaTrafico++;
+
+        const aduanaMatch = matchTerminalToAduana(t.nombre_terminal, t.label_terminal, aduanasDisponibles);
+        const tbmlScore = aduanaMatch ? computeTbmlScore(tbmlPorAduana.get(aduanaMatch) ?? null) : null;
+        if (aduanaMatch && tbmlScore !== null) terminalesConCoberturaTbml++;
+
+        const resultado = calcularScoreVulnerabilidadV3({
+          estadoConservacion: t.estado_conservacion,
+          esConcesionado: t.es_concesionado,
+          alcance: t.alcance,
+          ambito: t.ambito,
+          tieneGeolocalizacion: tieneGeo,
+          volumenScore: computeVolumenScore(serie?.[2017] ?? null),
+          variacionScore: computeVariacionScore(serie),
+          tbmlScore,
+        });
+        score = resultado.score;
+        componentes = { ...resultado.componentes, puertoMatch, aduanaMatch };
+      } else if (esTrafico) {
         const puertoMatch = matchTerminalToPuerto(t.nombre_terminal, t.label_terminal, puertosDisponibles);
         const serie = puertoMatch ? seriesPorPuerto.get(puertoMatch) ?? null : null;
         if (puertoMatch) terminalesConCoberturaTrafico++;
@@ -595,6 +698,9 @@ vulnerabilidadRouter.post(
       insertados,
       coberturaTrafico: esTrafico
         ? { terminalesConMatch: terminalesConCoberturaTrafico, total: terminales.length }
+        : undefined,
+      coberturaTbml: esV3
+        ? { terminalesConMatch: terminalesConCoberturaTbml, total: terminales.length }
         : undefined,
       errores: errores.length > 0 ? errores : undefined,
     });
@@ -703,10 +809,10 @@ vulnerabilidadRouter.get(
     const { rows: terminales } = await pool.query(
       `SELECT
          iv.*,
-         ROW_NUMBER() OVER (ORDER BY iv.score_vulnerabilidad DESC) AS ranking
+         ROW_NUMBER() OVER (ORDER BY iv.score_vulnerabilidad DESC, iv.codigo_puerto ASC) AS ranking
        FROM indice_vulnerabilidad_portuaria iv
        ${where}
-       ORDER BY iv.score_vulnerabilidad DESC
+       ORDER BY iv.score_vulnerabilidad DESC, iv.codigo_puerto ASC
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limit, offset]
     );

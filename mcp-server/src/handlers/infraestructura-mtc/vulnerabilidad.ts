@@ -60,10 +60,10 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const { rows } = await db.query<IndiceRow & { ranking: number | string }>(
     `SELECT
        iv.*,
-       ROW_NUMBER() OVER (ORDER BY iv.score_vulnerabilidad DESC) AS ranking
+       ROW_NUMBER() OVER (ORDER BY iv.score_vulnerabilidad DESC, iv.codigo_puerto ASC) AS ranking
      FROM indice_vulnerabilidad_portuaria iv
      ${where}
-     ORDER BY iv.score_vulnerabilidad DESC
+     ORDER BY iv.score_vulnerabilidad DESC, iv.codigo_puerto ASC
      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
     [...params, limit, offset],
   );
@@ -102,17 +102,16 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
 export async function byCodigo(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const { db, args } = ctx;
   const codigo = args.codigo as string;
-  const fuente = args.fuente as string | undefined;
+  // Mismo default que el listado (fuente_datos = 'MTC_2025' por defecto) — sin esto, un
+  // terminal con más de una fuente publicada (v1 + v2 + v3 coexistiendo) devuelve rows[0]
+  // sin ORDER BY, no determinístico. Ver fix equivalente en
+  // apps/infraestructura-mtc/api/src/routes/vulnerabilidad-portuaria.ts.
+  const fuente = typeof args.fuente === "string" ? args.fuente : "MTC_2025";
 
-  const params: unknown[] = [codigo];
-  let query = `SELECT * FROM indice_vulnerabilidad_portuaria WHERE codigo_puerto = $1`;
-
-  if (fuente) {
-    params.push(fuente);
-    query += ` AND fuente_datos = $${params.length}`;
-  }
-
-  const { rows } = await db.query<IndiceRow>(query, params);
+  const { rows } = await db.query<IndiceRow>(
+    `SELECT * FROM indice_vulnerabilidad_portuaria WHERE codigo_puerto = $1 AND fuente_datos = $2`,
+    [codigo, fuente],
+  );
 
   if (rows.length === 0) {
     return { status: 404, body: { error: `No se encontró índice para el código '${codigo}'.` } };
@@ -120,12 +119,15 @@ export async function byCodigo(ctx: ToolHandlerContext): Promise<HandlerResult> 
 
   const r = rows[0];
 
+  // Mismo desempate codigo_puerto ASC que el listado — ver fix equivalente en
+  // apps/infraestructura-mtc/api/src/routes/vulnerabilidad-portuaria.ts.
   const { rows: rankRows } = await db.query<{ ranking: string }>(
     `SELECT COUNT(*) + 1 AS ranking
      FROM indice_vulnerabilidad_portuaria
-     WHERE score_vulnerabilidad > $1
-       AND fuente_datos = $2`,
-    [r.score_vulnerabilidad, r.fuente_datos],
+     WHERE fuente_datos = $2
+       AND (score_vulnerabilidad > $1
+            OR (score_vulnerabilidad = $1 AND codigo_puerto < $3))`,
+    [r.score_vulnerabilidad, r.fuente_datos, r.codigo_puerto],
   );
 
   return {
@@ -490,10 +492,10 @@ export async function clima(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const { rows: terminales } = await db.query<IndiceRow & { ranking: number | string }>(
     `SELECT
        iv.*,
-       ROW_NUMBER() OVER (ORDER BY iv.score_vulnerabilidad DESC) AS ranking
+       ROW_NUMBER() OVER (ORDER BY iv.score_vulnerabilidad DESC, iv.codigo_puerto ASC) AS ranking
      FROM indice_vulnerabilidad_portuaria iv
      ${where}
-     ORDER BY iv.score_vulnerabilidad DESC
+     ORDER BY iv.score_vulnerabilidad DESC, iv.codigo_puerto ASC
      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
     [...params, limit, offset],
   );
