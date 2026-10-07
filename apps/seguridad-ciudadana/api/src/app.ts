@@ -4,6 +4,7 @@ import { termometroRouter } from "./routes/termometro.js";
 import { crossrefRouter } from "./routes/crossref.js";
 import { comisariasRouter } from "./routes/comisarias.js";
 import { equipamientoRouter } from "./routes/equipamiento.js";
+import { indiceDenunciasRouter } from "./routes/indice-denuncias.js";
 import { pool } from "./db/pool.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 
@@ -27,6 +28,7 @@ export function createApp() {
   app.use("/api/crossref", crossrefRouter);
   app.use("/api/comisarias", comisariasRouter);
   app.use("/api/equipamiento", equipamientoRouter);
+  app.use("/api/indices/denuncias", indiceDenunciasRouter);
 
   app.use(errorHandler);
 

@@ -13,6 +13,7 @@ import { personalRouter } from "./routes/personal.js";
 import { bienesMueblesBajaRouter } from "./routes/bienes-muebles-baja.js";
 import { burocraciaInversionRouter } from "./routes/burocracia-inversion.js";
 import { bienesMueblesBajaPorDistritoRouter } from "./routes/bienes-muebles-baja-por-distrito.js";
+import { indiceEjecucionRouter } from "./routes/indice-ejecucion.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 import { pool } from "./db/pool.js";
 
@@ -45,6 +46,7 @@ export function createApp() {
   app.use("/api/patrimonio/bienes-muebles-baja", bienesMueblesBajaRouter);
   app.use("/api/patrimonio/bienes-muebles-baja/por-distrito", bienesMueblesBajaPorDistritoRouter);
   app.use("/api/burocracia-inversion", burocraciaInversionRouter);
+  app.use("/api/indices/ejecucion", indiceEjecucionRouter);
 
   // Debe ir al final: sin esto, un rechazo dentro de un handler async
   // se vuelve un unhandled rejection que tumba el proceso entero en vez

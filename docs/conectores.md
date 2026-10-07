@@ -1638,3 +1638,63 @@ Construido 2026-10-01. **Fase 0 (solo ingesta).**
 | `onp-connector.ts` | onp-presupuesto | ONP (datosabiertos.gob.pe, vía `@appsperu/ckan-client`) | `package_show` + descarga CSV (Latin-1), parseo con `csv-parse` | Manual | Completa (1,992 filas, 2008-2025) — el dataset CKAN rota de slug cada año calendario |
 | `minam-connector.ts` | territorio-inteligencia | MINAM GeoServidor (ArcGIS REST, `Tem_AlertasTempranasDeforestacion`) | Pagina 1000 filas/página vía `resultOffset`, INSERT multi-fila por página, `ON CONFLICT (object_id) DO NOTHING` | Manual | Completa (183,767 alertas puntuales nacionales, reemplaza el conector anterior que generaba datos con `Math.random()`) |
 
+---
+
+## Índice de calidad de ejecución presupuestal
+
+**App:** `radar-ejecucion`
+**Puerto API:** 4000
+**Ruta:** `GET /api/indices/ejecucion`
+
+| | |
+|---|---|
+| **Qué devuelve** | Tasa de ejecución (devengado/PIM) por entidad, con ranking dentro de la cohorte de nivel de gobierno y mediana de cohorte. |
+| **Fórmula** | `tasa = ROUND(devengado / pim × 100, 1)`. Null cuando PIM = 0 (no es ejecución 0%, es "sin presupuesto registrado"). |
+| **Cohorte** | Entidades del mismo nivel de gobierno y departamento. Gate: si la cohorte tiene < 5 entidades, el ranking se devuelve como null. |
+| **Ranking** | Posición de la tasa propia dentro de la distribución de tasas de la cohorte, de mayor a menor. Percentil = (posición / total cohorte) × 100. |
+| **Mediana de cohorte** | Percentil 50 de tasas de la cohorte (excluye PIM = 0). Sirve como benchmark directo. |
+| **Segundo endpoint** | `GET /api/indices/ejecucion/por-funcion/:entityCode` — tasas por función para una entidad específica con desviación vs. mediana de la función en la cohorte. |
+| **Cobertura** | Cobertura del presupuesto ingestado: parcial por diseño, acotada a La Libertad vía offsets de byte. No extrapolar a otros departamentos. |
+| **Filtros** | `anio`, `nivel`, `funcion`, `departamento`, `soloConRanking` (excluye cohortes < 5), `orden`. |
+| **Limitaciones** | (1) PIM = 0 para una entidad no siempre significa "sin presupuesto" — puede ser un error de ingesta. (2) La cohorte se filtra por departamento para comparabilidad regional, pero no controla por tamaño de presupuesto. |
+| **Autoría** | Creado 2026-10-07 sobre schemas existentes (`budget_execution`, `entities`, `territories`). |
+
+---
+
+## Índice de concentración de mercado en adjudicaciones
+
+**App:** `compras-publicas`
+**Puerto API:** 4001
+**Ruta:** `GET /api/indices/concentracion`
+
+| | |
+|---|---|
+| **Qué devuelve** | CR1, CR3, CR5 y HHI por departamento y categoría de contratación (awards OCDS/OECE). Alertas de alta concentración. |
+| **Fórmula CRk** | `CRk = suma(cuota_top_k) × 100`, donde `cuota = valor_proveedor / valor_total × 100`. |
+| **Fórmula HHI** | `HHI = suma(cuota²)`. Escala 0–10,000. Umbrales: <1,500 competitivo, 1,500–2,500 moderado, >2,500 altamente concentrado (FTC/Sherman). |
+| **Redes de proveedores** | Proveedores que operan en más de 1 departamento (`soloRedes=true`): permite identificar si un proveedor pequeño en cada mercado tiene presencia nacional. |
+| **Comparativo** | `GET /api/indices/concentracion/comparativa` — compara HHI de awards (mayor cuantía) vs. menores SEACE por provincia. Son mercados distintos — la comparación tiene sentido solo como proxy de diversificación. |
+| **Cobertura** | Awards OECE: últimas ~10 páginas por corrida — no es snapshot completo del universo. Menores SEACE: universo de contratos ingestados. |
+| **Limitaciones** | (1) Grupos económicos con múltiples RUCs no se detectan desde awards — requiere conformación societaria. (2) La muestra de awards no es completa;报告中声明 cobertura parcial. (3) HHI alto en mercado pequeño puede ser simplemente falta de interés comercial, no irregularidad. |
+| **Autoría** | Creado 2026-10-07 sobre schemas existentes (`awards`, `minor_contracts`, `supplier_profiles`). Reusa `computeConcentration` de `suppliers/concentration.ts`. |
+
+---
+
+## Índice de inseguridad por modalidad de denuncia
+
+**App:** `seguridad-ciudadana`
+**Puerto API:** 4010
+**Ruta:** `GET /api/indices/denuncias`
+
+| | |
+|---|---|
+| **Qué devuelve** | Tasa de denuncias por 10,000 habitantes por distrito × modalidad × año, con ranking dentro del departamento y resumen por modalidad. |
+| **Fórmula** | `tasa = (total_denuncias × 10,000) / poblacion_distrito`. Null cuando no hay población para el ubigeo. |
+| **Ranking** | Posición de la tasa dentro del grupo de modalidades del mismo distrito (percentil). |
+| **Denominador poblacional** | INEI Censo Nacional 2017. Tabla `population_by_ubigeo` (migration 009 de `ceplan-geo`); debe estar poblada para que la tasa se calcule. Si no existe o está vacía, la respuesta devuelve null y lo declara en `nota`. |
+| **Comparativo anual** | `GET /api/indices/denuncias/comparativo?distrito=TRUJILLO` — evolución de la tasa por modalidad entre dos años, con tendencia y variación en %. |
+| **Cobertura** | SIDPOL: nacional. Población: solo La Libertad del INEI 2017. |
+| **Limitaciones** | (1) Población de 2017 — 9 años desactualizada. Distritos de crecimiento acelerado subestiman la tasa real. (2) SIDPOL mide solo denuncias hechas en comisaría — excluye hechos no denunciados (dark figure). Un distrito con alta tasa puede ser también uno con buena cultura de denuncia. (3) La modalidad de denuncia puede no reflejar la gravedad real del delito. |
+| **Autoría** | Creado 2026-10-07 sobre schemas existentes (`police_reports`, `population_by_ubigeo` si está poblado). |
+
+
