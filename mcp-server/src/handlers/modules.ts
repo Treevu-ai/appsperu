@@ -87,6 +87,7 @@ import * as mimp_chat100 from "./mimp/chat100.js";
 import * as mindef_offset from "./mindef/offset.js";
 import * as mindef_peace_missions from "./mindef/peace-missions.js";
 import * as mindef_training_abroad from "./mindef/training-abroad.js";
+import * as onp_presupuesto_ejecucion from "./onp-presupuesto/ejecucion.js";
 import * as osinergmin_combustibles_grifos from "./osinergmin-combustibles/grifos.js";
 import * as osinergmin_combustibles_precios from "./osinergmin-combustibles/precios.js";
 import * as ositran_reclamos_recaudacion from "./ositran-reclamos/recaudacion.js";
@@ -141,8 +142,10 @@ import * as seguridad_ciudadana_termometro from "./seguridad-ciudadana/termometr
 import * as senace_cartera_proyectos_proyectos from "./senace-cartera-proyectos/proyectos.js";
 import * as servicios_salud_crossref from "./servicios-salud/crossref.js";
 import * as servicios_salud_ipress from "./servicios-salud/ipress.js";
+import * as smv_sanciones_sanciones from "./smv-sanciones/sanciones.js";
 import * as sunat_aduanas_meta from "./sunat-aduanas/meta.js";
 import * as sunat_aduanas_ports from "./sunat-aduanas/ports.js";
+import * as sunedu_licenciamiento_licenciamiento from "./sunedu-licenciamiento/licenciamiento.js";
 import * as violencia_escolar_casos from "./violencia-escolar/casos.js";
 import * as violencia_escolar_resumen from "./violencia-escolar/resumen.js";
 
@@ -228,6 +231,7 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "mindef/offset": mindef_offset,
   "mindef/peace-missions": mindef_peace_missions,
   "mindef/training-abroad": mindef_training_abroad,
+  "onp-presupuesto/ejecucion": onp_presupuesto_ejecucion,
   "osinergmin-combustibles/grifos": osinergmin_combustibles_grifos,
   "osinergmin-combustibles/precios": osinergmin_combustibles_precios,
   "ositran-reclamos/recaudacion": ositran_reclamos_recaudacion,
@@ -282,8 +286,10 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "senace-cartera-proyectos/proyectos": senace_cartera_proyectos_proyectos,
   "servicios-salud/crossref": servicios_salud_crossref,
   "servicios-salud/ipress": servicios_salud_ipress,
+  "smv-sanciones/sanciones": smv_sanciones_sanciones,
   "sunat-aduanas/meta": sunat_aduanas_meta,
   "sunat-aduanas/ports": sunat_aduanas_ports,
+  "sunedu-licenciamiento/licenciamiento": sunedu_licenciamiento_licenciamiento,
   "violencia-escolar/casos": violencia_escolar_casos,
   "violencia-escolar/resumen": violencia_escolar_resumen,
 };
