@@ -42,7 +42,7 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
     `SELECT id, slug, codigo_interno, razon_social, sector
      FROM empresas_fonafe
      ${where}
-     ORDER BY sector, razon_social
+     ORDER BY sector, razon_social, id
      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
     [...params, limit, offset]
   );

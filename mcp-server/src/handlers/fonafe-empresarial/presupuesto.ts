@@ -25,7 +25,7 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const { db, args } = ctx;
   const slug = args.slug as string | undefined;
   const sector = args.sector as string | undefined;
-  const anio = args.anio ? Number(args.anio) : undefined;
+  const anio = args.anio !== undefined ? Number(args.anio) : undefined;
   const rubro = args.rubro as string | undefined;
   const limit = args.limit ? Number(args.limit) : 200;
   const offset = args.offset ? Number(args.offset) : 0;
@@ -40,7 +40,7 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
     params.push(`%${sector}%`);
     conditions.push(`e.sector ILIKE $${params.length}`);
   }
-  if (anio) {
+  if (anio !== undefined) {
     params.push(anio);
     conditions.push(`p.anio_ejecucion = $${params.length}`);
   }
@@ -66,7 +66,7 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
      FROM presupuesto_empresarial p
      JOIN empresas_fonafe e ON e.id = p.empresa_id
      ${where}
-     ORDER BY e.sector, e.razon_social, p.rubro
+     ORDER BY e.sector, e.razon_social, p.rubro, p.anio_ejecucion DESC, p.id
      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
     [...params, limit, offset]
   );
