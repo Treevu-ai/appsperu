@@ -293,6 +293,10 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "emergencias_indeci_detalle",
     "emergencias_indeci_preparacion_riesgo",
   ],
+  "fonafe-empresarial": [
+    "fonafe_empresarial_empresas",
+    "fonafe_empresarial_presupuesto",
+  ],
   "geo-intersections": [
     "geo_intersections_comunidad_cruce",
     "geo_intersections_comunidad_cruce_stats",

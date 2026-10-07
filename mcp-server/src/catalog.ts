@@ -3812,6 +3812,50 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
 
+  // ---- fonafe-empresarial (FONAFE, presupuesto empresarial corporativo) ----
+  {
+    name: "fonafe_empresarial_empresas",
+    handler: "empresas:list",
+    app: "fonafe-empresarial",
+    description:
+      "Listado de las 34 empresas activas bajo el ámbito de FONAFE (Fondo Nacional de Financiamiento de la " +
+      "Actividad Empresarial del Estado) — slug, código interno, razón social, sector (Distribución Eléctrica, " +
+      "Generación Eléctrica, Saneamiento, Transportes y Comunicaciones, Finanzas, Defensa, Hidrocarburos, " +
+      "Servicios y Producción). Excluye BANMAT y ENACE (disueltas/en liquidación) y ESSALUD (no es empresa " +
+      "FONAFE, capturada por error de regex en la fuente). Verificado en vivo 2026-10-07: 34 filas. " +
+      "Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. " + SIN_SCHEDULER,
+    pathTemplate: "/api/empresas",
+    pathParams: [],
+    querySchema: {
+      sector: z.string().min(1).optional(),
+      slug: z.string().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(200).optional().describe("Default 50, máximo 200."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "fonafe_empresarial_presupuesto",
+    handler: "presupuesto:list",
+    app: "fonafe-empresarial",
+    description:
+      "Presupuesto empresarial y ejecución mensual por empresa y rubro (FONAFE) — presupuestado anual, " +
+      "presupuesto del último mes informado, ejecución del último mes. Cada fila es un rubro (ingresos, " +
+      "costos, gastos, inversión, etc.) de una empresa en un año de ejecución; `ultimoMesInformado` indica " +
+      "hasta qué mes llega el reporte de esa empresa, que puede variar entre empresas. Verificado en vivo " +
+      "2026-10-07: 3,774 filas, 34 empresas. Paginación real: usa `limit`/`offset`; la respuesta trae `total` " +
+      "y `hasMore`. " + SIN_SCHEDULER,
+    pathTemplate: "/api/presupuesto",
+    pathParams: [],
+    querySchema: {
+      slug: z.string().min(1).optional(),
+      sector: z.string().min(1).optional(),
+      anio: z.coerce.number().int().optional(),
+      rubro: z.string().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+
   // ---- osinergmin-combustibles (OSINERGMIN) ----
   {
     name: "osinergmin_combustibles_grifos",

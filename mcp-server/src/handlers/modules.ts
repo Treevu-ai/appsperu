@@ -48,6 +48,8 @@ import * as compras_publicas_suppliers from "./compras-publicas/suppliers.js";
 import * as compras_publicas_unsuccessful_tenders from "./compras-publicas/unsuccessful-tenders.js";
 import * as emergencias_indeci_crossref from "./emergencias-indeci/crossref.js";
 import * as emergencias_indeci_emergencias from "./emergencias-indeci/emergencias.js";
+import * as fonafe_empresarial_empresas from "./fonafe-empresarial/empresas.js";
+import * as fonafe_empresarial_presupuesto from "./fonafe-empresarial/presupuesto.js";
 import * as geo_intersections_communities from "./geo-intersections/communities.js";
 import * as geo_intersections_community_crossref from "./geo-intersections/community-crossref.js";
 import * as geo_intersections_intersections from "./geo-intersections/intersections.js";
@@ -187,6 +189,8 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "compras-publicas/unsuccessful-tenders": compras_publicas_unsuccessful_tenders,
   "emergencias-indeci/crossref": emergencias_indeci_crossref,
   "emergencias-indeci/emergencias": emergencias_indeci_emergencias,
+  "fonafe-empresarial/empresas": fonafe_empresarial_empresas,
+  "fonafe-empresarial/presupuesto": fonafe_empresarial_presupuesto,
   "geo-intersections/communities": geo_intersections_communities,
   "geo-intersections/community-crossref": geo_intersections_community_crossref,
   "geo-intersections/intersections": geo_intersections_intersections,
