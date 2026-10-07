@@ -124,6 +124,13 @@ Caso destacado verificado (cobertura real, no suma de pares): comunidad campesin
 concesiones (incluida "ALQO 147" de Barrick). Comunidad campesina **INDEPENDIENTE** (Carabamba,
 Otuzco, La Libertad, 10.7 km²) con **100%** real bajo 7 derechos (Barrick y otros).
 
+Caso con mayor fragmentación de derechos detectado al explorar La Libertad: comunidad
+**LA VICTORIA** (Ongón, Pataz, 739 km², 83.1% real, **197 derechos** titulados, 70% en manos de
+personas naturales/SMRL) — con contraste contra OEFA (0 infracciones en Ongón) e INFOBRAS (88%
+del monto planificado sin ejecutar). Ver
+`docs/data-contracts/caso-la-victoria-ongon-pataz.md` para el detalle completo con queries y
+resultados crudos.
+
 Los 4 endpoints + 2 de cobertura, y las 6 tools MCP, probados contra datos reales en ambas
 bases (local y Neon), incluyendo casos 400/404 de validación.
 
