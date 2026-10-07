@@ -1633,4 +1633,7 @@ Construido 2026-10-01. **Fase 0 (solo ingesta).**
 | `senasa-connector.ts` | senasa-ejecucion | SENASA/MIDAGRI (datosabiertos.gob.pe) | Descarga CSV | Manual | Completa (6,814 filas) |
 | `sunass-connector.ts` | sunass-sanciones | SUNASS (datosabiertos.gob.pe) | Descarga CSV | Manual | Completa (280 sanciones) |
 | `produce-cooperativas-connector.ts` | identidad-fiscal | PRODUCE (API DataTables propia) | API JSON paginada | Manual | Bloqueada — subdominio sin DNS al 2026-10-04 |
+| `smv-connector.ts` | smv-sanciones | SMV (`mvnet.smv.gob.pe/SMV.OData.Api`, API JSON propia sin auth) | GET directo, API rechaza `sFechaInicio` fuera de 2018-2026 | Manual | Completa (998 sanciones, 2018-en adelante) |
+| `sunedu-connector.ts` | sunedu-licenciamiento | SUNEDU (datosabiertos.gob.pe) | Descarga CSV pipe-delimited (Latin-1), maneja WAF | Manual | Completa (143 universidades) — no incluye registro de infractores/sanciones (SPA sin SSR) |
+| `onp-connector.ts` | onp-presupuesto | ONP (datosabiertos.gob.pe, vía `@appsperu/ckan-client`) | `package_show` + descarga CSV (Latin-1), parseo con `csv-parse` | Manual | Completa (1,992 filas, 2008-2025) — el dataset CKAN rota de slug cada año calendario |
 
