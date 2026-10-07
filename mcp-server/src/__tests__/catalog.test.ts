@@ -319,6 +319,12 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "ositran_reclamos_trafico",
     "ositran_reclamos_recaudacion",
   ],
+  "sunat-aduanas": [
+    "sunat_aduanas_ports",
+    "sunat_aduanas_ports_subpartidas",
+    "sunat_aduanas_ports_top",
+    "sunat_aduanas_meta_freshness",
+  ],
 };
 
 describe("MCP catalog", () => {

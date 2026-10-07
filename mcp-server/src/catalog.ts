@@ -3915,4 +3915,67 @@ export const TOOL_CATALOG: ToolSpec[] = [
       offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
+
+  // ---- sunat-aduanas (SUNAT) ----
+  {
+    name: "sunat_aduanas_ports",
+    handler: "ports:list",
+    app: "sunat-aduanas",
+    description:
+      "Importaciones CIF por aduana y año (trimestral + total anual) — SUNAT Anuario de Comercio Exterior, " +
+      "cdro_15. Cobertura nacional, todas las aduanas (marítimas, fluviales y pasos de frontera). " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/ports",
+    pathParams: [],
+    querySchema: {
+      aduana: z.string().min(1).optional().describe("Filtra por nombre de aduana (coincidencia exacta en minúsculas, sin comodines)."),
+      anio: z.string().regex(/^\d{4}$/).optional(),
+      desde: z.string().regex(/^\d{4}$/).optional(),
+      hasta: z.string().regex(/^\d{4}$/).optional(),
+      limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 200, máximo 500."),
+    },
+  },
+  {
+    name: "sunat_aduanas_ports_subpartidas",
+    handler: "ports:subpartidas",
+    app: "sunat-aduanas",
+    description:
+      "Importaciones por aduana + subpartida arancelaria (FOB/CIF, variación % y estructura %) — SUNAT " +
+      "Anuario de Comercio Exterior, cdro_16. `subpartida` es el código arancelario (ej. '2709000000'), no " +
+      "la descripción del producto. " + SIN_SCHEDULER,
+    pathTemplate: "/api/ports/subpartidas",
+    pathParams: [],
+    querySchema: {
+      aduana: z.string().min(1).optional().describe("Filtra por nombre de aduana (coincidencia exacta en minúsculas, sin comodines)."),
+      anio: z.string().regex(/^\d{4}$/).optional(),
+      desde: z.string().regex(/^\d{4}$/).optional(),
+      hasta: z.string().regex(/^\d{4}$/).optional(),
+      subpartida: z.string().min(1).optional().describe("Código arancelario, admite coincidencia parcial (LIKE)."),
+      limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 200, máximo 500."),
+    },
+  },
+  {
+    name: "sunat_aduanas_ports_top",
+    handler: "ports:top",
+    app: "sunat-aduanas",
+    description:
+      "Ranking de aduanas por volumen CIF total importado en un año dado — SUNAT Anuario de Comercio " +
+      "Exterior, cdro_15. " + SIN_SCHEDULER,
+    pathTemplate: "/api/ports/top",
+    pathParams: [],
+    querySchema: {
+      anio: z.string().regex(/^\d{4}$/).describe("Obligatorio, formato YYYY."),
+    },
+  },
+  {
+    name: "sunat_aduanas_meta_freshness",
+    handler: "meta:freshness",
+    app: "sunat-aduanas",
+    description:
+      "Metadata de frescura de la ingesta SUNAT: fecha del último lote cargado, conteo de filas por tabla, " +
+      "y detalle del archivo fuente más reciente. " + SIN_SCHEDULER,
+    pathTemplate: "/api/meta/freshness",
+    pathParams: [],
+    querySchema: {},
+  },
 ];
