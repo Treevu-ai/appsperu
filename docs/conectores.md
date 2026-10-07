@@ -1670,12 +1670,12 @@ Construido 2026-10-01. **Fase 0 (solo ingesta).**
 | | |
 |---|---|
 | **Qué devuelve** | CR1, CR3, CR5 y HHI por departamento y categoría de contratación (awards OCDS/OECE). Alertas de alta concentración. |
-| **Fórmula CRk** | `CRk = suma(cuota_top_k) × 100`, donde `cuota = valor_proveedor / valor_total × 100`. |
+| **Fórmula CRk** | `CRk = suma(cuota_top_k)`, donde `cuota = valor_proveedor / valor_total × 100` (la cuota ya está expresada en %, 0–100; CRk es directamente esa suma, sin multiplicar de nuevo por 100). |
 | **Fórmula HHI** | `HHI = suma(cuota²)`. Escala 0–10,000. Umbrales: <1,500 competitivo, 1,500–2,500 moderado, >2,500 altamente concentrado (FTC/Sherman). |
-| **Redes de proveedores** | Proveedores que operan en más de 1 departamento (`soloRedes=true`): permite identificar si un proveedor pequeño en cada mercado tiene presencia nacional. |
-| **Comparativo** | `GET /api/indices/concentracion/comparativa` — compara HHI de awards (mayor cuantía) vs. menores SEACE por provincia. Son mercados distintos — la comparación tiene sentido solo como proxy de diversificación. |
+| **Redes de proveedores** | Proveedores que operan en más de 1 departamento (`soloRedes=true`): permite identificar si un proveedor pequeño en cada mercado tiene presencia nacional. El cálculo de redes y el filtro `proveedor`/`departamento` solo acotan qué departamentos se muestran — el HHI/CRk de cada departamento siempre se calcula sobre TODOS sus proveedores, nunca sobre un subconjunto (si no, el proveedor filtrado aparecería artificialmente como monopolio). |
+| **Comparativo** | `GET /api/indices/concentracion/comparativa` — compara HHI de awards (mayor cuantía) vs. menores SEACE por provincia. Son mercados distintos — la comparación tiene sentido solo como proxy de diversificación. Admite lista de departamentos separada por coma (ej. `LIMA,ICA`). |
 | **Cobertura** | Awards OECE: últimas ~10 páginas por corrida — no es snapshot completo del universo. Menores SEACE: universo de contratos ingestados. |
-| **Limitaciones** | (1) Grupos económicos con múltiples RUCs no se detectan desde awards — requiere conformación societaria. (2) La muestra de awards no es completa;报告中声明 cobertura parcial. (3) HHI alto en mercado pequeño puede ser simplemente falta de interés comercial, no irregularidad. |
+| **Limitaciones** | (1) Grupos económicos con múltiples RUCs no se detectan desde awards — requiere conformación societaria. (2) La muestra de awards no es completa — la cobertura parcial se declara explícitamente en la respuesta. (3) HHI alto en mercado pequeño puede ser simplemente falta de interés comercial, no irregularidad. |
 | **Autoría** | Creado 2026-10-07 sobre schemas existentes (`awards`, `minor_contracts`, `supplier_profiles`). Reusa `computeConcentration` de `suppliers/concentration.ts`. |
 
 ---
@@ -1688,13 +1688,13 @@ Construido 2026-10-01. **Fase 0 (solo ingesta).**
 
 | | |
 |---|---|
-| **Qué devuelve** | Tasa de denuncias por 10,000 habitantes por distrito × modalidad × año, con ranking dentro del departamento y resumen por modalidad. |
-| **Fórmula** | `tasa = (total_denuncias × 10,000) / poblacion_distrito`. Null cuando no hay población para el ubigeo. |
-| **Ranking** | Posición de la tasa dentro del grupo de modalidades del mismo distrito (percentil). |
-| **Denominador poblacional** | INEI Censo Nacional 2017. Tabla `population_by_ubigeo` (migration 009 de `ceplan-geo`); debe estar poblada para que la tasa se calcule. Si no existe o está vacía, la respuesta devuelve null y lo declara en `nota`. |
-| **Comparativo anual** | `GET /api/indices/denuncias/comparativo?distrito=TRUJILLO` — evolución de la tasa por modalidad entre dos años, con tendencia y variación en %. |
-| **Cobertura** | SIDPOL: nacional. Población: solo La Libertad del INEI 2017. |
-| **Limitaciones** | (1) Población de 2017 — 9 años desactualizada. Distritos de crecimiento acelerado subestiman la tasa real. (2) SIDPOL mide solo denuncias hechas en comisaría — excluye hechos no denunciados (dark figure). Un distrito con alta tasa puede ser también uno con buena cultura de denuncia. (3) La modalidad de denuncia puede no reflejar la gravedad real del delito. |
-| **Autoría** | Creado 2026-10-07 sobre schemas existentes (`police_reports`, `population_by_ubigeo` si está poblado). |
+| **Qué devuelve** | Tasa de denuncias por 10,000 habitantes por departamento (o provincia, solo conteos) × modalidad × año, con ranking dentro del nivel geográfico y resumen por modalidad. |
+| **Fórmula** | `tasa = (total_denuncias × 10,000) / poblacion_departamental`. Null cuando no hay población para el departamento, o cuando se filtra por `provincia` (no existe tabla de población provincial — ver limitaciones). |
+| **Ranking** | Posición de la tasa (o del total de denuncias, a nivel provincia) dentro del grupo de modalidades del mismo nivel geográfico (percentil). |
+| **Denominador poblacional** | RENIEC — padrón electoral 2026 (mayores de 18 años, proxy). Tabla `poblacion_departamental`. Si no existe o está vacía para el departamento, la respuesta devuelve 422 con `detalle`. |
+| **Comparativo anual** | `GET /api/indices/denuncias/comparativo?departamento=LA LIBERTAD` — evolución de la tasa por modalidad entre dos años (por defecto, el rango disponible PARA ESE departamento), con tendencia y variación en %. |
+| **Cobertura** | SIDPOL: nacional. Población: nacional (RENIEC padrón 2026), a nivel departamental únicamente. |
+| **Limitaciones** | (1) Población es proxy de mayores de 18 años (padrón electoral) — excluye menores. (2) SIDPOL mide solo denuncias hechas en comisaría — excluye hechos no denunciados (dark figure). Un departamento con alta tasa puede ser también uno con buena cultura de denuncia. (3) La modalidad de denuncia puede no reflejar la gravedad real del delito ni ser homologable entre años. (4) Al filtrar por `provincia`, solo se devuelve el conteo de denuncias — no hay población provincial para calcular una tasa válida. |
+| **Autoría** | Creado 2026-10-07 sobre schemas existentes (`police_reports`, `poblacion_departamental`). |
 
 

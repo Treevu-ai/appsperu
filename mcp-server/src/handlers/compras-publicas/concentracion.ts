@@ -24,11 +24,13 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const anio = args.anio ? Number(args.anio) : undefined;
   const conProveedores = args.conProveedores === "true" || args.conProveedores === true;
 
+  // `departamento` y `proveedor` NO se filtran en SQL — ambos requieren ver
+  // el universo completo de proveedores por departamento para calcularse
+  // correctamente (ver más abajo). `categoria`/`anio` sí restringen el
+  // universo de datos en sí, no la comparabilidad entre proveedores.
   const condiciones: string[] = [];
   const params: unknown[] = [];
-  if (departamento) { params.push(departamento.toUpperCase()); condiciones.push(`a.departamento = $${params.length}`); }
   if (categoria) { params.push(categoria); condiciones.push(`LOWER(pp.categoria) = $${params.length}`); }
-  if (proveedor) { params.push(proveedor); condiciones.push(`a.supplier_id = $${params.length}`); }
   if (anio !== undefined) { params.push(anio); condiciones.push(`EXTRACT(YEAR FROM a.fecha) = $${params.length}`); }
   const where = condiciones.length > 0 ? `WHERE ${condiciones.join(" AND ")}` : "";
 
@@ -49,13 +51,31 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
     params
   );
 
+  // Redes: se calcula sobre el universo SIN filtro de `departamento` — si se
+  // filtrara antes, cada proveedor solo tendría 1 departamento visible y
+  // `soloRedes=true&departamento=X` nunca encontraría redes.
   const deptosPorProveedor = new Map<string, Set<string>>();
   for (const p of proveedores) {
     if (!deptosPorProveedor.has(p.supplier_id)) deptosPorProveedor.set(p.supplier_id, new Set());
     deptosPorProveedor.get(p.supplier_id)!.add(p.departamento);
   }
 
-  const deptos = [...new Set(proveedores.map((p) => p.departamento))].sort();
+  // Lista de departamentos a mostrar: acotada por `departamento` y/o por
+  // dónde opera `proveedor` — pero la concentración de cada departamento
+  // mostrado siempre se calcula con TODOS sus proveedores (competidores
+  // incluidos). Filtrar las filas de awards por `proveedor` antes de calcular
+  // las cuotas eliminaba a todos sus competidores y el HHI salía siempre
+  // 10,000.
+  let deptos = [...new Set(proveedores.map((p) => p.departamento))].sort();
+  if (departamento) {
+    const deptoFiltro = departamento.toUpperCase();
+    deptos = deptos.filter((d) => d === deptoFiltro);
+  }
+  if (proveedor) {
+    const deptosDelProveedor = deptosPorProveedor.get(proveedor) ?? new Set();
+    deptos = deptos.filter((d) => deptosDelProveedor.has(d));
+  }
+
   const porDepartamento: Record<string, unknown>[] = [];
 
   for (const dept of deptos) {
@@ -134,6 +154,7 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
           "La muestra no es completa del universo — cobertura variable según última corrida OECE.",
           "Grupos económicos con múltiples RUCs no se detectan desde awards.",
           "Proveedores nuevos o inactivos no participan y pueden subestimar la concentración real.",
+          "`proveedor` y `departamento` solo acotan qué departamentos se muestran — el HHI/CRk de cada departamento siempre se calcula sobre TODOS sus proveedores, nunca sobre un subconjunto.",
         ],
         filtros: { departamento, categoria, soloRedes, proveedor, anio },
       },
@@ -170,7 +191,10 @@ export async function comparativa(ctx: ToolHandlerContext): Promise<HandlerResul
   const { db, args } = ctx;
   const departamento = (args.departamento as string | undefined) ?? "LA LIBERTAD";
   const anio = args.anio ? Number(args.anio) : 2026;
-  const deptos = departamento.split(",").map((d) => d.trim().toUpperCase());
+  const deptos = departamento
+    .split(",")
+    .map((d) => d.trim().toUpperCase())
+    .filter((d) => d.length > 0);
 
   const { rows: awardsConc } = await db.query<AwardsConcRow>(
     `SELECT
@@ -194,11 +218,11 @@ export async function comparativa(ctx: ToolHandlerContext): Promise<HandlerResul
        COUNT(DISTINCT m.winning_supplier_id) AS proveedores
      FROM minor_contracts m
      JOIN municipalities mu ON mu.municipality_id = m.municipality_id
-     WHERE mu.department = $1
+     WHERE mu.department = ANY($1)
        AND m.year = $2
        AND m.awarded_amount > 0
      GROUP BY mu.province`,
-    [departamento.toUpperCase(), anio]
+    [deptos, anio]
   );
 
   const awardsProviders: Record<string, number> = {};
@@ -223,19 +247,24 @@ export async function comparativa(ctx: ToolHandlerContext): Promise<HandlerResul
         filtros: { departamentos: deptos, anio },
         fuente: { awards: "OECE / contratacionesabiertas.oece.gob.pe", menores: "SEACE / Sigma" },
       },
-      awards: awardsConc.map((r) => ({
-        departamento: r.departamento,
-        montoTotal: Number(r.monto_total),
-        proveedores: Number(r.proveedores),
-        entidadesCompradoras: Number(r.entidades_compradoras),
-        hhi: awardsProviders[r.departamento] ?? null,
-        hhiNivel:
-          (awardsProviders[r.departamento] ?? 0) < 1500
-            ? "COMPETITIVO"
-            : (awardsProviders[r.departamento] ?? 0) < 2500
-              ? "MODERADO"
-              : "ALTAMENTE_CONCENTRADO",
-      })),
+      awards: awardsConc.map((r) => {
+        const hhi = awardsProviders[r.departamento] ?? null;
+        return {
+          departamento: r.departamento,
+          montoTotal: Number(r.monto_total),
+          proveedores: Number(r.proveedores),
+          entidadesCompradoras: Number(r.entidades_compradoras),
+          hhi,
+          hhiNivel:
+            hhi === null
+              ? null
+              : hhi < 1500
+                ? "COMPETITIVO"
+                : hhi < 2500
+                  ? "MODERADO"
+                  : "ALTAMENTE_CONCENTRADO",
+        };
+      }),
       menores: menoresConc.map((r) => ({
         provincia: r.provincia,
         montoTotal: Number(r.monto_total),

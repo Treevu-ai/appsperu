@@ -50,6 +50,23 @@ const IndiceEjecucionQuerySchema = z.object({
   orden: z.enum(["tasa_asc", "tasa_desc", "nombre_asc"]).optional().default("tasa_desc"),
 });
 
+/**
+ * Cuenta cuántos elementos de `sorted` (orden ascendente) son <= `valor`,
+ * vía búsqueda binaria (upper bound). Evita el escaneo O(n) por entidad que
+ * tenía la versión anterior (cada entidad reescaneaba el arreglo completo de
+ * `entidades`, dando O(n²) sobre el total de filas, no solo sobre la cohorte).
+ */
+function contarMenorOIgual(sorted: number[], valor: number): number {
+  let lo = 0;
+  let hi = sorted.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (sorted[mid] <= valor) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
 indiceEjecucionRouter.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -57,7 +74,33 @@ indiceEjecucionRouter.get(
     if (!parsed) return;
 
     const { anio, nivel, funcion, departamento, soloConRanking, orden } = parsed;
-    const anioFinal = anio ? Number(anio) : undefined;
+    let anioFinal = anio ? Number(anio) : undefined;
+
+    // Sin año explícito: LATEST_BUDGET_CTE dedup por anio_fiscal (entre otras
+    // columnas), así que sin filtro de año esta query suma devengado/pim de
+    // TODOS los años fiscales ingeridos para una entidad en una sola tasa —
+    // mezclando ejercicios distintos en un solo "tasa_ejecucion". Se usa el
+    // año fiscal más reciente con datos en el alcance solicitado como default.
+    if (anioFinal === undefined) {
+      const condicionesAnio: string[] = [];
+      const paramsAnio: unknown[] = [];
+      if (departamento) {
+        paramsAnio.push(departamento.toUpperCase());
+        condicionesAnio.push(`t.departamento = $${paramsAnio.length}`);
+      }
+      const whereAnio = condicionesAnio.length > 0 ? `WHERE ${condicionesAnio.join(" AND ")}` : "";
+      const { rows: anioRows } = await pool.query<{ max_anio: number | string | null }>(
+        `SELECT MAX(b.anio_fiscal) AS max_anio
+         FROM budget_execution b
+         JOIN entities e ON e.entity_code = b.entity_code
+         JOIN territories t ON t.ubigeo = e.ubigeo
+         ${whereAnio}`,
+        paramsAnio
+      );
+      anioFinal = anioRows[0]?.max_anio !== null && anioRows[0]?.max_anio !== undefined
+        ? Number(anioRows[0].max_anio)
+        : undefined;
+    }
 
     // Paso 1 — params propios para evitar desalineación de índices
     const condiciones1: string[] = [];
@@ -151,10 +194,22 @@ indiceEjecucionRouter.get(
       });
     }
 
+    // Tasas numéricas por cohorte, pre-ordenadas una sola vez (O(n log n) total,
+    // no O(n²) — ver nota en contarMenorOIgual).
+    const tasasPorCohorte = new Map<string, number[]>();
+    for (const e of entidades) {
+      if (e.tasa_ejecucion === null) continue;
+      const key = `${e.nivel_gobierno}::${e.departamento}`;
+      if (!tasasPorCohorte.has(key)) tasasPorCohorte.set(key, []);
+      tasasPorCohorte.get(key)!.push(Number(e.tasa_ejecucion));
+    }
+    for (const tasas of tasasPorCohorte.values()) tasas.sort((a, b) => a - b);
+
     // Paso 3: ranking dentro de la cohorte
     const resultados = entidades.map((e) => {
       const cohorteKey = `${e.nivel_gobierno}::${e.departamento}`;
       const cohorte = cohorteMap.get(cohorteKey);
+      const tasaNum = Number(e.tasa_ejecucion);
 
       if (!cohorte || cohorte.n < 5) {
         return {
@@ -166,7 +221,7 @@ indiceEjecucionRouter.get(
           distrito: e.distrito,
           totalPim: Number(e.total_pim),
           totalDevengado: Number(e.total_devengado),
-          tasaEjecucion: Number(e.tasa_ejecucion),
+          tasaEjecucion: tasaNum,
           medianaCohorte: null,
           totalCohorte: null,
           ranking: null,
@@ -175,15 +230,8 @@ indiceEjecucionRouter.get(
         };
       }
 
-      // Count how many entities in the cohort have a lower rate
-      const menorOIgual = entidades.filter(
-        (other) =>
-          other.nivel_gobierno === e.nivel_gobierno &&
-          other.departamento === e.departamento &&
-          other.tasa_ejecucion !== null &&
-          other.tasa_ejecucion <= e.tasa_ejecucion
-      ).length;
-
+      const tasasCohorte = tasasPorCohorte.get(cohorteKey) ?? [];
+      const menorOIgual = contarMenorOIgual(tasasCohorte, tasaNum);
       const ranking = cohorte.n - menorOIgual + 1;
       const percentil = Math.round((menorOIgual / cohorte.n) * 100);
 
@@ -196,7 +244,7 @@ indiceEjecucionRouter.get(
         distrito: e.distrito,
         totalPim: Number(e.total_pim),
         totalDevengado: Number(e.total_devengado),
-        tasaEjecucion: Number(e.tasa_ejecucion),
+        tasaEjecucion: tasaNum,
         medianaCohorte: cohorte.mediana,
         totalCohorte: cohorte.n,
         ranking,
@@ -205,38 +253,42 @@ indiceEjecucionRouter.get(
       };
     });
 
+    // `soloConRanking=true` excluye las cohortes insuficientes del resultado
+    // (antes se extraía el filtro de la query pero nunca se aplicaba).
+    const resultadosFiltrados =
+      soloConRanking === "true" ? resultados.filter((r) => !r.cohorteInsuficiente) : resultados;
+
     // Ordenar
     if (orden === "tasa_desc") {
-      resultados.sort((a, b) => (b.tasaEjecucion ?? -1) - (a.tasaEjecucion ?? -1));
+      resultadosFiltrados.sort((a, b) => (b.tasaEjecucion ?? -1) - (a.tasaEjecucion ?? -1));
     } else if (orden === "tasa_asc") {
-      resultados.sort((a, b) => (a.tasaEjecucion ?? 999) - (b.tasaEjecucion ?? 999));
+      resultadosFiltrados.sort((a, b) => (a.tasaEjecucion ?? 999) - (b.tasaEjecucion ?? 999));
     } else {
-      resultados.sort((a, b) => a.nombre.localeCompare(b.nombre));
+      resultadosFiltrados.sort((a, b) => a.nombre.localeCompare(b.nombre));
     }
 
     // Metadatos de respuesta
-    const aniosPresentes = [...new Set(entidades.map(() => anioFinal ?? "?"))];
-    const totalEntidades = resultados.length;
-    const conRanking = resultados.filter((r) => r.cohorteInsuficiente === false).length;
-    const sinRanking = resultados.filter((r) => r.cohorteInsuficiente === true).length;
+    const totalEntidades = resultadosFiltrados.length;
+    const conRanking = resultadosFiltrados.filter((r) => r.cohorteInsuficiente === false).length;
+    const sinRanking = resultadosFiltrados.filter((r) => r.cohorteInsuficiente === true).length;
 
     res.json({
       meta: {
         cobertura: "La Libertad (pIM, offsets de byte)",
         nota:
           "Cohortes con menos de 5 entidades no reciben ranking — la comparabilidad es estadísticamente inválida con muestras menores.",
-        filtros: { nivel, funcion, departamento, anio: anioFinal },
+        filtros: { nivel, funcion, departamento, anio: anioFinal, soloConRanking },
         stats: {
           totalEntidades,
           conRanking,
           sinRanking,
-          rankingMin: conRanking > 0 ? Math.min(...resultados.filter((r) => r.ranking !== null).map((r) => r.ranking!)) : null,
-          rankingMax: conRanking > 0 ? Math.max(...resultados.filter((r) => r.ranking !== null).map((r) => r.ranking!)) : null,
+          rankingMin: conRanking > 0 ? Math.min(...resultadosFiltrados.filter((r) => r.ranking !== null).map((r) => r.ranking!)) : null,
+          rankingMax: conRanking > 0 ? Math.max(...resultadosFiltrados.filter((r) => r.ranking !== null).map((r) => r.ranking!)) : null,
         },
         fuente: "MEF - Presupuesto y ejecución de gasto (Consulta Amigable)",
         // La fecha de corte real sale del batch mais reciente de budget_execution
       },
-      resultados,
+      resultados: resultadosFiltrados,
     });
   })
 );
@@ -247,8 +299,6 @@ indiceEjecucionRouter.get(
  * y cómo se posiciona la entidad seleccionada.
  */
 const EntidadFuncionQuerySchema = z.object({
-  /** Código de entidad MEF (ej. 301234 ). */
-  entityCode: z.string().min(1),
   anio: z.string().regex(/^\d{4}$/, "debe ser un año de 4 dígitos").optional(),
   /** Si se pasa, filtra a una función específica. */
   funcion: z.string().min(1).optional(),
@@ -257,11 +307,48 @@ const EntidadFuncionQuerySchema = z.object({
 indiceEjecucionRouter.get(
   "/por-funcion/:entityCode",
   asyncHandler(async (req, res) => {
+    // `entityCode` viaja en `req.params` (ruta `/por-funcion/:entityCode`), no
+    // en `req.query` — validarlo dentro del query schema nunca lo alcanza, así
+    // que toda llamada normal (`/por-funcion/301234`) caía siempre en el 400
+    // de "obligatorio". Se valida por separado contra `req.params`.
+    const entityCode = req.params.entityCode;
+    if (!entityCode) {
+      res.status(400).json({ error: "entityCode es obligatorio." });
+      return;
+    }
+
     const parsed = parseQuery(EntidadFuncionQuerySchema, req.query, res);
     if (!parsed) return;
 
-    const { entityCode, anio, funcion } = parsed;
-    const anioFinal = anio ? Number(anio) : undefined;
+    const { anio, funcion } = parsed;
+
+    // La cohorte de comparación tiene que acotarse al mismo nivel de gobierno
+    // y departamento de la entidad consultada — si no, una municipalidad
+    // distrital chica se compara contra la mediana de TODO el país/nivel,
+    // mezclando gobiernos regionales con municipalidades.
+    const { rows: entidadInfo } = await pool.query<{ nivel_gobierno: string; departamento: string }>(
+      `SELECT e.nivel_gobierno, t.departamento
+       FROM entities e
+       JOIN territories t ON t.ubigeo = e.ubigeo
+       WHERE e.entity_code = $1`,
+      [entityCode]
+    );
+    if (entidadInfo.length === 0) {
+      res.status(404).json({ error: "Entidad no encontrada." });
+      return;
+    }
+    const { nivel_gobierno: nivelGobierno, departamento } = entidadInfo[0];
+
+    let anioFinal = anio ? Number(anio) : undefined;
+    if (anioFinal === undefined) {
+      const { rows: anioRows } = await pool.query<{ max_anio: number | string | null }>(
+        `SELECT MAX(anio_fiscal) AS max_anio FROM budget_execution WHERE entity_code = $1`,
+        [entityCode]
+      );
+      anioFinal = anioRows[0]?.max_anio !== null && anioRows[0]?.max_anio !== undefined
+        ? Number(anioRows[0].max_anio)
+        : undefined;
+    }
 
     const condiciones: string[] = [];
     const params: unknown[] = [];
@@ -308,7 +395,20 @@ indiceEjecucionRouter.get(
       return;
     }
 
-    // Medianas por función (cohorte = misma función, todas las entidades del dept°).
+    // Medianas por función — cohorte = entidades del MISMO nivel de gobierno
+    // y departamento que la entidad consultada (ver nota arriba).
+    const condicionesMediana: string[] = [`e.nivel_gobierno = $1`, `t.departamento = $2`];
+    const paramsMediana: unknown[] = [nivelGobierno, departamento];
+    if (anioFinal !== undefined) {
+      paramsMediana.push(anioFinal);
+      condicionesMediana.push(`b.anio_fiscal = $${paramsMediana.length}`);
+    }
+    if (funcion) {
+      paramsMediana.push(funcion);
+      condicionesMediana.push(`b.funcion = $${paramsMediana.length}`);
+    }
+    const whereMediana = `WHERE ${condicionesMediana.join(" AND ")}`;
+
     // Postgres rechaza `SUM(...)` anidado dentro del `ORDER BY` de otra función
     // agregada ("aggregate function calls cannot be nested", confirmado en
     // vivo) — la versión anterior de esta query reventaba con 500 en TODA
@@ -326,7 +426,8 @@ indiceEjecucionRouter.get(
                      ELSE NULL END AS tasa_ejecucion
          FROM latest_budget b
          JOIN entities e ON e.entity_code = b.entity_code
-         ${where}
+         JOIN territories t ON t.ubigeo = e.ubigeo
+         ${whereMediana}
          GROUP BY b.entity_code, b.funcion
        )
        SELECT funcion,
@@ -335,7 +436,7 @@ indiceEjecucionRouter.get(
        FROM entidad_funcion_tasa
        WHERE tasa_ejecucion IS NOT NULL
        GROUP BY funcion`,
-      params
+      paramsMediana
     );
 
     const medianaMap = new Map<string, { mediana: number; n: number }>();
@@ -370,7 +471,7 @@ indiceEjecucionRouter.get(
       anioFiscal: anioFinal,
       meta: {
         cobertura: "La Libertad (pIM)",
-        nota: "Cohorte = todas las entidades del mismo nivel de gobierno con la misma función. Desviación = tasa propia − mediana de la cohorte.",
+        nota: "Cohorte = todas las entidades del mismo nivel de gobierno y departamento que la entidad consultada, con la misma función. Desviación = tasa propia − mediana de la cohorte.",
         fuente: "MEF - Consulta Amigable",
       },
       resultados,

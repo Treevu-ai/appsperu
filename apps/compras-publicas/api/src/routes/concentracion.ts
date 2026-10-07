@@ -40,7 +40,7 @@ const ConcentracionQuerySchema = z.object({
   categoria: z.enum(["goods", "works", "services"]).optional(),
   /** Solo proveedores que ganan en múltiples departamentos (red de proveedores). */
   soloRedes: z.enum(["true", "false"]).optional().default("false"),
-  /** Proveedor específico (RUC). */
+  /** Proveedor específico (RUC) — acota los departamentos mostrados a aquellos donde opera, sin alterar el cálculo de concentración de cada departamento. */
   proveedor: z.string().min(1).optional(),
   /** Año de adjudicaciones. */
   anio: z.coerce.number().int().min(2020).max(2100).optional(),
@@ -56,20 +56,16 @@ concentracionRouter.get(
 
     const { departamento, categoria, soloRedes, proveedor, anio, conProveedores } = parsed;
 
+    // `departamento` y `proveedor` NO se filtran aquí en SQL: ambos requieren
+    // ver el universo completo de proveedores por departamento para calcularse
+    // correctamente (ver abajo). `categoria`/`anio` sí restringen el universo
+    // de datos en sí, no la comparabilidad entre proveedores.
     const condiciones: string[] = [];
     const params: unknown[] = [];
 
-    if (departamento) {
-      params.push(departamento.toUpperCase());
-      condiciones.push(`a.departamento = $${params.length}`);
-    }
     if (categoria) {
       params.push(categoria);
       condiciones.push(`LOWER(pp.categoria) = $${params.length}`);
-    }
-    if (proveedor) {
-      params.push(proveedor);
-      condiciones.push(`a.supplier_id = $${params.length}`);
     }
     if (anio !== undefined) {
       params.push(anio);
@@ -78,7 +74,9 @@ concentracionRouter.get(
 
     const where = condiciones.length > 0 ? `WHERE ${condiciones.join(" AND ")}` : "";
 
-    // Proveedores por departamento
+    // Proveedores por departamento (TODOS los departamentos y proveedores,
+    // nunca acotado aquí a un solo `departamento` o `proveedor` — ver nota de
+    // soloRedes/proveedor más abajo).
     const proveedoresQuery = `
       SELECT
         a.departamento,
@@ -96,7 +94,11 @@ concentracionRouter.get(
 
     const { rows: proveedores } = await pool.query(proveedoresQuery, params);
 
-    // Redes: proveedores que operan en más de 1 departamento
+    // Redes: proveedores que operan en más de 1 departamento. Se calcula
+    // sobre el universo SIN el filtro de `departamento` — si se filtrara por
+    // departamento antes, cada proveedor solo tendría 1 departamento visible
+    // y `soloRedes=true&departamento=X` nunca encontraría redes (bug real:
+    // CodeRabbit lo confirmó, Set.size nunca > 1 con el filtro aplicado antes).
     const deptosPorProveedor = new Map<string, Set<string>>();
     for (const p of proveedores) {
       if (!deptosPorProveedor.has(p.supplier_id)) {
@@ -105,8 +107,22 @@ concentracionRouter.get(
       deptosPorProveedor.get(p.supplier_id)!.add(p.departamento);
     }
 
-    // Concentración por departamento
-    const deptos = [...new Set(proveedores.map((p) => p.departamento))].sort();
+    // Lista de departamentos a mostrar: acotada por `departamento` y/o por
+    // dónde opera `proveedor` — pero el cálculo de concentración de cada
+    // departamento mostrado sigue usando TODOS sus proveedores (competidores
+    // incluidos). Filtrar las filas de awards por `proveedor` antes de
+    // calcular las cuotas eliminaba a todos sus competidores y el HHI salía
+    // siempre 10,000 (bug real confirmado por CodeRabbit).
+    let deptos = [...new Set(proveedores.map((p) => p.departamento))].sort();
+    if (departamento) {
+      const deptoFiltro = departamento.toUpperCase();
+      deptos = deptos.filter((d) => d === deptoFiltro);
+    }
+    if (proveedor) {
+      const deptosDelProveedor = deptosPorProveedor.get(proveedor) ?? new Set();
+      deptos = deptos.filter((d) => deptosDelProveedor.has(d));
+    }
+
     const porDepartamento: Record<string, unknown>[] = [];
 
     for (const dept of deptos) {
@@ -208,6 +224,7 @@ concentracionRouter.get(
           "La muestra no es completa del universo — cobertura variable según última corrida OECE.",
           "Grupos económicos con múltiples RUCs no se detectan desde awards.",
           "Proveedores nuevos o inactivos no participan y pueden subestimar la concentración real.",
+          "`proveedor` y `departamento` solo acotan qué departamentos se muestran — el HHI/CRk de cada departamento siempre se calcula sobre TODOS sus proveedores, nunca sobre un subconjunto.",
         ],
         filtros: { departamento, categoria, soloRedes, proveedor, anio },
       },
@@ -236,7 +253,14 @@ concentracionRouter.get(
     if (!parsed) return;
 
     const { departamento, anio } = parsed;
-    const deptos = departamento.split(",").map((d) => d.trim().toUpperCase());
+    // `departamento` admite lista separada por comas (ej. "LIMA,ICA"). Se
+    // descartan entradas vacías producto de comas repetidas o extremas
+    // (ej. "LIMA,,ICA" o "LIMA,") — sin este filtro, `ANY($1)` con un ""
+    // nunca matchea pero tampoco rompe, solo ensucia el filtro silenciosamente.
+    const deptos = departamento
+      .split(",")
+      .map((d) => d.trim().toUpperCase())
+      .filter((d) => d.length > 0);
 
     // Concentración awards
     const { rows: awardsConc } = await pool.query(
@@ -253,7 +277,11 @@ concentracionRouter.get(
       [deptos, anio]
     );
 
-    // Concentración menores por provincia
+    // Concentración menores por provincia. Antes recibía `departamento` (el
+    // texto crudo, p.ej. "LIMA,ICA") como un único valor de igualdad — con
+    // una lista de 2+ departamentos, `mu.department = $1` nunca matcheaba
+    // ninguno y la rama de menores quedaba siempre vacía, mientras awards sí
+    // cubría ambos vía `ANY($1)` (bug real confirmado por CodeRabbit).
     const { rows: menoresConc } = await pool.query(
       `SELECT
          mu.province AS provincia,
@@ -262,11 +290,11 @@ concentracionRouter.get(
          COUNT(DISTINCT m.winning_supplier_id) AS proveedores
        FROM minor_contracts m
        JOIN municipalities mu ON mu.municipality_id = m.municipality_id
-       WHERE mu.department = $1
+       WHERE mu.department = ANY($1)
          AND m.year = $2
          AND m.awarded_amount > 0
        GROUP BY mu.province`,
-      [departamento.toUpperCase(), anio]
+      [deptos, anio]
     );
 
     // HHI awards
@@ -296,19 +324,27 @@ concentracionRouter.get(
           menores: "SEACE / Sigma",
         },
       },
-      awards: awardsConc.map((r) => ({
-        departamento: r.departamento,
-        montoTotal: Number(r.monto_total),
-        proveedores: Number(r.proveedores),
-        entidadesCompradoras: Number(r.entidades_compradoras),
-        hhi: awardsProviders[r.departamento] ?? null,
-        hhiNivel:
-          (awardsProviders[r.departamento] ?? 0) < 1500
-            ? "COMPETITIVO"
-            : (awardsProviders[r.departamento] ?? 0) < 2500
-              ? "MODERADO"
-              : "ALTAMENTE_CONCENTRADO",
-      })),
+      awards: awardsConc.map((r) => {
+        const hhi = awardsProviders[r.departamento] ?? null;
+        return {
+          departamento: r.departamento,
+          montoTotal: Number(r.monto_total),
+          proveedores: Number(r.proveedores),
+          entidadesCompradoras: Number(r.entidades_compradoras),
+          hhi,
+          // Antes usaba `?? 0` para decidir el nivel, por lo que un HHI
+          // ausente (null) se mostraba como "COMPETITIVO" en vez de null —
+          // inconsistente con el propio `hhi: null` del mismo objeto.
+          hhiNivel:
+            hhi === null
+              ? null
+              : hhi < 1500
+                ? "COMPETITIVO"
+                : hhi < 2500
+                  ? "MODERADO"
+                  : "ALTAMENTE_CONCENTRADO",
+        };
+      }),
       menores: menoresConc.map((r) => ({
         provincia: r.provincia,
         montoTotal: Number(r.monto_total),

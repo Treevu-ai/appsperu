@@ -21,6 +21,18 @@ interface CohorteRow extends NeonRow {
   n_entidades: number | string;
 }
 
+/** Cuenta cuántos elementos de `sorted` (asc) son <= `valor` (búsqueda binaria). */
+function contarMenorOIgual(sorted: number[], valor: number): number {
+  let lo = 0;
+  let hi = sorted.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (sorted[mid] <= valor) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
 /**
  * Handler para `radar_ejecucion_indice_ejecucion` — GET /api/indices/ejecucion.
  * Origen: apps/radar-ejecucion/api/src/routes/indice-ejecucion.ts.
@@ -30,8 +42,30 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const nivel = args.nivel as string | undefined;
   const funcion = args.funcion as string | undefined;
   const departamento = args.departamento as string | undefined;
-  const anioFinal = args.anio ? Number(args.anio) : undefined;
+  const soloConRanking = args.soloConRanking === "true" || args.soloConRanking === true;
   const orden = (args.orden as string | undefined) ?? "tasa_desc";
+
+  let anioFinal = args.anio ? Number(args.anio) : undefined;
+  if (anioFinal === undefined) {
+    const condicionesAnio: string[] = [];
+    const paramsAnio: unknown[] = [];
+    if (departamento) {
+      paramsAnio.push(departamento.toUpperCase());
+      condicionesAnio.push(`t.departamento = $${paramsAnio.length}`);
+    }
+    const whereAnio = condicionesAnio.length > 0 ? `WHERE ${condicionesAnio.join(" AND ")}` : "";
+    const { rows: anioRows } = await db.query<{ max_anio: number | string | null }>(
+      `SELECT MAX(b.anio_fiscal) AS max_anio
+       FROM budget_execution b
+       JOIN entities e ON e.entity_code = b.entity_code
+       JOIN territories t ON t.ubigeo = e.ubigeo
+       ${whereAnio}`,
+      paramsAnio
+    );
+    anioFinal = anioRows[0]?.max_anio !== null && anioRows[0]?.max_anio !== undefined
+      ? Number(anioRows[0].max_anio)
+      : undefined;
+  }
 
   const condiciones1: string[] = [];
   const params1: unknown[] = [];
@@ -111,8 +145,18 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
     });
   }
 
+  const tasasPorCohorte = new Map<string, number[]>();
+  for (const e of entidades) {
+    if (e.tasa_ejecucion === null) continue;
+    const key = `${e.nivel_gobierno}::${e.departamento}`;
+    if (!tasasPorCohorte.has(key)) tasasPorCohorte.set(key, []);
+    tasasPorCohorte.get(key)!.push(Number(e.tasa_ejecucion));
+  }
+  for (const tasas of tasasPorCohorte.values()) tasas.sort((a, b) => a - b);
+
   const resultados = entidades.map((e) => {
-    const cohorte = cohorteMap.get(`${e.nivel_gobierno}::${e.departamento}`);
+    const cohorteKey = `${e.nivel_gobierno}::${e.departamento}`;
+    const cohorte = cohorteMap.get(cohorteKey);
     const tasaEjecucion = Number(e.tasa_ejecucion);
 
     if (!cohorte || cohorte.n < 5) {
@@ -125,13 +169,8 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
       };
     }
 
-    const menorOIgual = entidades.filter(
-      (other) =>
-        other.nivel_gobierno === e.nivel_gobierno &&
-        other.departamento === e.departamento &&
-        other.tasa_ejecucion !== null &&
-        Number(other.tasa_ejecucion) <= tasaEjecucion
-    ).length;
+    const tasasCohorte = tasasPorCohorte.get(cohorteKey) ?? [];
+    const menorOIgual = contarMenorOIgual(tasasCohorte, tasaEjecucion);
 
     return {
       entityCode: e.entity_code, nombre: e.nombre, nivelGobierno: e.nivel_gobierno,
@@ -144,16 +183,18 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
     };
   });
 
+  const resultadosFiltrados = soloConRanking ? resultados.filter((r) => !r.cohorteInsuficiente) : resultados;
+
   if (orden === "tasa_desc") {
-    resultados.sort((a, b) => (b.tasaEjecucion ?? -1) - (a.tasaEjecucion ?? -1));
+    resultadosFiltrados.sort((a, b) => (b.tasaEjecucion ?? -1) - (a.tasaEjecucion ?? -1));
   } else if (orden === "tasa_asc") {
-    resultados.sort((a, b) => (a.tasaEjecucion ?? 999) - (b.tasaEjecucion ?? 999));
+    resultadosFiltrados.sort((a, b) => (a.tasaEjecucion ?? 999) - (b.tasaEjecucion ?? 999));
   } else {
-    resultados.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    resultadosFiltrados.sort((a, b) => a.nombre.localeCompare(b.nombre));
   }
 
-  const conRanking = resultados.filter((r) => !r.cohorteInsuficiente).length;
-  const sinRanking = resultados.filter((r) => r.cohorteInsuficiente).length;
+  const conRanking = resultadosFiltrados.filter((r) => !r.cohorteInsuficiente).length;
+  const sinRanking = resultadosFiltrados.filter((r) => r.cohorteInsuficiente).length;
 
   return {
     status: 200,
@@ -161,11 +202,11 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
       meta: {
         cobertura: "La Libertad (PIM, offsets de byte)",
         nota: "Cohortes con menos de 5 entidades no reciben ranking — la comparabilidad es estadísticamente inválida con muestras menores.",
-        filtros: { nivel, funcion, departamento, anio: anioFinal },
-        stats: { totalEntidades: resultados.length, conRanking, sinRanking },
+        filtros: { nivel, funcion, departamento, anio: anioFinal, soloConRanking },
+        stats: { totalEntidades: resultadosFiltrados.length, conRanking, sinRanking },
         fuente: "MEF - Presupuesto y ejecución de gasto (Consulta Amigable)",
       },
-      resultados,
+      resultados: resultadosFiltrados,
     },
   };
 }
@@ -183,6 +224,11 @@ interface MedianaFuncionRow extends NeonRow {
   n_entidades: number | string;
 }
 
+interface EntidadInfoRow extends NeonRow {
+  nivel_gobierno: string;
+  departamento: string;
+}
+
 /**
  * Handler para `radar_ejecucion_indice_ejecucion_resumen` — GET /api/indices/ejecucion/por-funcion/{entityCode}.
  * Origen: apps/radar-ejecucion/api/src/routes/indice-ejecucion.ts.
@@ -190,8 +236,30 @@ interface MedianaFuncionRow extends NeonRow {
 export async function porFuncion(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const { db, args } = ctx;
   const entityCode = args.entityCode as string;
-  const anioFinal = args.anio ? Number(args.anio) : undefined;
   const funcion = args.funcion as string | undefined;
+
+  const { rows: entidadInfo } = await db.query<EntidadInfoRow>(
+    `SELECT e.nivel_gobierno, t.departamento
+     FROM entities e
+     JOIN territories t ON t.ubigeo = e.ubigeo
+     WHERE e.entity_code = $1`,
+    [entityCode]
+  );
+  if (entidadInfo.length === 0) {
+    return { status: 404, body: { error: "Entidad no encontrada." } };
+  }
+  const { nivel_gobierno: nivelGobierno, departamento } = entidadInfo[0];
+
+  let anioFinal = args.anio ? Number(args.anio) : undefined;
+  if (anioFinal === undefined) {
+    const { rows: anioRows } = await db.query<{ max_anio: number | string | null }>(
+      `SELECT MAX(anio_fiscal) AS max_anio FROM budget_execution WHERE entity_code = $1`,
+      [entityCode]
+    );
+    anioFinal = anioRows[0]?.max_anio !== null && anioRows[0]?.max_anio !== undefined
+      ? Number(anioRows[0].max_anio)
+      : undefined;
+  }
 
   const condiciones: string[] = [];
   const params: unknown[] = [];
@@ -225,6 +293,12 @@ export async function porFuncion(ctx: ToolHandlerContext): Promise<HandlerResult
     return { status: 404, body: { error: "Entidad sin datos para el año y filtros dados." } };
   }
 
+  const condicionesMediana: string[] = [`e.nivel_gobierno = $1`, `t.departamento = $2`];
+  const paramsMediana: unknown[] = [nivelGobierno, departamento];
+  if (anioFinal !== undefined) { paramsMediana.push(anioFinal); condicionesMediana.push(`b.anio_fiscal = $${paramsMediana.length}`); }
+  if (funcion) { paramsMediana.push(funcion); condicionesMediana.push(`b.funcion = $${paramsMediana.length}`); }
+  const whereMediana = `WHERE ${condicionesMediana.join(" AND ")}`;
+
   const { rows: medianRows } = await db.query<MedianaFuncionRow>(
     `${LATEST_BUDGET_CTE},
      entidad_funcion_tasa AS (
@@ -236,7 +310,8 @@ export async function porFuncion(ctx: ToolHandlerContext): Promise<HandlerResult
                    ELSE NULL END AS tasa_ejecucion
        FROM latest_budget b
        JOIN entities e ON e.entity_code = b.entity_code
-       ${where}
+       JOIN territories t ON t.ubigeo = e.ubigeo
+       ${whereMediana}
        GROUP BY b.entity_code, b.funcion
      )
      SELECT funcion,
@@ -245,7 +320,7 @@ export async function porFuncion(ctx: ToolHandlerContext): Promise<HandlerResult
      FROM entidad_funcion_tasa
      WHERE tasa_ejecucion IS NOT NULL
      GROUP BY funcion`,
-    params
+    paramsMediana
   );
 
   const medianaMap = new Map<string, { mediana: number; n: number }>();
@@ -277,7 +352,7 @@ export async function porFuncion(ctx: ToolHandlerContext): Promise<HandlerResult
       anioFiscal: anioFinal,
       meta: {
         cobertura: "La Libertad (PIM)",
-        nota: "Cohorte = todas las entidades del mismo nivel de gobierno con la misma función. Desviación = tasa propia − mediana de la cohorte.",
+        nota: "Cohorte = todas las entidades del mismo nivel de gobierno y departamento que la entidad consultada, con la misma función. Desviación = tasa propia − mediana de la cohorte.",
         fuente: "MEF - Consulta Amigable",
       },
       resultados,

@@ -19,10 +19,10 @@ interface ResultadoItem {
   modalidad: string;
   totalDenuncias: number;
   distritosActivos: number;
-  poblacion: number;
-  tasaPor10mil: number;
-  fuentePoblacion: string;
-  vintage: string;
+  poblacion: number | null;
+  tasaPor10mil: number | null;
+  fuentePoblacion: string | null;
+  vintage: string | null;
   ranking: number | null;
   totalModalidades: number | null;
 }
@@ -87,15 +87,22 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
     return { status: 404, body: { error: "Sin datos de denuncias para los filtros dados.", anio: anioFinal, departamento } };
   }
 
+  // Sin población a nivel provincia, dividir el numerador de una provincia
+  // por la población de TODO el departamento infla artificialmente la tasa.
+  // La tasa solo es válida a nivel departamental; a nivel provincia se
+  // devuelve null explícito (ver nota en la ruta HTTP homónima).
   const resultados: ResultadoItem[] = denuncias.map((r) => ({
     nivelGeo: r.nivel_geo,
     modalidad: r.modalidad,
     totalDenuncias: Number(r.total_denuncias),
     distritosActivos: Number(r.distritos_activos),
-    poblacion: Number(poblacion),
-    tasaPor10mil: Math.round((Number(r.total_denuncias) / Number(poblacion)) * 10000 * 10) / 10,
-    fuentePoblacion: fuente,
-    vintage,
+    poblacion: nivelAgr === "departamento" ? Number(poblacion) : null,
+    tasaPor10mil:
+      nivelAgr === "departamento"
+        ? Math.round((Number(r.total_denuncias) / Number(poblacion)) * 10000 * 10) / 10
+        : null,
+    fuentePoblacion: nivelAgr === "departamento" ? fuente : null,
+    vintage: nivelAgr === "departamento" ? vintage : null,
     ranking: null,
     totalModalidades: null,
   }));
@@ -106,7 +113,11 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
     grupos.get(r.nivelGeo)!.push(r);
   }
   for (const [, grupo] of grupos) {
-    grupo.sort((a, b) => b.tasaPor10mil - a.tasaPor10mil);
+    grupo.sort((a, b) =>
+      nivelAgr === "departamento"
+        ? (b.tasaPor10mil ?? 0) - (a.tasaPor10mil ?? 0)
+        : b.totalDenuncias - a.totalDenuncias
+    );
     for (let i = 0; i < grupo.length; i++) {
       const item = resultados.find((r) => r.nivelGeo === grupo[i].nivelGeo && r.modalidad === grupo[i].modalidad)!;
       item.ranking = i + 1;
@@ -114,8 +125,8 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
     }
   }
 
-  if (orden === "tasa_desc") resultados.sort((a, b) => b.tasaPor10mil - a.tasaPor10mil);
-  else if (orden === "tasa_asc") resultados.sort((a, b) => a.tasaPor10mil - b.tasaPor10mil);
+  if (orden === "tasa_desc") resultados.sort((a, b) => (b.tasaPor10mil ?? -1) - (a.tasaPor10mil ?? -1));
+  else if (orden === "tasa_asc") resultados.sort((a, b) => (a.tasaPor10mil ?? 999999) - (b.tasaPor10mil ?? 999999));
   else if (orden === "denuncias_desc") resultados.sort((a, b) => b.totalDenuncias - a.totalDenuncias);
   else {
     resultados.sort((a, b) => {
@@ -124,23 +135,28 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
     });
   }
 
-  const porModalidad = new Map<string, { denuncias: number; tasas: number[]; niveles: number }>();
-  for (const r of resultados) {
-    const existing = porModalidad.get(r.modalidad) ?? { denuncias: 0, tasas: [], niveles: 0 };
-    porModalidad.set(r.modalidad, {
-      denuncias: existing.denuncias + r.totalDenuncias,
-      tasas: [...existing.tasas, r.tasaPor10mil],
-      niveles: existing.niveles + 1,
-    });
-  }
-  const resumenModalidades = [...porModalidad.entries()]
-    .map(([modalidad, data]) => ({
-      modalidad,
-      totalDenuncias: data.denuncias,
-      tasaPromedio: data.niveles > 0 ? Math.round((data.tasas.reduce((a, b) => a + b, 0) / data.niveles) * 10) / 10 : null,
-      departamentosActivos: data.niveles,
-    }))
-    .sort((a, b) => (b.tasaPromedio ?? 0) - (a.tasaPromedio ?? 0));
+  const resumenModalidades =
+    nivelAgr === "departamento"
+      ? (() => {
+          const porModalidad = new Map<string, { denuncias: number; tasas: number[]; niveles: number }>();
+          for (const r of resultados) {
+            const existing = porModalidad.get(r.modalidad) ?? { denuncias: 0, tasas: [], niveles: 0 };
+            porModalidad.set(r.modalidad, {
+              denuncias: existing.denuncias + r.totalDenuncias,
+              tasas: [...existing.tasas, r.tasaPor10mil ?? 0],
+              niveles: existing.niveles + 1,
+            });
+          }
+          return [...porModalidad.entries()]
+            .map(([modalidad, data]) => ({
+              modalidad,
+              totalDenuncias: data.denuncias,
+              tasaPromedio: data.niveles > 0 ? Math.round((data.tasas.reduce((a, b) => a + b, 0) / data.niveles) * 10) / 10 : null,
+              departamentosActivos: data.niveles,
+            }))
+            .sort((a, b) => (b.tasaPromedio ?? 0) - (a.tasaPromedio ?? 0));
+        })()
+      : [];
 
   return {
     status: 200,
@@ -149,13 +165,14 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
         cobertura: "Nacional (SIDPOL/MININTER)",
         fuentePoblacion: fuente,
         vintage,
-        metodologia: "Tasa = (total_denuncias × 10,000) / poblacion_departamento. Población = padrón electoral RENIEC 2026 (mayores de 18 años).",
+        metodologia: "Tasa = (total_denuncias × 10,000) / poblacion_departamento. Población = padrón electoral RENIEC 2026 (mayores de 18 años). Solo disponible a nivel departamento — no hay población provincial.",
         limitaciones: [
           "SIDPOL mide solo denuncias hechas en comisaría — no incluye hechos no denunciados.",
           "Un departamento con alta tasa puede reflejar buena cultura de denuncia, no necesariamente más criminalidad.",
           "La modalidad puede variar de clasificación entre años.",
           "La población es proxy (mayores de 18 años) — excluye menores.",
           "La agregación es departamental: diferencias intra-departamentales (provincias/distritos) no se capturan en la tasa.",
+          "Al filtrar por provincia, tasaPor10mil es null (no hay población provincial) — solo se muestra totalDenuncias.",
         ],
         filtros: { anio: anioFinal, departamento, provincia: provincia ?? null, modalidad: modalidad ?? null },
         nivelGeografico: nivelAgr,
@@ -183,10 +200,16 @@ export async function comparativo(ctx: ToolHandlerContext): Promise<HandlerResul
   const anioInicio = args.anioInicio ? Number(args.anioInicio) : undefined;
   const anioFin = args.anioFin ? Number(args.anioFin) : undefined;
 
-  const { rows: yearRows } = await db.query<{ anio: number | string }>(`SELECT DISTINCT anio FROM police_reports ORDER BY anio`);
+  // Años disponibles PARA ESE DEPARTAMENTO — tomar el rango de toda la tabla
+  // (todos los departamentos) podía dejar el default fuera del rango real
+  // de datos del departamento solicitado.
+  const { rows: yearRows } = await db.query<{ anio: number | string }>(
+    `SELECT DISTINCT anio FROM police_reports WHERE departamento = $1 ORDER BY anio`,
+    [departamento]
+  );
   const aniosDisponibles = yearRows.map((r) => Number(r.anio));
   if (aniosDisponibles.length === 0) {
-    return { status: 404, body: { error: "Sin datos en la tabla police_reports." } };
+    return { status: 404, body: { error: `Sin datos en police_reports para "${departamento}".` } };
   }
 
   const anioFinReal = anioFin ?? Math.max(...aniosDisponibles);
@@ -233,9 +256,15 @@ export async function comparativo(ctx: ToolHandlerContext): Promise<HandlerResul
     const puntos = seriesConTasa.filter((r) => r.modalidad === modalidad);
     const primerAnio = puntos.find((r) => r.anio === anioInicioReal);
     const ultimoAnio = puntos.find((r) => r.anio === anioFinReal);
+
+    // `variacionPct` se calcula sobre `totalDenuncias` (conteo crudo), no
+    // sobre `tasaPor10mil` (ya redondeada a 1 decimal) — la población es
+    // constante entre años para el mismo departamento, el % de variación es
+    // idéntico, pero partir del conteo crudo evita amplificar el error de
+    // redondeo de la tasa.
     const variacion =
-      primerAnio !== undefined && ultimoAnio !== undefined && primerAnio.tasaPor10mil !== 0
-        ? Math.round(((ultimoAnio.tasaPor10mil - primerAnio.tasaPor10mil) / primerAnio.tasaPor10mil) * 1000) / 10
+      primerAnio !== undefined && ultimoAnio !== undefined && primerAnio.totalDenuncias !== 0
+        ? Math.round(((ultimoAnio.totalDenuncias - primerAnio.totalDenuncias) / primerAnio.totalDenuncias) * 1000) / 10
         : null;
 
     return {
@@ -265,7 +294,7 @@ export async function comparativo(ctx: ToolHandlerContext): Promise<HandlerResul
         poblacion,
         fuentePoblacion: fuente,
         vintage,
-        limitacion: "Variación > 0 no necesariamente significa más criminalidad — puede ser más denuncias. Población = padrón electoral 2026 (proxy mayores de 18 años).",
+        limitacion: "Variación > 0 no necesariamente significa más criminalidad — puede ser más denuncias. Población = padrón electoral 2026 (proxy mayores de 18 años). variacionPct se calcula sobre el conteo crudo de denuncias, no sobre la tasa redondeada.",
       },
       evolucion,
       series: seriesConTasa,
