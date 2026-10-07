@@ -15,6 +15,14 @@
 
 ## Estado: CONFIRMADO — cartera APP/PA, OxI y GIS, los tres implementados
 
+**Primera ingesta real contra Neon producción: 2026-10-07.** La base `inversion_privada` estaba
+sin migrar en Neon hasta esta fecha (los 3 conectores solo se habían verificado contra Postgres
+local). Se aplicaron las 4 migraciones pendientes y se corrieron los 3 conectores sin cambios de
+código: **331 VERTIX APP/PA** (vs. 340 del corte 2026-08-28), **572 OxI** (vs. 761 del corte
+2026-08-28), **464 features GIS** (vs. 473 del corte 2026-08-28) — las tres cifras bajaron
+respecto al spike original, consistente entre sí (cartera viva que cambia), sin investigar causa
+puntual en esta sesión. Detalle completo en `docs/conectores.md#inversion-privada`.
+
 ### Hallazgo decisivo: cartera APP/PA vía `vertixService.php`
 
 **Endpoint** (no documentado oficialmente; inferido del front de

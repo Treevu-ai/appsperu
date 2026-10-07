@@ -4,6 +4,12 @@
 
 Investigación en vivo: 2026-09-20.
 
+**Primera ingesta real contra Neon producción: 2026-10-07.** La tabla `inhabilitaciones_judiciales`
+en Neon seguía en 0 filas hasta esta fecha (la verificación de 2026-09-20 fue contra Postgres
+local). Corrida sin cambios de código: **19/24 filas aceptadas, 5 rechazadas** — el universo de
+la fuente creció de 15 a 24 filas desde el corte anterior, consistente con la actualización
+mensual ya documentada de OECE. Detalle en `docs/conectores.md#proveedores-sancionados`.
+
 ## Por qué esta fuente y en qué se diferencia de `inhabilitaciones`/`multas`
 
 `proveedores-sancionados` ya cubre sanciones **administrativas** del Tribunal de Contrataciones
