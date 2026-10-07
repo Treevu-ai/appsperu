@@ -294,6 +294,8 @@ describe("GET /api/cruce/comunidad/:capa/:objectid", () => {
     queryMock
       .mockResolvedValueOnce({ rows: [{ capa: "comunidades_campesinas", objectid: 2046, nombre: "MOLLOCCAHUA" }] })
       .mockResolvedValueOnce({ rows: [{ mining_codigou: "010080425", mining_titular: "MINERA BARRICK PERU S.A." }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ area_cubierta_km2: 32.33, pct_cobertura: 79.86, num_derechos: 9 }] })
       .mockResolvedValueOnce({ rows: [] });
 
     const res = await request(createApp()).get("/api/cruce/comunidad/comunidades_campesinas/2046");
@@ -302,6 +304,22 @@ describe("GET /api/cruce/comunidad/:capa/:objectid", () => {
     expect(res.body.comunidad.nombre).toBe("MOLLOCCAHUA");
     expect(res.body.superposiciones_minero).toHaveLength(1);
     expect(res.body.superposiciones_forestal).toHaveLength(0);
+  });
+
+  it("incluye la cobertura REAL (ST_Union) junto a los pares individuales", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ capa: "comunidades_campesinas", objectid: 2046, nombre: "MOLLOCCAHUA" }] })
+      .mockResolvedValueOnce({ rows: [{}, {}] }) // 2 pares individuales
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ area_cubierta_km2: 32.33, pct_cobertura: 79.86, num_derechos: 9 }] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(createApp()).get("/api/cruce/comunidad/comunidades_campesinas/2046");
+
+    expect(res.status).toBe(200);
+    expect(res.body.superposiciones_minero).toHaveLength(2);
+    expect(res.body.cobertura_minero_real).toEqual({ area_cubierta_km2: 32.33, pct_cobertura: 79.86, num_derechos: 9 });
+    expect(res.body.cobertura_forestal_real).toBeNull();
   });
 
   it("devuelve 404 si la comunidad no existe", async () => {
@@ -359,8 +377,40 @@ describe("GET /api/cruce/comunidad-forestal/report", () => {
   });
 });
 
+describe("GET /api/cruce/comunidad-minero/cobertura", () => {
+  it("filtra por min_pct y ordena por cobertura descendente", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "1" }] })
+      .mockResolvedValueOnce({ rows: [{ community_nombre: "INDEPENDIENTE", pct_cobertura: 100 }] });
+
+    const res = await request(createApp())
+      .get("/api/cruce/comunidad-minero/cobertura")
+      .query({ min_pct: 90 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(1);
+    expect(queryMock.mock.calls[0][0]).toMatch(/community_mining_coverage/);
+    expect(queryMock.mock.calls[1][0]).toMatch(/ORDER BY pct_cobertura DESC/);
+  });
+});
+
+describe("GET /api/cruce/comunidad-forestal/cobertura", () => {
+  it("filtra por departamento", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "1" }] })
+      .mockResolvedValueOnce({ rows: [{ community_nombre: "BAMBAMARCA" }] });
+
+    const res = await request(createApp())
+      .get("/api/cruce/comunidad-forestal/cobertura")
+      .query({ departamento: "LA LIBERTAD" });
+
+    expect(res.status).toBe(200);
+    expect(queryMock.mock.calls[0][0]).toMatch(/community_forest_coverage/);
+  });
+});
+
 describe("GET /api/cruce/comunidad/stats", () => {
-  it("agrega resumen, top titulares y por capa forestal", async () => {
+  it("agrega resumen, buckets de severidad, top titulares y por capa forestal", async () => {
     queryMock
       .mockResolvedValueOnce({ rows: [{ count: "4492" }] }) // comunidadesCount
       .mockResolvedValueOnce({ rows: [{ count: "14650" }] }) // mineroCount
@@ -370,7 +420,9 @@ describe("GET /api/cruce/comunidad/stats", () => {
       .mockResolvedValueOnce({ rows: [{ mining_titular: "MINERA BARRICK PERU S.A.", count: "108" }] })
       .mockResolvedValueOnce({ rows: [{ forest_capa: "modalidad_concesiones_forestales", count: "87" }] })
       .mockResolvedValueOnce({ rows: [{ computed_at: "2026-10-06T22:56:30.032Z" }] })
-      .mockResolvedValueOnce({ rows: [{ computed_at: "2026-10-06T22:56:43.988Z" }] });
+      .mockResolvedValueOnce({ rows: [{ computed_at: "2026-10-06T22:56:43.988Z" }] })
+      .mockResolvedValueOnce({ rows: [{ menor_10: "540", entre_10_50: "724", entre_50_90: "364", mayor_90: "302" }] })
+      .mockResolvedValueOnce({ rows: [{ count: "40" }] });
 
     const res = await request(createApp()).get("/api/cruce/comunidad/stats");
 
@@ -381,6 +433,14 @@ describe("GET /api/cruce/comunidad/stats", () => {
       pares_comunidad_forestal: 859,
       comunidades_afectadas_minero: 1930,
       comunidades_afectadas_forestal: 320,
+      comunidades_con_doble_exposicion: 40,
+    });
+    expect(res.body.cobertura_minero_por_severidad).toEqual({
+      nota: "Cobertura REAL (ST_Union), ver /comunidad-minero/cobertura. No es la suma de community_overlap_pct.",
+      menor_10pct: 540,
+      entre_10_50pct: 724,
+      entre_50_90pct: 364,
+      mayor_90pct: 302,
     });
     expect(res.body.top_titulares_mineros[0]).toEqual({
       titular: "MINERA BARRICK PERU S.A.",
