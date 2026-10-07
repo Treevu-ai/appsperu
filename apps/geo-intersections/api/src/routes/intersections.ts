@@ -377,7 +377,7 @@ intersectionsRouter.get(
       return;
     }
 
-    const [{ rows: minero }, { rows: forestal }] = await Promise.all([
+    const [{ rows: minero }, { rows: forestal }, { rows: coberturaMinero }, { rows: coberturaForestal }] = await Promise.all([
       pool.query(
         `SELECT mining_codigou, mining_concesion, mining_titular, mining_estado, mining_sustancia,
                 mining_area_km2, intersection_area_km2, community_overlap_pct, mining_overlap_pct, computed_at
@@ -394,9 +394,29 @@ intersectionsRouter.get(
          ORDER BY intersection_area_km2 DESC`,
         [capa, objectid]
       ),
+      pool.query(
+        `SELECT area_cubierta_km2, pct_cobertura, num_derechos, computed_at
+         FROM community_mining_coverage WHERE community_capa = $1 AND community_objectid = $2`,
+        [capa, objectid]
+      ),
+      pool.query(
+        `SELECT area_cubierta_km2, pct_cobertura, num_titulos, computed_at
+         FROM community_forest_coverage WHERE community_capa = $1 AND community_objectid = $2`,
+        [capa, objectid]
+      ),
     ]);
 
-    res.json({ comunidad: comunidades[0], superposiciones_minero: minero, superposiciones_forestal: forestal });
+    res.json({
+      comunidad: comunidades[0],
+      superposiciones_minero: minero,
+      superposiciones_forestal: forestal,
+      // Cobertura REAL (ST_Union de todos los derechos/títulos antes de medir) — no es la
+      // suma de community_overlap_pct de arriba, que sobrestima cuando dos derechos distintos
+      // se solapan entre sí sobre el mismo terreno (confirmado en vivo: casos reales de
+      // 131-175% al sumar ingenuamente). null si la comunidad no tiene ninguna superposición.
+      cobertura_minero_real: coberturaMinero[0] ?? null,
+      cobertura_forestal_real: coberturaForestal[0] ?? null,
+    });
   })
 );
 
@@ -529,6 +549,128 @@ intersectionsRouter.get(
   })
 );
 
+const CoberturaReportSchema = z.object({
+  capa: z.enum(["comunidades_campesinas", "comunidades_nativas"]).optional(),
+  departamento: z.string().min(1).optional(),
+  provincia: z.string().min(1).optional(),
+  distrito: z.string().min(1).optional(),
+  min_pct: z.coerce.number().min(0).max(100).optional()
+    .describe("% mínimo de cobertura REAL (ST_Union, no suma de pares)."),
+  min_area_km2: z.coerce.number().min(0).optional(),
+  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+/**
+ * Reporte paginado de cobertura REAL comunidad∩minero — una fila por comunidad, no por par.
+ * `pct_cobertura` viene de `ST_Union` de todos los derechos titulados que la intersectan,
+ * medido una sola vez contra la comunidad — a diferencia de `/comunidad-minero/report`
+ * (una fila por par), este número nunca supera 100% ni duplica solapamientos entre derechos
+ * distintos sobre el mismo terreno (ver `docs/data-contracts/comunidades-cruce-minero-forestal.md`).
+ */
+intersectionsRouter.get(
+  "/comunidad-minero/cobertura",
+  asyncHandler(async (req, res) => {
+    const p = parseQuery(CoberturaReportSchema, req.query, res);
+    if (!p) return;
+    const { capa, departamento, provincia, distrito, min_pct, min_area_km2, limit = DEFAULT_LIMIT, offset = 0 } = p;
+
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    const add = (v: unknown) => { params.push(v); return `$${params.length}`; };
+
+    if (capa) conditions.push(`community_capa = ${add(capa)}`);
+    if (departamento) conditions.push(`community_departamento = ${add(departamento)}`);
+    if (provincia) conditions.push(`community_provincia = ${add(provincia)}`);
+    if (distrito) conditions.push(`community_distrito = ${add(distrito)}`);
+    if (min_pct !== undefined) conditions.push(`pct_cobertura >= ${add(min_pct)}`);
+    if (min_area_km2 !== undefined) conditions.push(`area_cubierta_km2 >= ${add(min_area_km2)}`);
+
+    const whereSql = conditions.length > 0 ? conditions.join(" AND ") : "TRUE";
+    const listParams = [...params];
+    const lp = (v: unknown) => { listParams.push(v); return `$${listParams.length}`; };
+
+    const [{ rows: [{ total: totalStr }] }, { rows }] = await Promise.all([
+      pool.query<{ total: string }>(`SELECT COUNT(*) AS total FROM community_mining_coverage WHERE ${whereSql}`, params),
+      pool.query(
+        `SELECT community_capa, community_objectid, community_nombre, community_departamento,
+                community_provincia, community_distrito, community_area_km2,
+                area_cubierta_km2, pct_cobertura, num_derechos, computed_at
+         FROM community_mining_coverage
+         WHERE ${whereSql}
+         ORDER BY pct_cobertura DESC
+         LIMIT ${lp(limit)} OFFSET ${lp(offset)}`,
+        listParams
+      ),
+    ]);
+
+    const total = Number(totalStr);
+    res.json({
+      total,
+      limit,
+      offset,
+      hasMore: offset + rows.length < total,
+      resultados: rows,
+      fuente: {
+        dataset: "SERFOR OCAPAS (comunidades) ∩ INGEMMET (derechos mineros titulados) — cobertura real vía ST_Union",
+        nota: "pct_cobertura nunca supera 100%, a diferencia de sumar community_overlap_pct de /comunidad-minero/report entre varios derechos. Se regenera con npm run ingest:comunidad-cruce.",
+      },
+    });
+  })
+);
+
+/** Análogo a `/comunidad-minero/cobertura` para títulos forestales. */
+intersectionsRouter.get(
+  "/comunidad-forestal/cobertura",
+  asyncHandler(async (req, res) => {
+    const p = parseQuery(CoberturaReportSchema, req.query, res);
+    if (!p) return;
+    const { capa, departamento, provincia, distrito, min_pct, min_area_km2, limit = DEFAULT_LIMIT, offset = 0 } = p;
+
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    const add = (v: unknown) => { params.push(v); return `$${params.length}`; };
+
+    if (capa) conditions.push(`community_capa = ${add(capa)}`);
+    if (departamento) conditions.push(`community_departamento = ${add(departamento)}`);
+    if (provincia) conditions.push(`community_provincia = ${add(provincia)}`);
+    if (distrito) conditions.push(`community_distrito = ${add(distrito)}`);
+    if (min_pct !== undefined) conditions.push(`pct_cobertura >= ${add(min_pct)}`);
+    if (min_area_km2 !== undefined) conditions.push(`area_cubierta_km2 >= ${add(min_area_km2)}`);
+
+    const whereSql = conditions.length > 0 ? conditions.join(" AND ") : "TRUE";
+    const listParams = [...params];
+    const lp = (v: unknown) => { listParams.push(v); return `$${listParams.length}`; };
+
+    const [{ rows: [{ total: totalStr }] }, { rows }] = await Promise.all([
+      pool.query<{ total: string }>(`SELECT COUNT(*) AS total FROM community_forest_coverage WHERE ${whereSql}`, params),
+      pool.query(
+        `SELECT community_capa, community_objectid, community_nombre, community_departamento,
+                community_provincia, community_distrito, community_area_km2,
+                area_cubierta_km2, pct_cobertura, num_titulos, computed_at
+         FROM community_forest_coverage
+         WHERE ${whereSql}
+         ORDER BY pct_cobertura DESC
+         LIMIT ${lp(limit)} OFFSET ${lp(offset)}`,
+        listParams
+      ),
+    ]);
+
+    const total = Number(totalStr);
+    res.json({
+      total,
+      limit,
+      offset,
+      hasMore: offset + rows.length < total,
+      resultados: rows,
+      fuente: {
+        dataset: "SERFOR OCAPAS (comunidades) ∩ SERFOR (títulos forestales) — cobertura real vía ST_Union",
+        nota: "Se regenera con npm run ingest:comunidad-cruce.",
+      },
+    });
+  })
+);
+
 /** Resumen: comunidades afectadas, top titulares mineros, por capa forestal. */
 intersectionsRouter.get(
   "/comunidad/stats",
@@ -543,6 +685,8 @@ intersectionsRouter.get(
       porCapaForestal,
       ultimoBatchMinero,
       ultimoBatchForestal,
+      coberturaBuckets,
+      coberturaDobleExposicion,
     ] = await Promise.all([
       pool.query<{ count: string }>("SELECT COUNT(*) AS count FROM rural_communities"),
       pool.query<{ count: string }>("SELECT COUNT(*) AS count FROM community_mining_intersections"),
@@ -563,6 +707,23 @@ intersectionsRouter.get(
       pool.query<{ computed_at: Date }>(
         "SELECT computed_at FROM raw_community_intersection_batches WHERE tipo = 'forestal' ORDER BY computed_at DESC LIMIT 1"
       ),
+      // Buckets de severidad por cobertura REAL (ST_Union) — no confundir con sumar
+      // community_overlap_pct de community_mining_intersections, que sobrestima.
+      pool.query<{ menor_10: string; entre_10_50: string; entre_50_90: string; mayor_90: string }>(`
+        SELECT
+          COUNT(*) FILTER (WHERE pct_cobertura < 10) AS menor_10,
+          COUNT(*) FILTER (WHERE pct_cobertura >= 10 AND pct_cobertura < 50) AS entre_10_50,
+          COUNT(*) FILTER (WHERE pct_cobertura >= 50 AND pct_cobertura < 90) AS entre_50_90,
+          COUNT(*) FILTER (WHERE pct_cobertura >= 90) AS mayor_90
+        FROM community_mining_coverage
+      `),
+      pool.query<{ count: string }>(`
+        SELECT COUNT(*) AS count FROM (
+          SELECT community_capa, community_objectid FROM community_mining_coverage
+          INTERSECT
+          SELECT community_capa, community_objectid FROM community_forest_coverage
+        ) x
+      `),
     ]);
 
     res.json({
@@ -572,6 +733,14 @@ intersectionsRouter.get(
         pares_comunidad_forestal: Number(forestalCount.rows[0].count),
         comunidades_afectadas_minero: Number(comunidadesAfectadasMinero.rows[0].count),
         comunidades_afectadas_forestal: Number(comunidadesAfectadasForestal.rows[0].count),
+        comunidades_con_doble_exposicion: Number(coberturaDobleExposicion.rows[0].count),
+      },
+      cobertura_minero_por_severidad: {
+        nota: "Cobertura REAL (ST_Union), ver /comunidad-minero/cobertura. No es la suma de community_overlap_pct.",
+        menor_10pct: Number(coberturaBuckets.rows[0].menor_10),
+        entre_10_50pct: Number(coberturaBuckets.rows[0].entre_10_50),
+        entre_50_90pct: Number(coberturaBuckets.rows[0].entre_50_90),
+        mayor_90pct: Number(coberturaBuckets.rows[0].mayor_90),
       },
       top_titulares_mineros: topTitulares.rows.map((r) => ({
         titular: r.mining_titular,

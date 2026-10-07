@@ -3678,13 +3678,63 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
   {
+    name: "geo_intersections_comunidad_minero_cobertura",
+    handler: "community-crossref:coberturaMinero",
+    app: "geo-intersections",
+    description:
+      "Cobertura REAL de derechos mineros titulados por comunidad — una fila por COMUNIDAD " +
+      "(no por par como `geo_intersections_comunidad_minero_reporte`), usando `ST_Union` de " +
+      "todos los derechos que la intersectan antes de medir el área. `pct_cobertura` NUNCA " +
+      "supera 100%, a diferencia de sumar `community_overlap_pct` entre varios derechos " +
+      "distintos, que sobrestima cuando esos derechos se solapan entre sí sobre el mismo " +
+      "terreno (confirmado en vivo 2026-10-06: casos reales de 131-175% al sumar " +
+      "ingenuamente). Filtra por `capa`/`departamento`/`provincia`/`distrito`/`min_pct`/" +
+      "`min_area_km2`. Verificado: 302/1,930 comunidades afectadas (15.6%) tienen cobertura " +
+      "real ≥90%; ej. INDEPENDIENTE (Carabamba, Otuzco, La Libertad) con 100% de su " +
+      "territorio (10.7 km²) bajo 7 derechos de Barrick y otros. " + SIN_SCHEDULER,
+    pathTemplate: "/api/cruce/comunidad-minero/cobertura",
+    pathParams: [],
+    querySchema: {
+      capa: z.enum(["comunidades_campesinas", "comunidades_nativas"]).optional(),
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+      min_pct: z.coerce.number().min(0).max(100).optional().describe("% mínimo de cobertura real (ST_Union)."),
+      min_area_km2: z.coerce.number().min(0).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "geo_intersections_comunidad_forestal_cobertura",
+    handler: "community-crossref:coberturaForestal",
+    app: "geo-intersections",
+    description:
+      "Cobertura REAL de títulos forestales por comunidad — análogo a " +
+      "`geo_intersections_comunidad_minero_cobertura` con `forest_titles` en vez de " +
+      "`mining_rights`, misma corrección por `ST_Union`. " + SIN_SCHEDULER,
+    pathTemplate: "/api/cruce/comunidad-forestal/cobertura",
+    pathParams: [],
+    querySchema: {
+      capa: z.enum(["comunidades_campesinas", "comunidades_nativas"]).optional(),
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+      min_pct: z.coerce.number().min(0).max(100).optional(),
+      min_area_km2: z.coerce.number().min(0).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
     name: "geo_intersections_comunidad_cruce_stats",
     handler: "community-crossref:stats",
     app: "geo-intersections",
     description:
-      "Resumen del cruce comunidades ∩ minero/forestal: comunidades afectadas, top titulares " +
-      "mineros por número de comunidades afectadas, desglose por capa forestal, fecha de la " +
-      "última corrida de `npm run ingest:comunidad-cruce`. " + SIN_SCHEDULER,
+      "Resumen del cruce comunidades ∩ minero/forestal: comunidades afectadas, comunidades " +
+      "con doble exposición (minero Y forestal a la vez), distribución de severidad por " +
+      "cobertura real (buckets <10%/10-50%/50-90%/≥90%), top titulares mineros, desglose por " +
+      "capa forestal, fecha de la última corrida de `npm run ingest:comunidad-cruce`. " + SIN_SCHEDULER,
     pathTemplate: "/api/cruce/comunidad/stats",
     pathParams: [],
     querySchema: {},

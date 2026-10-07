@@ -44,7 +44,7 @@ export async function detalle(ctx: ToolHandlerContext): Promise<HandlerResult> {
     return { status: 404, body: { error: "Comunidad no encontrada." } };
   }
 
-  const [minero, forestal] = await Promise.all([
+  const [minero, forestal, coberturaMinero, coberturaForestal] = await Promise.all([
     db.query<NeonRow>(
       `SELECT mining_codigou, mining_concesion, mining_titular, mining_estado, mining_sustancia,
               mining_area_km2, intersection_area_km2, community_overlap_pct, mining_overlap_pct, computed_at
@@ -61,11 +61,29 @@ export async function detalle(ctx: ToolHandlerContext): Promise<HandlerResult> {
        ORDER BY intersection_area_km2 DESC`,
       [capa, objectid]
     ),
+    db.query<NeonRow>(
+      `SELECT area_cubierta_km2, pct_cobertura, num_derechos, computed_at
+       FROM community_mining_coverage WHERE community_capa = $1 AND community_objectid = $2`,
+      [capa, objectid]
+    ),
+    db.query<NeonRow>(
+      `SELECT area_cubierta_km2, pct_cobertura, num_titulos, computed_at
+       FROM community_forest_coverage WHERE community_capa = $1 AND community_objectid = $2`,
+      [capa, objectid]
+    ),
   ]);
 
   return {
     status: 200,
-    body: { comunidad: comunidades[0], superposiciones_minero: minero.rows, superposiciones_forestal: forestal.rows },
+    body: {
+      comunidad: comunidades[0],
+      superposiciones_minero: minero.rows,
+      superposiciones_forestal: forestal.rows,
+      // Cobertura REAL (ST_Union) -- no es la suma de community_overlap_pct de arriba, que
+      // sobrestima cuando dos derechos/títulos distintos se solapan entre sí.
+      cobertura_minero_real: coberturaMinero.rows[0] ?? null,
+      cobertura_forestal_real: coberturaForestal.rows[0] ?? null,
+    },
   };
 }
 
@@ -176,6 +194,115 @@ export async function reporteForestal(ctx: ToolHandlerContext): Promise<HandlerR
 }
 
 /**
+ * Handler para `geo_intersections_comunidad_minero_cobertura` — GET /api/cruce/comunidad-minero/cobertura.
+ * SQL idéntico al de `intersections.ts` (`GET /comunidad-minero/cobertura`). A diferencia de
+ * `reporteMinero` (una fila por par), esto es una fila por COMUNIDAD con cobertura REAL
+ * (ST_Union de todos los derechos antes de medir) -- nunca supera 100%.
+ */
+export async function coberturaMinero(ctx: ToolHandlerContext): Promise<HandlerResult> {
+  const { db, args } = ctx;
+  const capa = args.capa as string | undefined;
+  const departamento = args.departamento as string | undefined;
+  const provincia = args.provincia as string | undefined;
+  const distrito = args.distrito as string | undefined;
+  const min_pct = args.min_pct !== undefined ? Number(args.min_pct) : undefined;
+  const min_area_km2 = args.min_area_km2 !== undefined ? Number(args.min_area_km2) : undefined;
+  const limit = parseLimit(args.limit);
+  const offset = parseOffset(args.offset);
+
+  if (capa !== undefined && !CAPA_VALUES.has(capa)) {
+    return { status: 400, body: { error: `capa inválida: "${capa}"` } };
+  }
+
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+  const add = (v: unknown) => { params.push(v); return `$${params.length}`; };
+
+  if (capa) conditions.push(`community_capa = ${add(capa)}`);
+  if (departamento) conditions.push(`community_departamento = ${add(departamento)}`);
+  if (provincia) conditions.push(`community_provincia = ${add(provincia)}`);
+  if (distrito) conditions.push(`community_distrito = ${add(distrito)}`);
+  if (min_pct !== undefined) conditions.push(`pct_cobertura >= ${add(min_pct)}`);
+  if (min_area_km2 !== undefined) conditions.push(`area_cubierta_km2 >= ${add(min_area_km2)}`);
+
+  const whereSql = conditions.length > 0 ? conditions.join(" AND ") : "TRUE";
+  const listParams = [...params];
+  const lp = (v: unknown) => { listParams.push(v); return `$${listParams.length}`; };
+
+  const [countRes, rowsRes] = await Promise.all([
+    db.query<{ total: string }>(`SELECT COUNT(*) AS total FROM community_mining_coverage WHERE ${whereSql}`, params),
+    db.query<NeonRow>(
+      `SELECT community_capa, community_objectid, community_nombre, community_departamento,
+              community_provincia, community_distrito, community_area_km2,
+              area_cubierta_km2, pct_cobertura, num_derechos, computed_at
+       FROM community_mining_coverage
+       WHERE ${whereSql}
+       ORDER BY pct_cobertura DESC
+       LIMIT ${lp(limit)} OFFSET ${lp(offset)}`,
+      listParams
+    ),
+  ]);
+
+  const total = Number(countRes.rows[0].total);
+  return {
+    status: 200,
+    body: { total, limit, offset, hasMore: offset + rowsRes.rows.length < total, resultados: rowsRes.rows },
+  };
+}
+
+/** Handler para `geo_intersections_comunidad_forestal_cobertura` — análogo con forest_titles. */
+export async function coberturaForestal(ctx: ToolHandlerContext): Promise<HandlerResult> {
+  const { db, args } = ctx;
+  const capa = args.capa as string | undefined;
+  const departamento = args.departamento as string | undefined;
+  const provincia = args.provincia as string | undefined;
+  const distrito = args.distrito as string | undefined;
+  const min_pct = args.min_pct !== undefined ? Number(args.min_pct) : undefined;
+  const min_area_km2 = args.min_area_km2 !== undefined ? Number(args.min_area_km2) : undefined;
+  const limit = parseLimit(args.limit);
+  const offset = parseOffset(args.offset);
+
+  if (capa !== undefined && !CAPA_VALUES.has(capa)) {
+    return { status: 400, body: { error: `capa inválida: "${capa}"` } };
+  }
+
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+  const add = (v: unknown) => { params.push(v); return `$${params.length}`; };
+
+  if (capa) conditions.push(`community_capa = ${add(capa)}`);
+  if (departamento) conditions.push(`community_departamento = ${add(departamento)}`);
+  if (provincia) conditions.push(`community_provincia = ${add(provincia)}`);
+  if (distrito) conditions.push(`community_distrito = ${add(distrito)}`);
+  if (min_pct !== undefined) conditions.push(`pct_cobertura >= ${add(min_pct)}`);
+  if (min_area_km2 !== undefined) conditions.push(`area_cubierta_km2 >= ${add(min_area_km2)}`);
+
+  const whereSql = conditions.length > 0 ? conditions.join(" AND ") : "TRUE";
+  const listParams = [...params];
+  const lp = (v: unknown) => { listParams.push(v); return `$${listParams.length}`; };
+
+  const [countRes, rowsRes] = await Promise.all([
+    db.query<{ total: string }>(`SELECT COUNT(*) AS total FROM community_forest_coverage WHERE ${whereSql}`, params),
+    db.query<NeonRow>(
+      `SELECT community_capa, community_objectid, community_nombre, community_departamento,
+              community_provincia, community_distrito, community_area_km2,
+              area_cubierta_km2, pct_cobertura, num_titulos, computed_at
+       FROM community_forest_coverage
+       WHERE ${whereSql}
+       ORDER BY pct_cobertura DESC
+       LIMIT ${lp(limit)} OFFSET ${lp(offset)}`,
+      listParams
+    ),
+  ]);
+
+  const total = Number(countRes.rows[0].total);
+  return {
+    status: 200,
+    body: { total, limit, offset, hasMore: offset + rowsRes.rows.length < total, resultados: rowsRes.rows },
+  };
+}
+
+/**
  * Handler para `geo_intersections_comunidad_cruce_stats` — GET /api/cruce/comunidad/stats.
  * SQL idéntico al de `intersections.ts` (`GET /comunidad/stats`).
  */
@@ -186,6 +313,7 @@ export async function stats(ctx: ToolHandlerContext): Promise<HandlerResult> {
     comunidadesCount, mineroCount, forestalCount,
     comunidadesAfectadasMinero, comunidadesAfectadasForestal,
     topTitulares, porCapaForestal, ultimoBatchMinero, ultimoBatchForestal,
+    coberturaBuckets, coberturaDobleExposicion,
   ] = await Promise.all([
     db.query<{ count: string }>("SELECT COUNT(*) AS count FROM rural_communities"),
     db.query<{ count: string }>("SELECT COUNT(*) AS count FROM community_mining_intersections"),
@@ -206,6 +334,21 @@ export async function stats(ctx: ToolHandlerContext): Promise<HandlerResult> {
     db.query<{ computed_at: string }>(
       "SELECT computed_at FROM raw_community_intersection_batches WHERE tipo = 'forestal' ORDER BY computed_at DESC LIMIT 1"
     ),
+    db.query<{ menor_10: string; entre_10_50: string; entre_50_90: string; mayor_90: string }>(`
+      SELECT
+        COUNT(*) FILTER (WHERE pct_cobertura < 10) AS menor_10,
+        COUNT(*) FILTER (WHERE pct_cobertura >= 10 AND pct_cobertura < 50) AS entre_10_50,
+        COUNT(*) FILTER (WHERE pct_cobertura >= 50 AND pct_cobertura < 90) AS entre_50_90,
+        COUNT(*) FILTER (WHERE pct_cobertura >= 90) AS mayor_90
+      FROM community_mining_coverage
+    `),
+    db.query<{ count: string }>(`
+      SELECT COUNT(*) AS count FROM (
+        SELECT community_capa, community_objectid FROM community_mining_coverage
+        INTERSECT
+        SELECT community_capa, community_objectid FROM community_forest_coverage
+      ) x
+    `),
   ]);
 
   return {
@@ -217,6 +360,14 @@ export async function stats(ctx: ToolHandlerContext): Promise<HandlerResult> {
         pares_comunidad_forestal: Number(forestalCount.rows[0].count),
         comunidades_afectadas_minero: Number(comunidadesAfectadasMinero.rows[0].count),
         comunidades_afectadas_forestal: Number(comunidadesAfectadasForestal.rows[0].count),
+        comunidades_con_doble_exposicion: Number(coberturaDobleExposicion.rows[0].count),
+      },
+      cobertura_minero_por_severidad: {
+        nota: "Cobertura REAL (ST_Union), ver geo_intersections_comunidad_minero_cobertura. No es la suma de community_overlap_pct.",
+        menor_10pct: Number(coberturaBuckets.rows[0].menor_10),
+        entre_10_50pct: Number(coberturaBuckets.rows[0].entre_10_50),
+        entre_50_90pct: Number(coberturaBuckets.rows[0].entre_50_90),
+        mayor_90pct: Number(coberturaBuckets.rows[0].mayor_90),
       },
       top_titulares_mineros: topTitulares.rows.map((r) => ({
         titular: r.mining_titular,

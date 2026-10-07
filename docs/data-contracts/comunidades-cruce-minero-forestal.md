@@ -51,6 +51,37 @@ Mismo patrón que `intersection_results` (001) + `geometry_valid` (004), extendi
 - `community_forest_intersections` — análoga con `forest_titles`.
 - `raw_community_intersection_batches` — batches compartidos, discriminados por `tipo`
   (`'minero'`/`'forestal'`), una corrida de `npm run ingest:comunidad-cruce` hace los dos pases.
+- `community_mining_coverage` / `community_forest_coverage` (migración 008) — **cobertura
+  REAL**, una fila por comunidad (no por par). Ver sección siguiente.
+
+## Cobertura REAL vs. suma de pares — hallazgo real de método (2026-10-07)
+
+Sumar `community_overlap_pct` entre las filas de `community_mining_intersections` para una
+misma comunidad **sobrestima**: dos derechos mineros/títulos distintos pueden solaparse *entre
+sí* sobre el mismo terreno (ej. dos concesiones mineras superpuestas, una vigente y otra en
+trámite sobre la misma área), y sumar sus overlaps individuales duplica esa porción común.
+Confirmado en vivo: casos reales con suma de **131-175%** al calcularlo así — **MOLLOCCAHUA**
+(Espinar, Cusco) parecía tener solo 24.7% cubierto solo por la concesión "ALQO 147" de Barrick
+al mirar un único par, pero su cobertura real (las 9 concesiones que la tocan, unidas antes de
+medir) es **79.86%**, no una suma ingenua de los 9 porcentajes individuales.
+
+**Corrección**: `community_mining_coverage`/`community_forest_coverage` calculan
+`ST_Area(ST_Intersection(comunidad, ST_Union(todos los derechos/títulos que la tocan)))` — el
+`ST_Union` desduplica el solapamiento entre derechos antes de medir contra la comunidad.
+`pct_cobertura` queda clampeado a `LEAST(..., 100)` como amortiguador defensivo ante un posible
+desborde de centésimas por redondeo de punto flotante entre dos `ST_MakeValid` distintos — la
+intersección real nunca debería superar el área de la propia comunidad.
+
+Severidad real a nivel nacional (no la de la tabla de pares):
+
+| Cobertura real | Comunidades |
+|---|---|
+| <10% | 540 |
+| 10–50% | 724 |
+| 50–90% | 364 |
+| **≥90%** | **302** (15.6% de las 1,930 afectadas) |
+
+**40 comunidades tienen doble exposición** (minero Y forestal a la vez).
 
 ## Conector (`src/ingest/compute-community-intersections.ts`)
 
@@ -88,29 +119,35 @@ TECK PERU S.A. (41), COMPAÑIA MINERA POMATAREA S.A.C. (40), YURA S.A. (40), HUD
 MINAS BUENAVENTURA S.A.A. (33), BHP WORLD EXPLORATION INC. SUCURSAL DEL PERU (33), MINERA UNA
 S.A. (32), BLACK SWAN MINERALS S.A.C. (27).
 
-Caso destacado verificado: comunidad campesina **MOLLOCCAHUA** (Espinar, Cusco, 40.5 km²) con
-24.7% de su territorio cubierto solo por la concesión "ALQO 147" de Barrick, más 8 derechos
-adicionales (9 pares en total). Comunidad campesina **BAMBAMARCA** (Bolívar, La Libertad, 250.9
-km²) con 43.3% de su territorio bajo la concesión forestal MINAG-DGFFS.
+Caso destacado verificado (cobertura real, no suma de pares): comunidad campesina
+**MOLLOCCAHUA** (Espinar, Cusco, 40.5 km²) con **79.86%** de su territorio real cubierto por 9
+concesiones (incluida "ALQO 147" de Barrick). Comunidad campesina **INDEPENDIENTE** (Carabamba,
+Otuzco, La Libertad, 10.7 km²) con **100%** real bajo 7 derechos (Barrick y otros).
 
-Los 4 endpoints y las 4 tools MCP probados contra datos reales en ambas bases (local y Neon),
-incluyendo casos 400/404 de validación.
+Los 4 endpoints + 2 de cobertura, y las 6 tools MCP, probados contra datos reales en ambas
+bases (local y Neon), incluyendo casos 400/404 de validación.
 
 ## API (`src/routes/intersections.ts`, extiende el router existente de `/api/cruce`)
 
 - `GET /api/cruce/comunidad/:capa/:objectid` — superposiciones (minero + forestal) de una
-  comunidad específica. `capa` obligatoria en el path — mismo motivo que `/api/communities/:objectid`
-  (`objectid` no es clave única por sí solo).
-- `GET /api/cruce/comunidad-minero/report` — filtros `capa`/`departamento`/`titular` (ILIKE)/
-  `min_area_km2`/`min_community_overlap_pct`, paginado (máx. 1000).
+  comunidad específica, **incluyendo `cobertura_minero_real`/`cobertura_forestal_real`**
+  (ST_Union, ver arriba). `capa` obligatoria en el path — mismo motivo que
+  `/api/communities/:objectid` (`objectid` no es clave única por sí solo).
+- `GET /api/cruce/comunidad-minero/report` — una fila por PAR. Filtros `capa`/`departamento`/
+  `titular` (ILIKE)/`min_area_km2`/`min_community_overlap_pct`, paginado (máx. 1000).
 - `GET /api/cruce/comunidad-forestal/report` — análogo con `forest_capa`.
-- `GET /api/cruce/comunidad/stats` — resumen + top titulares + desglose por capa forestal.
+- `GET /api/cruce/comunidad-minero/cobertura` — **una fila por COMUNIDAD**, cobertura real
+  (`ST_Union`). Filtros `capa`/`departamento`/`provincia`/`distrito`/`min_pct`/`min_area_km2`.
+- `GET /api/cruce/comunidad-forestal/cobertura` — análogo con títulos forestales.
+- `GET /api/cruce/comunidad/stats` — resumen + doble exposición + buckets de severidad real +
+  top titulares + desglose por capa forestal.
 
 ## MCP (`mcp-server/src/handlers/geo-intersections/community-crossref.ts`)
 
-4 tools: `geo_intersections_comunidad_cruce`, `geo_intersections_comunidad_minero_reporte`,
-`geo_intersections_comunidad_forestal_reporte`, `geo_intersections_comunidad_cruce_stats`. SQL
-idéntico a las rutas Express — los handlers MCP consultan Neon directamente, no proxy HTTP.
+6 tools: `geo_intersections_comunidad_cruce`, `geo_intersections_comunidad_minero_reporte`,
+`geo_intersections_comunidad_forestal_reporte`, `geo_intersections_comunidad_minero_cobertura`,
+`geo_intersections_comunidad_forestal_cobertura`, `geo_intersections_comunidad_cruce_stats`.
+SQL idéntico a las rutas Express — los handlers MCP consultan Neon directamente, no proxy HTTP.
 
 ## Limitaciones
 
