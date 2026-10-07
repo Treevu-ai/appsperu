@@ -332,6 +332,12 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "sunat_aduanas_meta_freshness",
   ],
   "sunedu-licenciamiento": ["sunedu_licenciamiento_licenciamiento"],
+  "territorio-inteligencia": [
+    "territorio_inteligencia_captura_territorio",
+    "territorio_inteligencia_titulares_riesgo",
+    "territorio_inteligencia_inconsistencia_presupuesto",
+    "territorio_inteligencia_riesgo_eudr",
+  ],
 };
 
 describe("MCP catalog", () => {

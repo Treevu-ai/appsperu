@@ -3,6 +3,9 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "node",
+    // `tsc` deja `dist/__tests__/*.test.js` tras `npm run build` — sin esto,
+    // vitest corre cada test dos veces (fuente y compilado).
+    exclude: ["**/node_modules/**", "**/dist/**"],
     coverage: {
       provider: "v8",
       thresholds: {

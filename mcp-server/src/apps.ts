@@ -2,8 +2,6 @@
  * Catálogo de apps del MCP. Cada una tiene su propia base de datos en el
  * proyecto Neon; el nombre de la base se deriva del `AppKey` en
  * `db/neon-env.ts` (no hay un binding ni un secret por app).
- * La app `territorio-inteligencia` no está en APP_KEYS (sin ingesta real,
- * ver apps/territorio-inteligencia/README.md).
  */
 export const APP_KEYS = [
   "radar-ejecucion",
@@ -51,6 +49,7 @@ export const APP_KEYS = [
   "smv-sanciones",
   "sunat-aduanas",
   "sunedu-licenciamiento",
+  "territorio-inteligencia",
 ] as const;
 
 export type AppKey = (typeof APP_KEYS)[number];
@@ -102,6 +101,7 @@ const DEFAULT_PORTS: Record<AppKey, number> = {
   "smv-sanciones": 4044,
   "sunat-aduanas": 4041,
   "sunedu-licenciamiento": 4045,
+  "territorio-inteligencia": 4047,
 };
 
 function envVarFor(app: AppKey): string {

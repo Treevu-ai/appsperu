@@ -1,77 +1,73 @@
-# territorio-inteligencia — PROTOTIPO, sin ingesta real
+# territorio-inteligencia
 
-**No está en el catálogo MCP y no debe estarlo hasta que esto cambie.** Ver
-"Por qué está fuera del MCP" más abajo.
+App Express que cruza catastro (minero y forestal) con sanciones, proyectos
+de inversión pública (OxI) y alertas de deforestación MINAM para responder
+cuatro preguntas: qué titulares mineros tienen riesgo sancionador (por nombre,
+no por RUC), si la superficie de un departamento está concentrada en pocas
+manos, si un proyecto de Obras por Impuestos se superpone por distrito a un
+derecho minero, y cuántas alertas de deforestación caen dentro de un título
+forestal.
 
-## Qué es
+**Reescrita 2026-10-07.** Hasta esa fecha, los 4 servicios consultaban tablas
+que no existían en ninguna base del repo (`minam_deforestacion`,
+`inteligencia_minero`, `proyectos`) o pedían columnas inventadas
+(`titular_ruc`, `superficie`) sobre esquemas reales que no las tienen. El
+conector de MINAM generaba datos con `Math.random()`. Nada de esto corría
+fuera de los `.cjs` de exploración que fabricaban las tablas localmente.
 
-App Express que cruza catastro (minero y forestal) con sanciones y
-emergencias para responder cuatro preguntas: qué titulares tienen riesgo
-sancionador, si la superficie de un departamento está concentrada en pocas
-manos, si un proyecto público se superpone a un derecho minero, y el riesgo
-EUDR de un título forestal.
+## Arquitectura de pools
 
-Las rutas existen y el código compila. **Los datos no.**
+Esta app tiene su propia base (`territorio_inteligencia`, solo para las
+alertas MINAM que sí ingiere) más 5 pools de solo lectura hacia otras apps
+— el mismo patrón que usa `proveedores-sancionados`
+(`CATASTRO_MINERO_DATABASE_URL`, `CATASTRO_FORESTAL_DATABASE_URL`,
+`SANCIONES_DATABASE_URL`, `GEO_INTERSECTIONS_DATABASE_URL`,
+`INVERSION_PRIVADA_DATABASE_URL`, ver `.env.example`). Los cruces entre
+fuentes se resuelven en código de aplicación (nunca con `JOIN` SQL directo
+entre bases distintas — Postgres no lo soporta sin `dblink`/`postgres_fdw`,
+que este repo no usa).
 
-## Por qué está fuera del MCP
+## Limitaciones reales de los datos (no son bugs, son la fuente)
 
-`src/services/` consulta fuentes que **no existen en ninguna base de datos del
-monorepo**, y lo hace en silencio:
+- **Ni catastro minero ni forestal tienen RUC.** `catastro_minero_derechos.
+  titular` es un nombre, no un identificador. El cruce contra sanciones
+  (`titulares-riesgo`) usa `@appsperu/entity-matcher` (match difuso por
+  nombre, confianza `confirmada`/`candidata`) — nunca trates una coincidencia
+  `candidata` como una violación confirmada, es una coincidencia de nombre a
+  revisar.
+- **El catastro forestal no tiene titular en absoluto.** SERFOR no publica
+  dueño de concesión/cesión forestal. `titulares-riesgo` por eso solo cubre
+  `tipoCatastro: "minero"`; `captura-territorio` para forestal agrupa por
+  `capa` (modalidad) + `SECTOR` cuando la fuente lo trae (a menudo vacío), no
+  por titular.
+- **`nom_dep`/`nom_pro`/`nom_dis` en catastro-forestal y en
+  `geo-intersections.forest_titles` son códigos UBIGEO, no nombres** — pese
+  a lo que sugiere el nombre de columna (verificado en vivo 2026-10-07:
+  `nom_dep = "13"`, no `"LA LIBERTAD"`). `src/lib/ubigeo.ts` traduce.
+- **MINAM reporta alertas puntuales (lat/lon), no polígonos de área
+  deforestada.** `riesgo-eudr` no inventa hectáreas: cuenta cuántas alertas
+  caen dentro del polígono real de un título forestal (geometría de
+  `geo-intersections.forest_titles`, intersección punto-en-polígono real con
+  `@turf/boolean-point-in-polygon`), y clasifica ALTO/MEDIO/BAJO por ese
+  conteo — una heurística propia del conector, no una clasificación oficial
+  de MINAM ni de la UE.
+- **`inconsistencia-presupuesto`** cruza `inversion-privada.
+  oxi_investment_promotions` (Obras por Impuestos, con distrito/provincia
+  reales) contra `catastro_minero_derechos` por coincidencia exacta de
+  distrito+provincia — es una señal de coexistencia territorial, no una
+  superposición geométrica (ninguna de las dos fuentes tiene polígono).
 
-| Consulta | Dónde vive de verdad | Estado |
-|---|---|---|
-| `inhabilitaciones`, `inhabilitaciones_judiciales`, `multas` | base de `proveedores-sancionados` (5439) | no replicada |
-| `catastro_forestal_titulos` | base de `catastro-forestal` (4034) | no replicada |
-| `minam_deforestacion` | **no existe** | el propio código lo admite |
-| `catastro_minero_derechos` | base de `catastro-minero` (4031) | sí, es el único `DATABASE_URL` real |
+## Conector de ingesta
 
-`.env.example` apunta el único pool a `catastro_minero`, así que las consultas
-forestales y de sanciones no pueden funcionar: es una sola conexión, y las otras
-bases están en servidores distintos.
+`src/ingest/minam-connector.ts` pagina el servicio ArcGIS REST real de
+GeoServidor MINAM (`Tem_AlertasTempranasDeforestacion`, confirmado en vivo:
+183,767 puntos nacionales) y los guarda en la base propia de esta app.
+`ON CONFLICT (object_id) DO NOTHING` lo hace seguro de re-ejecutar.
 
-Además:
+## Estado en el catálogo MCP
 
-- **Columnas que el catastro forestal real no tiene.** Los servicios piden
-  `f.titular_ruc`, `f.titular_nombre`, `f.superficie`, `f.provincia`,
-  `f.distrito`, `f.codigo_concesion`. El esquema real
-  (`apps/catastro-forestal/api/src/db/migrations/001_init.sql`) tiene `capa`,
-  `objectid`, `nom_dep`, `nom_pro`, `nom_dis`, `sup_sig`, `sup_apr` — y ningún
-  titular, porque SERFOR publica el título, no su dueño.
-- **Un nombre disfrazado de RUC.** En la rama minera, `ruc` se llenaba con
-  `titular`, que es el *nombre* del titular. El catastro minero no tiene columna
-  de RUC. Cualquier consumidor que use ese campo para cruzar con sanciones
-  está cruzando un nombre contra un RUC.
-- **`riesgo-eudr.service.ts` convierte un error en "no hay riesgo".** El
-  `catch` final devuelve `[]` ante cualquier fallo, incluido "la tabla no
-  existe". Para un agente, `[]` significa "no encontramos riesgo", que es lo
-  contrario de "no pudimos preguntar". Es el peor default posible para una
-  herramienta de fiscalización.
-- **Los `.cjs` de la raíz crean una tabla falsa.** `create_table.cjs` y los
-  `seed_*.cjs` ejecutan `CREATE TABLE IF NOT EXISTS catastro_forestal_titulos`
-  con las columnas inventadas y la llenan con datos fabricados (La Libertad,
-  Huánuco). En local eso hace que la app "funcione" y esconde que en
-  cualquier otro entorno las consultas revientan.
-
-## Qué falta para encenderla
-
-1. **Conectores de ingesta reales.** O se replica cada fuente a la base de esta
-   app, o —lo más barato y ya es el patrón del repo— se agregan pools por
-   fuente siguiendo lo que ya hace `proveedores-sancionados`
-   (`CATASTRO_FORESTAL_DATABASE_URL`, `SANCIONES_DATABASE_URL`, etc.) y se
-   resuelven los cruces en aplicación.
-2. **Un esquema propio** bajo `src/db/migrations/`, si se replica algo.
-3. **Corregir las columnas** contra los esquemas reales, o cambiar el contrato
-   de salida para dejar de prometer un RUC que la fuente no tiene.
-4. **Que `riesgo-eudr` deje de tragarse los errores.**
-5. **Tests.** No tiene ninguno.
-
-Solo entonces se agrega a `APP_KEYS` en `mcp-server/src/apps.ts`, y CX-15
-exigirá que sus 4 rutas GET estén mapeadas 1:1 en el catálogo.
-
-## Nota sobre los scripts de la raíz
-
-Los `.cjs` (`create_table.cjs`, `create_int_mining.cjs`, `create_proyectos.cjs`,
-`seed_*.cjs`, `check_*.cjs`, `fix_cols.cjs`) son exploración de una sesión
-anterior, no parte de la app: crean un esquema que ninguna migración declara y
-lo llenan con datos inventados. No son parte del pipeline. Si se los borra, esta
-app no pierde nada real.
+Ya está en `APP_KEYS` (`mcp-server/src/apps.ts`) y en el catálogo (`mcp-server/
+src/catalog.ts`), con las 4 rutas con tests propios (`captura-territorio.
+test.ts`, `titulares-riesgo.test.ts`, `inconsistencia-presupuesto.test.ts`,
+`riesgo-eudr.test.ts`) y el ingest de MINAM corrido contra Neon en producción
+(`npm run migrate && npm run ingest:minam`, 183,767 filas).
