@@ -64,11 +64,10 @@ GeoServidor MINAM (`Tem_AlertasTempranasDeforestacion`, confirmado en vivo:
 183,767 puntos nacionales) y los guarda en la base propia de esta app.
 `ON CONFLICT (object_id) DO NOTHING` lo hace seguro de re-ejecutar.
 
-## Qué falta para entrar al catálogo MCP
+## Estado en el catálogo MCP
 
-Nada estructural — ya tiene pools reales, columnas reales, y tests para el
-endpoint más sensible (`riesgo-eudr`). Antes de agregarlo a `APP_KEYS` en
-`mcp-server/src/apps.ts`, agregar tests para `titulares-riesgo`,
-`captura-territorio` e `inconsistencia-presupuesto` (hoy solo `riesgo-eudr`
-los tiene) y correr el ingest de MINAM en producción (`npm run migrate &&
-npm run ingest:minam`, ~184 páginas, tarda varios minutos).
+Ya está en `APP_KEYS` (`mcp-server/src/apps.ts`) y en el catálogo (`mcp-server/
+src/catalog.ts`), con las 4 rutas con tests propios (`captura-territorio.
+test.ts`, `titulares-riesgo.test.ts`, `inconsistencia-presupuesto.test.ts`,
+`riesgo-eudr.test.ts`) y el ingest de MINAM corrido contra Neon en producción
+(`npm run migrate && npm run ingest:minam`, 183,767 filas).

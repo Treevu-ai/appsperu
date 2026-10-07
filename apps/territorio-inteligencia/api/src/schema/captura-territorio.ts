@@ -3,7 +3,10 @@ import { z } from "zod";
 export const CapturaTerritorioQuerySchema = z.object({
   departamento: z.string().optional(),
   tipoCatastro: z.enum(["minero", "forestal"]).optional().describe("Sin esto, devuelve ambos."),
-  limiteRucs: z.preprocess((val) => Number(val), z.number().optional()).describe("Top N por superficie. El nombre es histórico — ninguna fuente tiene RUC, ver `identificador`."),
+  // `.min(1)` importa más de lo que parece: `?limiteRucs=` (vacío) coerciona
+  // a 0 con `Number()`, y `0 ?? 10` sigue siendo `0` (solo `undefined` cae al
+  // default) — sin el mínimo, ese input devolvía 0 filas en silencio.
+  limiteRucs: z.coerce.number().int().min(1).optional().describe("Top N por superficie. Default 10. El nombre es histórico — ninguna fuente tiene RUC, ver `identificador`."),
 });
 
 export type CapturaTerritorioQuery = z.infer<typeof CapturaTerritorioQuerySchema>;
