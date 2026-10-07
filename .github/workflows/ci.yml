@@ -42,6 +42,7 @@ jobs:
           - apps/mincetur-juegos-casino/api
           - apps/mindef/api
           - apps/mimp/api
+          - apps/onp-presupuesto/api
           - apps/onpe-resultados/api
           - apps/osinergmin-combustibles/api
           - apps/ositran-reclamos/api
@@ -61,8 +62,10 @@ jobs:
           - apps/senace-cartera-proyectos/api
           - apps/senasa-ejecucion/api
           - apps/servicios-salud/api
+          - apps/smv-sanciones/api
           - apps/sunass-sanciones/api
           - apps/sunat-aduanas/api
+          - apps/sunedu-licenciamiento/api
           - apps/territorio-inteligencia/api
           - apps/violencia-escolar/api
           - mcp-server

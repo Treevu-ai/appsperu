@@ -3856,6 +3856,31 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
 
+  // ---- onp-presupuesto (ONP, ejecución presupuestal de regímenes previsionales) ----
+  {
+    name: "onp_presupuesto_ejecucion",
+    handler: "ejecucion:list",
+    app: "onp-presupuesto",
+    description:
+      "Ejecución presupuestal anual (2008-2025) del gasto de planilla de los regímenes previsionales " +
+      "administrados por la ONP (Oficina de Normalización Previsional) — pago de pensión, devengados, " +
+      "intereses legales, sentencias judiciales, por fuente de financiamiento (RO=Recursos Ordinarios, " +
+      "RD_CF=Recursos Directamente Recaudados/Contribuciones, TOTAL=suma de ambas). `descripcion` identifica " +
+      "el régimen u obligación (ej. 'SNP DL 19990', 'BONOS DE RECONOCIMIENTO', ex-empresas públicas " +
+      "liquidadas como 'ELECTROLIMA'). Fuente CKAN rota de slug cada año calendario — este conector apunta " +
+      "al dataset `-2025`; verificado en vivo 2026-10-07: 1,992 filas. Paginación real: usa `limit`/`offset`; " +
+      "la respuesta trae `total` y `hasMore`. " + SIN_SCHEDULER,
+    pathTemplate: "/api/ejecucion",
+    pathParams: [],
+    querySchema: {
+      anio: z.coerce.number().int().optional(),
+      descripcion: z.string().min(1).optional(),
+      fuente: z.string().min(1).optional().describe("RO, RD_CF o TOTAL."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+
   // ---- osinergmin-combustibles (OSINERGMIN) ----
   {
     name: "osinergmin_combustibles_grifos",
@@ -3960,6 +3985,31 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
 
+  // ---- smv-sanciones (SMV, sanciones a personas jurídicas) ----
+  {
+    name: "smv_sanciones_sanciones",
+    handler: "sanciones:list",
+    app: "smv-sanciones",
+    description:
+      "Sanciones a personas jurídicas supervisadas por la SMV (Superintendencia del Mercado de Valores) " +
+      "desde 2018 — amonestaciones y multas con resolución, empresa, sumilla de la infracción, monto en " +
+      "soles y si tuvo recurso de reconsideración (`conRecurso`; si lo tuvo, `nroResResolutiva`/" +
+      "`fechaResResolutiva` referencian la resolución que lo resolvió). La API fuente (`mvnet.smv.gob.pe`, " +
+      "JSON, sin auth) solo acepta `sFechaInicio` entre 2018-2026 — fuera de ese rango responde error, no " +
+      "una lista vacía. Verificado en vivo 2026-10-07: 998 filas (2018 en adelante). Paginación real: usa " +
+      "`limit`/`offset`; la respuesta trae `total` y `hasMore`. " + SIN_SCHEDULER,
+    pathTemplate: "/api/sanciones",
+    pathParams: [],
+    querySchema: {
+      empresa: z.string().min(1).optional(),
+      tipo: z.string().min(1).optional().describe("Ej. 'Multa', 'Amonestación'."),
+      fechaInicio: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      fechaFin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+
   // ---- sunat-aduanas (SUNAT) ----
   {
     name: "sunat_aduanas_ports",
@@ -4021,5 +4071,30 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathTemplate: "/api/meta/freshness",
     pathParams: [],
     querySchema: {},
+  },
+
+  // ---- sunedu-licenciamiento (SUNEDU, licenciamiento institucional de universidades) ----
+  {
+    name: "sunedu_licenciamiento_licenciamiento",
+    handler: "licenciamiento:list",
+    app: "sunedu-licenciamiento",
+    description:
+      "Licenciamiento institucional de universidades peruanas (SUNEDU) — estado (LICENCIA OTORGADA/" +
+      "DENEGADA/NO PRESENTADO), vigencia, tipo de gestión (público/privado) y ubicación geográfica. No " +
+      "incluye el registro de infractores/sanciones (REGIS) — esa parte de SUNEDU es una SPA sin datos " +
+      "server-rendered, fuera de alcance de este conector. Dataset estático (última actualización en la " +
+      "fuente: 2024-08-28). Verificado en vivo 2026-10-07: 143 filas. Paginación real: usa `limit`/`offset`; " +
+      "la respuesta trae `total` y `hasMore`. " + SIN_SCHEDULER,
+    pathTemplate: "/api/licenciamiento",
+    pathParams: [],
+    querySchema: {
+      nombre: z.string().min(1).optional(),
+      estadoLicenciamiento: z.string().min(1).optional(),
+      departamento: z.string().min(1).optional(),
+      provincia: z.string().min(1).optional(),
+      tipoGestion: z.string().min(1).optional().describe("PÚBLICO o PRIVADO."),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
   },
 ];

@@ -222,6 +222,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "mimp_cem_casos",
     "mimp_chat100_consultas",
   ],
+  "onp-presupuesto": ["onp_presupuesto_ejecucion"],
   "renamu": [
     "renamu_crossref",
     "renamu_equipamiento",
@@ -323,12 +324,14 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "ositran_reclamos_trafico",
     "ositran_reclamos_recaudacion",
   ],
+  "smv-sanciones": ["smv_sanciones_sanciones"],
   "sunat-aduanas": [
     "sunat_aduanas_ports",
     "sunat_aduanas_ports_subpartidas",
     "sunat_aduanas_ports_top",
     "sunat_aduanas_meta_freshness",
   ],
+  "sunedu-licenciamiento": ["sunedu_licenciamiento_licenciamiento"],
 };
 
 describe("MCP catalog", () => {
