@@ -52,6 +52,8 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "radar_ejecucion_supplier_observations_unlinked",
     "radar_ejecucion_tourism_crossref",
     "radar_ejecucion_tourism_hospedaje",
+    "radar_ejecucion_indice_ejecucion",
+    "radar_ejecucion_indice_ejecucion_resumen",
   ],
   "compras-publicas": [
     "compras_publicas_analytics",
@@ -80,6 +82,8 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "compras_publicas_supplier_by_id",
     "compras_publicas_suppliers",
     "compras_publicas_unsuccessful_tenders",
+    "compras_publicas_indice_concentracion",
+    "compras_publicas_indice_concentracion_comparativa",
   ],
   "radar-inversiones": [
     "radar_inversiones_crossref",
@@ -177,6 +181,8 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "seguridad_ciudadana_denuncias_termometro",
     "seguridad_ciudadana_equipamiento",
     "seguridad_ciudadana_equipamiento_resumen",
+    "seguridad_ciudadana_indice_denuncias",
+    "seguridad_ciudadana_indice_denuncias_comparativo",
   ],
   "bcrp-comercio-exterior": [
     "bcrp_comercio_exterior_macro",

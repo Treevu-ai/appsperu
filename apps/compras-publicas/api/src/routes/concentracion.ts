@@ -256,7 +256,7 @@ concentracionRouter.get(
     // Concentración menores por provincia
     const { rows: menoresConc } = await pool.query(
       `SELECT
-         m.province AS provincia,
+         mu.province AS provincia,
          SUM(m.awarded_amount) AS monto_total,
          COUNT(*) AS contratos,
          COUNT(DISTINCT m.winning_supplier_id) AS proveedores
@@ -265,7 +265,7 @@ concentracionRouter.get(
        WHERE mu.department = $1
          AND m.year = $2
          AND m.awarded_amount > 0
-       GROUP BY m.province`,
+       GROUP BY mu.province`,
       [departamento.toUpperCase(), anio]
     );
 
