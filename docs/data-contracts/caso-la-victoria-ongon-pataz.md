@@ -187,6 +187,14 @@ distrito.
   `rural_communities.departamento` (`'LA LIBERTAD'`) — cualquier query futura contra esa tabla
   debe usar `ILIKE` o normalizar explícitamente, no asumir mayúsculas.
 
+## Extensión a los 13 distritos de la provincia
+
+Este caso se extendió a una comparativa provincial completa, cruzando además SIDPOL/MININTER
+(denuncias policiales, extorsión) — ver
+`docs/data-contracts/pataz-comparativa-sidpol-oefa-infobras.md` para la tabla de los 13
+distritos, la serie temporal de extorsión 2018–2026 y los hallazgos de calidad de datos
+adicionales (distritos de Cusco mal etiquetados como Pataz en INFOBRAS, homónimo de Sartimbamba).
+
 ## Pendiente
 
 - Este documento registra el caso puntual verificado en sesión. Si se decide publicar o
