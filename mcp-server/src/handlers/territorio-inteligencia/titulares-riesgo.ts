@@ -87,11 +87,19 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
     return { status: 200, body: { estado: "ENRIQUECIMIENTO_NO_CONFIGURADO", resultados: [] } };
   }
 
+  // `filtroNombre` se empuja al SQL (`titular ILIKE`) — ver nota equivalente
+  // en la ruta HTTP de origen (sin esto, cada request cargaba ~66.8k filas y
+  // las matcheaba todas contra las sanciones aunque el caller ya pedía un
+  // nombre específico).
   const condiciones: string[] = [];
   const params: unknown[] = [];
   if (departamento) {
     params.push(`%${departamento}%`);
     condiciones.push(`departamento ILIKE $${params.length}`);
+  }
+  if (filtroNombre) {
+    params.push(`%${filtroNombre}%`);
+    condiciones.push(`titular ILIKE $${params.length}`);
   }
   const where = condiciones.length > 0 ? `WHERE ${condiciones.join(" AND ")}` : "";
 
@@ -160,9 +168,10 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
     riesgosPorTitular.set(m.a.id, lista);
   }
 
+  // `filtroNombre` ya se aplicó en SQL arriba — `porTitular` solo contiene
+  // titulares que ya calzaron ese filtro.
   const resultados = [];
   for (const [nombre, riesgos] of riesgosPorTitular) {
-    if (filtroNombre && !nombre.toUpperCase().includes(filtroNombre.toUpperCase())) continue;
     const info = porTitular.get(nombre)!;
     resultados.push({
       titular: nombre,

@@ -70,14 +70,31 @@ export async function getRiesgoEUDR(query: RiesgoEUDRQuery): Promise<RiesgoEUDRD
       return [];
     }
 
+    // Si el ingest de MINAM nunca corrió (tabla vacía), toda alerta cuenta 0
+    // y `clasificarRiesgo(0)` daría BAJO para CADA título — indistinguible de
+    // "revisamos y no hay riesgo". Es exactamente el bug que esta reescritura
+    // vino a eliminar (ver README), así que se corta antes de clasificar nada.
+    const { rows: disponibilidad } = await pool.query<{ existe: boolean }>(
+      `SELECT EXISTS(SELECT 1 FROM minam_alertas_deforestacion LIMIT 1) as existe`
+    );
+    if (!disponibilidad[0]?.existe) {
+      throw new RiesgoEUDRNoDisponibleError(new Error("minam_alertas_deforestacion está vacía — el ingest no ha corrido."));
+    }
+
     const { rows: titulos } = await geoIntersectionsPool.query<ForestTitleRow>(
       `SELECT id, doc_leg, sup_sig, atributos_extra->>'SECTOR' as sector,
               ST_AsGeoJSON(geometry) as geojson
        FROM forest_titles
        ${codigo ? "WHERE nom_dep = $1" : ""}
+       ORDER BY id
        LIMIT 500`,
       codigo ? [codigo] : []
     );
+    // Tope de 500 títulos por consulta — un departamento o un llamado nacional
+    // sin filtro con más de 500 títulos recibe un subconjunto, no el universo
+    // completo. `ORDER BY id` lo hace al menos estable entre llamadas (mismo
+    // subconjunto siempre), pero sigue siendo un subconjunto: no hay todavía
+    // paginación real ni un indicador de truncamiento en la respuesta.
 
     if (titulos.length === 0) return [];
 
@@ -108,7 +125,16 @@ export async function getRiesgoEUDR(query: RiesgoEUDRQuery): Promise<RiesgoEUDRD
     );
 
     return geometrias.map(({ titulo, feature }) => {
-      const conteoAlertas = alertas.reduce(
+      // Pre-filtra por el bbox propio del título antes del point-in-polygon
+      // (más caro) — sin esto, cada uno de hasta 500 títulos se compara
+      // contra TODAS las alertas del bbox combinado (que puede cubrir medio
+      // Perú sin filtro de departamento), no solo contra las candidatas
+      // plausibles de su propia zona.
+      const [tMinLon, tMinLat, tMaxLon, tMaxLat] = bbox(feature);
+      const candidatas = alertas.filter(
+        (a) => a.longitud >= tMinLon && a.longitud <= tMaxLon && a.latitud >= tMinLat && a.latitud <= tMaxLat
+      );
+      const conteoAlertas = candidatas.reduce(
         (acc, a) => acc + (booleanPointInPolygon(point([a.longitud, a.latitud]), feature) ? 1 : 0),
         0
       );

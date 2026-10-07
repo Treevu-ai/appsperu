@@ -68,54 +68,62 @@ async function ingestMinam(): Promise<{ batchId: number; filasInsertadas: number
     );
     const batchId = batchRows[0].id;
 
-    for (;;) {
-      const { raw, parsed } = await fetchPage(offset);
-      checksumParts.push(raw);
-      paginas++;
+    // El `UPDATE` final vive en un `finally`: si una página falla a mitad de
+    // camino, sin esto el batch quedaba con `checksum='pending'` para
+    // siempre (el `ON CONFLICT (object_id) DO NOTHING` sigue permitiendo
+    // re-correr el conector sin duplicar filas, pero ese batch en particular
+    // nunca reflejaba lo que de verdad se insertó). Registrar lo acumulado
+    // hasta el punto de falla preserva la procedencia real.
+    try {
+      for (;;) {
+        const { raw, parsed } = await fetchPage(offset);
+        checksumParts.push(raw);
+        paginas++;
 
-      if (parsed.features.length === 0) break;
+        if (parsed.features.length === 0) break;
 
-      const validas = parsed.features.filter(
-        (f) => f.geometry && typeof f.geometry.x === "number" && typeof f.geometry.y === "number"
-      );
+        const validas = parsed.features.filter(
+          (f) => f.geometry && typeof f.geometry.x === "number" && typeof f.geometry.y === "number"
+        );
 
-      if (validas.length > 0) {
-        // Un solo INSERT multi-fila por página en vez de 1000 awaits
-        // secuenciales — la versión anterior tardaba minutos por página por
-        // el round-trip de red a Neon en cada fila.
-        const values: unknown[] = [];
-        const placeholders = validas.map((f, i) => {
-          const { attributes: a, geometry: g } = f;
-          const base = i * 8;
-          values.push(a.OBJECTID, a.tipo, a.SIST_REF, toIsoDate(a.Fecha), a.D_LEGAL, g.x, g.y, batchId);
-          return `($${base + 1},$${base + 2},$${base + 3},$${base + 4},$${base + 5},$${base + 6},$${base + 7},$${base + 8})`;
-        });
+        if (validas.length > 0) {
+          // Un solo INSERT multi-fila por página en vez de 1000 awaits
+          // secuenciales — la versión anterior tardaba minutos por página
+          // por el round-trip de red a Neon en cada fila.
+          const values: unknown[] = [];
+          const placeholders = validas.map((f, i) => {
+            const { attributes: a, geometry: g } = f;
+            const base = i * 8;
+            values.push(a.OBJECTID, a.tipo, a.SIST_REF, toIsoDate(a.Fecha), a.D_LEGAL, g.x, g.y, batchId);
+            return `($${base + 1},$${base + 2},$${base + 3},$${base + 4},$${base + 5},$${base + 6},$${base + 7},$${base + 8})`;
+          });
 
-        await client.query("BEGIN");
-        try {
-          await client.query(
-            `INSERT INTO minam_alertas_deforestacion
-               (object_id, tipo, sist_ref, fecha_alerta, d_legal, longitud, latitud, source_batch_id)
-             VALUES ${placeholders.join(",")}
-             ON CONFLICT (object_id) DO NOTHING`,
-            values
-          );
-          await client.query("COMMIT");
-        } catch (err) {
-          await client.query("ROLLBACK");
-          throw err;
+          await client.query("BEGIN");
+          try {
+            await client.query(
+              `INSERT INTO minam_alertas_deforestacion
+                 (object_id, tipo, sist_ref, fecha_alerta, d_legal, longitud, latitud, source_batch_id)
+               VALUES ${placeholders.join(",")}
+               ON CONFLICT (object_id) DO NOTHING`,
+              values
+            );
+            await client.query("COMMIT");
+          } catch (err) {
+            await client.query("ROLLBACK");
+            throw err;
+          }
+          filasInsertadas += validas.length;
         }
-        filasInsertadas += validas.length;
+
+        if (parsed.features.length < PAGE_SIZE && !parsed.exceededTransferLimit) break;
+        offset += PAGE_SIZE;
       }
-
-      if (parsed.features.length < PAGE_SIZE && !parsed.exceededTransferLimit) break;
-      offset += PAGE_SIZE;
+    } finally {
+      await client.query(
+        `UPDATE raw_minam_batches SET checksum = $1, record_count = $2 WHERE id = $3`,
+        [checksumOf(checksumParts.join("\n")), filasInsertadas, batchId]
+      );
     }
-
-    await client.query(
-      `UPDATE raw_minam_batches SET checksum = $1, record_count = $2 WHERE id = $3`,
-      [checksumOf(checksumParts.join("\n")), filasInsertadas, batchId]
-    );
 
     return { batchId, filasInsertadas, paginas };
   } finally {

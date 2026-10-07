@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Pool } from "pg";
 
 const connectionString = process.env.INVERSION_PRIVADA_DATABASE_URL;

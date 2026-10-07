@@ -36,12 +36,26 @@ interface SancionRow {
   descripcion: string | null;
 }
 
-async function fetchTitularesMinero(departamento: string | undefined): Promise<TitularMineroRow[]> {
+/**
+ * `filtroNombre` se empuja al SQL (`titular ILIKE`) en vez de filtrarse
+ * después del match difuso — sin esto, cada request cargaba las ~66.8k filas
+ * de `catastro_minero_derechos` y las comparaba todas contra las sanciones
+ * (O(sanciones × titulares)) incluso cuando el caller ya pedía un nombre
+ * específico.
+ */
+async function fetchTitularesMinero(
+  departamento: string | undefined,
+  filtroNombre: string | undefined
+): Promise<TitularMineroRow[]> {
   const conditions: string[] = [];
   const params: unknown[] = [];
   if (departamento) {
     params.push(`%${departamento}%`);
     conditions.push(`departamento ILIKE $${params.length}`);
+  }
+  if (filtroNombre) {
+    params.push(`%${filtroNombre}%`);
+    conditions.push(`titular ILIKE $${params.length}`);
   }
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
@@ -89,7 +103,7 @@ export async function getTitularesConRiesgo(query: TitularesRiesgoQuery): Promis
   const { ruc: filtroNombre, departamento, soloVigentes } = query;
 
   const [titulares, sanciones] = await Promise.all([
-    fetchTitularesMinero(departamento),
+    fetchTitularesMinero(departamento, filtroNombre),
     fetchSanciones(soloVigentes),
   ]);
 
@@ -131,9 +145,10 @@ export async function getTitularesConRiesgo(query: TitularesRiesgoQuery): Promis
     riesgosPorTitular.set(m.a.id, lista);
   }
 
+  // `filtroNombre` ya se aplicó en SQL (fetchTitularesMinero) — no se repite
+  // acá, `porTitular` solo contiene titulares que ya calzaron ese filtro.
   const results: TitularRiesgo[] = [];
   for (const [nombre, riesgos] of riesgosPorTitular) {
-    if (filtroNombre && !nombre.toUpperCase().includes(filtroNombre.toUpperCase())) continue;
     const info = porTitular.get(nombre)!;
     results.push({
       titular: nombre,

@@ -5,6 +5,11 @@
  * MINAM reales (puntos) dentro del polígono real de `geo-intersections.
  * forest_titles` — se sigue propagando el error en vez de devolver `[]`,
  * porque un `catch` que degrada a `[]` es indistinguible de "sin riesgo".
+ *
+ * `ownQueryMock` se llama DOS veces en el camino feliz: primero el chequeo
+ * de disponibilidad de MINAM (`SELECT EXISTS(...)`), después la consulta
+ * real de alertas en el bbox — por eso la mayoría de los tests hacen dos
+ * `mockResolvedValueOnce` sobre ese mock, en ese orden.
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
@@ -27,13 +32,30 @@ const POLIGONO_PRUEBA = JSON.stringify({
   coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],
 });
 
+function mockMinamDisponible() {
+  ownQueryMock.mockResolvedValueOnce({ rows: [{ existe: true }] });
+}
+
 beforeEach(() => {
   geoQueryMock.mockReset();
   ownQueryMock.mockReset();
 });
 
+describe("getRiesgoEUDR — MINAM no disponible", () => {
+  it("propaga RiesgoEUDRNoDisponibleError si minam_alertas_deforestacion está vacía, sin clasificar BAJO", async () => {
+    ownQueryMock.mockResolvedValueOnce({ rows: [{ existe: false }] });
+
+    const error = await getRiesgoEUDR({ departamento: "LA LIBERTAD" }).catch((e) => e);
+
+    expect(error).toBeInstanceOf(RiesgoEUDRNoDisponibleError);
+    // Nunca debe llegar a consultar forest_titles si MINAM no está listo.
+    expect(geoQueryMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("getRiesgoEUDR — fallo de la fuente", () => {
   it("propaga el error de geo-intersections en vez de devolver lista vacía", async () => {
+    mockMinamDisponible();
     geoQueryMock.mockRejectedValueOnce(new Error('relation "forest_titles" does not exist'));
 
     await expect(getRiesgoEUDR({ departamento: "LA LIBERTAD" })).rejects.toBeInstanceOf(
@@ -42,6 +64,7 @@ describe("getRiesgoEUDR — fallo de la fuente", () => {
   });
 
   it("propaga el error de la fuente de alertas MINAM", async () => {
+    mockMinamDisponible();
     geoQueryMock.mockResolvedValueOnce({
       rows: [{ id: 1, doc_leg: "D1", sup_sig: 100, sector: "X", geojson: POLIGONO_PRUEBA }],
     });
@@ -55,6 +78,7 @@ describe("getRiesgoEUDR — fallo de la fuente", () => {
   });
 
   it("conserva la causa original para poder diagnosticar", async () => {
+    mockMinamDisponible();
     const cause = new Error("columna inexistente");
     geoQueryMock.mockRejectedValueOnce(cause);
 
@@ -69,12 +93,14 @@ describe("getRiesgoEUDR — departamento no reconocido", () => {
     const results = await getRiesgoEUDR({ departamento: "NARNIA" });
 
     expect(results).toEqual([]);
+    expect(ownQueryMock).not.toHaveBeenCalled();
     expect(geoQueryMock).not.toHaveBeenCalled();
   });
 });
 
 describe("getRiesgoEUDR — intersección real punto-en-polígono", () => {
   it("cuenta solo las alertas que caen dentro del polígono, no las de afuera", async () => {
+    mockMinamDisponible();
     geoQueryMock.mockResolvedValueOnce({
       rows: [{ id: 7, doc_leg: "DOC-7", sup_sig: 500, sector: "Sector A", geojson: POLIGONO_PRUEBA }],
     });
@@ -82,7 +108,7 @@ describe("getRiesgoEUDR — intersección real punto-en-polígono", () => {
       rows: [
         { longitud: 0.5, latitud: 0.5 }, // dentro
         { longitud: 0.2, latitud: 0.8 }, // dentro
-        { longitud: 5, latitud: 5 }, // fuera
+        { longitud: 5, latitud: 5 }, // fuera (y fuera del bbox del título)
       ],
     });
 
@@ -96,6 +122,7 @@ describe("getRiesgoEUDR — intersección real punto-en-polígono", () => {
   });
 
   it("clasifica BAJO cuando no hay alertas dentro del polígono", async () => {
+    mockMinamDisponible();
     geoQueryMock.mockResolvedValueOnce({
       rows: [{ id: 1, doc_leg: null, sup_sig: null, sector: null, geojson: POLIGONO_PRUEBA }],
     });
@@ -110,6 +137,7 @@ describe("getRiesgoEUDR — intersección real punto-en-polígono", () => {
   });
 
   it("clasifica ALTO con 10 o más alertas dentro", async () => {
+    mockMinamDisponible();
     geoQueryMock.mockResolvedValueOnce({
       rows: [{ id: 1, doc_leg: null, sup_sig: null, sector: null, geojson: POLIGONO_PRUEBA }],
     });
@@ -124,11 +152,34 @@ describe("getRiesgoEUDR — intersección real punto-en-polígono", () => {
   });
 
   it("devuelve [] si no hay títulos forestales para el departamento", async () => {
+    mockMinamDisponible();
     geoQueryMock.mockResolvedValueOnce({ rows: [] });
 
     const results = await getRiesgoEUDR({ departamento: "LA LIBERTAD" });
 
     expect(results).toEqual([]);
-    expect(ownQueryMock).not.toHaveBeenCalled();
+  });
+
+  it("no cuenta una alerta que cae dentro del bbox combinado pero fuera del bbox propio del título", async () => {
+    // Dos títulos lejos entre sí: el bbox combinado los cubre a ambos, pero
+    // la alerta solo debe contar para el título cuyo propio bbox la contiene
+    // — valida el pre-filtro por bbox individual, no solo el combinado.
+    mockMinamDisponible();
+    const poligonoLejano = JSON.stringify({
+      type: "Polygon",
+      coordinates: [[[10, 10], [11, 10], [11, 11], [10, 11], [10, 10]]],
+    });
+    geoQueryMock.mockResolvedValueOnce({
+      rows: [
+        { id: 1, doc_leg: null, sup_sig: null, sector: null, geojson: POLIGONO_PRUEBA },
+        { id: 2, doc_leg: null, sup_sig: null, sector: null, geojson: poligonoLejano },
+      ],
+    });
+    ownQueryMock.mockResolvedValueOnce({ rows: [{ longitud: 0.5, latitud: 0.5 }] });
+
+    const [titulo1, titulo2] = await getRiesgoEUDR({ departamento: "LA LIBERTAD" });
+
+    expect(titulo1.alertasDentroDelTitulo).toBe(1);
+    expect(titulo2.alertasDentroDelTitulo).toBe(0);
   });
 });

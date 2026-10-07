@@ -33,10 +33,16 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
     conteoTitulos: number;
     proporcionTerritorial: number;
   }> = [];
+  // Si NINGUNA de las fuentes pedidas está configurada, se distingue de "no
+  // encontramos concentración" (el resto de handlers de esta app ya usan
+  // ENRIQUECIMIENTO_NO_CONFIGURADO para esto, este quedaba devolviendo `[]`
+  // sin distinguir los dos casos).
+  let algunaFuenteConfigurada = false;
 
   if (!tipoCatastro || tipoCatastro === "minero") {
     const catastroMineroPool = getPoolForApp(env as NeonEnv, "catastro-minero");
     if (catastroMineroPool) {
+      algunaFuenteConfigurada = true;
       const params: unknown[] = [];
       let where = "";
       if (departamento) {
@@ -71,6 +77,7 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
   if (!tipoCatastro || tipoCatastro === "forestal") {
     const catastroForestalPool = getPoolForApp(env as NeonEnv, "catastro-forestal");
     const codigo = departamento ? codigoDeDepartamento(departamento) : null;
+    if (catastroForestalPool) algunaFuenteConfigurada = true;
     if (catastroForestalPool && (!departamento || codigo)) {
       const params: unknown[] = [];
       let where = "";
@@ -102,6 +109,10 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
         });
       }
     }
+  }
+
+  if (!algunaFuenteConfigurada) {
+    return { status: 200, body: { estado: "ENRIQUECIMIENTO_NO_CONFIGURADO", resultados: [] } };
   }
 
   return { status: 200, body: resultados };

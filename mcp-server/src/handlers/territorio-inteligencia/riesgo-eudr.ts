@@ -49,14 +49,29 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
     return { status: 200, body: [] };
   }
 
+  // Si el ingest de MINAM nunca corrió (tabla vacía), toda alerta cuenta 0 y
+  // `clasificarRiesgo(0)` daría BAJO para CADA título — indistinguible de
+  // "revisamos y no hay riesgo". Se corta antes de clasificar nada, mismo
+  // criterio que la ruta HTTP (que ahí lanza un error 503 en vez de devolver
+  // este status — el handler MCP sigue la convención de este archivo de
+  // nunca lanzar, siempre responder con un status explícito).
+  const { rows: disponibilidad } = await db.query<{ existe: boolean }>(
+    `SELECT EXISTS(SELECT 1 FROM minam_alertas_deforestacion LIMIT 1) as existe`
+  );
+  if (!disponibilidad[0]?.existe) {
+    return { status: 200, body: { estado: "MINAM_NO_DISPONIBLE", resultados: [] } };
+  }
+
   const { rows: titulos } = await geoIntersectionsPool.query<ForestTitleRow>(
     `SELECT id, doc_leg, sup_sig, atributos_extra->>'SECTOR' as sector,
             ST_AsGeoJSON(geometry) as geojson
      FROM forest_titles
      ${codigo ? "WHERE nom_dep = $1" : ""}
+     ORDER BY id
      LIMIT 500`,
     codigo ? [codigo] : []
   );
+  // Tope de 500 títulos — ver nota equivalente en la ruta HTTP de origen.
 
   if (titulos.length === 0) return { status: 200, body: [] };
 
@@ -84,7 +99,13 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
   );
 
   const resultados = geometrias.map(({ titulo, feature }) => {
-    const conteoAlertas = alertas.reduce(
+    // Pre-filtra por el bbox propio del título antes del point-in-polygon —
+    // ver nota equivalente en la ruta HTTP de origen.
+    const [tMinLon, tMinLat, tMaxLon, tMaxLat] = bbox(feature);
+    const candidatas = alertas.filter(
+      (a) => a.longitud >= tMinLon && a.longitud <= tMaxLon && a.latitud >= tMinLat && a.latitud <= tMaxLat
+    );
+    const conteoAlertas = candidatas.reduce(
       (acc, a) => acc + (booleanPointInPolygon(point([a.longitud, a.latitud]), feature) ? 1 : 0),
       0
     );

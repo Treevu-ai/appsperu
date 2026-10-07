@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Pool } from "pg";
 
 const connectionString = process.env.GEO_INTERSECTIONS_DATABASE_URL;
