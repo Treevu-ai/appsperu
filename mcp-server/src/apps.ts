@@ -51,6 +51,7 @@ export const APP_KEYS = [
   "smv-sanciones",
   "sunat-aduanas",
   "sunedu-licenciamiento",
+  "territorio-inteligencia",
 ] as const;
 
 export type AppKey = (typeof APP_KEYS)[number];
@@ -102,6 +103,7 @@ const DEFAULT_PORTS: Record<AppKey, number> = {
   "smv-sanciones": 4044,
   "sunat-aduanas": 4041,
   "sunedu-licenciamiento": 4045,
+  "territorio-inteligencia": 4033,
 };
 
 function envVarFor(app: AppKey): string {

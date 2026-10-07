@@ -17,7 +17,8 @@
     "apps/informes-control/api",
     "apps/servicios-salud/api",
     "apps/programas-sociales/api",
-    "apps/onp-presupuesto/api"
+    "apps/onp-presupuesto/api",
+    "apps/territorio-inteligencia/api"
   ],
   "dependencies": {
     "@neon/config": "^1.8.2",

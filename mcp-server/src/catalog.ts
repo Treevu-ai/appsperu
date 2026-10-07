@@ -4097,4 +4097,80 @@ export const TOOL_CATALOG: ToolSpec[] = [
       offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
+
+  // ---- territorio-inteligencia (catastro minero/forestal × sanciones × OxI × MINAM) ----
+  {
+    name: "territorio_inteligencia_captura_territorio",
+    handler: "captura-territorio:list",
+    app: "territorio-inteligencia",
+    description:
+      "Concentración de superficie minera o forestal por titular (minero) o modalidad/sector (forestal) — " +
+      "el catastro forestal no tiene columna de titular (SERFOR no publica dueño de concesión/cesión " +
+      "forestal), por eso para `tipoCatastro=forestal` el `identificador` es el SECTOR de la fuente cuando " +
+      "lo trae (a menudo vacío) o la modalidad (`capa`). Para minero, `identificador` es el nombre del " +
+      "titular tal como lo reporta INGEMMET — no es un RUC, esa fuente no lo tiene. " + SIN_SCHEDULER,
+    pathTemplate: "/api/captura-territorio",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      tipoCatastro: z.enum(["minero", "forestal"]).optional().describe("Sin esto, devuelve ambos."),
+      limiteRucs: z.coerce.number().int().min(1).optional().describe("Top N por superficie. Default 10. El nombre del parámetro es histórico."),
+    },
+  },
+  {
+    name: "territorio_inteligencia_titulares_riesgo",
+    handler: "titulares-riesgo:list",
+    app: "territorio-inteligencia",
+    description:
+      "Titulares mineros (INGEMMET) con coincidencia de nombre contra sanciones de `proveedores-sancionados` " +
+      "(inhabilitaciones OSCE, inhabilitaciones judiciales, multas) — el cruce es por NOMBRE vía matcher " +
+      "difuso (ninguna de las dos fuentes comparte RUC: catastro-minero no tiene columna de RUC en " +
+      "absoluto), nunca por igualdad exacta de identificador. Cada riesgo trae `confianza`: `confirmada` " +
+      "(nombre normalizado idéntico) o `candidata` (similitud de tokens) — una `candidata` es una " +
+      "coincidencia a revisar, NUNCA la trates como una violación confirmada. Solo cubre catastro minero: " +
+      "el forestal no tiene titular, no hay nada que cruzar ahí. " + SIN_SCHEDULER,
+    pathTemplate: "/api/titulares-riesgo",
+    pathParams: [],
+    querySchema: {
+      ruc: z.string().min(1).optional().describe("Filtra por texto en el nombre del titular — pese al nombre del parámetro, no es un RUC."),
+      departamento: z.string().min(1).optional(),
+      soloVigentes: z.enum(["true", "false"]).optional(),
+    },
+  },
+  {
+    name: "territorio_inteligencia_inconsistencia_presupuesto",
+    handler: "inconsistencia-presupuesto:list",
+    app: "territorio-inteligencia",
+    description:
+      "Proyectos de Obras por Impuestos (`inversion-privada.oxi_investment_promotions`) cruzados por " +
+      "distrito+provincia contra derechos mineros vigentes (`catastro-minero`) — `conflictoDeteccionado` es " +
+      "una señal de coexistencia territorial (mismo distrito), NO una superposición geométrica real: " +
+      "ninguna de las dos fuentes tiene polígono. Requiere revisión humana antes de cualquier conclusión. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/inconsistencia-presupuesto",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      sector: z.string().min(1).optional().describe("Texto libre sobre el nombre de la entidad pública (ej. 'MINISTERIO DE AGRICULTURA')."),
+    },
+  },
+  {
+    name: "territorio_inteligencia_riesgo_eudr",
+    handler: "riesgo-eudr:list",
+    app: "territorio-inteligencia",
+    description:
+      "Riesgo EUDR por título forestal — cuenta alertas tempranas de deforestación reales de MINAM " +
+      "(GeoServidor, capa Tem_AlertasTempranasDeforestacion, 183,767 puntos nacionales verificados en vivo " +
+      "2026-10-07) que caen, por intersección punto-en-polígono real, dentro de la geometría de cada título " +
+      "forestal (`geo-intersections.forest_titles`). MINAM reporta puntos, no polígonos de área deforestada " +
+      "— `superficieHa` es la superficie del TÍTULO (`sup_sig`), no del área deforestada, que esta fuente no " +
+      "da. `estadoRiesgo` (ALTO ≥10 alertas, MEDIO ≥1, BAJO =0) es una heurística propia de este conector, " +
+      "no una clasificación oficial de MINAM ni de la UE. Sin titular/RUC: SERFOR no publica dueño de " +
+      "concesión forestal, el identificador es el título mismo. " + SIN_SCHEDULER,
+    pathTemplate: "/api/riesgo-eudr",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Nombre de departamento (ej. 'La Libertad'). Sin esto, puede devolver muchos títulos a nivel nacional."),
+    },
+  },
 ];

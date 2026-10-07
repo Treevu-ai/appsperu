@@ -1636,4 +1636,5 @@ Construido 2026-10-01. **Fase 0 (solo ingesta).**
 | `smv-connector.ts` | smv-sanciones | SMV (`mvnet.smv.gob.pe/SMV.OData.Api`, API JSON propia sin auth) | GET directo, API rechaza `sFechaInicio` fuera de 2018-2026 | Manual | Completa (998 sanciones, 2018-en adelante) |
 | `sunedu-connector.ts` | sunedu-licenciamiento | SUNEDU (datosabiertos.gob.pe) | Descarga CSV pipe-delimited (Latin-1), maneja WAF | Manual | Completa (143 universidades) — no incluye registro de infractores/sanciones (SPA sin SSR) |
 | `onp-connector.ts` | onp-presupuesto | ONP (datosabiertos.gob.pe, vía `@appsperu/ckan-client`) | `package_show` + descarga CSV (Latin-1), parseo con `csv-parse` | Manual | Completa (1,992 filas, 2008-2025) — el dataset CKAN rota de slug cada año calendario |
+| `minam-connector.ts` | territorio-inteligencia | MINAM GeoServidor (ArcGIS REST, `Tem_AlertasTempranasDeforestacion`) | Pagina 1000 filas/página vía `resultOffset`, INSERT multi-fila por página, `ON CONFLICT (object_id) DO NOTHING` | Manual | Completa (183,767 alertas puntuales nacionales, reemplaza el conector anterior que generaba datos con `Math.random()`) |
 

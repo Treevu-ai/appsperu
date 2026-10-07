@@ -9,9 +9,14 @@
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "sync": "tsx src/sync.ts"
+    "migrate": "tsx src/db/migrate.ts",
+    "ingest:minam": "tsx src/ingest/minam-connector.ts"
   },
   "dependencies": {
+    "@appsperu/entity-matcher": "*",
+    "@turf/boolean-point-in-polygon": "^7.2.0",
+    "@turf/bbox": "^7.2.0",
+    "@turf/helpers": "^7.2.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^4.19.2",

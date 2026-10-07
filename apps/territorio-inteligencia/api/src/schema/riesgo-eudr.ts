@@ -1,22 +1,24 @@
 import { z } from "zod";
 
 export const RiesgoEUDRQuerySchema = z.object({
-  ruc: z.string().optional(),
-  departamento: z.string().optional(),
+  departamento: z.string().optional().describe("Nombre de departamento (ej. 'La Libertad'). Sin esto, puede devolver muchos títulos a nivel nacional."),
 });
 
 export type RiesgoEUDRQuery = z.infer<typeof RiesgoEUDRQuerySchema>;
 
 /**
- * `NO_EVALUABLE` no es un cuarto nivel de riesgo: es la ausencia de dato. Sin
- * él, un `LEFT JOIN` sin coincidencia caía en el `ELSE` y reportaba "BAJO" —
- * es decir, "no deforestó", cuando en realidad no se pudo mirar.
+ * No hay `ruc`/`nombre` de titular: SERFOR no publica dueño del título
+ * forestal (confirmado, no es un gap temporal de datos). El identificador es
+ * el título forestal mismo (`tituloForestalId`, `docLegal`), no una persona o
+ * empresa.
  */
 export const RiesgoEUDRDataSchema = z.object({
-  ruc: z.string(),
-  nombre: z.string(),
-  estadoRiesgo: z.enum(["ALTO", "MEDIO", "BAJO", "NO_EVALUABLE"]),
-  superficieDeforestada: z.number().nullable(),
+  tituloForestalId: z.string(),
+  sector: z.string().nullable(),
+  docLegal: z.string().nullable(),
+  superficieHa: z.number().nullable(),
+  estadoRiesgo: z.enum(["ALTO", "MEDIO", "BAJO"]),
+  alertasDentroDelTitulo: z.number().int(),
   evidencia: z.string(),
 });
 
