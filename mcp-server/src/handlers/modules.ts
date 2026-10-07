@@ -37,6 +37,7 @@ import * as ceplan_geo_layers from "./ceplan-geo/layers.js";
 import * as ceplan_geo_patrimonio from "./ceplan-geo/patrimonio.js";
 import * as ceplan_geo_territories from "./ceplan-geo/territories.js";
 import * as compras_publicas_bidders from "./compras-publicas/bidders.js";
+import * as compras_publicas_concentracion from "./compras-publicas/concentracion.js";
 import * as compras_publicas_conformacion from "./compras-publicas/conformacion.js";
 import * as compras_publicas_crossref from "./compras-publicas/crossref.js";
 import * as compras_publicas_entity_profiles from "./compras-publicas/entity-profiles.js";
@@ -117,6 +118,7 @@ import * as radar_ejecucion_burocracia_inversion from "./radar-ejecucion/burocra
 import * as radar_ejecucion_care_services from "./radar-ejecucion/care-services.js";
 import * as radar_ejecucion_execution from "./radar-ejecucion/execution.js";
 import * as radar_ejecucion_food from "./radar-ejecucion/food.js";
+import * as radar_ejecucion_indice_ejecucion from "./radar-ejecucion/indice-ejecucion.js";
 import * as radar_ejecucion_infrastructure from "./radar-ejecucion/infrastructure.js";
 import * as radar_ejecucion_lluvias from "./radar-ejecucion/lluvias.js";
 import * as radar_ejecucion_meta from "./radar-ejecucion/meta.js";
@@ -138,6 +140,7 @@ import * as seguridad_ciudadana_comisarias from "./seguridad-ciudadana/comisaria
 import * as seguridad_ciudadana_crossref from "./seguridad-ciudadana/crossref.js";
 import * as seguridad_ciudadana_denuncias from "./seguridad-ciudadana/denuncias.js";
 import * as seguridad_ciudadana_equipamiento from "./seguridad-ciudadana/equipamiento.js";
+import * as seguridad_ciudadana_indice_denuncias from "./seguridad-ciudadana/indice-denuncias.js";
 import * as seguridad_ciudadana_termometro from "./seguridad-ciudadana/termometro.js";
 import * as senace_cartera_proyectos_proyectos from "./senace-cartera-proyectos/proyectos.js";
 import * as servicios_salud_crossref from "./servicios-salud/crossref.js";
@@ -185,6 +188,7 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "ceplan-geo/patrimonio": ceplan_geo_patrimonio,
   "ceplan-geo/territories": ceplan_geo_territories,
   "compras-publicas/bidders": compras_publicas_bidders,
+  "compras-publicas/concentracion": compras_publicas_concentracion,
   "compras-publicas/conformacion": compras_publicas_conformacion,
   "compras-publicas/crossref": compras_publicas_crossref,
   "compras-publicas/entity-profiles": compras_publicas_entity_profiles,
@@ -265,6 +269,7 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "radar-ejecucion/care-services": radar_ejecucion_care_services,
   "radar-ejecucion/execution": radar_ejecucion_execution,
   "radar-ejecucion/food": radar_ejecucion_food,
+  "radar-ejecucion/indice-ejecucion": radar_ejecucion_indice_ejecucion,
   "radar-ejecucion/infrastructure": radar_ejecucion_infrastructure,
   "radar-ejecucion/lluvias": radar_ejecucion_lluvias,
   "radar-ejecucion/meta": radar_ejecucion_meta,
@@ -286,6 +291,7 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "seguridad-ciudadana/crossref": seguridad_ciudadana_crossref,
   "seguridad-ciudadana/denuncias": seguridad_ciudadana_denuncias,
   "seguridad-ciudadana/equipamiento": seguridad_ciudadana_equipamiento,
+  "seguridad-ciudadana/indice-denuncias": seguridad_ciudadana_indice_denuncias,
   "seguridad-ciudadana/termometro": seguridad_ciudadana_termometro,
   "senace-cartera-proyectos/proyectos": senace_cartera_proyectos_proyectos,
   "servicios-salud/crossref": servicios_salud_crossref,

@@ -9,6 +9,7 @@ import { entityProfilesRouter } from "./routes/entity-profiles.js";
 import { identitiesRouter } from "./routes/identities.js";
 import { conformacionRouter } from "./routes/conformacion.js";
 import { pool } from "./db/pool.js";
+import { concentracionRouter } from "./routes/concentracion.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 
 const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
@@ -41,6 +42,7 @@ export function createApp() {
   app.use("/api/entities", entityProfilesRouter);
   app.use("/api/identities", identitiesRouter);
   app.use("/api/conformacion", conformacionRouter);
+  app.use("/api/indices/concentracion", concentracionRouter);
   app.use("/api", observatoryRouter);
 
   // Debe ir al final: sin esto, un rechazo dentro de un handler async

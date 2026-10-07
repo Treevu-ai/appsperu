@@ -511,6 +511,46 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
 
+  // ---- radar-ejecucion: índice de calidad de ejecución presupuestal ----
+  {
+    name: "radar_ejecucion_indice_ejecucion",
+    handler: "indice-ejecucion:list",
+    app: "radar-ejecucion",
+    description:
+      "Índice de calidad de ejecución presupuestal — tasa de ejecución (devengado/PIM) por entidad, " +
+      "con ranking dentro de su cohorte (mismo nivel de gobierno + departamento) y mediana de cohorte. " +
+      "Cohortes con menos de 5 entidades no reciben ranking (`cohorteInsuficiente: true`) — la " +
+      "comparabilidad es estadísticamente inválida con muestras menores. Usa `LATEST_BUDGET_CTE` para " +
+      "deduplicar cortes repetidos de `budget_execution` (confirmado en vivo: hay entidades con hasta 12 " +
+      "filas para el mismo entity_code+función+año en 2 fecha_corte distintos — sumar sin dedupe infla " +
+      "la tasa). Cobertura PARCIAL: acotada a La Libertad (offsets fijos del conector), no extrapolar a " +
+      "otros departamentos. " + SIN_SCHEDULER,
+    pathTemplate: "/api/indices/ejecucion",
+    pathParams: [],
+    querySchema: {
+      anio: z.string().regex(/^\d{4}$/).optional().describe("Default: todos los años ingeridos."),
+      nivel: z.string().min(1).optional().describe("Ej. GOBIERNO_LOCAL, GOBIERNO_REGIONAL."),
+      funcion: z.string().min(1).optional(),
+      departamento: z.string().min(1).optional(),
+      soloConRanking: z.enum(["true", "false"]).optional(),
+      orden: z.enum(["tasa_asc", "tasa_desc", "nombre_asc"]).optional().describe("Default tasa_desc."),
+    },
+  },
+  {
+    name: "radar_ejecucion_indice_ejecucion_resumen",
+    handler: "indice-ejecucion:porFuncion",
+    app: "radar-ejecucion",
+    description:
+      "Tasas de ejecución por función de gasto para una entidad específica, con desviación respecto a " +
+      "la mediana de su cohorte (mismo nivel de gobierno, misma función). " + SIN_SCHEDULER,
+    pathTemplate: "/api/indices/ejecucion/por-funcion/{entityCode}",
+    pathParams: ["entityCode"],
+    querySchema: {
+      anio: z.string().regex(/^\d{4}$/).optional(),
+      funcion: z.string().min(1).optional(),
+    },
+  },
+
   // ---- compras-publicas (OECE/OCDS) ----
   {
     name: "compras_publicas_procurement",
@@ -869,6 +909,46 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathTemplate: "/api/analytics/{kind}",
     pathParams: ["kind"],
     querySchema: {},
+  },
+
+  // ---- compras-publicas: índice de concentración de mercado ----
+  {
+    name: "compras_publicas_indice_concentracion",
+    handler: "concentracion:list",
+    app: "compras-publicas",
+    description:
+      "Índice de concentración de mercado en adjudicaciones (awards OECE/OCDS) — CR1/CR3/CR5 y HHI por " +
+      "departamento, con umbrales FTC/Sherman (HHI <1,500 competitivo, 1,500–2,500 moderado, >2,500 " +
+      "altamente concentrado). `soloRedes=true` filtra a proveedores con presencia en más de 1 " +
+      "departamento. Cobertura: muestra de las últimas ~10 páginas de la API OECE por corrida de " +
+      "ingesta, NO un snapshot completo del universo — no inflar la cobertura real. Un proveedor que " +
+      "aparece como un solo RUC pero es un grupo económico con múltiples RUCs no se detecta desde " +
+      "awards. " + SIN_SCHEDULER,
+    pathTemplate: "/api/indices/concentracion",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Sin esto, desglosa por todos los departamentos."),
+      categoria: z.enum(["goods", "works", "services"]).optional(),
+      soloRedes: z.enum(["true", "false"]).optional(),
+      proveedor: z.string().min(1).optional().describe("RUC específico."),
+      anio: z.coerce.number().int().min(2020).max(2100).optional(),
+      conProveedores: z.enum(["true", "false"]).optional().describe("Incluye el detalle por proveedor individual."),
+    },
+  },
+  {
+    name: "compras_publicas_indice_concentracion_comparativa",
+    handler: "concentracion:comparativa",
+    app: "compras-publicas",
+    description:
+      "Comparación directa de concentración entre awards (mayor cuantía) y contratos menores (menor a 8 " +
+      "UIT) — mercados distintos, la comparación de HHI es solo un proxy de diversificación del " +
+      "proveedor, no un benchmark directo. " + SIN_SCHEDULER,
+    pathTemplate: "/api/indices/concentracion/comparativa",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Default LA LIBERTAD. Admite varios separados por coma."),
+      anio: z.coerce.number().int().min(2020).max(2100).optional().describe("Default 2026."),
+    },
   },
 
   // ---- radar-inversiones (Invierte.pe) ----
@@ -2140,6 +2220,45 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: {
       anio_desde: z.coerce.number().int().min(2000).max(2100).optional().describe("Default 2020."),
       anio_hasta: z.coerce.number().int().min(2000).max(2100).optional().describe("Default 2026."),
+    },
+  },
+
+  // ---- seguridad-ciudadana: índice de inseguridad por modalidad de denuncia ----
+  {
+    name: "seguridad_ciudadana_indice_denuncias",
+    handler: "indice-denuncias:list",
+    app: "seguridad-ciudadana",
+    description:
+      "Índice de inseguridad por modalidad de denuncia policial (SIDPOL) — tasa de denuncias por cada " +
+      "10,000 habitantes por departamento × modalidad, normalizada por población (padrón electoral " +
+      "RENIEC 2026, mayores de 18 años, como proxy — excluye menores). SIDPOL mide solo denuncias hechas " +
+      "en comisaría, no hechos no denunciados: una tasa alta puede reflejar buena cultura de denuncia, " +
+      "no necesariamente más criminalidad. Responde 422 si no hay población departamental cargada para " +
+      "el departamento pedido. " + SIN_SCHEDULER,
+    pathTemplate: "/api/indices/denuncias",
+    pathParams: [],
+    querySchema: {
+      anio: z.coerce.number().int().min(2018).max(2100).optional().describe("Default: año más reciente en la tabla."),
+      departamento: z.string().min(1).optional().describe("Default LA LIBERTAD."),
+      provincia: z.string().min(1).optional().describe("Agrega dentro del departamento."),
+      modalidad: z.string().min(1).optional(),
+      orden: z.enum(["tasa_desc", "tasa_asc", "denuncias_desc", "modalidad_asc"]).optional(),
+    },
+  },
+  {
+    name: "seguridad_ciudadana_indice_denuncias_comparativo",
+    handler: "indice-denuncias:comparativo",
+    app: "seguridad-ciudadana",
+    description:
+      "Evolución de la tasa de denuncias de un departamento entre dos años, por modalidad — variación > " +
+      "0 no implica necesariamente más criminalidad, puede ser más denuncias (mejor cultura de reporte). " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/indices/denuncias/comparativo",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional().describe("Default LA LIBERTAD."),
+      anioInicio: z.coerce.number().int().min(2018).max(2100).optional().describe("Default: año mínimo disponible."),
+      anioFin: z.coerce.number().int().min(2018).max(2100).optional().describe("Default: año máximo disponible."),
     },
   },
 
