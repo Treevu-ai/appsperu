@@ -6,10 +6,13 @@ import path from "node:path";
 import { createInterface } from "node:readline";
 import { Readable } from "node:stream";
 import { pathToFileURL } from "node:url";
+import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
 
 const SOURCE_URL = "https://drive.minsa.gob.pe/s/PigmdwnCGEdyqos/download";
 const DATASET = "sinadef_fallecidos";
+/** Clave fija para el advisory lock — evita que dos corridas concurrentes de esta ingesta se pisen. */
+const ADVISORY_LOCK_KEY = "sinadef_ingest";
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
 
@@ -170,7 +173,7 @@ async function downloadToFile(destPath: string): Promise<{ bytes: number; checks
   return { bytes, checksum: hash.digest("hex") };
 }
 
-async function insertBatch(batchId: number, rows: DefuncionRow[]): Promise<void> {
+async function insertBatch(client: PoolClient, batchId: number, rows: DefuncionRow[]): Promise<void> {
   if (rows.length === 0) return;
 
   const values: string[] = [];
@@ -184,7 +187,7 @@ async function insertBatch(batchId: number, rows: DefuncionRow[]): Promise<void>
     params.push(batchId);
   }
 
-  await pool.query(
+  await client.query(
     `INSERT INTO defunciones
        (tipo_seguro, sexo, edad, tiempo_edad, estado_civil, nivel_instruccion, etnia,
         ubigeo_domicilio, pais_domicilio, departamento_domicilio, provincia_domicilio, distrito_domicilio,
@@ -204,11 +207,26 @@ export interface SinadefIngestSummary {
   bytesDescargados: number;
 }
 
+/**
+ * Carga por reemplazo completo, atómica: un solo `PoolClient` sostiene el
+ * advisory lock (evita que dos corridas concurrentes se pisen) y una única
+ * transacción (vacía `defunciones` y vuelve a insertar todo, incluido el
+ * registro en `raw_sinadef_batches`). Antes cada INSERT de 500 filas se
+ * confirmaba por separado contra `pool` sin lock ni limpieza de corridas
+ * anteriores — una segunda ejecución duplicaba el snapshot completo, y una
+ * falla a mitad de la descarga/parseo dejaba filas parciales de la corrida
+ * fallida mezcladas con las de corridas previas. Con COMMIT solo al final,
+ * cualquier error (red, parseo, DB) revierte TODO, incluida la limpieza —
+ * los datos previos quedan intactos si la corrida nueva falla.
+ */
 export async function ingestSinadef(): Promise<SinadefIngestSummary> {
   const tmpDir = await mkdtemp(path.join(tmpdir(), "sinadef-"));
   const csvPath = path.join(tmpDir, "fallecidos_sinadef.csv");
+  const client = await pool.connect();
 
   try {
+    await client.query("SELECT pg_advisory_lock(hashtext($1))", [ADVISORY_LOCK_KEY]);
+
     console.log(`Descargando ${SOURCE_URL} a ${csvPath}...`);
     const { bytes, checksum } = await downloadToFile(csvPath);
     console.log(`Descarga completa: ${bytes.toLocaleString()} bytes.`);
@@ -218,45 +236,60 @@ export async function ingestSinadef(): Promise<SinadefIngestSummary> {
     let filasInsertadas = 0;
     let pendientes: DefuncionRow[] = [];
     let headerSkipped = false;
+    let batchId = -1;
 
-    const { rows: batchRows } = await pool.query<{ id: number }>(
-      `INSERT INTO raw_sinadef_batches (dataset, source_url, checksum, record_count) VALUES ($1, $2, $3, 0) RETURNING id`,
-      [DATASET, SOURCE_URL, checksum]
-    );
-    const batchId = batchRows[0].id;
+    await client.query("BEGIN");
+    try {
+      // Reemplazo completo: limpia el snapshot anterior antes de cargar el
+      // nuevo. TRUNCATE es transaccional en Postgres — si algo falla más
+      // abajo, el ROLLBACK también deshace esta limpieza.
+      await client.query("TRUNCATE defunciones");
 
-    const rl = createInterface({ input: createReadStream(csvPath, { encoding: "utf8" }), crlfDelay: Infinity });
-    for await (const line of rl) {
-      if (!headerSkipped) {
-        headerSkipped = true;
-        continue;
-      }
-      if (line.trim() === "") continue;
-      filasLeidas++;
+      const { rows: batchRows } = await client.query<{ id: number }>(
+        `INSERT INTO raw_sinadef_batches (dataset, source_url, checksum, record_count) VALUES ($1, $2, $3, 0) RETURNING id`,
+        [DATASET, SOURCE_URL, checksum]
+      );
+      batchId = batchRows[0].id;
 
-      const parsed = parseSinadefLine(line);
-      if (!parsed) continue;
-      filasLaLibertad++;
-      pendientes.push(parsed);
+      const rl = createInterface({ input: createReadStream(csvPath, { encoding: "utf8" }), crlfDelay: Infinity });
+      for await (const line of rl) {
+        if (!headerSkipped) {
+          headerSkipped = true;
+          continue;
+        }
+        if (line.trim() === "") continue;
+        filasLeidas++;
 
-      if (pendientes.length >= BATCH_SIZE) {
-        await insertBatch(batchId, pendientes);
-        filasInsertadas += pendientes.length;
-        pendientes = [];
-        if (filasLaLibertad % 5000 < BATCH_SIZE) {
-          console.log(`  ${filasLeidas.toLocaleString()} filas leídas, ${filasLaLibertad.toLocaleString()} de La Libertad...`);
+        const parsed = parseSinadefLine(line);
+        if (!parsed) continue;
+        filasLaLibertad++;
+        pendientes.push(parsed);
+
+        if (pendientes.length >= BATCH_SIZE) {
+          await insertBatch(client, batchId, pendientes);
+          filasInsertadas += pendientes.length;
+          pendientes = [];
+          if (filasLaLibertad % 5000 < BATCH_SIZE) {
+            console.log(`  ${filasLeidas.toLocaleString()} filas leídas, ${filasLaLibertad.toLocaleString()} de La Libertad...`);
+          }
         }
       }
-    }
-    if (pendientes.length > 0) {
-      await insertBatch(batchId, pendientes);
-      filasInsertadas += pendientes.length;
-    }
+      if (pendientes.length > 0) {
+        await insertBatch(client, batchId, pendientes);
+        filasInsertadas += pendientes.length;
+      }
 
-    await pool.query(`UPDATE raw_sinadef_batches SET record_count = $1 WHERE id = $2`, [filasInsertadas, batchId]);
+      await client.query(`UPDATE raw_sinadef_batches SET record_count = $1 WHERE id = $2`, [filasInsertadas, batchId]);
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    }
 
     return { batchId, filasLeidas, filasLaLibertad, filasInsertadas, bytesDescargados: bytes };
   } finally {
+    await client.query("SELECT pg_advisory_unlock(hashtext($1))", [ADVISORY_LOCK_KEY]).catch(() => {});
+    client.release();
     await rm(tmpDir, { recursive: true, force: true });
   }
 }

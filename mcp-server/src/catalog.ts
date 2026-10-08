@@ -4305,7 +4305,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "Fallecidos del SINADEF (MINSA), solo La Libertad. `muerteViolenta` es la clasificación del certificado de " +
       "defunción (HOMICIDIO, SUICIDIO, ACCIDENTE DE TRANSITO, ACCIDENTE DE TRABAJO, OTRO ACCIDENTE) — no es una " +
       "calificación forense ni equivale a una denuncia SIDPOL, pero sirve como fuente independiente para cruzar. " +
-      "Línea base histórica: el archivo fuente está desactualizado desde 2026-05-06, no refleja el año en curso.",
+      "Línea base histórica: el archivo fuente está desactualizado desde 2024-05-06, no refleja el año en curso.",
     pathTemplate: "/api/defunciones",
     pathParams: [],
     querySchema: {

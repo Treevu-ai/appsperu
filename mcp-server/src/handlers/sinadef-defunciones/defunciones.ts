@@ -79,7 +79,7 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
       })),
       meta: {
         cobertura: "La Libertad únicamente",
-        limitacion: "Archivo fuente desactualizado desde 2026-05-06 — línea base histórica, no refleja el año en curso.",
+        limitacion: "Archivo fuente desactualizado desde 2024-05-06 — línea base histórica, no refleja el año en curso.",
         fuente: "SINADEF / MINSA",
       },
     },

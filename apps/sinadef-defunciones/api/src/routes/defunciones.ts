@@ -18,7 +18,7 @@ const MAX_LIMIT = 1000;
  * calificación forense definitiva ni equivale a una denuncia SIDPOL.
  *
  * Limitación de frescura: el archivo fuente tiene `Last-Modified:
- * 2026-05-06` (confirmado en vivo 2026-10-07) — más de 2 años desactualizado
+ * 2024-05-06` (confirmado en vivo 2026-10-07) — más de 2 años desactualizado
  * respecto al momento de la ingesta. Sirve como línea base histórica, no
  * como fuente de monitoreo del año en curso.
  */
@@ -83,7 +83,7 @@ defuncionesRouter.get(
       })),
       meta: {
         cobertura: "La Libertad únicamente",
-        limitacion: "Archivo fuente desactualizado desde 2026-05-06 — línea base histórica, no refleja el año en curso.",
+        limitacion: "Archivo fuente desactualizado desde 2024-05-06 — línea base histórica, no refleja el año en curso.",
         fuente: "SINADEF / MINSA",
       },
     });
