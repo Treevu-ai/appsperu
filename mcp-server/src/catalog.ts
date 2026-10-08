@@ -1508,12 +1508,17 @@ export const TOOL_CATALOG: ToolSpec[] = [
     app: "identidad-fiscal",
     handler: "ficha-ruc:byRuc",
     description:
-      "Detalle completo de la ficha individual de SUNAT para un RUC específico (razón social, fechas, domicilio, " +
-      "actividades CIIU, comprobantes electrónicos, representantes legales) — solo si ese RUC ya fue consultado " +
-      "manualmente (ver `identidad_fiscal_ficha_ruc`). 404 si no está en la ficha individual todavía.",
+      "Ficha de un RUC específico. Si ya fue consultado manualmente (ver `identidad_fiscal_ficha_ruc`), devuelve " +
+      "la ficha completa de SUNAT (razón social, fechas, domicilio, actividades CIIU, comprobantes electrónicos, " +
+      "representantes legales). Si no, cae a un fallback en vivo vía openruc.com (fuente SUNAT, sin auth) con una " +
+      "ficha reducida — solo razón social/estado/condición/domicilio/ubigeo, sin actividades ni representantes; " +
+      "el campo `fuente` de la respuesta indica cuál de los dos casos aplicó. 404 solo si ninguna de las dos fuentes " +
+      "tiene el RUC.",
     pathTemplate: "/api/ficha-ruc/{ruc}",
     pathParams: ["ruc"],
-    querySchema: {},
+    querySchema: {
+      ruc: z.string().regex(/^\d{11}$/, "ruc debe tener 11 dígitos"),
+    },
   },
   {
     name: "identidad_fiscal_padron_ppa",
