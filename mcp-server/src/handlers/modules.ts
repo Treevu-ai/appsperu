@@ -145,6 +145,7 @@ import * as seguridad_ciudadana_termometro from "./seguridad-ciudadana/termometr
 import * as senace_cartera_proyectos_proyectos from "./senace-cartera-proyectos/proyectos.js";
 import * as servicios_salud_crossref from "./servicios-salud/crossref.js";
 import * as servicios_salud_ipress from "./servicios-salud/ipress.js";
+import * as sinadef_defunciones_defunciones from "./sinadef-defunciones/defunciones.js";
 import * as smv_sanciones_sanciones from "./smv-sanciones/sanciones.js";
 import * as sunat_aduanas_meta from "./sunat-aduanas/meta.js";
 import * as sunat_aduanas_ports from "./sunat-aduanas/ports.js";
@@ -296,6 +297,7 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "senace-cartera-proyectos/proyectos": senace_cartera_proyectos_proyectos,
   "servicios-salud/crossref": servicios_salud_crossref,
   "servicios-salud/ipress": servicios_salud_ipress,
+  "sinadef-defunciones/defunciones": sinadef_defunciones_defunciones,
   "smv-sanciones/sanciones": smv_sanciones_sanciones,
   "sunat-aduanas/meta": sunat_aduanas_meta,
   "sunat-aduanas/ports": sunat_aduanas_ports,

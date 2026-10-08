@@ -4297,4 +4297,38 @@ export const TOOL_CATALOG: ToolSpec[] = [
       departamento: z.string().min(1).optional().describe("Nombre de departamento (ej. 'La Libertad'). Sin esto, puede devolver muchos títulos a nivel nacional."),
     },
   },
+  {
+    name: "sinadef_defunciones_defunciones",
+    app: "sinadef-defunciones",
+    handler: "defunciones:list",
+    description:
+      "Fallecidos del SINADEF (MINSA), solo La Libertad. `muerteViolenta` es la clasificación del certificado de " +
+      "defunción (HOMICIDIO, SUICIDIO, ACCIDENTE DE TRANSITO, ACCIDENTE DE TRABAJO, OTRO ACCIDENTE) — no es una " +
+      "calificación forense ni equivale a una denuncia SIDPOL, pero sirve como fuente independiente para cruzar. " +
+      "Línea base histórica: el archivo fuente está desactualizado desde 2026-05-06, no refleja el año en curso.",
+    pathTemplate: "/api/defunciones",
+    pathParams: [],
+    querySchema: {
+      provincia: z.string().min(1).optional(),
+      distrito: z.string().min(1).optional(),
+      muerteViolenta: z.string().min(1).optional(),
+      anio: z.coerce.number().int().min(2000).max(2100).optional(),
+      limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "sinadef_defunciones_resumen",
+    app: "sinadef-defunciones",
+    handler: "defunciones:resumen",
+    description:
+      "Conteo de defunciones SINADEF (La Libertad) por categoría de `muerteViolenta` — para cruzar contra la tasa " +
+      "de denuncias SIDPOL de seguridad-ciudadana por provincia/año.",
+    pathTemplate: "/api/defunciones/resumen",
+    pathParams: [],
+    querySchema: {
+      provincia: z.string().min(1).optional(),
+      anio: z.coerce.number().int().min(2000).max(2100).optional(),
+    },
+  },
 ];

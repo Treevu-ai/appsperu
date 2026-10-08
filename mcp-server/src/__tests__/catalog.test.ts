@@ -344,6 +344,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "territorio_inteligencia_inconsistencia_presupuesto",
     "territorio_inteligencia_riesgo_eudr",
   ],
+  "sinadef-defunciones": ["sinadef_defunciones_defunciones", "sinadef_defunciones_resumen"],
 };
 
 describe("MCP catalog", () => {
