@@ -218,18 +218,34 @@ export interface SinadefIngestSummary {
  * fallida mezcladas con las de corridas previas. Con COMMIT solo al final,
  * cualquier error (red, parseo, DB) revierte TODO, incluida la limpieza —
  * los datos previos quedan intactos si la corrida nueva falla.
+ *
+ * El orden importa: se insertan las filas nuevas (con el batchId nuevo)
+ * PRIMERO, y recién se borran las filas del batch anterior justo antes del
+ * COMMIT — no al revés. Un `TRUNCATE` al inicio toma un lock ACCESS
+ * EXCLUSIVE sobre toda la tabla hasta el COMMIT, bloqueando cualquier
+ * SELECT de la API/MCP durante los ~1.1M líneas leídas y ~140 lotes de
+ * INSERT (confirmado real, no solo teórico — hallazgo de CodeRabbit tras
+ * el primer intento con TRUNCATE). Con DELETE al final, los lectores ven
+ * el snapshot viejo normalmente durante toda la ingesta y solo hay una
+ * ventana de bloqueo breve al final (el DELETE + COMMIT).
  */
 export async function ingestSinadef(): Promise<SinadefIngestSummary> {
   const tmpDir = await mkdtemp(path.join(tmpdir(), "sinadef-"));
   const csvPath = path.join(tmpDir, "fallecidos_sinadef.csv");
+
+  console.log(`Descargando ${SOURCE_URL} a ${csvPath}...`);
+  const { bytes, checksum } = await downloadToFile(csvPath);
+  console.log(`Descarga completa: ${bytes.toLocaleString()} bytes.`);
+
+  // El cliente/lock se adquieren DESPUÉS de descargar, no antes — un
+  // cliente conectado pero inactivo durante los ~20-30s+ de descarga se
+  // cayó en vivo con "Connection terminated unexpectedly" (el pooler de
+  // Neon corta conexiones ociosas). La descarga (sin tocar la DB) no
+  // necesita el lock; solo la fase de lectura+inserción sí.
   const client = await pool.connect();
 
   try {
     await client.query("SELECT pg_advisory_lock(hashtext($1))", [ADVISORY_LOCK_KEY]);
-
-    console.log(`Descargando ${SOURCE_URL} a ${csvPath}...`);
-    const { bytes, checksum } = await downloadToFile(csvPath);
-    console.log(`Descarga completa: ${bytes.toLocaleString()} bytes.`);
 
     let filasLeidas = 0;
     let filasLaLibertad = 0;
@@ -240,11 +256,6 @@ export async function ingestSinadef(): Promise<SinadefIngestSummary> {
 
     await client.query("BEGIN");
     try {
-      // Reemplazo completo: limpia el snapshot anterior antes de cargar el
-      // nuevo. TRUNCATE es transaccional en Postgres — si algo falla más
-      // abajo, el ROLLBACK también deshace esta limpieza.
-      await client.query("TRUNCATE defunciones");
-
       const { rows: batchRows } = await client.query<{ id: number }>(
         `INSERT INTO raw_sinadef_batches (dataset, source_url, checksum, record_count) VALUES ($1, $2, $3, 0) RETURNING id`,
         [DATASET, SOURCE_URL, checksum]
@@ -280,6 +291,10 @@ export async function ingestSinadef(): Promise<SinadefIngestSummary> {
       }
 
       await client.query(`UPDATE raw_sinadef_batches SET record_count = $1 WHERE id = $2`, [filasInsertadas, batchId]);
+      // Recién acá se borran las filas de corridas anteriores — ver nota de
+      // ordenamiento arriba. `<> $1` por `source_batch_id`, no por fecha,
+      // para no depender de relojes/zonas horarias.
+      await client.query(`DELETE FROM defunciones WHERE source_batch_id <> $1`, [batchId]);
       await client.query("COMMIT");
     } catch (err) {
       await client.query("ROLLBACK");
