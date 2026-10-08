@@ -1,6 +1,8 @@
 const BASE_URL = "https://openruc.com/api/ruc";
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
+/** Sin esto, un openruc.com que acepta la conexión y se queda colgado deja la invocación del Worker ocupada indefinidamente. */
+const FETCH_TIMEOUT_MS = 5000;
 
 export interface OpenRucResult {
   ruc: string;
@@ -35,6 +37,7 @@ export async function fetchRucLive(ruc: string): Promise<OpenRucResult | null> {
   try {
     const res = await fetch(`${BASE_URL}/${encodeURIComponent(ruc)}`, {
       headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!res.ok) return null;
 

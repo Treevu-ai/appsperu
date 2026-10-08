@@ -143,7 +143,17 @@ fichaRucRouter.get("/", asyncHandler(async (req, res) => {
   });
 }));
 
+const RUC_REGEX = /^\d{11}$/;
+
 fichaRucRouter.get("/:ruc", asyncHandler(async (req, res) => {
+  // Valida el formato ANTES de disparar el fallback en vivo a openruc.com —
+  // sin esto, cualquier string mal formado o arbitrariamente largo que no
+  // esté en ficha_ruc dispara igual una consulta saliente a un tercero.
+  if (!RUC_REGEX.test(req.params.ruc)) {
+    res.status(400).json({ error: "ruc debe tener 11 dígitos." });
+    return;
+  }
+
   const { rows } = await pool.query(`SELECT * FROM ficha_ruc WHERE ruc = $1`, [req.params.ruc]);
   if (rows.length === 0) {
     const fallback = await lookupRucFallback(req.params.ruc);

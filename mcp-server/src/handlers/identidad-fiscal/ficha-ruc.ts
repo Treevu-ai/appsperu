@@ -167,9 +167,18 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
 /**
  * Handler para `identidad_fiscal_ficha_ruc_by_ruc` — GET /api/ficha-ruc/{ruc}
  */
+const RUC_REGEX = /^\d{11}$/;
+
 export async function byRuc(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const { db, args } = ctx;
   const ruc = args.ruc as string;
+
+  // Mismo guard que la ruta Express — ver nota ahí. Además de defensa en
+  // profundidad, cubre el caso en que `ruc` llegue vacío/undefined porque
+  // el catálogo no lo declaraba en `querySchema` (ver catalog.ts).
+  if (typeof ruc !== "string" || !RUC_REGEX.test(ruc)) {
+    return { status: 400, body: { error: "ruc debe tener 11 dígitos." } };
+  }
 
   const { rows } = await db.query<FichaRucRow>(`SELECT * FROM ficha_ruc WHERE ruc = $1`, [ruc]);
   if (rows.length === 0) {
