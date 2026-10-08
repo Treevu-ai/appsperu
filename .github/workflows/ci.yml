@@ -62,6 +62,7 @@ jobs:
           - apps/senace-cartera-proyectos/api
           - apps/senasa-ejecucion/api
           - apps/servicios-salud/api
+          - apps/sinadef-defunciones/api
           - apps/smv-sanciones/api
           - apps/sunass-sanciones/api
           - apps/sunat-aduanas/api
