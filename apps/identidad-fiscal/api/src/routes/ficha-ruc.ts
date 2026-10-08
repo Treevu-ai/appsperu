@@ -3,8 +3,71 @@ import { z } from "zod";
 import { pool } from "../db/pool.js";
 import { asyncHandler } from "../lib/async-handler.js";
 import { parseQuery } from "../lib/validate-query.js";
+import { fetchRucLive } from "../lib/openruc-client.js";
 
 export const fichaRucRouter = Router();
+
+/** Caché del fallback en vivo: no re-consultar openruc.com antes de este tiempo. */
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+interface RucLookupCacheRow {
+  ruc: string;
+  razon_social: string;
+  estado: string | null;
+  condicion: string | null;
+  direccion: string | null;
+  ubigeo: string | null;
+  as_of: string | null;
+  consultado_en: string;
+}
+
+function cacheToApiShape(r: RucLookupCacheRow) {
+  return {
+    ruc: r.ruc,
+    razonSocial: r.razon_social,
+    estadoContribuyente: r.estado,
+    condicionContribuyente: r.condicion,
+    domicilioFiscal: r.direccion,
+    ubigeo: r.ubigeo,
+    asOf: r.as_of,
+    fuente: "openruc.com (ficha reducida, en vivo)",
+    consultadoEn: r.consultado_en,
+    nota: "Fallback porque este RUC no está en la ficha SUNAT completa (ficha_ruc) — no incluye actividades CIIU ni representantes legales.",
+  };
+}
+
+/**
+ * Fallback cuando el RUC no está en `ficha_ruc`: usa el caché si está
+ * fresco (< 24h), si no pega a openruc.com en vivo y guarda el resultado.
+ * Devuelve `null` si ni el caché ni la consulta en vivo tienen el RUC.
+ */
+async function lookupRucFallback(ruc: string): Promise<ReturnType<typeof cacheToApiShape> | null> {
+  const { rows: cached } = await pool.query<RucLookupCacheRow>(
+    `SELECT ruc, razon_social, estado, condicion, direccion, ubigeo, as_of, consultado_en
+     FROM ruc_lookup_cache WHERE ruc = $1`,
+    [ruc]
+  );
+  if (cached.length > 0 && Date.now() - new Date(cached[0].consultado_en).getTime() < CACHE_TTL_MS) {
+    return cacheToApiShape(cached[0]);
+  }
+
+  const live = await fetchRucLive(ruc);
+  if (!live) {
+    return cached.length > 0 ? cacheToApiShape(cached[0]) : null;
+  }
+
+  const { rows: upserted } = await pool.query<RucLookupCacheRow>(
+    `INSERT INTO ruc_lookup_cache (ruc, razon_social, estado, condicion, direccion, ubigeo, as_of, consultado_en)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,now())
+     ON CONFLICT (ruc) DO UPDATE
+       SET razon_social = EXCLUDED.razon_social, estado = EXCLUDED.estado, condicion = EXCLUDED.condicion,
+           direccion = EXCLUDED.direccion, ubigeo = EXCLUDED.ubigeo, as_of = EXCLUDED.as_of,
+           consultado_en = EXCLUDED.consultado_en
+     RETURNING ruc, razon_social, estado, condicion, direccion, ubigeo, as_of, consultado_en`,
+    [live.ruc, live.razonSocial, live.estado, live.condicion, live.direccion, live.ubigeo, live.asOf]
+  );
+  return cacheToApiShape(upserted[0]);
+}
 
 const DEFAULT_LIMIT = 200;
 const MAX_LIMIT = 1000;
@@ -83,7 +146,12 @@ fichaRucRouter.get("/", asyncHandler(async (req, res) => {
 fichaRucRouter.get("/:ruc", asyncHandler(async (req, res) => {
   const { rows } = await pool.query(`SELECT * FROM ficha_ruc WHERE ruc = $1`, [req.params.ruc]);
   if (rows.length === 0) {
-    res.status(404).json({ error: "RUC no encontrado en las fichas SUNAT ya consultadas." });
+    const fallback = await lookupRucFallback(req.params.ruc);
+    if (!fallback) {
+      res.status(404).json({ error: "RUC no encontrado en las fichas SUNAT ya consultadas ni en openruc.com." });
+      return;
+    }
+    res.json(fallback);
     return;
   }
   const r = rows[0];
@@ -118,6 +186,7 @@ fichaRucRouter.get("/:ruc", asyncHandler(async (req, res) => {
     afiliadoPleDesde: r.afiliado_ple_desde,
     padrones: r.padrones,
     fechaConsulta: r.fecha_consulta,
+    fuente: "ficha_ruc (SUNAT, importada manualmente)",
     actividades: actividades.map((a) => ({
       orden: a.orden,
       tipo: a.tipo,

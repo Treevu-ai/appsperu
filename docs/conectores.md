@@ -345,6 +345,18 @@ Piloto Rastro: LA LIBERTAD, LAMBAYEQUE, PIURA, CAJAMARCA, CUSCO — 425 distrito
 | **Anomalía conocida** | `nombre`/`cargo` de representante legal se separan por una lista cerrada de cargos societarios conocidos (no hay delimitador de columna en el texto plano de la tabla fuente) — si el cargo no está en la lista, se conserva sin partir. Ver data contract para las sub-secciones de la ficha aún no investigadas (Deuda Coactiva, Establecimientos Anexos, etc.). |
 | **Detalle completo** | [`docs/data-contracts/sunat-ficha-ruc.md`](data-contracts/sunat-ficha-ruc.md) |
 
+### `openruc-client.ts` — Fallback en vivo para RUC no importados
+
+| | |
+|---|---|
+| **Descripción** | Dado que `ficha_ruc` solo tiene los RUC importados manualmente (universo chico, ver arriba), `GET /api/ficha-ruc/:ruc` cae a una consulta en vivo a `openruc.com` (proxy gratuito, sin auth, de datos SUNAT) cuando el RUC no está en la ficha completa. Investigado 2026-10-07 tras evaluar COFOPRI/SUNARP/MIDAGRI-PPA como posibles conectores nuevos — ninguno tiene API bulk (ver `docs/inventario-fuentes/`); openruc.com fue el único hallazgo reutilizable de esa investigación. |
+| **Qué hace** | `GET /api/ficha-ruc/:ruc`: si el RUC no está en `ficha_ruc`, revisa `ruc_lookup_cache` (TTL 24h); si no hay caché fresco, pega a `https://openruc.com/api/ruc/{ruc}` y guarda el resultado. Devuelve razón social/estado/condición/domicilio/ubigeo — **no** incluye actividades CIIU ni representantes legales (eso solo lo tiene la ficha completa manual). |
+| **Por qué no es la fuente principal** | SUNAT (`e-consultaruc.sunat.gob.pe`) exige reCAPTCHA v3 server-side — no automatizable sin arriesgar el IP de origen (ver fila de arriba). openruc.com es un wrapper de terceros, no oficial — por eso es *fallback*, no reemplazo de la ficha completa. |
+| **Frecuencia** | Bajo demanda, por RUC consultado — sin ingesta masiva ni batch. |
+| **Fuente de datos** | `openruc.com/api/ruc/{ruc}` (gratuito, sin auth, fuente declarada: SUNAT). |
+| **Tabla** | `ruc_lookup_cache` (migración `012_ruc_lookup_cache.sql`). |
+| **Verificado en vivo** | RUC `20100070970` (Supermercados Peruanos) — 1ra llamada 2.7s (openruc.com), 2da llamada 237ms (caché, mismo `consultadoEn`). RUC inexistente → 404. |
+
 ### `ruc-consulta-masiva-import.ts` — Consulta Múltiple de RUC (SUNAT)
 
 | | |
