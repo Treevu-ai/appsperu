@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { parseSinadefLine } from "../ingest/sinadef-connector.js";
+
+// sinadef-connector.ts importa `pool` a nivel de módulo, y db/pool.ts lanza
+// si DATABASE_URL no está definida (falla al importar, no al usarla) — en
+// CI no hay .env. `parseSinadefLine` es una función pura, no toca la DB,
+// pero igual arrastra el import. Mismo patrón que los tests de identidad-fiscal.
+process.env.DATABASE_URL ??= "postgres://test:test@localhost:5432/test";
+
+const { parseSinadefLine } = await import("../ingest/sinadef-connector.js");
 
 const HEADER =
   "Nº|TIPO SEGURO|SEXO|EDAD|TIEMPO EDAD|ESTADO CIVIL|NIVEL DE INSTRUCCIÓN|ETNIA|COD# UBIGEO DOMICILIO|" +
