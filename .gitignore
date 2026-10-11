@@ -71,3 +71,7 @@ tools/ckan-indexer/state/
 # nunca al historial del repo publico (ver docs/financiamiento/README.md)
 docs/financiamiento/
 .neon
+
+# Shapefile descargado manualmente de Geobosques (436MB), no va al repo
+/Bosque_NoBosque_Perdida_2001_2025_Vector.zip
+/Bosque_NoBosque_Perdida_2001_2025_Vector/
