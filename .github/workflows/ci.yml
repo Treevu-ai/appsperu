@@ -46,6 +46,7 @@ jobs:
           - apps/onpe-resultados/api
           - apps/osinergmin-combustibles/api
           - apps/ositran-reclamos/api
+          - apps/perdida-bosque/api
           - apps/poder-judicial/api
           - apps/pronabec-colegios/api
           - apps/programas-sociales/api
