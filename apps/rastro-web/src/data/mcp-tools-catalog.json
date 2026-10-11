@@ -428,6 +428,36 @@
     "sinScheduler": true
   },
   {
+    "name": "radar_ejecucion_indice_ejecucion",
+    "app": "radar-ejecucion",
+    "description": "Índice de calidad de ejecución presupuestal — tasa de ejecución (devengado/PIM) por entidad, con ranking dentro de su cohorte (mismo nivel de gobierno + departamento) y mediana de cohorte. Cohortes con menos de 5 entidades no reciben ranking (`cohorteInsuficiente: true`) — la comparabilidad es estadísticamente inválida con muestras menores. Usa `LATEST_BUDGET_CTE` para deduplicar cortes repetidos de `budget_execution` (confirmado en vivo: hay entidades con hasta 12 filas para el mismo entity_code+función+año en 2 fecha_corte distintos — sumar sin dedupe infla la tasa). Cobertura PARCIAL: acotada a La Libertad (offsets fijos del conector), no extrapolar a otros departamentos. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/indices/ejecucion",
+    "pathParams": [],
+    "queryParams": [
+      "anio",
+      "nivel",
+      "funcion",
+      "departamento",
+      "soloConRanking",
+      "orden"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "radar_ejecucion_indice_ejecucion_resumen",
+    "app": "radar-ejecucion",
+    "description": "Tasas de ejecución por función de gasto para una entidad específica, con desviación respecto a la mediana de su cohorte (mismo nivel de gobierno, misma función). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/indices/ejecucion/por-funcion/{entityCode}",
+    "pathParams": [
+      "entityCode"
+    ],
+    "queryParams": [
+      "anio",
+      "funcion"
+    ],
+    "sinScheduler": true
+  },
+  {
     "name": "compras_publicas_procurement",
     "app": "compras-publicas",
     "description": "Procesos de contratación pública (releases OCDS) ingeridos desde OECE. Cobertura PARCIAL: cada corrida trae hasta 10 páginas más recientes, no el histórico completo. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
@@ -725,6 +755,34 @@
     ],
     "queryParams": [],
     "sinScheduler": false
+  },
+  {
+    "name": "compras_publicas_indice_concentracion",
+    "app": "compras-publicas",
+    "description": "Índice de concentración de mercado en adjudicaciones (awards OECE/OCDS) — CR1/CR3/CR5 y HHI por departamento, con umbrales FTC/Sherman (HHI <1,500 competitivo, 1,500–2,500 moderado, >2,500 altamente concentrado). `soloRedes=true` filtra a proveedores con presencia en más de 1 departamento. Cobertura: muestra de las últimas ~10 páginas de la API OECE por corrida de ingesta, NO un snapshot completo del universo — no inflar la cobertura real. Un proveedor que aparece como un solo RUC pero es un grupo económico con múltiples RUCs no se detecta desde awards. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/indices/concentracion",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "categoria",
+      "soloRedes",
+      "proveedor",
+      "anio",
+      "conProveedores"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "compras_publicas_indice_concentracion_comparativa",
+    "app": "compras-publicas",
+    "description": "Comparación directa de concentración entre awards (mayor cuantía) y contratos menores (menor a 8 UIT) — mercados distintos, la comparación de HHI es solo un proxy de diversificación del proveedor, no un benchmark directo. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/indices/concentracion/comparativa",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "anio"
+    ],
+    "sinScheduler": true
   },
   {
     "name": "radar_inversiones_investments",
@@ -1190,12 +1248,14 @@
   {
     "name": "identidad_fiscal_ficha_ruc_by_ruc",
     "app": "identidad-fiscal",
-    "description": "Detalle completo de la ficha individual de SUNAT para un RUC específico (razón social, fechas, domicilio, actividades CIIU, comprobantes electrónicos, representantes legales) — solo si ese RUC ya fue consultado manualmente (ver `identidad_fiscal_ficha_ruc`). 404 si no está en la ficha individual todavía.",
+    "description": "Ficha de un RUC específico. Si ya fue consultado manualmente (ver `identidad_fiscal_ficha_ruc`), devuelve la ficha completa de SUNAT (razón social, fechas, domicilio, actividades CIIU, comprobantes electrónicos, representantes legales). Si no, cae a un fallback en vivo vía openruc.com (fuente SUNAT, sin auth) con una ficha reducida — solo razón social/estado/condición/domicilio/ubigeo, sin actividades ni representantes; el campo `fuente` de la respuesta indica cuál de los dos casos aplicó. 404 solo si ninguna de las dos fuentes tiene el RUC.",
     "pathTemplate": "/api/ficha-ruc/{ruc}",
     "pathParams": [
       "ruc"
     ],
-    "queryParams": [],
+    "queryParams": [
+      "ruc"
+    ],
     "sinScheduler": false
   },
   {
@@ -1219,6 +1279,29 @@
     "pathParams": [
       "ruc"
     ],
+    "queryParams": [],
+    "sinScheduler": false
+  },
+  {
+    "name": "identidad_fiscal_financieras_informales",
+    "app": "identidad-fiscal",
+    "description": "Candidatas a financiera informal ('gota a gota', casa de cambio o de empeño) por coincidencia de nombre en el Padrón RUC nacional (contribuyentes, no CIIU: el padrón reducido no trae código de actividad económica, solo ficha_ruc_actividades/ruc_consulta_masiva lo tienen y con cobertura parcial de un seed, no el universo completo — ver docs/prd/PRD-003-mapa-gota-gota.md). Reemplaza al conector SBS original (GOT-01 a GOT-05): el portal sbs.gob.pe completo está protegido por Incapsula (WAF anti-bot, confirmado en vivo), sin API ni dataset abierto alternativo — no hay lado 'casas registradas por SBS' en este dato. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/financieras-informales",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "soloActivas",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "identidad_fiscal_financieras_informales_resumen_geo",
+    "app": "identidad-fiscal",
+    "description": "Agregados por departamento de `identidad_fiscal_financieras_informales` cruzados con la tasa de extorsión SIDPOL por 100k habitantes (mismo denominador que el Termómetro SIDPOL). `candidatas`/`candidatasActivas` y `tasaExtorsion100k` son DOS señales independientes, no un score combinado — no hay evidencia de que una financiera específica esté vinculada a casos de extorsión concretos, solo que ambos fenómenos coexisten geográficamente. Lima y Callao se normalizan desde las etiquetas propias de SIDPOL ('LIMA METROPOLITANA'/'REGION LIMA'/'PROV. CONST. DEL CALLAO') antes de cruzar.",
+    "pathTemplate": "/api/financieras-informales/resumen-geo",
+    "pathParams": [],
     "queryParams": [],
     "sinScheduler": false
   },
@@ -1340,6 +1423,17 @@
       "departamento",
       "soloInhabilitados",
       "soloNuevos"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "proveedores_sancionados_radar",
+    "app": "proveedores-sancionados",
+    "description": "Radar de Captura Contractual consolidado (RCC-05 a RCC-08, docs/prd/PRD-001-radar-captura-contractual.md) — resumen nacional de proveedores con inhabilitación VIGENTE HOY (verificado por rango de fechas real, no solo el campo `estado` de la fuente) y contratos activos en una sola llamada: totalProveedores, totalContratosMonto (en PEN, contando cada contrato una sola vez aunque un award de consorcio lo comparta más de un proveedor sancionado; contratosEnOtraMoneda/montoPorOtraMoneda desglosa adjudicaciones en otra moneda), top5Proveedores/top5Entidades (estos sí muestran el monto completo por proveedor, no deduplicado, porque reflejan su exposición real), frescura por fuente (proveedoresSancionados vía ingestion_log, compras-publicas vía raw_ocds_batches), proveedoresDobleInhabilitacion (sanción administrativa Y judicial simultáneamente vigentes hoy) y alertas de contratos vistos por primera vez en `ventanaDiasNuevos` días (default 7), con `diasDesdeSancion` (desde que la sanción empezó a regir) y `diasDesdeDeteccion` (desde que el cruce lo vio por primera vez) por separado. `nuevosDesdeUltimaCorrida`/alertas se leen de `sanciones_contratos_vistos` sin volver a correr el cruce — si `proveedores_sancionados_crossref` (con `soloNuevos`) no se ha ejecutado en esa ventana, da 0 aunque existan sanciones nuevas sin detectar todavía: significa \\\"nadie corrió la detección\\\", no \\\"no hay novedades\\\" (sin scheduler, ver docs/BACKLOG_Scheduler_Ingesta_Diseno_v1.md). RCC-09 (signals de minor_contracts, redes corporativas) NO está incluido — requiere integrar compras-publicas/observatory.ts y redes-proveedores.ts de verdad, no una aproximación; queda como follow-up explícito. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/radar",
+    "pathParams": [],
+    "queryParams": [
+      "ventanaDiasNuevos"
     ],
     "sinScheduler": true
   },
@@ -1475,30 +1569,6 @@
     "sinScheduler": true
   },
   {
-    "name": "salud_institucional_score",
-    "app": "salud-institucional",
-    "description": "Score compuesto 0-100 por entidad, calculado EN VIVO combinando ejecución (radar-ejecucion), obras (infobras), inversiones (radar-inversiones), compras (compras-publicas) y salud tributaria de proveedores (identidad-fiscal). Si una fuente no tiene dato para una entidad, ese componente se OMITE del promedio — nunca se imputa 0 ni 100 por ausencia. No hay 'ingesta' propia que programar: requiere que las otras 5 apps estén corriendo. Cada resultado con score también trae `banda` (SI-04, 2026-09-08): Sobresaliente/Alto/Medio/Bajo/Crítico, umbrales fijos por percentiles reales de La Libertad — null si scoreCompuesto es null. Default: LA LIBERTAD, año 2026.",
-    "pathTemplate": "/api/score",
-    "pathParams": [],
-    "queryParams": [
-      "departamento",
-      "anio"
-    ],
-    "sinScheduler": false
-  },
-  {
-    "name": "salud_institucional_score_por_provincia",
-    "app": "salud-institucional",
-    "description": "Promedio de scoreCompuesto por provincia (SI-03, 2026-09-08), solo entidades con score disponible — reutiliza el mismo cálculo que salud_institucional_score. Provincia sin ninguna entidad con score trae promedioScore:null y sinDatos:true, nunca un 0 engañoso. Default: LA LIBERTAD, año 2026.",
-    "pathTemplate": "/api/score/por-provincia",
-    "pathParams": [],
-    "queryParams": [
-      "departamento",
-      "anio"
-    ],
-    "sinScheduler": false
-  },
-  {
     "name": "actividad_agraria_wage",
     "app": "actividad-agraria",
     "description": "Valor de jornal agrícola (S/.) por departamento/año/mes, fuente MIDAGRI. Serie mensual normalizada; un valor null puede significar 'mes reportado sin dato' ('-' en el origen) o 'mes futuro aún no reportado' — ambos casos son indistinguibles en este endpoint. Cobertura nacional completa. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
@@ -1567,8 +1637,22 @@
     "queryParams": [
       "departamento",
       "provincia",
+      "ubigeo",
       "anio",
       "modalidad"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "seguridad_ciudadana_denuncias_termometro",
+    "app": "seguridad-ciudadana",
+    "description": "Termómetro de denuncias: compara el mes más reciente disponible de un departamento (y opcionalmente modalidad) contra el mismo mes en años anteriores (2018-2026) usando z-score (CRÍTICO z>3, ALERTA z>2, NORMAL z>1, si no BAJO; SIN_HISTORIAL si no hay desviación calculable). tasa_100k usa como denominador el padrón electoral RENIEC 2026 (población civil 18+ registrada), NO el censo INEI de población total — subestima la población real, aceptable para comparar un departamento consigo mismo en el tiempo, no para reportar población absoluta. variacion_mensual_pct compara contra el promedio histórico del mismo mes (no contra el mes calendario anterior). 400 si falta departamento, 404 si no hay datos en SIDPOL para la combinación pedida (departamento, o departamento + anio/modalidad si se filtran) — no solo cuando el departamento en sí carece de datos. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/denuncias/termometro",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "modalidad",
+      "anio"
     ],
     "sinScheduler": true
   },
@@ -1634,6 +1718,34 @@
     "queryParams": [
       "anio_desde",
       "anio_hasta"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "seguridad_ciudadana_indice_denuncias",
+    "app": "seguridad-ciudadana",
+    "description": "Índice de inseguridad por modalidad de denuncia policial (SIDPOL) — tasa de denuncias por cada 10,000 habitantes por departamento × modalidad, normalizada por población (padrón electoral RENIEC 2026, mayores de 18 años, como proxy — excluye menores). SIDPOL mide solo denuncias hechas en comisaría, no hechos no denunciados: una tasa alta puede reflejar buena cultura de denuncia, no necesariamente más criminalidad. Responde 422 si no hay población departamental cargada para el departamento pedido. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/indices/denuncias",
+    "pathParams": [],
+    "queryParams": [
+      "anio",
+      "departamento",
+      "provincia",
+      "modalidad",
+      "orden"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "seguridad_ciudadana_indice_denuncias_comparativo",
+    "app": "seguridad-ciudadana",
+    "description": "Evolución de la tasa de denuncias de un departamento entre dos años, por modalidad — variación > 0 no implica necesariamente más criminalidad, puede ser más denuncias (mejor cultura de reporte). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/indices/denuncias/comparativo",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "anioInicio",
+      "anioFin"
     ],
     "sinScheduler": true
   },
@@ -1714,7 +1826,7 @@
   {
     "name": "inversion_privada_oxi_projects",
     "app": "inversion-privada",
-    "description": "Cartera OxI (Obras por Impuestos) en promoción por PROINVERSIÓN — universo distinto a APP/PA, misma plataforma VERTIX. `codigoReferencia` viene de una columna fuente que mezcla tres sistemas de código (SNIP / Invierte.pe / IDEA) — no asumir que siempre es un codigo_snip exacto. Cobertura completa del export consultado (761 nacional, 55 en La Libertad, verificado 2026-08-28). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "description": "Cartera OxI (Obras por Impuestos) en promoción por PROINVERSIÓN — universo distinto a APP/PA, misma plataforma VERTIX. `codigoReferencia` viene de una columna fuente que mezcla tres sistemas de código (SNIP / Invierte.pe / IDEA) — no asumir que siempre es un codigo_snip exacto. Cobertura completa del export consultado (761 nacional, 55 en La Libertad, verificado 2026-08-28). `provincia` viene puramente numérica (no un ubigeo) en ~11% de los proyectos a nivel nacional — DQ-18: `provinciaConfiable: false` marca esos casos, nunca corrige el campo en silencio; `provinciaExtraidaDeNombre`/`distritoExtraidoDeNombre` traen el fallback recuperado de `nombreProyecto` por regex cuando el patrón de texto lo permite (puede ser `null` incluso con `provinciaConfiable: false`, si el texto no sigue el patrón reconocido). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
     "pathTemplate": "/api/oxi",
     "pathParams": [],
     "queryParams": [
@@ -2402,6 +2514,38 @@
     "sinScheduler": true
   },
   {
+    "name": "legislativo_congreso_cruces_infobras",
+    "app": "legislativo-congreso",
+    "description": "Cruce keyword-based entre proyectos de ley y obras públicas de INFOBRAS, por departamento — SIN IA ni embeddings: `matchScore` es la fracción de keywords del título del proyecto que aparecen en el nombre de la obra, y `matchedKeywords` las lista. Es una heurística léxica: un score alto NO prueba que el proyecto de ley cause esa obra. La coincidencia es por token completo, no por subcadena: `crea` no matchea `CREACION`. No hay tope de candidatas —el cruce cubre el conjunto completo y pagina sobre él con orden estable—, así que `total` es el conteo real y no existe `truncated`. Para acotar el resultado, subir `umbral_score` o `matched_minimo`. `departamento` debe estar en el catálogo peruano (400 si no); se aceptan alias como 'P C DEL CALLAO'. Requiere la base de `infobras`: sin ella responde 503, no cero. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/cruces/proyectos-infobras",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "periodo",
+      "umbral_score",
+      "matched_minimo",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "legislativo_congreso_cruce_infobras_proyecto",
+    "app": "legislativo-congreso",
+    "description": "Cruce de un proyecto de ley concreto contra obras públicas de INFOBRAS, por `periodo` (perParId) + `numero` (pleyNum). Misma heurística keyword-based y mismo `matchScore` que `legislativo_congreso_cruces_infobras`, pero acotado a un proyecto. 404 si el proyecto no existe O si ninguna obra alcanza el umbral — son dos causas distintas: usar `legislativo_congreso_proyecto_detalle` para confirmar que el proyecto existe antes de interpretar un 404 como 'sin obras'. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/cruces/proyectos-infobras/{periodo}/{numero}",
+    "pathParams": [
+      "periodo",
+      "numero"
+    ],
+    "queryParams": [
+      "departamento",
+      "umbral_score",
+      "matched_minimo"
+    ],
+    "sinScheduler": true
+  },
+  {
     "name": "catastro_minero_derechos",
     "app": "catastro-minero",
     "description": "Derechos mineros del catastro de INGEMMET — filtra por departamento/provincia/distrito (ej. 'LA LIBERTAD'), estado (código tal cual la fuente, ej. 'T'=Titulado, 'P'=En trámite — ver `estadoDescripcion` para el texto legible, no se normalizó a un enum binario), sustancia, concesión o titular (ambos búsqueda parcial ILIKE). Clave real verificada: `codigou` — 66,823 filas, 0 duplicados en la ingesta nacional completa verificada 2026-09-21 (4,787 en La Libertad). Carácter referencial, solo de consulta (aviso de la propia fuente INGEMMET). `titular` puede ser una empresa o, en minería artesanal/pequeña, una persona natural — mismo tipo de dato público que un registro de propiedad (SUNARP), no enmascarado. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
@@ -2587,6 +2731,146 @@
     "sinScheduler": true
   },
   {
+    "name": "geo_intersections_comunidades",
+    "app": "geo-intersections",
+    "description": "Comunidades Campesinas y Nativas de SERFOR OCAPAS_MIDAGRI (réplica SERFOR de datos MIDAGRI, no el catastro oficial MIDAGRI directo). Filtra por `capa` (`comunidades_campesinas`/`comunidades_nativas`) o `departamento` (ILIKE). `departamento`/`provincia`/`distrito` vienen ya separados de la fuente (no requieren parseo); ~76% de `comunidades_campesinas` no trae `distrito` poblado en la fuente (dato real, no bug). `titulo` (resolución de título comunal) solo existe para `comunidades_nativas` — la fuente no lo expone para `comunidades_campesinas`. Verificado en vivo 2026-10-06: 3,090 comunidades_campesinas + 1,402 comunidades_nativas insertadas, 0 rechazadas. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/communities",
+    "pathParams": [],
+    "queryParams": [
+      "capa",
+      "departamento",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "geo_intersections_comunidad_detalle",
+    "app": "geo-intersections",
+    "description": "Detalle de una comunidad campesina o nativa específica por `objectid` (ID de ArcGIS) + `capa` (obligatorio). `objectid` por sí solo NO es clave única — la tabla garantiza UNIQUE(capa, objectid), no UNIQUE(objectid) a solas; hay comunidades reales con el mismo `objectid` en capas distintas (ej. objectid=1 existe en comunidades_campesinas Y en comunidades_nativas). Responde 404 si no existe esa combinación. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/communities/{objectid}",
+    "pathParams": [
+      "objectid"
+    ],
+    "queryParams": [
+      "capa"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "geo_intersections_comunidades_intersect",
+    "app": "geo-intersections",
+    "description": "Comunidades campesinas/nativas que intersectan una geometría GeoJSON dada (PostGIS ST_Intersects) — útil para cruzar territorio comunal con un punto, polígono de proyecto de inversión, u otra capa geoespacial del catálogo. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/communities/intersect",
+    "pathParams": [],
+    "queryParams": [
+      "geometry",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "geo_intersections_comunidades_stats",
+    "app": "geo-intersections",
+    "description": "Resumen por capa de comunidades campesinas/nativas: total de filas, cuántas tienen geometría y área total en km². Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/communities/stats",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "geo_intersections_comunidad_cruce",
+    "app": "geo-intersections",
+    "description": "Superposiciones (minero + forestal) de una comunidad campesina o nativa específica, por `capa` + `objectid`. Precomputado (ver `npm run ingest:comunidad-cruce`), solo considera derechos mineros TITULADOS (`estado='T'`). Verificado en vivo 2026-10-06: 1,930 de 4,492 comunidades (43%) tocan al menos un derecho minero titulado; casos de comunidades grandes (10-50 km²) con el 100% de su territorio cubierto, concentrados en Espinar, Cusco (zona de conflicto minero históricamente documentada — Antapaccay/Tintaya). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/cruce/comunidad/{capa}/{objectid}",
+    "pathParams": [
+      "capa",
+      "objectid"
+    ],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "geo_intersections_comunidad_minero_reporte",
+    "app": "geo-intersections",
+    "description": "Reporte paginado de comunidades ∩ derechos mineros titulados — filtra por `capa`, `departamento`, `titular` (ILIKE, ej. 'barrick'), `min_area_km2` o `min_community_overlap_pct` (% del territorio de la comunidad cubierto). Titulares reales con más comunidades afectadas (verificado 2026-10-06): MINERA BARRICK PERU S.A. (108), FRESNILLO PERU S.A.C. (78), VALE EXPLORATION PERU S.A.C. (74), COMPAÑIA MINERA CHUNGAR S.A.C. (47), TECK PERU S.A. (41), HUDBAY PERU S.A.C. (38), RIO TINTO MINING AND EXPLORATION S.A.C. (36), COMPAÑIA DE MINAS BUENAVENTURA S.A.A. (33). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/cruce/comunidad-minero/report",
+    "pathParams": [],
+    "queryParams": [
+      "capa",
+      "departamento",
+      "titular",
+      "min_area_km2",
+      "min_community_overlap_pct",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "geo_intersections_comunidad_forestal_reporte",
+    "app": "geo-intersections",
+    "description": "Reporte paginado de comunidades ∩ títulos forestales — filtra por `capa`, `departamento`, `forest_capa` (ej. 'modalidad_concesiones_forestales', la categoría más sensible: concesiones de tala comercial a terceros sobre territorio indígena/comunal), `min_area_km2` o `min_community_overlap_pct`. Verificado en vivo 2026-10-06: 320 comunidades afectadas en total, 87 específicamente por concesiones forestales comerciales. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/cruce/comunidad-forestal/report",
+    "pathParams": [],
+    "queryParams": [
+      "capa",
+      "departamento",
+      "forest_capa",
+      "min_area_km2",
+      "min_community_overlap_pct",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "geo_intersections_comunidad_minero_cobertura",
+    "app": "geo-intersections",
+    "description": "Cobertura REAL de derechos mineros titulados por comunidad — una fila por COMUNIDAD (no por par como `geo_intersections_comunidad_minero_reporte`), usando `ST_Union` de todos los derechos que la intersectan antes de medir el área. `pct_cobertura` NUNCA supera 100%, a diferencia de sumar `community_overlap_pct` entre varios derechos distintos, que sobrestima cuando esos derechos se solapan entre sí sobre el mismo terreno (confirmado en vivo 2026-10-06: casos reales de 131-175% al sumar ingenuamente). Filtra por `capa`/`departamento`/`provincia`/`distrito`/`min_pct`/`min_area_km2`. Verificado: 302/1,930 comunidades afectadas (15.6%) tienen cobertura real ≥90%; ej. INDEPENDIENTE (Carabamba, Otuzco, La Libertad) con 100% de su territorio (10.7 km²) bajo 7 derechos de Barrick y otros. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/cruce/comunidad-minero/cobertura",
+    "pathParams": [],
+    "queryParams": [
+      "capa",
+      "departamento",
+      "provincia",
+      "distrito",
+      "min_pct",
+      "min_area_km2",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "geo_intersections_comunidad_forestal_cobertura",
+    "app": "geo-intersections",
+    "description": "Cobertura REAL de títulos forestales por comunidad — análogo a `geo_intersections_comunidad_minero_cobertura` con `forest_titles` en vez de `mining_rights`, misma corrección por `ST_Union`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/cruce/comunidad-forestal/cobertura",
+    "pathParams": [],
+    "queryParams": [
+      "capa",
+      "departamento",
+      "provincia",
+      "distrito",
+      "min_pct",
+      "min_area_km2",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "geo_intersections_comunidad_cruce_stats",
+    "app": "geo-intersections",
+    "description": "Resumen del cruce comunidades ∩ minero/forestal: comunidades afectadas, comunidades con doble exposición (minero Y forestal a la vez), distribución de severidad por cobertura real (buckets <10%/10-50%/50-90%/≥90%), top titulares mineros, desglose por capa forestal, fecha de la última corrida de `npm run ingest:comunidad-cruce`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/cruce/comunidad/stats",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
     "name": "emergencias_indeci",
     "app": "emergencias-indeci",
     "description": "Emergencias y daños históricos a nivel nacional (2003-2025) de INDECI/SINPAD — inundaciones, huaicos, sismos, heladas, incendios, sequías y otros 22 tipos de peligro. Datos EDAN (Evaluación de Daños y Análisis de Necesidades) por evento: fallecidos, desaparecidos, lesionados, damnificados, afectados, viviendas destruidas/afectadas. Filtra por `departamento`/`provincia`/`distrito` (nombres reales, no códigos), `peligro` exacto o `anio`. `sinpadId` **no es una clave única** pese a que la fuente lo documenta como tal (verificado en vivo: 7 códigos repetidos entre eventos genuinamente distintos) — usa el `id` interno para referenciar una fila específica. Snapshot completo del histórico, reemplazado en cada ingesta (sin clave estable de negocio). Verificado en vivo 2026-09-22: 142,139 filas, 0 rechazadas; 2,853 en La Libertad. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
@@ -2625,5 +2909,293 @@
       "peligros"
     ],
     "sinScheduler": true
+  },
+  {
+    "name": "fonafe_empresarial_empresas",
+    "app": "fonafe-empresarial",
+    "description": "Listado de las 34 empresas activas bajo el ámbito de FONAFE (Fondo Nacional de Financiamiento de la Actividad Empresarial del Estado) — slug, código interno, razón social, sector (Distribución Eléctrica, Generación Eléctrica, Saneamiento, Transportes y Comunicaciones, Finanzas, Defensa, Hidrocarburos, Servicios y Producción). Excluye BANMAT y ENACE (disueltas/en liquidación) y ESSALUD (no es empresa FONAFE, capturada por error de regex en la fuente). Verificado en vivo 2026-10-07: 34 filas. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/empresas",
+    "pathParams": [],
+    "queryParams": [
+      "sector",
+      "slug",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "fonafe_empresarial_presupuesto",
+    "app": "fonafe-empresarial",
+    "description": "Presupuesto empresarial y ejecución mensual por empresa y rubro (FONAFE) — presupuestado anual, presupuesto del último mes informado, ejecución del último mes. Cada fila es un rubro (ingresos, costos, gastos, inversión, etc.) de una empresa en un año de ejecución; `ultimoMesInformado` indica hasta qué mes llega el reporte de esa empresa, que puede variar entre empresas. Verificado en vivo 2026-10-07: 3,774 filas, 34 empresas. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/presupuesto",
+    "pathParams": [],
+    "queryParams": [
+      "slug",
+      "sector",
+      "anio",
+      "rubro",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "onp_presupuesto_ejecucion",
+    "app": "onp-presupuesto",
+    "description": "Ejecución presupuestal anual (2008-2025) del gasto de planilla de los regímenes previsionales administrados por la ONP (Oficina de Normalización Previsional) — pago de pensión, devengados, intereses legales, sentencias judiciales, por fuente de financiamiento (RO=Recursos Ordinarios, RD_CF=Recursos Directamente Recaudados/Contribuciones, TOTAL=suma de ambas). `descripcion` identifica el régimen u obligación (ej. 'SNP DL 19990', 'BONOS DE RECONOCIMIENTO', ex-empresas públicas liquidadas como 'ELECTROLIMA'). Fuente CKAN rota de slug cada año calendario — este conector apunta al dataset `-2025`; verificado en vivo 2026-10-07: 1,992 filas. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/ejecucion",
+    "pathParams": [],
+    "queryParams": [
+      "anio",
+      "descripcion",
+      "fuente",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "osinergmin_combustibles_grifos",
+    "app": "osinergmin-combustibles",
+    "description": "Registro de grifos y estaciones de servicio (OSINERGMIN) — expediente, código OSINERGMIN, RUC, razón social, ubicación, tipo de establecimiento, capacidad de almacenamiento, vigencia de registro. 3,429 filas nacionales verificadas. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/grifos",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "provincia",
+      "distrito",
+      "ruc",
+      "tipoEstablecimiento",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "osinergmin_combustibles_precios",
+    "app": "osinergmin-combustibles",
+    "description": "Reporte diario SCOP de precios registrados por Distribuidores Minoristas de Combustibles Líquidos (OSINERGMIN) — diesel, petróleo industrial, gasohol. Precio mínimo/máximo en soles por el RUC del distribuidor minorista, NO precio al consumidor final en grifo. 1,034 filas nacionales verificadas, incluye La Libertad. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/precios",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "provincia",
+      "producto",
+      "ruc",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "ositran_reclamos_reclamos",
+    "app": "ositran-reclamos",
+    "description": "Reclamos de usuarios sobre carreteras concesionadas (OSITRAN) — por concesión, medio de presentación, motivo, materia y estado del reclamo, agregado por año/mes. 3,978 filas verificadas. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/reclamos",
+    "pathParams": [],
+    "queryParams": [
+      "anio",
+      "mes",
+      "entidadPrestadora",
+      "siglasConcesion",
+      "estadoReclamo",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "ositran_reclamos_trafico",
+    "app": "ositran-reclamos",
+    "description": "Tráfico vehicular por peaje en carreteras concesionadas (OSITRAN) — cantidad de vehículos por clase, tipo de tarifa, tipo de eje, agregado por año/mes. 41,000 filas verificadas. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/trafico",
+    "pathParams": [],
+    "queryParams": [
+      "anio",
+      "mes",
+      "siglasConcesion",
+      "peaje",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "ositran_reclamos_recaudacion",
+    "app": "ositran-reclamos",
+    "description": "Recaudación por peaje en carreteras concesionadas (OSITRAN) — importe en soles por tipo de recaudación/tarifa/vehículo, agregado por año/mes. 40,500 filas verificadas. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/recaudacion",
+    "pathParams": [],
+    "queryParams": [
+      "anio",
+      "mes",
+      "siglasConcesion",
+      "peaje",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "smv_sanciones_sanciones",
+    "app": "smv-sanciones",
+    "description": "Sanciones a personas jurídicas supervisadas por la SMV (Superintendencia del Mercado de Valores) desde 2018 — amonestaciones y multas con resolución, empresa, sumilla de la infracción, monto en soles y si tuvo recurso de reconsideración (`conRecurso`; si lo tuvo, `nroResResolutiva`/`fechaResResolutiva` referencian la resolución que lo resolvió). La API fuente (`mvnet.smv.gob.pe`, JSON, sin auth) solo acepta `sFechaInicio` entre 2018-2026 — fuera de ese rango responde error, no una lista vacía. Verificado en vivo 2026-10-07: 998 filas (2018 en adelante). Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/sanciones",
+    "pathParams": [],
+    "queryParams": [
+      "empresa",
+      "tipo",
+      "fechaInicio",
+      "fechaFin",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "sunat_aduanas_ports",
+    "app": "sunat-aduanas",
+    "description": "Importaciones CIF por aduana y año (trimestral + total anual) — SUNAT Anuario de Comercio Exterior, cdro_15. Cobertura nacional, todas las aduanas (marítimas, fluviales y pasos de frontera). Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/ports",
+    "pathParams": [],
+    "queryParams": [
+      "aduana",
+      "anio",
+      "desde",
+      "hasta",
+      "limit"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "sunat_aduanas_ports_subpartidas",
+    "app": "sunat-aduanas",
+    "description": "Importaciones por aduana + subpartida arancelaria (FOB/CIF, variación % y estructura %) — SUNAT Anuario de Comercio Exterior, cdro_16. `subpartida` es el código arancelario (ej. '2709000000'), no la descripción del producto. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/ports/subpartidas",
+    "pathParams": [],
+    "queryParams": [
+      "aduana",
+      "anio",
+      "desde",
+      "hasta",
+      "subpartida",
+      "limit"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "sunat_aduanas_ports_top",
+    "app": "sunat-aduanas",
+    "description": "Ranking de aduanas por volumen CIF total importado en un año dado — SUNAT Anuario de Comercio Exterior, cdro_15. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/ports/top",
+    "pathParams": [],
+    "queryParams": [
+      "anio"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "sunat_aduanas_meta_freshness",
+    "app": "sunat-aduanas",
+    "description": "Metadata de frescura de la ingesta SUNAT: fecha del último lote cargado, conteo de filas por tabla, y detalle del archivo fuente más reciente. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/meta/freshness",
+    "pathParams": [],
+    "queryParams": [],
+    "sinScheduler": true
+  },
+  {
+    "name": "sunedu_licenciamiento_licenciamiento",
+    "app": "sunedu-licenciamiento",
+    "description": "Licenciamiento institucional de universidades peruanas (SUNEDU) — estado (LICENCIA OTORGADA/DENEGADA/NO PRESENTADO), vigencia, tipo de gestión (público/privado) y ubicación geográfica. No incluye el registro de infractores/sanciones (REGIS) — esa parte de SUNEDU es una SPA sin datos server-rendered, fuera de alcance de este conector. Dataset estático (última actualización en la fuente: 2024-08-28). Verificado en vivo 2026-10-07: 143 filas. Paginación real: usa `limit`/`offset`; la respuesta trae `total` y `hasMore`. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/licenciamiento",
+    "pathParams": [],
+    "queryParams": [
+      "nombre",
+      "estadoLicenciamiento",
+      "departamento",
+      "provincia",
+      "tipoGestion",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "territorio_inteligencia_captura_territorio",
+    "app": "territorio-inteligencia",
+    "description": "Concentración de superficie minera o forestal por titular (minero) o modalidad/sector (forestal) — el catastro forestal no tiene columna de titular (SERFOR no publica dueño de concesión/cesión forestal), por eso para `tipoCatastro=forestal` el `identificador` es el SECTOR de la fuente cuando lo trae (a menudo vacío) o la modalidad (`capa`). Para minero, `identificador` es el nombre del titular tal como lo reporta INGEMMET — no es un RUC, esa fuente no lo tiene. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/captura-territorio",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "tipoCatastro",
+      "limiteRucs"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "territorio_inteligencia_titulares_riesgo",
+    "app": "territorio-inteligencia",
+    "description": "Titulares mineros (INGEMMET) con coincidencia de nombre contra sanciones de `proveedores-sancionados` (inhabilitaciones OSCE, inhabilitaciones judiciales, multas) — el cruce es por NOMBRE vía matcher difuso (ninguna de las dos fuentes comparte RUC: catastro-minero no tiene columna de RUC en absoluto), nunca por igualdad exacta de identificador. Cada riesgo trae `confianza`: `confirmada` (nombre normalizado idéntico) o `candidata` (similitud de tokens) — una `candidata` es una coincidencia a revisar, NUNCA la trates como una violación confirmada. Solo cubre catastro minero: el forestal no tiene titular, no hay nada que cruzar ahí. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/titulares-riesgo",
+    "pathParams": [],
+    "queryParams": [
+      "ruc",
+      "departamento",
+      "soloVigentes"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "territorio_inteligencia_inconsistencia_presupuesto",
+    "app": "territorio-inteligencia",
+    "description": "Proyectos de Obras por Impuestos (`inversion-privada.oxi_investment_promotions`) cruzados por distrito+provincia contra derechos mineros vigentes (`catastro-minero`) — `conflictoDeteccionado` es una señal de coexistencia territorial (mismo distrito), NO una superposición geométrica real: ninguna de las dos fuentes tiene polígono. Requiere revisión humana antes de cualquier conclusión. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/inconsistencia-presupuesto",
+    "pathParams": [],
+    "queryParams": [
+      "departamento",
+      "sector"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "territorio_inteligencia_riesgo_eudr",
+    "app": "territorio-inteligencia",
+    "description": "Riesgo EUDR por título forestal — cuenta alertas tempranas de deforestación reales de MINAM (GeoServidor, capa Tem_AlertasTempranasDeforestacion, 183,767 puntos nacionales verificados en vivo 2026-10-07) que caen, por intersección punto-en-polígono real, dentro de la geometría de cada título forestal (`geo-intersections.forest_titles`). MINAM reporta puntos, no polígonos de área deforestada — `superficieHa` es la superficie del TÍTULO (`sup_sig`), no del área deforestada, que esta fuente no da. `estadoRiesgo` (ALTO ≥10 alertas, MEDIO ≥1, BAJO =0) es una heurística propia de este conector, no una clasificación oficial de MINAM ni de la UE. Sin titular/RUC: SERFOR no publica dueño de concesión forestal, el identificador es el título mismo. Ingesta manual, sin scheduler — los datos reflejan la última corrida del conector, no necesariamente el estado actual de la fuente.",
+    "pathTemplate": "/api/riesgo-eudr",
+    "pathParams": [],
+    "queryParams": [
+      "departamento"
+    ],
+    "sinScheduler": true
+  },
+  {
+    "name": "sinadef_defunciones_defunciones",
+    "app": "sinadef-defunciones",
+    "description": "Fallecidos del SINADEF (MINSA), solo La Libertad. `muerteViolenta` es la clasificación del certificado de defunción (HOMICIDIO, SUICIDIO, ACCIDENTE DE TRANSITO, ACCIDENTE DE TRABAJO, OTRO ACCIDENTE) — no es una calificación forense ni equivale a una denuncia SIDPOL, pero sirve como fuente independiente para cruzar. Línea base histórica: el archivo fuente está desactualizado desde 2024-05-06, no refleja el año en curso.",
+    "pathTemplate": "/api/defunciones",
+    "pathParams": [],
+    "queryParams": [
+      "provincia",
+      "distrito",
+      "muerteViolenta",
+      "anio",
+      "limit",
+      "offset"
+    ],
+    "sinScheduler": false
+  },
+  {
+    "name": "sinadef_defunciones_resumen",
+    "app": "sinadef-defunciones",
+    "description": "Conteo de defunciones SINADEF (La Libertad) por categoría de `muerteViolenta` — para cruzar contra la tasa de denuncias SIDPOL de seguridad-ciudadana por provincia/año.",
+    "pathTemplate": "/api/defunciones/resumen",
+    "pathParams": [],
+    "queryParams": [
+      "provincia",
+      "anio"
+    ],
+    "sinScheduler": false
   }
 ]

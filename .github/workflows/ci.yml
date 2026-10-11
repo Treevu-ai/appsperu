@@ -57,7 +57,6 @@ jobs:
           - apps/reniec-padron/api
           - apps/residuos-solidos/api
           - apps/riesgo-fiscal-isds/api
-          - apps/salud-institucional/api
           - apps/seguridad-ciudadana/api
           - apps/senace-cartera-proyectos/api
           - apps/senasa-ejecucion/api

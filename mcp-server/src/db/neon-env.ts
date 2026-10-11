@@ -20,8 +20,8 @@ export const MCP_DATABASE_NAME = "mcp";
 
 /**
  * Nombre de la base Neon de una app. Es determinista a propósito: una app sin
- * base propia (salud-institucional, territorio-inteligencia) simplemente no
- * tiene entrada, y el resolver devuelve null en vez de inventar una base vacía.
+ * base propia simplemente no tiene entrada, y el resolver devuelve null en
+ * vez de inventar una base vacía.
  */
 export function databaseNameFor(app: AppKey): string {
   return app.replace(/-/g, "_");

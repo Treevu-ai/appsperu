@@ -8,7 +8,6 @@ export const TERRITORIAL_APP_CATALOG = [
   { app: 'identidad-fiscal', defaultState: 'BLOQUEADA', defaultRestriction: 'Pendiente de padrón y validación de UBIGEO; domicilio no prueba ejecución.' },
   { app: 'proveedores-sancionados', defaultState: 'BLOQUEADA', defaultRestriction: 'Depende del cruce territorial verificable de compras.' },
   { app: 'actividad-agraria', defaultState: 'BLOQUEADA', defaultRestriction: 'Pendiente de serie MIDAGRI validada por departamento, año y mes.' },
-  { app: 'salud-institucional', defaultState: 'BLOQUEADA', defaultRestriction: 'Score derivado bloqueado mientras falten capas base verificadas.' },
   { app: 'ceplan-estrategico', defaultState: 'NO_APLICA', defaultRestriction: 'No existe todavía una llave geográfica oficial verificada para declararlo regional.' },
   { app: 'seguridad-ciudadana', defaultState: 'BLOQUEADA', defaultRestriction: 'Pendiente de ingesta SIDPOL (MININTER) validada por departamento, año y mes.' },
 ] as const satisfies readonly { app: string; defaultState: CoverageState; defaultRestriction: string }[];

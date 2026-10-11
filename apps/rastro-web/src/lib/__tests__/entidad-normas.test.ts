@@ -14,8 +14,8 @@ describe("mandatoLegalFromFuente", () => {
     });
   });
 
-  it("devuelve undefined para un app sin ROF documentado (ej. salud-institucional, score compuesto)", () => {
-    expect(mandatoLegalFromFuente("salud-institucional / salud_institucional_score")).toBeUndefined();
+  it("devuelve undefined para un app sin ROF documentado", () => {
+    expect(mandatoLegalFromFuente("app-inexistente / tool_inexistente")).toBeUndefined();
   });
 
   it("devuelve undefined para una fuente vacía o irreconocible", () => {

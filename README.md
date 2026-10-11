@@ -32,7 +32,6 @@ Agentes IA (Claude Code, Cursor, Claude Desktop)
 | `ceplan-estrategico` | Planificación estratégica (ObservaPerú) | `ceplan_estrategico` |
 | `ceplan-geo` | GeoServer (capas territoriales/infraestructura) | `ceplan_geo` |
 | `identidad-fiscal` | Padrón RUC (SUNAT) + cruces | `identidad_fiscal` |
-| `salud-institucional` | Score compuesto (agrega otras fuentes, sin BD propia) | comparte DBs de otras apps |
 | `proveedores-sancionados` | Inhabilitaciones/multas RNP/OECE | `proveedores_sancionados` |
 | `actividad-agraria` | Series MIDAGRI regionales (jornal, tractor, yunta) | `actividad_agraria` |
 | `seguridad-ciudadana` | Denuncias policialas SIDPOL (MININTER) | `seguridad_ciudadana` |

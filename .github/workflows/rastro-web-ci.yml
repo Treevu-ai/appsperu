@@ -111,7 +111,6 @@ jobs:
       VITE_API_BASE_URL_CEPLAN_ESTRATEGICO: https://api.example.test/ceplan-estrategico
       VITE_API_BASE_URL_CEPLAN_GEO: https://api.example.test/ceplan-geo
       VITE_API_BASE_URL_IDENTIDAD_FISCAL: https://api.example.test/identidad-fiscal
-      VITE_API_BASE_URL_SALUD_INSTITUCIONAL: https://api.example.test/salud-institucional
       VITE_API_BASE_URL_PROVEEDORES_SANCIONADOS: https://api.example.test/proveedores-sancionados
       VITE_API_BASE_URL_ACTIVIDAD_AGRARIA: https://api.example.test/actividad-agraria
       VITE_API_BASE_URL_SEGURIDAD_CIUDADANA: https://api.example.test/seguridad-ciudadana

@@ -135,7 +135,6 @@ import * as renamu_equipamiento from "./renamu/equipamiento.js";
 import * as renamu_municipalidades from "./renamu/municipalidades.js";
 import * as residuos_solidos_residuos from "./residuos-solidos/residuos.js";
 import * as riesgo_fiscal_isds_mmm from "./riesgo-fiscal-isds/mmm.js";
-import * as salud_institucional_score from "./salud-institucional/score.js";
 import * as seguridad_ciudadana_comisarias from "./seguridad-ciudadana/comisarias.js";
 import * as seguridad_ciudadana_crossref from "./seguridad-ciudadana/crossref.js";
 import * as seguridad_ciudadana_denuncias from "./seguridad-ciudadana/denuncias.js";
@@ -287,7 +286,6 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "renamu/municipalidades": renamu_municipalidades,
   "residuos-solidos/residuos": residuos_solidos_residuos,
   "riesgo-fiscal-isds/mmm": riesgo_fiscal_isds_mmm,
-  "salud-institucional/score": salud_institucional_score,
   "seguridad-ciudadana/comisarias": seguridad_ciudadana_comisarias,
   "seguridad-ciudadana/crossref": seguridad_ciudadana_crossref,
   "seguridad-ciudadana/denuncias": seguridad_ciudadana_denuncias,

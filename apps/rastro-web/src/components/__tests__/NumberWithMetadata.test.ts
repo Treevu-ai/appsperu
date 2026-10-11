@@ -8,7 +8,7 @@ describe("metaNumber", () => {
   });
 
   it("no agrega mandatoLegal cuando la fuente no tiene entidad documentada", () => {
-    const data = metaNumber(100, "salud-institucional / salud_institucional_score", "2026-08-26", "COMPLETA");
+    const data = metaNumber(100, "app-inexistente / tool_inexistente", "2026-08-26", "COMPLETA");
     expect(data.mandatoLegal).toBeUndefined();
   });
 

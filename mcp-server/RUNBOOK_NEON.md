@@ -58,8 +58,8 @@ cd mcp-server
 DATABASE_URL="postgresql://…@ep-xxx.aws.neon.tech/mcp" npm run migrate
 ```
 
-`salud-institucional` y `territorio-inteligencia` no tienen base propia ni
-migraciones: calculan cruzando otras. No se les crea base.
+`territorio-inteligencia` no tiene base propia ni migraciones: calcula
+cruzando otras. No se le crea base.
 
 ### Después de migrar `identidad-fiscal`: calcular el cruce entidad ↔ padrón
 
@@ -141,9 +141,8 @@ Cada app debe salir `ok`. Estados posibles:
 
 ## Fase 6 — Portar los handlers (COMPLETA, 2026-09-29)
 
-**209/209 tools tienen handler.** Las 38 apps del catálogo están portadas,
-incluidas `geo-intersections` y `ceplan-geo` (PostGIS) y `salud-institucional`
-(cruza 5 bases, secuencial).
+**Todas las tools del catálogo tienen handler.** Las apps del catálogo están
+portadas, incluidas `geo-intersections` y `ceplan-geo` (PostGIS).
 
 **`ceplan_geo` y `geo_intersections` provisionadas y con datos reales**
 (2026-09-29): bases creadas, PostGIS habilitado, schema completo, Fase 3

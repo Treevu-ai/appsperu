@@ -63,7 +63,6 @@ export type AppKey =
   | "ceplan-estrategico"
   | "ceplan-geo"
   | "identidad-fiscal"
-  | "salud-institucional"
   | "proveedores-sancionados"
   | "actividad-agraria"
   | "seguridad-ciudadana"
@@ -94,7 +93,6 @@ export const APP_CATALOG: Record<AppKey, { label: string; port: number; envKey: 
   "ceplan-estrategico": { label: "CEPLAN Estratégico", port: 4004, envKey: "VITE_API_BASE_URL_CEPLAN_ESTRATEGICO" },
   "ceplan-geo": { label: "CEPLAN Geo", port: 4005, envKey: "VITE_API_BASE_URL_CEPLAN_GEO" },
   "identidad-fiscal": { label: "Identidad Fiscal (SUNAT RUC)", port: 4006, envKey: "VITE_API_BASE_URL_IDENTIDAD_FISCAL" },
-  "salud-institucional": { label: "Salud Institucional", port: 4007, envKey: "VITE_API_BASE_URL_SALUD_INSTITUCIONAL" },
   "proveedores-sancionados": { label: "Proveedores Sancionados", port: 4008, envKey: "VITE_API_BASE_URL_PROVEEDORES_SANCIONADOS" },
   "actividad-agraria": { label: "Actividad Agraria (MIDAGRI)", port: 4009, envKey: "VITE_API_BASE_URL_ACTIVIDAD_AGRARIA" },
   "seguridad-ciudadana": { label: "Seguridad Ciudadana (SIDPOL)", port: 4010, envKey: "VITE_API_BASE_URL_SEGURIDAD_CIUDADANA" },

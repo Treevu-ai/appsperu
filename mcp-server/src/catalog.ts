@@ -1988,42 +1988,6 @@ export const TOOL_CATALOG: ToolSpec[] = [
     querySchema: {},
   },
 
-  // ---- salud-institucional (agregador, sin base propia) ----
-  {
-    name: "salud_institucional_score",
-    handler: "score:score",
-    app: "salud-institucional",
-    description:
-      "Score compuesto 0-100 por entidad, calculado EN VIVO combinando ejecución (radar-ejecucion), obras " +
-      "(infobras), inversiones (radar-inversiones), compras (compras-publicas) y salud tributaria de proveedores " +
-      "(identidad-fiscal). Si una fuente no tiene dato para una entidad, ese componente se OMITE del promedio — " +
-      "nunca se imputa 0 ni 100 por ausencia. No hay 'ingesta' propia que programar: requiere que las otras 5 apps " +
-      "estén corriendo. Cada resultado con score también trae `banda` (SI-04, 2026-09-08): Sobresaliente/Alto/" +
-      "Medio/Bajo/Crítico, umbrales fijos por percentiles reales de La Libertad — null si scoreCompuesto es null. " +
-      "Default: LA LIBERTAD, año 2026.",
-    pathTemplate: "/api/score",
-    pathParams: [],
-    querySchema: {
-      departamento: z.string().min(1).optional(),
-      anio: z.string().regex(/^\d{4}$/).optional(),
-    },
-  },
-  {
-    name: "salud_institucional_score_por_provincia",
-    handler: "score:scorePorProvincia",
-    app: "salud-institucional",
-    description:
-      "Promedio de scoreCompuesto por provincia (SI-03, 2026-09-08), solo entidades con score disponible — " +
-      "reutiliza el mismo cálculo que salud_institucional_score. Provincia sin ninguna entidad con score trae " +
-      "promedioScore:null y sinDatos:true, nunca un 0 engañoso. Default: LA LIBERTAD, año 2026.",
-    pathTemplate: "/api/score/por-provincia",
-    pathParams: [],
-    querySchema: {
-      departamento: z.string().min(1).optional(),
-      anio: z.string().regex(/^\d{4}$/).optional(),
-    },
-  },
-
   // ---- actividad-agraria (MIDAGRI, jornal agrícola) ----
   {
     name: "actividad_agraria_wage",

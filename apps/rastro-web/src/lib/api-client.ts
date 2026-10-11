@@ -890,43 +890,6 @@ export function getCeplanGeoTerritory(
   });
 }
 
-/** salud_institucional_score — score compuesto 0-100 por entidad, calculado en vivo. */
-export interface ComponentScore {
-  valor: number | null;
-  disponible: boolean;
-}
-export interface EntityScore {
-  entityCode: string;
-  nombre: string;
-  scoreCompuesto: number | null;
-  componentesUsados: number;
-  componentes: {
-    ejecucion: ComponentScore;
-    obrasNoParalizadas: ComponentScore;
-    inversionesSinSobrecosto: ComponentScore;
-    comprasNoConcentradas: ComponentScore;
-    saludTributariaProveedores: ComponentScore;
-  };
-}
-export interface SaludInstitucionalScoreResponse {
-  departamento: string;
-  anioFiscal?: number;
-  resultados: EntityScore[];
-}
-export function getSaludInstitucionalScore(
-  params: { departamento?: string; anio?: string },
-  options?: RequestOptions,
-) {
-  return requestJson<SaludInstitucionalScoreResponse>(
-    "salud-institucional",
-    "/api/score",
-    {
-      ...options,
-      query: params,
-    },
-  );
-}
-
 /**
  * actividad_agraria_wage — jornal agrícola regional (MIDAGRI). Los 3
  * endpoints "regional-monthly" (wage/tractor-rental/yunta-rental) devuelven

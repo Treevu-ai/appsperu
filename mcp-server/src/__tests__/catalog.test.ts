@@ -146,10 +146,6 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "identidad_fiscal_ruc_consulta_masiva",
     "identidad_fiscal_ruc_consulta_masiva_by_ruc",
   ],
-  "salud-institucional": [
-    "salud_institucional_score",
-    "salud_institucional_score_por_provincia",
-  ],
   "proveedores-sancionados": [
     "proveedores_sancionados_candidatos_sancionados",
     "proveedores_sancionados_crossref",

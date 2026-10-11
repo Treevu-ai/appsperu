@@ -84,7 +84,7 @@ Nombres de env var por app: `RADAR_EJECUCION_API_URL`, `COMPRAS_PUBLICAS_API_URL
 
 209 entradas (38 apps) en `src/catalog.ts` — la fuente de verdad, cada una mapea 1:1 a un
 `routes/*.ts` existente, sin inventar parámetros. Nombradas `<app>_<recurso>`, ej.
-`radar_ejecucion_execution`, `compras_publicas_suppliers`, `salud_institucional_score`.
+`radar_ejecucion_execution`, `compras_publicas_suppliers`, `identidad_fiscal_ruc_consulta_masiva`.
 
 Desde la reingeniería del catálogo, esto ya **no** son 209 tools MCP registrados individualmente — son
 filas que `rastro_buscar_tools` busca y `rastro_llamar` ejecuta.
