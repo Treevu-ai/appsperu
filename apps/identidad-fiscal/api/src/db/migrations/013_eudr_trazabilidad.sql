@@ -94,12 +94,16 @@ CREATE TABLE IF NOT EXISTS eudr_parcela (
 -- Columna generada: ¿esta parcela cumple el requisito de geolocalización del
 -- art. 9(1)(d)? Se calcula, no se declara, para que el indicador no se pueda
 -- "maquillar" desde la carga.
+-- Por debajo de 4 ha basta un punto, pero un polígono también cumple (es un
+-- dato más preciso que el mínimo exigido, no uno peor): por eso el caso
+-- ELSE no exige PUNTO, solo que exista una geometría válida, que ya está
+-- garantizado por chk_eudr_parcela_geometria.
 ALTER TABLE eudr_parcela
   ADD COLUMN IF NOT EXISTS cumple_geolocalizacion_eudr BOOLEAN
   GENERATED ALWAYS AS (
     CASE WHEN area_ha > 4
          THEN tipo_geometria = 'POLIGONO'
-         ELSE tipo_geometria = 'PUNTO'
+         ELSE TRUE
     END
   ) STORED;
 
@@ -107,7 +111,8 @@ ALTER TABLE eudr_parcela
 CREATE UNIQUE INDEX IF NOT EXISTS uq_eudr_parcela_org_codigo
   ON eudr_parcela (ruc, codigo_parcela);
 
-CREATE INDEX IF NOT EXISTS idx_eudr_parcela_ruc ON eudr_parcela (ruc);
+-- No se agrega índice separado por (ruc): uq_eudr_parcela_org_codigo ya
+-- cubre ese filtro como prefijo izquierdo de (ruc, codigo_parcela).
 CREATE INDEX IF NOT EXISTS idx_eudr_parcela_cultivo ON eudr_parcela (cultivo);
 
 -- Índice para las consultas de cumplimiento, que son las que se van a hacer.
@@ -138,7 +143,8 @@ CREATE TABLE IF NOT EXISTS eudr_lote (
   CONSTRAINT uq_eudr_lote_org_codigo UNIQUE (ruc, codigo_lote)
 );
 
-CREATE INDEX IF NOT EXISTS idx_eudr_lote_ruc ON eudr_lote (ruc);
+-- No se agrega índice separado por (ruc): uq_eudr_lote_org_codigo ya cubre
+-- ese filtro como prefijo izquierdo de (ruc, codigo_lote).
 
 -- Qué parcelas componen un lote y en qué proporción. Un lote puede venir de
 -- varias parcelas y una parcela puede alimentar varios lotes.
@@ -213,24 +219,48 @@ CREATE INDEX IF NOT EXISTS idx_eudr_declaracion_lote_lote
 -- ---------------------------------------------------------------- cobertura
 -- Vista de avance por organización. Es la que contesta "¿cuánto falta para que
 -- esta organización pueda declarar?" sin tener que escribir el GROUP BY cada vez.
+-- Las métricas de parcela (parcelas, cumplimiento, área) se agregan ANTES de
+-- unir con lotes/declaraciones: una parcela puede alimentar varios lotes, y un
+-- lote puede respaldar varias declaraciones, así que unir primero y agregar
+-- después duplicaría cada parcela una vez por cada lote/declaración que toque.
 CREATE OR REPLACE VIEW v_eudr_cobertura_org AS
+WITH parcelas_por_org AS (
+  SELECT
+    ruc,
+    COUNT(*)                                       AS parcelas,
+    COUNT(*) FILTER (WHERE cumple_geolocalizacion_eudr) AS parcelas_cumplen_geo,
+    SUM(area_ha)                                   AS area_total_ha
+  FROM eudr_parcela
+  GROUP BY ruc
+),
+lotes_por_org AS (
+  SELECT p.ruc, COUNT(DISTINCT l.lote_id) AS lotes
+  FROM eudr_parcela p
+  JOIN eudr_lote_parcela lp ON lp.parcela_id = p.parcela_id
+  JOIN eudr_lote l          ON l.lote_id = lp.lote_id
+  GROUP BY p.ruc
+),
+declaraciones_por_org AS (
+  SELECT p.ruc, COUNT(DISTINCT e.declaracion_id) AS declaraciones
+  FROM eudr_parcela p
+  JOIN eudr_lote_parcela lp     ON lp.parcela_id = p.parcela_id
+  JOIN eudr_lote l              ON l.lote_id = lp.lote_id
+  JOIN eudr_declaracion_lote dl ON dl.lote_id = l.lote_id
+  JOIN eudr_declaracion e       ON e.declaracion_id = dl.declaracion_id
+  GROUP BY p.ruc
+)
 SELECT
-  p.ruc,
-  COUNT(*)                                        AS parcelas,
-  COUNT(*) FILTER (WHERE p.cumple_geolocalizacion_eudr) AS parcelas_cumplen_geo,
-  ROUND(
-    100.0 * COUNT(*) FILTER (WHERE p.cumple_geolocalizacion_eudr)
-    / NULLIF(COUNT(*), 0), 1
-  )                                               AS pct_parcelas_cumplen_geo,
-  SUM(p.area_ha)                                  AS area_total_ha,
-  COUNT(DISTINCT l.lote_id)                       AS lotes,
-  COUNT(DISTINCT e.declaracion_id)                AS declaraciones
-FROM eudr_parcela p
-LEFT JOIN eudr_lote_parcela lp ON lp.parcela_id = p.parcela_id
-LEFT JOIN eudr_lote l          ON l.lote_id = lp.lote_id
-LEFT JOIN eudr_declaracion_lote dl ON dl.lote_id = l.lote_id
-LEFT JOIN eudr_declaracion e   ON e.declaracion_id = dl.declaracion_id
-GROUP BY p.ruc;
+  ppo.ruc,
+  ppo.parcelas,
+  ppo.parcelas_cumplen_geo,
+  ROUND(100.0 * ppo.parcelas_cumplen_geo / NULLIF(ppo.parcelas, 0), 1)
+                                     AS pct_parcelas_cumplen_geo,
+  ppo.area_total_ha,
+  COALESCE(lpo.lotes, 0)             AS lotes,
+  COALESCE(dpo.declaraciones, 0)     AS declaraciones
+FROM parcelas_por_org ppo
+LEFT JOIN lotes_por_org lpo         ON lpo.ruc = ppo.ruc
+LEFT JOIN declaraciones_por_org dpo ON dpo.ruc = ppo.ruc;
 
 -- Trazabilidad completa: de la parcela al embarque, en una sola fila por parcela.
 -- Sirve para responder "¿de qué parcelas salió este contenedor?" y "¿a dónde
