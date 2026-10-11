@@ -1,0 +1,21 @@
+name: catastro-rural
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    environment:
+      POSTGRES_USER: catastro_rural
+      POSTGRES_PASSWORD: catastro_rural
+      POSTGRES_DB: catastro_rural
+    ports:
+      - "127.0.0.1:5463:5432"
+    volumes:
+      - catastro_rural_pgdata:/var/lib/postgresql/data
+
+volumes:
+  catastro_rural_pgdata:
+
+networks:
+  default:
+    name: appsperu_shared
+    external: true
