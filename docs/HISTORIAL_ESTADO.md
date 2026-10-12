@@ -29,21 +29,29 @@ que ya estaban desincronizados desde antes.
 1. **Conector `perdida-bosque`** (Geobosques/MINAM): nivel departamental completo (API
    REST real reverse-engineered del visor — la documentación oficial del endpoint era
    incorrecta) + nivel de polígono exacto en PostGIS (shapefile nacional, 5.65M features,
-   reproyectado de UTM 18S a WGS84). Cargado solo al 47% (2.66M filas, 8 departamentos:
-   Loreto, San Martín, Amazonas, Cajamarca, Ucayali, Piura, La Libertad, Huánuco) — decisión
-   explícita de no completar el país entero sin una parcela real que lo justifique. La
-   carga completa resultó poco confiable (el proceso moría sin error cada ~40-50 min,
-   límite del entorno de ejecución, no bug del script) y se abandonó a medio camino a
-   propósito.
-2. **Etiquetado territorial**: los 2.66M polígonos llevan ahora `ubigeo`/`departamento`/
-   `provincia`/`distrito` reales (99.95% etiquetado), copiando `geo_intersections.territories`
+   reproyectado de UTM 18S a WGS84). **Cargado al 100% (5,655,291/5,655,291, 15 departamentos
+   con datos reales)**: se pausó primero en 47% (8 departamentos) por decisión explícita de
+   no completar sin una parcela real que lo justifique, y luego, en la misma sesión, el
+   usuario pidió explícitamente completar el país entero. El primer intento de carga total
+   murió sin avisar cada ~40-50 min (límite del entorno de background, no bug); el segundo
+   intento (ya con el conector reescrito, ver punto siguiente) también se trabó una vez a
+   mitad de camino — se mató el proceso y el tramo siguiente, más chico, pasó limpio,
+   confirmando que fue puntual, no estructural. El resto del país se cargó en 6 tramos de
+   ~400-500K filas, cada uno con salida limpia.
+2. **Bug real corregido en la ingesta**: el mecanismo de "resume" original releía y
+   decodificaba cada fila saltada con la librería `shapefile` — 52+ min de CPU para saltar
+   2.66M filas sin insertar nada. Se reescribió con un lector propio (`shp-reader.ts`):
+   acceso O(1) por offset de bytes al `.shx` (índice ESRI) en vez de lectura secuencial,
+   con protección para un registro outlier real (117,798 partes, 2.6M vértices en un solo
+   feature). **Etiquetado territorial**: los 5.65M polígonos llevan `ubigeo`/`departamento`/
+   `provincia`/`distrito` reales (99.97% etiquetado), copiando `geo_intersections.territories`
    (otra base del mismo proyecto Neon) vía una conexión pg directa — `postgres_fdw`/`dblink`
    con password en el SQL fue bloqueado por el clasificador de permisos del propio Claude Code.
 3. **Precisión por año (GFW)**: Geobosques solo da pérdida agregada 2001-2024 sin año — para
    el corte EUDR del art. 9(1)(d) (2020-12-31) hace falta el año exacto. Se integró la
    GFW Data API (`umd_tree_cover_loss`, Hansen/GLAD) con un pre-filtro gratis contra los
    polígonos de Geobosques ya cargados: solo se gasta cuota de GFW (de tasa limitada) si
-   la zona tiene pérdida cerca o está fuera del 47% cargado.
+   la zona tiene pérdida cerca.
 4. **Riesgo de legalidad**: cruce por RUC contra sanciones OEFA (`infracciones_ambientales`)
    e inhabilitaciones OSCE (`proveedores_sancionados`). Verificado en vivo con PETROPERU
    (468 sanciones OEFA reales) y un RUC limpio (sin falsos positivos).
