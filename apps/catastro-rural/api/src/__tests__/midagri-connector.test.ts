@@ -5,7 +5,7 @@ const releaseMock = vi.fn();
 const connectMock = vi.fn(() => Promise.resolve({ query: queryMock, release: releaseMock }));
 
 vi.mock("../db/pool.js", () => ({
-  pool: { connect: connectMock },
+  pool: { connect: connectMock, query: queryMock },
 }));
 
 const { ingestMidagri } = await import("../ingest/midagri-connector.js");
@@ -45,10 +45,22 @@ beforeEach(() => {
     if (sql.includes("INSERT INTO raw_midagri_batches")) {
       return Promise.resolve({ rows: [{ id: 1 }] });
     }
+    if (sql.includes("SELECT count(*) FROM catastro_rural")) {
+      // Postgres SIEMPRE devuelve una fila para COUNT(*), incluso en 0.
+      return Promise.resolve({ rows: [{ count: "0" }] });
+    }
+    if (sql.includes("SELECT id FROM raw_midagri_batches")) {
+      return Promise.resolve({ rows: [] });
+    }
     return Promise.resolve({ rows: [] });
   });
-  // 10 capas -- por defecto todas devuelven dataset vacío
-  fetchMock.mockResolvedValue(jsonResponse({ features: [], exceededTransferLimit: false }));
+  // Por defecto: returnCountOnly=true -> 0 features (capa vacía); cualquier
+  // otra consulta de datos -> sin features. Cada capa ahora SIEMPRE arranca
+  // con una consulta de conteo (returnCountOnly) antes de paginar.
+  fetchMock.mockImplementation((url: string) => {
+    if (url.includes("returnCountOnly=true")) return Promise.resolve(jsonResponse({ count: 0 }));
+    return Promise.resolve(jsonResponse({ features: [], exceededTransferLimit: false }));
+  });
 });
 
 describe("ingestMidagri", () => {
@@ -70,8 +82,10 @@ describe("ingestMidagri", () => {
     const page2 = { features: Array.from({ length: 50 }, (_, i) => esriFeature({ OBJECTID: 1001 + i })), exceededTransferLimit: false };
 
     fetchMock.mockImplementation((url: string) => {
+      if (url.includes("/MapServer/0/query") && url.includes("returnCountOnly=true")) return Promise.resolve(jsonResponse({ count: 1050 }));
       if (url.includes("/MapServer/0/query") && url.includes("resultOffset=0")) return Promise.resolve(jsonResponse(page1));
       if (url.includes("/MapServer/0/query") && url.includes("resultOffset=1000")) return Promise.resolve(jsonResponse(page2));
+      if (url.includes("returnCountOnly=true")) return Promise.resolve(jsonResponse({ count: 0 }));
       return Promise.resolve(jsonResponse({ features: [], exceededTransferLimit: false }));
     });
 
@@ -83,9 +97,11 @@ describe("ingestMidagri", () => {
 
   it("lanza un error si la respuesta no tiene 'features' como arreglo", async () => {
     fetchMock.mockImplementation((url: string) => {
+      if (url.includes("/MapServer/0/query") && url.includes("returnCountOnly=true")) return Promise.resolve(jsonResponse({ count: 1 }));
       if (url.includes("/MapServer/0/query")) {
         return Promise.resolve(jsonResponse({}));
       }
+      if (url.includes("returnCountOnly=true")) return Promise.resolve(jsonResponse({ count: 0 }));
       return Promise.resolve(jsonResponse({ features: [], exceededTransferLimit: false }));
     });
 
@@ -95,16 +111,18 @@ describe("ingestMidagri", () => {
   it("borra, dentro de la misma transacción, todas las filas existentes de esa capa antes de insertar (snapshot completo)", async () => {
     await ingestMidagri();
 
-    const deleteCalls = queryMock.mock.calls.filter(([sql]) => sql.includes("DELETE FROM catastro_rural"));
+    const deleteCalls = queryMock.mock.calls.filter(([sql]) => sql.includes("DELETE FROM catastro_rural WHERE"));
     expect(deleteCalls).toHaveLength(10);
     expect(deleteCalls[0][1]).toEqual(["predio_rural"]);
   });
 
-  it("hace rollback y sigue con las demás capas si una falla, y lanza al final con el detalle", async () => {
+  it("sigue con las demás capas si una falla, y lanza al final con el detalle", async () => {
     fetchMock.mockImplementation((url: string) => {
+      if (url.includes("/MapServer/0/query") && url.includes("returnCountOnly=true")) return Promise.resolve(jsonResponse({ count: 1 }));
       if (url.includes("/MapServer/0/query")) {
         return Promise.resolve(jsonResponse({}, false));
       }
+      if (url.includes("returnCountOnly=true")) return Promise.resolve(jsonResponse({ count: 0 }));
       return Promise.resolve(jsonResponse({ features: [], exceededTransferLimit: false }));
     });
 
@@ -115,9 +133,11 @@ describe("ingestMidagri", () => {
   it("guarda record_count con el total de la fuente (incluye rechazadas), no solo lo insertado", async () => {
     // Una feature válida + una sin attributes (rechazada) - solo para la primera capa
     fetchMock.mockImplementation((url: string) => {
+      if (url.includes("/MapServer/0/query") && url.includes("returnCountOnly=true")) return Promise.resolve(jsonResponse({ count: 2 }));
       if (url.includes("/MapServer/0/query")) {
         return Promise.resolve(jsonResponse({ features: [esriFeature({ OBJECTID: 1 }), { attributes: null }] }));
       }
+      if (url.includes("returnCountOnly=true")) return Promise.resolve(jsonResponse({ count: 0 }));
       return Promise.resolve(jsonResponse({ features: [], exceededTransferLimit: false }));
     });
 

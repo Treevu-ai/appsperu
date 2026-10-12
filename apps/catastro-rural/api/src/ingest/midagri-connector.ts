@@ -54,6 +54,38 @@ async function saveRawBatch(client: PoolClient, layerId: number, recordCount: nu
   return result.rows[0].id;
 }
 
+/**
+ * Total real de features en el servicio ArcGIS (returnCountOnly) -- permite
+ * saber si una capa quedó a medio ingestar sin asumirlo, y calcular el
+ * offset de reanudación real en vez de arrancar siempre desde 0. Necesario
+ * porque la ingesta anterior (una transacción gigante por capa) se cayó a
+ * mitad de camino (proceso matado por el entorno) y el ROLLBACK se llevó
+ * las 1.2M filas ya insertadas -- mismo patrón de pérdida total que ya
+ * vimos y arreglamos en perdida-bosque/shp-reader.
+ */
+async function contarFeaturesArcGIS(layerId: number): Promise<number> {
+  const params = new URLSearchParams({ where: "1=1", returnCountOnly: "true", f: "json" });
+  const res = await fetch(`${layerUrl(layerId)}/query?${params.toString()}`);
+  if (!res.ok) throw new Error(`MIDAGRI Georural devolvió ${res.status} al contar la capa ${layerId}`);
+  const body = (await res.json()) as { count?: number; error?: { code: number; message: string } };
+  if (body.error) throw new Error(`MIDAGRI Georural devolvió error ${body.error.code}: ${body.error.message} (count capa ${layerId})`);
+  if (typeof body.count !== "number") throw new Error(`MIDAGRI Georural no devolvió "count" para la capa ${layerId}`);
+  return body.count;
+}
+
+async function contarFilasExistentes(capa: Capa): Promise<number> {
+  const { rows } = await pool.query<{ count: string }>(`SELECT count(*) FROM catastro_rural WHERE capa = $1`, [capa]);
+  return Number(rows[0].count);
+}
+
+async function ultimoBatchId(capa: Capa): Promise<number | null> {
+  const { rows } = await pool.query<{ id: number }>(
+    `SELECT id FROM raw_midagri_batches WHERE capa = $1 ORDER BY id DESC LIMIT 1`,
+    [capa]
+  );
+  return rows[0]?.id ?? null;
+}
+
 const INSERT_COLUMNS = [
   "capa", "objectid", "area_ha", "perimetro", "id_dist", "cod_proy",
   "nom_dpto", "nom_prov", "nom_dist", "nombre", "estado", "fuente",
@@ -127,96 +159,132 @@ export interface IngestSummary {
   capas: CapaIngestSummary[];
 }
 
+const MAX_PAGES_THIS_RUN = process.env.MAX_PAGES_THIS_RUN ? Number(process.env.MAX_PAGES_THIS_RUN) : Infinity;
+
 async function ingestCapa(layerId: number): Promise<CapaIngestSummary> {
   const capa = getCapaName(layerId);
-  let offset = 0;
   const pageSize = 1000;
+
+  const totalEsperado = await contarFeaturesArcGIS(layerId);
+  const yaInsertadas = await contarFilasExistentes(capa);
+
+  let offset: number;
+  let batchId: number;
+
+  if (yaInsertadas > 0 && yaInsertadas < totalEsperado) {
+    offset = yaInsertadas;
+    const existente = await ultimoBatchId(capa);
+    if (existente === null) throw new Error(`capa ${layerId} tiene ${yaInsertadas} filas pero ningún batch registrado -- estado inconsistente`);
+    batchId = existente;
+    console.log(`[capa ${layerId} (${capa})] REANUDANDO: ya hay ${yaInsertadas}/${totalEsperado} filas, offset=${offset}`);
+  } else {
+    offset = 0;
+    const lockClient = await pool.connect();
+    try {
+      await lockClient.query("BEGIN");
+      await lockClient.query("SELECT pg_advisory_xact_lock(hashtext('catastro_rural_ingest'), hashtext($1))", [capa]);
+      await lockClient.query("DELETE FROM catastro_rural WHERE capa = $1", [capa]);
+      await lockClient.query("DELETE FROM catastro_rural_rejected WHERE capa = $1", [capa]);
+      batchId = await saveRawBatch(lockClient, layerId, 0); // actualizamos al final
+      await lockClient.query("COMMIT");
+    } catch (error) {
+      await lockClient.query("ROLLBACK");
+      throw error;
+    } finally {
+      lockClient.release();
+    }
+    console.log(`[capa ${layerId} (${capa})] Arranque limpio: 0/${totalEsperado} filas`);
+  }
+
   let pageCount = 0;
-  let totalFeatures = 0;
-  let totalInserted = 0;
+  let totalInserted = yaInsertadas;
   let totalRejected = 0;
 
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    await client.query("SELECT pg_advisory_xact_lock(hashtext('catastro_rural_ingest'), hashtext($1))", [capa]);
+  // Cada página es su propio INSERT autocommiteado (sin transacción que
+  // envuelva toda la capa) -- si el proceso muere a mitad de camino, lo ya
+  // insertado queda persistido y la próxima corrida reanuda desde el
+  // offset real en vez de perderlo todo.
+  while (offset < totalEsperado && pageCount < MAX_PAGES_THIS_RUN) {
+    const params = new URLSearchParams({
+      where: "1=1",
+      outFields: "*",
+      returnGeometry: "true",
+      outSR: "4326",
+      orderByFields: "OBJECTID",
+      resultOffset: offset.toString(),
+      resultRecordCount: pageSize.toString(),
+      f: "json",
+    });
 
-    const batchId = await saveRawBatch(client, layerId, 0); // actualizamos al final
+    console.log(`[capa ${layerId} (${capa})] Fetching page (offset=${offset})...`);
+    const res = await fetch(`${layerUrl(layerId)}/query?${params.toString()}`);
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`MIDAGRI Georural devolvió ${res.status} al consultar la capa ${layerId}: ${text}`);
+    }
 
-    await client.query("DELETE FROM catastro_rural WHERE capa = $1", [capa]);
+    const payload = (await res.json()) as EsriQueryResponse;
 
-    while (true) {
-      const params = new URLSearchParams({
-        where: "1=1",
-        outFields: "*",
-        returnGeometry: "true",
-        outSR: "4326",
-        resultOffset: offset.toString(),
-        resultRecordCount: pageSize.toString(),
-        f: "json",
-      });
+    if (payload.error) {
+      throw new Error(`MIDAGRI Georural devolvió error ${payload.error.code}: ${payload.error.message} (capa ${layerId})`);
+    }
 
-      console.log(`[capa ${layerId} (${capa})] Fetching page ${pageCount + 1} (offset=${offset})...`);
-      const res = await fetch(`${layerUrl(layerId)}/query?${params.toString()}`);
-      console.log(`[capa ${layerId}] Response status: ${res.status}`);
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(`MIDAGRI Georural devolvió ${res.status} al consultar la capa ${layerId}: ${text}`);
-      }
+    if (!Array.isArray(payload.features)) {
+      throw new Error(`MIDAGRI Georural devolvió una respuesta sin "features" (array) para la capa ${layerId}`);
+    }
 
-      const payload = (await res.json()) as EsriQueryResponse;
+    const features = payload.features;
+    console.log(`[capa ${layerId}] Features: ${features.length}, total insertado: ${totalInserted + features.length}/${totalEsperado}`);
 
-      if (payload.error) {
-        throw new Error(`MIDAGRI Georural devolvió error ${payload.error.code}: ${payload.error.message} (capa ${layerId})`);
-      }
+    const { rows, rejected } = normalizeMidagri(features, layerId);
+    totalInserted += rows.length;
+    totalRejected += rejected.length;
 
-      if (!Array.isArray(payload.features)) {
-        throw new Error(`MIDAGRI Georural devolvió una respuesta sin "features" (array) para la capa ${layerId}`);
-      }
-
-      const features = payload.features;
-      totalFeatures += features.length;
-      console.log(`[capa ${layerId}] Features: ${features.length}, exceeded: ${payload.exceededTransferLimit}, total so far: ${totalFeatures}`);
-
-      // Normalize and insert this page immediately (streaming)
-      const { rows, rejected } = normalizeMidagri(features, layerId);
-      totalInserted += rows.length;
-      totalRejected += rejected.length;
-
+    const client = await pool.connect();
+    try {
       for (let i = 0; i < rows.length; i += INSERT_BATCH_SIZE) {
         await insertBatch(client, batchId, rows.slice(i, i + INSERT_BATCH_SIZE));
       }
       for (let i = 0; i < rejected.length; i += INSERT_BATCH_SIZE) {
         await insertRejectedBatch(client, batchId, rejected.slice(i, i + INSERT_BATCH_SIZE), capa);
       }
-
-      pageCount++;
-
-      if (payload.exceededTransferLimit !== true) break;
-      offset += pageSize;
+    } finally {
+      client.release();
     }
 
-    // Update batch record count
-    await client.query("UPDATE raw_midagri_batches SET record_count = $1 WHERE id = $2", [totalFeatures, batchId]);
+    pageCount++;
+    offset += features.length;
 
-    await client.query("COMMIT");
-    console.log(`[capa ${layerId}] COMPLETED: ${totalFeatures} features, ${totalInserted} inserted, ${totalRejected} rejected in ${pageCount} pages`);
-    return { capa, layerId, batchId, filasOrigen: totalFeatures, filasInsertadas: totalInserted, filasRechazadas: totalRejected };
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
+    if (features.length === 0 || payload.exceededTransferLimit !== true) break;
   }
+
+  const terminoCapaCompleta = offset >= totalEsperado;
+  if (terminoCapaCompleta) {
+    // record_count es el total crudo de origen (válidas + rechazadas), no solo
+    // lo insertado -- offset avanza por cada feature recibida de ArcGIS.
+    await pool.query("UPDATE raw_midagri_batches SET record_count = $1 WHERE id = $2", [offset, batchId]);
+  }
+
+  console.log(
+    `[capa ${layerId}] ${terminoCapaCompleta ? "COMPLETED" : "PAUSADA (MAX_PAGES_THIS_RUN alcanzado)"}: ` +
+      `${totalInserted}/${totalEsperado} insertadas, ${totalRejected} rechazadas en esta corrida, ${pageCount} páginas`
+  );
+  return { capa, layerId, batchId, filasOrigen: totalEsperado, filasInsertadas: totalInserted, filasRechazadas: totalRejected };
 }
 
 export async function ingestMidagri(): Promise<IngestSummary> {
   const capas: CapaIngestSummary[] = [];
   const errores: string[] = [];
+  const soloLayerId = process.env.LAYER_ID !== undefined ? Number(process.env.LAYER_ID) : null;
 
-  for (let layerId = 0; layerId < TOTAL_LAYERS; layerId++) {
+  for (let layerId = soloLayerId ?? 0; layerId < (soloLayerId !== null ? soloLayerId + 1 : TOTAL_LAYERS); layerId++) {
     try {
-      capas.push(await ingestCapa(layerId));
+      const resumen = await ingestCapa(layerId);
+      capas.push(resumen);
+      // Si esta corrida se pausó por MAX_PAGES_THIS_RUN (capa grande, en
+      // tramos), no avanzar a la siguiente capa todavía -- hay que
+      // reanudar esta misma capa en la próxima corrida.
+      if (resumen.filasInsertadas < resumen.filasOrigen) break;
     } catch (error) {
       const msg = error instanceof Error ? `${error.name}: ${error.message}\n${error.stack}` : String(error);
       errores.push(`capa_${layerId}: ${msg}`);
