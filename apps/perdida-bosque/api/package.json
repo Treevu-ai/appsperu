@@ -12,7 +12,9 @@
     "ingest:poligonos": "tsx src/ingest/vector-perdida-connector.ts",
     "transfer:territories": "tsx src/ingest/transfer-territories.ts",
     "etiquetar:territorios": "tsx src/ingest/etiquetar-territorios.ts",
-    "transfer:mining-rights": "tsx src/ingest/transfer-mining-rights.ts"
+    "transfer:mining-rights": "tsx src/ingest/transfer-mining-rights.ts",
+    "backfill:mining-fecha-denuncio": "tsx src/ingest/backfill-mining-fecha-denuncio.ts",
+    "validar:causalidad-mineria": "tsx src/scripts/validar-causalidad-mineria.ts"
   },
   "dependencies": {
     "cors": "^2.8.6",

@@ -27,13 +27,14 @@ interface MiningRightRow {
   departamento: string | null;
   provincia: string | null;
   distrito: string | null;
+  fecha_denuncio: string | null;
   wkt: string;
 }
 
 async function transferMiningRights(): Promise<void> {
   const { rows } = await src.query<MiningRightRow>(
     `SELECT codigou, titular, hectareas, estado, estado_descripcion, sustancia,
-            departamento, provincia, distrito, ST_AsText(geometry) as wkt
+            departamento, provincia, distrito, fecha_denuncio::text, ST_AsText(geometry) as wkt
      FROM mining_rights WHERE geometry IS NOT NULL ORDER BY id`
   );
   console.log(`Leídas ${rows.length} concesiones mineras de geo_intersections.mining_rights`);
@@ -52,9 +53,11 @@ async function transferMiningRights(): Promise<void> {
         departamento TEXT,
         provincia TEXT,
         distrito TEXT,
+        fecha_denuncio DATE,
         geom GEOMETRY(Geometry, 4326) NOT NULL
       )
     `);
+    await client.query(`ALTER TABLE mining_rights ADD COLUMN IF NOT EXISTS fecha_denuncio DATE`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_mining_rights_geom ON mining_rights USING GIST (geom)`);
 
     // Un INSERT por fila (round-trip por fila) tarda horas con 67K filas a
@@ -71,7 +74,7 @@ async function transferMiningRights(): Promise<void> {
       let p = 1;
       for (const row of batch) {
         values.push(
-          `($${p++}, $${p++}, $${p++}, $${p++}, $${p++}, $${p++}, $${p++}, $${p++}, $${p++}, ST_GeomFromText($${p++}, 4326))`
+          `($${p++}, $${p++}, $${p++}, $${p++}, $${p++}, $${p++}, $${p++}, $${p++}, $${p++}, $${p++}, ST_GeomFromText($${p++}, 4326))`
         );
         params.push(
           row.codigou,
@@ -83,13 +86,14 @@ async function transferMiningRights(): Promise<void> {
           row.departamento,
           row.provincia,
           row.distrito,
+          row.fecha_denuncio,
           row.wkt
         );
       }
       await client.query(
-        `INSERT INTO mining_rights (codigou, titular, hectareas, estado, estado_descripcion, sustancia, departamento, provincia, distrito, geom)
+        `INSERT INTO mining_rights (codigou, titular, hectareas, estado, estado_descripcion, sustancia, departamento, provincia, distrito, fecha_denuncio, geom)
          VALUES ${values.join(",")}
-         ON CONFLICT (codigou) DO UPDATE SET geom = EXCLUDED.geom`,
+         ON CONFLICT (codigou) DO UPDATE SET geom = EXCLUDED.geom, fecha_denuncio = EXCLUDED.fecha_denuncio`,
         params
       );
       inserted += batch.length;
