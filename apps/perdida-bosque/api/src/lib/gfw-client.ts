@@ -76,18 +76,43 @@ export async function queryTreeCoverLossByYear(geostoreId: string): Promise<Perd
 
 const CORTE_EUDR_ANIO = 2020;
 
+export interface ResultadoEudr {
+  geostoreId: string | null;
+  areaHaConsultada: number | null;
+  serieAnual: PerdidaPorAnio[];
+  perdidaPostCorteHa: number;
+  cumpleCorteEudr: boolean;
+  /** "geobosques" = resuelto gratis con el pre-filtro local, sin gastar cuota de GFW; "gfw" = se consultó GFW. */
+  resueltoCon: "geobosques" | "gfw";
+}
+
 /**
  * Due diligence EUDR para una geometría de parcela: crea el geostore, saca
  * la serie anual de pérdida, y separa lo que cae antes/después del corte
  * del art. 9(1)(d) del Reglamento (UE) 2023/1115 (2020-12-31).
+ *
+ * Antes de gastar cuota de GFW (de tasa limitada), usa `preFiltro` —
+ * calculado aparte con `preFiltroGeobosques` — para resolver gratis los
+ * casos donde Geobosques ya cubre la zona y no hay ninguna clase "Pérdida"
+ * ahí: no hace falta precisión de año porque no hay pérdida que fechar.
+ * Si la zona no está cubierta por Geobosques, o si sí hay pérdida (y hace
+ * falta el año exacto para el corte), se consulta GFW igual.
  */
-export async function evaluarCorteEudr(geometry: GeoJSONPolygon): Promise<{
-  geostoreId: string;
-  areaHaConsultada: number;
-  serieAnual: PerdidaPorAnio[];
-  perdidaPostCorteHa: number;
-  cumpleCorteEudr: boolean;
-}> {
+export async function evaluarCorteEudr(
+  geometry: GeoJSONPolygon,
+  preFiltro: { cubierto: boolean; intersectaPerdida: boolean }
+): Promise<ResultadoEudr> {
+  if (preFiltro.cubierto && !preFiltro.intersectaPerdida) {
+    return {
+      geostoreId: null,
+      areaHaConsultada: null,
+      serieAnual: [],
+      perdidaPostCorteHa: 0,
+      cumpleCorteEudr: true,
+      resueltoCon: "geobosques",
+    };
+  }
+
   const { geostoreId, areaHa } = await createGeostore(geometry);
   const serieAnual = await queryTreeCoverLossByYear(geostoreId);
   const perdidaPostCorteHa = serieAnual
@@ -100,5 +125,6 @@ export async function evaluarCorteEudr(geometry: GeoJSONPolygon): Promise<{
     serieAnual,
     perdidaPostCorteHa,
     cumpleCorteEudr: perdidaPostCorteHa === 0,
+    resueltoCon: "gfw",
   };
 }

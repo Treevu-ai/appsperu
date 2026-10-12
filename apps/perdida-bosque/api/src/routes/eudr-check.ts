@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { evaluarCorteEudr } from "../lib/gfw-client.js";
+import { preFiltroGeobosques } from "../lib/geobosques-filter.js";
 import { asyncHandler } from "../lib/async-handler.js";
 
 export const eudrCheckRouter = Router();
@@ -32,14 +33,16 @@ eudrCheckRouter.post(
       return;
     }
 
-    const resultado = await evaluarCorteEudr(parsed.data.geometry);
+    const preFiltro = await preFiltroGeobosques(parsed.data.geometry);
+    const resultado = await evaluarCorteEudr(parsed.data.geometry, preFiltro);
 
     res.json({
       ...resultado,
       corte: "2020-12-31",
-      fuente: {
-        dataset: "umd_tree_cover_loss (Hansen/GLAD, University of Maryland, vía GFW Data API)",
-      },
+      fuente:
+        resultado.resueltoCon === "geobosques"
+          ? { dataset: "Geobosques (MINAM) — sin pérdida detectada en la zona cubierta, no hizo falta consultar GFW" }
+          : { dataset: "umd_tree_cover_loss (Hansen/GLAD, University of Maryland, vía GFW Data API)" },
     });
   })
 );
