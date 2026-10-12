@@ -3,8 +3,8 @@ import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import proj4 from "proj4";
-import * as shapefile from "shapefile";
 import { pool } from "../db/pool.js";
+import { ShpReader, type ShpRecord } from "./shp-reader.js";
 
 /**
  * Carga el shapefile nacional "Bosque_No_Bosque_2025" (Geobosques/MINAM) a
@@ -12,26 +12,45 @@ import { pool } from "../db/pool.js";
  * geobosques.minam.gob.pe, no automatizable) — ver migración 002 para el
  * contexto completo. Reproyecta de EPSG:32718 (UTM Zona 18S) a EPSG:4326
  * (WGS84) vértice por vértice, porque el shapefile no trae eso resuelto.
+ *
+ * Usa `ShpReader` (lector propio de acceso aleatorio O(1), ver ese archivo)
+ * en vez de la librería `shapefile` — con esa librería, "saltar" a la fila
+ * 2.66M para reanudar tardaba 52+ minutos de CPU (decodificaba cada fila
+ * saltada igual que si la fuera a insertar). Con acceso directo por offset
+ * de bytes, saltar a cualquier fila es ~0ms.
  */
 
 const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../data-local");
 const SHP_PATH = path.join(DATA_DIR, "Bosque_No_Bosque_2025.shp");
+const SHX_PATH = path.join(DATA_DIR, "Bosque_No_Bosque_2025.shx");
 const DBF_PATH = path.join(DATA_DIR, "Bosque_No_Bosque_2025.dbf");
-const DATASET = "perdida_bosque_poligono";
 const EXPECTED_RECORD_COUNT = 5_655_291;
-// Los polígonos son en su mayoría un solo pixel Landsat (30x30m, 4-5
-// vértices) — confirmado al inspeccionar las primeras filas — así que un
-// lote de 3000 sigue siendo un payload chico; prioriza menos round-trips
-// de red hacia Neon sobre el tamaño de transacción.
 const BATCH_SIZE = 3000;
 
-// EPSG:32718 = WGS 84 / UTM zone 18S (confirmado en el .prj del shapefile).
 proj4.defs("EPSG:32718", "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs");
 const toWgs84 = proj4("EPSG:32718", "WGS84");
 
 type Ring = number[][];
-type PolygonCoords = Ring[];
-type MultiPolygonCoords = PolygonCoords[];
+
+function reprojectRing(ring: Ring): Ring {
+  return ring.map(([x, y]) => {
+    const [lon, lat] = toWgs84.forward([x, y]);
+    return [lon, lat];
+  });
+}
+
+function toMultiPolygonGeoJson(geometry: ShpRecord["geometry"]): string | null {
+  if (!geometry) return null;
+  if (geometry.type === "Polygon") {
+    const coords = geometry.coordinates.map(reprojectRing);
+    if (coords.length === 0 || coords[0].length < 4) return null;
+    return JSON.stringify({ type: "MultiPolygon", coordinates: [coords] });
+  }
+  const coords = geometry.coordinates.map((poly) => poly.map(reprojectRing));
+  const valid = coords.filter((poly) => poly.length > 0 && poly[0].length >= 4);
+  if (valid.length === 0) return null;
+  return JSON.stringify({ type: "MultiPolygon", coordinates: valid });
+}
 
 interface ParsedRow {
   gridcode: number | null;
@@ -41,34 +60,7 @@ interface ParsedRow {
   geojson: string;
 }
 
-function reprojectRing(ring: Ring): Ring {
-  return ring.map(([x, y]) => {
-    const [lon, lat] = toWgs84.forward([x, y]);
-    return [lon, lat];
-  });
-}
-
-/** Normaliza Polygon o MultiPolygon reproyectado a MultiPolygon GeoJSON (string). */
-function toMultiPolygonGeoJson(geometry: GeoJSON.Geometry): string | null {
-  if (geometry.type === "Polygon") {
-    const coords = (geometry.coordinates as PolygonCoords).map(reprojectRing);
-    if (coords.length === 0 || coords[0].length < 4) return null;
-    return JSON.stringify({ type: "MultiPolygon", coordinates: [coords] });
-  }
-  if (geometry.type === "MultiPolygon") {
-    const coords = (geometry.coordinates as MultiPolygonCoords).map((poly) => poly.map(reprojectRing));
-    const valid = coords.filter((poly) => poly.length > 0 && poly[0].length >= 4);
-    if (valid.length === 0) return null;
-    return JSON.stringify({ type: "MultiPolygon", coordinates: valid });
-  }
-  return null;
-}
-
 function checksumOfFile(filePath: string): string {
-  // Archivo de 1.85GB: no lo leemos entero a memoria para el checksum, solo
-  // tamaño+mtime como huella — suficiente para trazabilidad del batch, el
-  // checksum criptográfico real no aporta nada que el conteo de filas no
-  // verifique ya.
   const stat = statSync(filePath);
   return createHash("sha256").update(`${filePath}:${stat.size}:${stat.mtimeMs}`).digest("hex");
 }
@@ -114,67 +106,71 @@ async function flushBatch(batch: ParsedRow[], batchId: number): Promise<void> {
 }
 
 async function ingestVectorPerdida(): Promise<{
+  inicioEn: number;
   procesadas: number;
   insertadas: number;
   saltadas: number;
+  terminoArchivoCompleto: boolean;
   coberturas: Record<string, number>;
 }> {
-  if (!existsSync(SHP_PATH) || !existsSync(DBF_PATH)) {
+  if (!existsSync(SHP_PATH) || !existsSync(SHX_PATH) || !existsSync(DBF_PATH)) {
     throw new Error(
-      `No se encuentra el shapefile en ${DATA_DIR}. Extrae Bosque_No_Bosque_2025.{shp,dbf,shx} ahí primero.`
+      `No se encuentra el shapefile en ${DATA_DIR}. Extrae Bosque_No_Bosque_2025.{shp,shx,dbf} ahí primero.`
     );
   }
+
+  // Punto de partida: SIEMPRE se calcula contra la base, nunca se recibe a
+  // mano — evita el error de pasar un SKIP_FEATURES desactualizado.
+  const { rows: countRows } = await pool.query<{ count: string }>(
+    `SELECT count(*) FROM perdida_bosque_poligono`
+  );
+  const inicioEn = Number(countRows[0].count);
+
+  const maxThisRun = process.env.MAX_FEATURES_THIS_RUN
+    ? Number(process.env.MAX_FEATURES_THIS_RUN)
+    : Infinity;
+  const finEn = Math.min(inicioEn + maxThisRun, EXPECTED_RECORD_COUNT);
+
+  console.log(
+    `Arrancando en la fila ${inicioEn.toLocaleString()} (ya en la base), ` +
+      `hasta ${finEn.toLocaleString()} en este tramo.`
+  );
 
   const batchId = await registerBatch(SHP_PATH);
   console.log(`Batch registrado: id=${batchId}`);
 
-  // El .dbf trae texto en UTF-8 real (confirmado leyendo bytes crudos), pero
-  // shapefile.js decodifica mal sin esta opción explícita — sin ella,
-  // "Pérdida" sale como "PÃ©rdida".
-  const source = await shapefile.open(SHP_PATH, DBF_PATH, { encoding: "utf-8" });
-
-  // Reanudación tras un corte (ver sesión 2026-10-11: el proceso en
-  // background fue matado a los 44min, con 2,664,000 filas ya confirmadas en
-  // Neon de forma transaccional). La lectura del .shp es secuencial y
-  // determinista, así que saltar los primeros N registros retoma
-  // exactamente donde quedó, sin duplicar ni perder filas.
-  const skip = Number(process.env.SKIP_FEATURES ?? 0);
-  if (skip > 0) {
-    console.log(`Saltando los primeros ${skip.toLocaleString()} registros ya cargados...`);
-    for (let i = 0; i < skip; i++) {
-      const r = await source.read();
-      if (r.done) throw new Error(`SKIP_FEATURES=${skip} pero el shapefile solo tiene ${i} registros`);
-    }
+  const reader = new ShpReader(SHP_PATH, SHX_PATH, DBF_PATH);
+  if (reader.numRecords !== EXPECTED_RECORD_COUNT) {
+    throw new Error(
+      `El .dbf tiene ${reader.numRecords} registros, se esperaban ${EXPECTED_RECORD_COUNT}`
+    );
   }
 
-  let procesadas = skip;
+  let procesadas = 0;
   let insertadas = 0;
   let saltadas = 0;
   let batch: ParsedRow[] = [];
   const coberturas: Record<string, number> = {};
   const startedAt = Date.now();
 
-  while (true) {
-    const result = await source.read();
-    if (result.done) break;
-
+  for (let n = inicioEn; n < finEn; n++) {
+    const record = reader.read(n);
     procesadas++;
-    const feature = result.value;
-    const props = (feature.properties ?? {}) as Record<string, unknown>;
-    const cobertura = String(props.Cobertura ?? props.cobertura ?? "");
+
+    const cobertura = record.cobertura;
     coberturas[cobertura] = (coberturas[cobertura] ?? 0) + 1;
 
-    const geojson = feature.geometry ? toMultiPolygonGeoJson(feature.geometry) : null;
+    const geojson = toMultiPolygonGeoJson(record.geometry);
     if (!geojson) {
       saltadas++;
       continue;
     }
 
     batch.push({
-      gridcode: typeof props.gridcode === "number" ? props.gridcode : null,
+      gridcode: record.gridcode,
       cobertura,
-      area_ha: typeof props.Area === "number" ? props.Area : null,
-      shape_area_m2: typeof props.Shape_Area === "number" ? props.Shape_Area : null,
+      area_ha: record.areaHa,
+      shape_area_m2: record.shapeArea,
       geojson,
     });
 
@@ -183,12 +179,13 @@ async function ingestVectorPerdida(): Promise<{
       insertadas += batch.length;
       batch = [];
 
-      if (insertadas % 50_000 < BATCH_SIZE) {
+      if (insertadas % 100_000 < BATCH_SIZE) {
         const elapsedS = (Date.now() - startedAt) / 1000;
-        const pct = ((procesadas / EXPECTED_RECORD_COUNT) * 100).toFixed(1);
+        const totalProcesadas = inicioEn + procesadas;
+        const pct = ((totalProcesadas / EXPECTED_RECORD_COUNT) * 100).toFixed(1);
         console.log(
-          `${procesadas.toLocaleString()} / ${EXPECTED_RECORD_COUNT.toLocaleString()} procesadas (${pct}%), ` +
-            `${insertadas.toLocaleString()} insertadas, ${saltadas} saltadas, ${elapsedS.toFixed(0)}s transcurridos`
+          `${totalProcesadas.toLocaleString()} / ${EXPECTED_RECORD_COUNT.toLocaleString()} procesadas (${pct}%), ` +
+            `${insertadas.toLocaleString()} insertadas en este tramo, ${saltadas} saltadas, ${elapsedS.toFixed(0)}s transcurridos`
         );
       }
     }
@@ -199,10 +196,15 @@ async function ingestVectorPerdida(): Promise<{
     insertadas += batch.length;
   }
 
-  console.log("Reindexando (VACUUM ANALYZE)...");
-  await pool.query("VACUUM ANALYZE perdida_bosque_poligono");
+  reader.close();
 
-  return { procesadas, insertadas, saltadas, coberturas };
+  const terminoArchivoCompleto = finEn >= EXPECTED_RECORD_COUNT;
+  if (terminoArchivoCompleto) {
+    console.log("Reindexando (VACUUM ANALYZE)...");
+    await pool.query("VACUUM ANALYZE perdida_bosque_poligono");
+  }
+
+  return { inicioEn, procesadas, insertadas, saltadas, terminoArchivoCompleto, coberturas };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
