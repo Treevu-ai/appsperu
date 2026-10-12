@@ -11,7 +11,8 @@
     "ingest:perdida": "tsx src/ingest/geobosques-connector.ts",
     "ingest:poligonos": "tsx src/ingest/vector-perdida-connector.ts",
     "transfer:territories": "tsx src/ingest/transfer-territories.ts",
-    "etiquetar:territorios": "tsx src/ingest/etiquetar-territorios.ts"
+    "etiquetar:territorios": "tsx src/ingest/etiquetar-territorios.ts",
+    "transfer:mining-rights": "tsx src/ingest/transfer-mining-rights.ts"
   },
   "dependencies": {
     "cors": "^2.8.6",
