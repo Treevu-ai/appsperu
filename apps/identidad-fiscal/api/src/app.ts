@@ -7,6 +7,7 @@ import { oeceFichaRouter } from "./routes/oece-ficha.js";
 import { rucConsultaMasivaRouter } from "./routes/ruc-consulta-masiva.js";
 import { exportacionesFobRouter } from "./routes/exportaciones-fob.js";
 import { financierasInformalesRouter } from "./routes/financieras-informales.js";
+import { eudrLegalidadRouter } from "./routes/eudr-legalidad.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 import { pool } from "./db/pool.js";
 
@@ -33,6 +34,7 @@ export function createApp() {
   app.use("/api/ruc-consulta-masiva", rucConsultaMasivaRouter);
   app.use("/api/exportaciones-fob", exportacionesFobRouter);
   app.use("/api/financieras-informales", financierasInformalesRouter);
+  app.use("/api/eudr-legalidad", eudrLegalidadRouter);
 
   // Debe ir al final: sin esto, un rechazo dentro de un handler async se
   // vuelve un unhandled rejection que tumba el proceso entero.
