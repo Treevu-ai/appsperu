@@ -9,7 +9,8 @@
     "start": "node dist/index.js",
     "migrate": "tsx src/db/migrate.ts",
     "ingest:perdida": "tsx src/ingest/geobosques-connector.ts",
-    "ingest:poligonos": "tsx src/ingest/vector-perdida-connector.ts"
+    "ingest:poligonos": "tsx src/ingest/vector-perdida-connector.ts",
+    "transfer:territories": "tsx src/ingest/transfer-territories.ts"
   },
   "dependencies": {
     "cors": "^2.8.6",
