@@ -46,6 +46,7 @@ async function transferPredios(): Promise<void> {
   console.log(`Total predio_rural en origen: ${totalRows[0].count}`);
 
   const client = await dst.connect();
+  client.on("error", (err) => console.error("Error inesperado en conexión activa (dst):", err.message));
   try {
     await client.query(`
       CREATE TABLE IF NOT EXISTS predios_rurales (
@@ -82,6 +83,7 @@ async function transferPredios(): Promise<void> {
     if (rows.length === 0) break;
 
     const client = await dst.connect();
+    client.on("error", (err) => console.error("Error inesperado en conexión activa (dst):", err.message));
     try {
       for (let i = 0; i < rows.length; i += BATCH_SIZE) {
         const batch = rows.slice(i, i + BATCH_SIZE);

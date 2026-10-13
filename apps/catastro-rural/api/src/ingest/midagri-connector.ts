@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
 import type { PoolClient } from "pg";
-import { pool } from "../db/pool.js";
+import { pool, connectSafe } from "../db/pool.js";
 import { normalizeMidagri, type CanonicalPredio, type Capa, type RejectedRow, LAYER_NAMES } from "./normalize-midagri.js";
 
 const BASE_URL = "https://georural.midagri.gob.pe/geoservicios/rest/services/public/Catastro_Rural/MapServer";
@@ -183,7 +183,7 @@ async function ingestCapa(layerId: number): Promise<CapaIngestSummary> {
   // conteo de partida y pisarse: confirmado en vivo, generó filas
   // duplicadas y disparó el branch de "arranque limpio" (DELETE) mientras
   // otro proceso seguía insertando, perdiendo ~3M filas ya transferidas.
-  const lockClient = await pool.connect();
+  const lockClient = await connectSafe();
   const lockKey = Number(BigInt.asIntN(32, BigInt(`0x${Buffer.from(capa).toString("hex")}`.slice(0, 10))));
   const { rows: lockRows } = await lockClient.query<{ locked: boolean }>(
     "SELECT pg_try_advisory_lock(hashtext('catastro_rural_ingest'), $1) AS locked",
@@ -214,7 +214,7 @@ async function ingestCapa(layerId: number): Promise<CapaIngestSummary> {
       console.log(`[capa ${layerId} (${capa})] REANUDANDO: ya hay ${yaInsertadas}/${totalEsperado} filas únicas, offset=${offset}`);
     } else {
       offset = 0;
-      const initClient = await pool.connect();
+      const initClient = await connectSafe();
       try {
         await initClient.query("BEGIN");
         await initClient.query("DELETE FROM catastro_rural WHERE capa = $1", [capa]);
@@ -291,7 +291,7 @@ async function paginarCapa(
     totalInserted += rows.length;
     totalRejected += rejected.length;
 
-    const client = await pool.connect();
+    const client = await connectSafe();
     try {
       for (let i = 0; i < rows.length; i += INSERT_BATCH_SIZE) {
         await insertBatch(client, batchId, rows.slice(i, i + INSERT_BATCH_SIZE));

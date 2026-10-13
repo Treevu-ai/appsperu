@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
-import { pool } from "../db/pool.js";
+import { pool, connectSafe } from "../db/pool.js";
 
 const BASE_URL = "https://geobosques.minam.gob.pe/geobosque/controller/consulta.php";
 
@@ -86,7 +86,7 @@ async function fetchConsulta(nivel: string, ubigeo: string): Promise<{ raw: stri
 async function ingestNivel(nivel: string, ubigeo: string): Promise<number> {
   const { raw, filas } = await fetchConsulta(nivel, ubigeo);
 
-  const client = await pool.connect();
+  const client = await connectSafe();
   try {
     const { rows: batchRows } = await client.query<{ id: number }>(
       `INSERT INTO raw_geobosques_batches (nivel, ubigeo, source_url, checksum, record_count)

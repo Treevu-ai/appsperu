@@ -27,6 +27,7 @@ async function transferTerritories(): Promise<void> {
   console.log(`Leídos ${rows.length} distritos de geo_intersections.territories`);
 
   const client = await dst.connect();
+  client.on("error", (err) => console.error("Error inesperado en conexión activa (dst):", err.message));
   try {
     await client.query("BEGIN");
     for (const row of rows) {

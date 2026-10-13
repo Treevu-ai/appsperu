@@ -3,7 +3,7 @@ import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import proj4 from "proj4";
-import { pool } from "../db/pool.js";
+import { pool, connectSafe } from "../db/pool.js";
 import { ShpReader, type ShpRecord } from "./shp-reader.js";
 
 /**
@@ -87,7 +87,7 @@ async function flushBatch(batch: ParsedRow[], batchId: number): Promise<void> {
     params.push(row.gridcode, row.cobertura, row.area_ha, row.shape_area_m2, row.geojson, batchId);
   }
 
-  const client = await pool.connect();
+  const client = await connectSafe();
   try {
     await client.query("BEGIN");
     await client.query(

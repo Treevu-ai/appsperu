@@ -42,6 +42,7 @@ async function transferMiningRights(): Promise<void> {
   console.log(`Leídas ${rows.length} concesiones mineras de geo_intersections.mining_rights`);
 
   const client = await dst.connect();
+  client.on("error", (err) => console.error("Error inesperado en conexión activa (dst):", err.message));
   try {
     await client.query("BEGIN");
     await client.query(`

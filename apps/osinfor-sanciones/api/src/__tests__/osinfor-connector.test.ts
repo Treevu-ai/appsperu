@@ -2,10 +2,12 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const queryMock = vi.fn();
 const releaseMock = vi.fn();
-const connectMock = vi.fn(() => Promise.resolve({ query: queryMock, release: releaseMock }));
+const onMock = vi.fn();
+const connectMock = vi.fn(() => Promise.resolve({ query: queryMock, release: releaseMock, on: onMock }));
 
 vi.mock("../db/pool.js", () => ({
   pool: { connect: connectMock, query: queryMock },
+  connectSafe: connectMock,
 }));
 
 const { ingestOsinforSanciones } = await import("../ingest/osinfor-connector.js");

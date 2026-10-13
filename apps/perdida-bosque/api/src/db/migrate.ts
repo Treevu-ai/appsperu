@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { pool } from "./pool.js";
+import { pool, connectSafe } from "./pool.js";
 
 const migrationsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "migrations");
 
@@ -29,7 +29,7 @@ async function migrate() {
     const sql = readFileSync(path.join(migrationsDir, file), "utf-8");
     console.log(`Aplicando migración: ${file}`);
 
-    const client = await pool.connect();
+    const client = await connectSafe();
     try {
       await client.query("BEGIN");
       await client.query(sql);

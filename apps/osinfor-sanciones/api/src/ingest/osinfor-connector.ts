@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
-import { pool } from "../db/pool.js";
+import { pool, connectSafe } from "../db/pool.js";
 
 /**
  * Sanciones emitidas por OSINFOR a títulos habilitantes forestales.
@@ -110,7 +110,7 @@ const INSERT_COLUMNS = [
 export async function ingestOsinforSanciones(): Promise<{ batchId: number; filasInsertadas: number }> {
   const { raw, rows } = await fetchSanciones();
 
-  const client = await pool.connect();
+  const client = await connectSafe();
   try {
     const { rows: batchRows } = await client.query<{ id: number }>(
       `INSERT INTO raw_osinfor_batches (source_url, checksum, record_count) VALUES ($1, $2, $3) RETURNING id`,

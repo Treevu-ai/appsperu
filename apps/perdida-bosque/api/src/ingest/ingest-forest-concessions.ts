@@ -116,6 +116,7 @@ async function insertBatch(client: import("pg").PoolClient, rows: readonly Conce
 
 async function ingestForestConcessions(): Promise<void> {
   const client = await dst.connect();
+  client.on("error", (err) => console.error("Error inesperado en conexión activa (dst):", err.message));
   try {
     await client.query("BEGIN");
     await client.query(`
