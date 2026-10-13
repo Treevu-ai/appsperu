@@ -42,10 +42,16 @@ beforeEach(() => {
   connectMock.mockClear();
   fetchMock.mockReset();
   queryMock.mockImplementation((sql: string) => {
+    if (sql.includes("pg_try_advisory_lock")) {
+      return Promise.resolve({ rows: [{ locked: true }] });
+    }
+    if (sql.includes("pg_advisory_unlock")) {
+      return Promise.resolve({ rows: [{ unlocked: true }] });
+    }
     if (sql.includes("INSERT INTO raw_midagri_batches")) {
       return Promise.resolve({ rows: [{ id: 1 }] });
     }
-    if (sql.includes("SELECT count(*) FROM catastro_rural")) {
+    if (sql.includes("count(DISTINCT objectid) FROM catastro_rural")) {
       // Postgres SIEMPRE devuelve una fila para COUNT(*), incluso en 0.
       return Promise.resolve({ rows: [{ count: "0" }] });
     }
@@ -147,13 +153,38 @@ describe("ingestMidagri", () => {
     expect(updateCalls[0][1]).toEqual([2, 1]); // 2 features de origen (1 insertada + 1 rechazada), no 1
   });
 
-  it("usa advisory lock por capa (hashtext del nombre de capa)", async () => {
+  it("toma y libera un advisory lock de sesión por capa, balanceado", async () => {
     await ingestMidagri();
 
-    const lockCalls = queryMock.mock.calls.filter(([sql]) => sql.includes("pg_advisory_xact_lock"));
+    const lockCalls = queryMock.mock.calls.filter(([sql]) => sql.includes("pg_try_advisory_lock"));
+    const unlockCalls = queryMock.mock.calls.filter(([sql]) => sql.includes("pg_advisory_unlock"));
     expect(lockCalls).toHaveLength(10);
-    // Verifica que el segundo parámetro sea el nombre de la capa
-    expect(lockCalls[5][1]).toEqual(["comunidades_campesinas"]);
-    expect(lockCalls[6][1]).toEqual(["comunidades_nativas"]);
+    expect(unlockCalls).toHaveLength(10);
+    // Cada lock/unlock usa la misma clave numérica derivada del nombre de capa
+    expect(lockCalls[0][1]).toEqual(unlockCalls[0][1]);
+  });
+
+  it("no reingesta una capa que ya tiene todas sus filas únicas (evita el bug de arranque-limpio en falso)", async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (url.includes("/MapServer/0/query") && url.includes("returnCountOnly=true")) return Promise.resolve(jsonResponse({ count: 5 }));
+      if (url.includes("returnCountOnly=true")) return Promise.resolve(jsonResponse({ count: 0 }));
+      return Promise.resolve(jsonResponse({ features: [], exceededTransferLimit: false }));
+    });
+    queryMock.mockImplementation((sql: string) => {
+      if (sql.includes("pg_try_advisory_lock")) return Promise.resolve({ rows: [{ locked: true }] });
+      if (sql.includes("pg_advisory_unlock")) return Promise.resolve({ rows: [{ unlocked: true }] });
+      if (sql.includes("count(DISTINCT objectid) FROM catastro_rural")) return Promise.resolve({ rows: [{ count: "5" }] });
+      if (sql.includes("SELECT id FROM raw_midagri_batches")) return Promise.resolve({ rows: [{ id: 7 }] });
+      return Promise.resolve({ rows: [] });
+    });
+
+    const summary = await ingestMidagri();
+    const predioRural = summary.capas.find((c) => c.layerId === 0);
+
+    expect(predioRural?.filasInsertadas).toBe(5);
+    const deleteCalls = queryMock.mock.calls.filter(([sql]) => sql.includes("DELETE FROM catastro_rural WHERE"));
+    expect(deleteCalls).toHaveLength(0); // ninguna capa debe borrarse si ya está completa
+    const fetchCalls = fetchMock.mock.calls.filter(([url]) => typeof url === "string" && !url.includes("returnCountOnly"));
+    expect(fetchCalls.filter((c) => c[0].includes("/MapServer/0/query"))).toHaveLength(0); // no vuelve a paginar
   });
 });

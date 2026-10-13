@@ -73,8 +73,15 @@ async function contarFeaturesArcGIS(layerId: number): Promise<number> {
   return body.count;
 }
 
+// DISTINCT objectid, no count(*) crudo -- una corrida que se corta a mitad
+// de página puede reinsertar un rango ya presente; con ON CONFLICT DO
+// NOTHING eso ya no duplica filas, pero sigue siendo necesario contar lo
+// realmente único para decidir el offset real de reanudación.
 async function contarFilasExistentes(capa: Capa): Promise<number> {
-  const { rows } = await pool.query<{ count: string }>(`SELECT count(*) FROM catastro_rural WHERE capa = $1`, [capa]);
+  const { rows } = await pool.query<{ count: string }>(
+    `SELECT count(DISTINCT objectid) FROM catastro_rural WHERE capa = $1`,
+    [capa]
+  );
   return Number(rows[0].count);
 }
 
@@ -134,7 +141,11 @@ async function insertBatch(client: PoolClient, batchId: number, rows: readonly C
     );
   });
 
-  await client.query(`INSERT INTO catastro_rural (${INSERT_COLUMNS.join(",")}) VALUES ${tuples.join(",")}`, values);
+  await client.query(
+    `INSERT INTO catastro_rural (${INSERT_COLUMNS.join(",")}) VALUES ${tuples.join(",")}
+     ON CONFLICT (capa, objectid) DO NOTHING`,
+    values
+  );
 }
 
 async function insertRejectedBatch(client: PoolClient, batchId: number, rejected: readonly RejectedRow[], capa: Capa): Promise<void> {
@@ -165,37 +176,77 @@ async function ingestCapa(layerId: number): Promise<CapaIngestSummary> {
   const capa = getCapaName(layerId);
   const pageSize = 1000;
 
-  const totalEsperado = await contarFeaturesArcGIS(layerId);
-  const yaInsertadas = await contarFilasExistentes(capa);
-
-  let offset: number;
-  let batchId: number;
-
-  if (yaInsertadas > 0 && yaInsertadas < totalEsperado) {
-    offset = yaInsertadas;
-    const existente = await ultimoBatchId(capa);
-    if (existente === null) throw new Error(`capa ${layerId} tiene ${yaInsertadas} filas pero ningún batch registrado -- estado inconsistente`);
-    batchId = existente;
-    console.log(`[capa ${layerId} (${capa})] REANUDANDO: ya hay ${yaInsertadas}/${totalEsperado} filas, offset=${offset}`);
-  } else {
-    offset = 0;
-    const lockClient = await pool.connect();
-    try {
-      await lockClient.query("BEGIN");
-      await lockClient.query("SELECT pg_advisory_xact_lock(hashtext('catastro_rural_ingest'), hashtext($1))", [capa]);
-      await lockClient.query("DELETE FROM catastro_rural WHERE capa = $1", [capa]);
-      await lockClient.query("DELETE FROM catastro_rural_rejected WHERE capa = $1", [capa]);
-      batchId = await saveRawBatch(lockClient, layerId, 0); // actualizamos al final
-      await lockClient.query("COMMIT");
-    } catch (error) {
-      await lockClient.query("ROLLBACK");
-      throw error;
-    } finally {
-      lockClient.release();
-    }
-    console.log(`[capa ${layerId} (${capa})] Arranque limpio: 0/${totalEsperado} filas`);
+  // Lock de SESIÓN (no transaccional) tomado con pg_try_advisory_lock y
+  // sostenido durante TODA la ingesta de esta capa -- sin esto, dos
+  // corridas concurrentes de la misma capa (ej. un relanzamiento sobre un
+  // proceso "killed" que en realidad seguía vivo) pueden leer el mismo
+  // conteo de partida y pisarse: confirmado en vivo, generó filas
+  // duplicadas y disparó el branch de "arranque limpio" (DELETE) mientras
+  // otro proceso seguía insertando, perdiendo ~3M filas ya transferidas.
+  const lockClient = await pool.connect();
+  const lockKey = Number(BigInt.asIntN(32, BigInt(`0x${Buffer.from(capa).toString("hex")}`.slice(0, 10))));
+  const { rows: lockRows } = await lockClient.query<{ locked: boolean }>(
+    "SELECT pg_try_advisory_lock(hashtext('catastro_rural_ingest'), $1) AS locked",
+    [lockKey]
+  );
+  if (!lockRows[0].locked) {
+    lockClient.release();
+    throw new Error(`capa ${layerId} (${capa}) ya tiene otra ingesta en curso (lock no disponible) -- no se relanza en paralelo`);
   }
 
+  try {
+    const totalEsperado = await contarFeaturesArcGIS(layerId);
+    const yaInsertadas = await contarFilasExistentes(capa);
+
+    let offset: number;
+    let batchId: number;
+
+    if (yaInsertadas >= totalEsperado && yaInsertadas > 0) {
+      const existente = await ultimoBatchId(capa);
+      if (existente === null) throw new Error(`capa ${layerId} tiene ${yaInsertadas} filas pero ningún batch registrado -- estado inconsistente`);
+      console.log(`[capa ${layerId} (${capa})] YA COMPLETA: ${yaInsertadas}/${totalEsperado} filas únicas, nada que hacer.`);
+      return { capa, layerId, batchId: existente, filasOrigen: totalEsperado, filasInsertadas: yaInsertadas, filasRechazadas: 0 };
+    } else if (yaInsertadas > 0) {
+      offset = yaInsertadas;
+      const existente = await ultimoBatchId(capa);
+      if (existente === null) throw new Error(`capa ${layerId} tiene ${yaInsertadas} filas pero ningún batch registrado -- estado inconsistente`);
+      batchId = existente;
+      console.log(`[capa ${layerId} (${capa})] REANUDANDO: ya hay ${yaInsertadas}/${totalEsperado} filas únicas, offset=${offset}`);
+    } else {
+      offset = 0;
+      const initClient = await pool.connect();
+      try {
+        await initClient.query("BEGIN");
+        await initClient.query("DELETE FROM catastro_rural WHERE capa = $1", [capa]);
+        await initClient.query("DELETE FROM catastro_rural_rejected WHERE capa = $1", [capa]);
+        batchId = await saveRawBatch(initClient, layerId, 0); // actualizamos al final
+        await initClient.query("COMMIT");
+      } catch (error) {
+        await initClient.query("ROLLBACK");
+        throw error;
+      } finally {
+        initClient.release();
+      }
+      console.log(`[capa ${layerId} (${capa})] Arranque limpio: 0/${totalEsperado} filas`);
+    }
+
+    return await paginarCapa(layerId, capa, pageSize, offset, batchId, totalEsperado, yaInsertadas);
+  } finally {
+    await lockClient.query("SELECT pg_advisory_unlock(hashtext('catastro_rural_ingest'), $1)", [lockKey]);
+    lockClient.release();
+  }
+}
+
+async function paginarCapa(
+  layerId: number,
+  capa: Capa,
+  pageSize: number,
+  offsetInicial: number,
+  batchId: number,
+  totalEsperado: number,
+  yaInsertadas: number
+): Promise<CapaIngestSummary> {
+  let offset = offsetInicial;
   let pageCount = 0;
   let totalInserted = yaInsertadas;
   let totalRejected = 0;
