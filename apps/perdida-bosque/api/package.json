@@ -18,7 +18,9 @@
     "ingest:forest-concessions": "tsx src/ingest/ingest-forest-concessions.ts",
     "cruce:concesiones-forestales": "tsx src/scripts/cruce-concesiones-forestales.ts",
     "transfer:predios-rurales": "tsx src/ingest/transfer-predios-rurales.ts",
-    "cruce:predios-deforestacion": "tsx src/scripts/cruce-predios-deforestacion.ts"
+    "cruce:predios-deforestacion": "tsx src/scripts/cruce-predios-deforestacion.ts",
+    "indice:riesgo-territorial-extractivo": "tsx src/scripts/indice-riesgo-territorial-extractivo.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "cors": "^2.8.6",
@@ -39,6 +41,7 @@
     "@types/proj4": "^2.5.6",
     "@types/shapefile": "^0.6.4",
     "tsx": "^4.16.2",
-    "typescript": "^5.5.3"
+    "typescript": "^5.5.3",
+    "vitest": "^4.1.10"
   }
 }
