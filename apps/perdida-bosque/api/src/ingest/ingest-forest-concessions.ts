@@ -26,6 +26,7 @@ const PAGE_SIZE = 200;
 const dstUrl = process.env.DATABASE_URL;
 if (!dstUrl) throw new Error("DATABASE_URL no está definida.");
 const dst = new Pool({ connectionString: dstUrl });
+dst.on("error", (err) => console.error("Error inesperado en conexión idle (dst):", err.message));
 
 function apiKey(): string {
   const key = process.env.GFW_API_KEY;

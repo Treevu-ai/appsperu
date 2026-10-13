@@ -22,6 +22,12 @@ if (!dstUrl) throw new Error("DATABASE_URL no está definida.");
 const src = new Pool({ connectionString: srcUrl });
 const dst = new Pool({ connectionString: dstUrl });
 
+// Sin estos listeners, un error en una conexión idle (ej. reset de red de
+// Neon) tumba el proceso Node completo en vez de solo descartar esa
+// conexión -- confirmado en vivo durante la ingesta de catastro-rural.
+src.on("error", (err) => console.error("Error inesperado en conexión idle (src):", err.message));
+dst.on("error", (err) => console.error("Error inesperado en conexión idle (dst):", err.message));
+
 interface PredioRuralRow {
   objectid: number | null;
   area_ha: number | null;

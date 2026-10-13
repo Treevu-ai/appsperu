@@ -9,6 +9,8 @@ if (!dstUrl) throw new Error("DATABASE_URL no está definida.");
 
 const src = new Pool({ connectionString: srcUrl });
 const dst = new Pool({ connectionString: dstUrl });
+src.on("error", (err) => console.error("Error inesperado en conexión idle (src):", err.message));
+dst.on("error", (err) => console.error("Error inesperado en conexión idle (dst):", err.message));
 
 interface TerritoryRow {
   ubigeo: string;
