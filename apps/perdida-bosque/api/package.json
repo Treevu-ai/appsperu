@@ -16,7 +16,9 @@
     "backfill:mining-fecha-denuncio": "tsx src/ingest/backfill-mining-fecha-denuncio.ts",
     "validar:causalidad-mineria": "tsx src/scripts/validar-causalidad-mineria.ts",
     "ingest:forest-concessions": "tsx src/ingest/ingest-forest-concessions.ts",
-    "cruce:concesiones-forestales": "tsx src/scripts/cruce-concesiones-forestales.ts"
+    "cruce:concesiones-forestales": "tsx src/scripts/cruce-concesiones-forestales.ts",
+    "transfer:predios-rurales": "tsx src/ingest/transfer-predios-rurales.ts",
+    "cruce:predios-deforestacion": "tsx src/scripts/cruce-predios-deforestacion.ts"
   },
   "dependencies": {
     "cors": "^2.8.6",
