@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildPath, buildQuery, findTool, invokeTool, runRastroLlamar, validateArgs } from "../index.js";
+import { buildPath, buildQuery, findTool, invokeTool, resolveStdioEnv, runRastroLlamar, validateArgs } from "../index.js";
 import { TOOL_CATALOG, type ToolSpec } from "../catalog.js";
 import { z } from "zod";
 
@@ -222,4 +222,16 @@ describe("runRastroLlamar", () => {
     expect(result.isError).toBe(false);
     vi.unstubAllGlobals();
   });
+});
+
+describe("resolveStdioEnv", () => {
+  it("sin NEON_DATABASE_URL no pasa env: el fallback HTTP a los Express locales queda intacto", () => {
+    expect(resolveStdioEnv({ PATH: "x" } as never)).toBeUndefined();
+  });
+
+  it("con NEON_DATABASE_URL pasa el entorno para que los handlers corran contra Neon (paridad Worker)", () => {
+    const env = resolveStdioEnv({ NEON_DATABASE_URL: "postgres://x/y", MCP_API_KEY: "k" } as never);
+    expect(env).toMatchObject({ NEON_DATABASE_URL: "postgres://x/y" });
+  });
+
 });

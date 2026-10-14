@@ -15,6 +15,8 @@ import * as actividad_empresarial_crossref from "./actividad-empresarial/crossre
 import * as actividad_empresarial_empresas from "./actividad-empresarial/empresas.js";
 import * as areas_protegidas_areas from "./areas-protegidas/areas.js";
 import * as autoridades_electas_autoridades from "./autoridades-electas/autoridades.js";
+import * as bcrp_comercio_exterior_benchmark_externo from "./bcrp-comercio-exterior/benchmark-externo.js";
+import * as bcrp_comercio_exterior_contexto_paises from "./bcrp-comercio-exterior/contexto-paises.js";
 import * as bcrp_comercio_exterior_meta from "./bcrp-comercio-exterior/meta.js";
 import * as bcrp_comercio_exterior_trade from "./bcrp-comercio-exterior/trade.js";
 import * as bcrp_la_libertad_indicadores from "./bcrp-la-libertad/indicadores.js";
@@ -56,6 +58,7 @@ import * as geo_intersections_community_crossref from "./geo-intersections/commu
 import * as geo_intersections_intersections from "./geo-intersections/intersections.js";
 import * as identidad_fiscal_contribuyentes from "./identidad-fiscal/contribuyentes.js";
 import * as identidad_fiscal_crossref from "./identidad-fiscal/crossref.js";
+import * as identidad_fiscal_eudr_legalidad from "./identidad-fiscal/eudr-legalidad.js";
 import * as identidad_fiscal_exportaciones_fob from "./identidad-fiscal/exportaciones-fob.js";
 import * as identidad_fiscal_ficha_ruc from "./identidad-fiscal/ficha-ruc.js";
 import * as identidad_fiscal_financieras_informales from "./identidad-fiscal/financieras-informales.js";
@@ -146,6 +149,7 @@ import * as servicios_salud_crossref from "./servicios-salud/crossref.js";
 import * as servicios_salud_ipress from "./servicios-salud/ipress.js";
 import * as sinadef_defunciones_defunciones from "./sinadef-defunciones/defunciones.js";
 import * as smv_sanciones_sanciones from "./smv-sanciones/sanciones.js";
+import * as sunat_aduanas_comercio_bienes from "./sunat-aduanas/comercio-bienes.js";
 import * as sunat_aduanas_meta from "./sunat-aduanas/meta.js";
 import * as sunat_aduanas_ports from "./sunat-aduanas/ports.js";
 import * as sunedu_licenciamiento_licenciamiento from "./sunedu-licenciamiento/licenciamiento.js";
@@ -166,6 +170,8 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "actividad-empresarial/empresas": actividad_empresarial_empresas,
   "areas-protegidas/areas": areas_protegidas_areas,
   "autoridades-electas/autoridades": autoridades_electas_autoridades,
+  "bcrp-comercio-exterior/benchmark-externo": bcrp_comercio_exterior_benchmark_externo,
+  "bcrp-comercio-exterior/contexto-paises": bcrp_comercio_exterior_contexto_paises,
   "bcrp-comercio-exterior/meta": bcrp_comercio_exterior_meta,
   "bcrp-comercio-exterior/trade": bcrp_comercio_exterior_trade,
   "bcrp-la-libertad/indicadores": bcrp_la_libertad_indicadores,
@@ -207,6 +213,7 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "geo-intersections/intersections": geo_intersections_intersections,
   "identidad-fiscal/contribuyentes": identidad_fiscal_contribuyentes,
   "identidad-fiscal/crossref": identidad_fiscal_crossref,
+  "identidad-fiscal/eudr-legalidad": identidad_fiscal_eudr_legalidad,
   "identidad-fiscal/exportaciones-fob": identidad_fiscal_exportaciones_fob,
   "identidad-fiscal/ficha-ruc": identidad_fiscal_ficha_ruc,
   "identidad-fiscal/financieras-informales": identidad_fiscal_financieras_informales,
@@ -297,6 +304,7 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "servicios-salud/ipress": servicios_salud_ipress,
   "sinadef-defunciones/defunciones": sinadef_defunciones_defunciones,
   "smv-sanciones/sanciones": smv_sanciones_sanciones,
+  "sunat-aduanas/comercio-bienes": sunat_aduanas_comercio_bienes,
   "sunat-aduanas/meta": sunat_aduanas_meta,
   "sunat-aduanas/ports": sunat_aduanas_ports,
   "sunedu-licenciamiento/licenciamiento": sunedu_licenciamiento_licenciamiento,

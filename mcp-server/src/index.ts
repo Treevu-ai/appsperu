@@ -130,7 +130,25 @@ export async function invokeTool(
 }
 
 /**
- * En vez de registrar un tool MCP por cada una de las 209 entradas de
+ * Resuelve el env que se pasa a los handlers cuando el servidor arranca en stdio.
+ *
+ * Histórico: `main()` arrancaba sin env, así que en stdio TODOS los tools caían
+ * al fallback HTTP contra los Express en localhost. Ese sigue siendo el modo
+ * para el clásico "tengo las apps corriendo en local". Pero los tools MCP-only
+ * (los que no tienen ruta Express — ver `MCP_ONLY_PATHS` en
+ * `routes-vs-catalog.test.ts`) no tienen a dónde hacer proxy: sin env, en stdio
+ * quedarían inusables en terminal.
+ *
+ * Con `NEON_DATABASE_URL` en el entorno (modo paridad producción), se pasa el
+ * entorno y los tools con handler ejecutan SQL contra Neon igual que el Worker.
+ * Sin la variable, el comportamiento histórico queda intacto: proxy HTTP.
+ */
+export function resolveStdioEnv(env: NodeJS.ProcessEnv): Record<string, unknown> | undefined {
+  return env.NEON_DATABASE_URL ? { ...env } : undefined;
+}
+
+/**
+ * En vez de registrar un tool MCP por cada una de las entradas de
  * `TOOL_CATALOG` (costo de contexto fijo por sesión, aunque el cliente use 2 o 3),
  * se exponen 3 meta-tools: `rastro_buscar_tools` descubre el nombre exacto por
  * palabra clave/app, `rastro_llamar` ejecuta ese nombre contra la API real vía la
@@ -364,7 +382,7 @@ export function buildMcpServer(activeKey: ApiKeyRecord | null, env?: Record<stri
 
 async function main(): Promise<void> {
   const activeKey = await resolveActiveKey();
-  const server = buildMcpServer(activeKey);
+  const server = buildMcpServer(activeKey, resolveStdioEnv(process.env));
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

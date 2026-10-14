@@ -17,7 +17,10 @@
     "migrate": "tsx src/db/migrate.ts",
     "create-key": "tsx src/cli/create-key.ts",
     "generate-keys-batch": "tsx scripts/generate-keys-batch.ts",
-    "dev:http": "cross-env MCP_TRANSPORT=http tsx src/index.ts"
+    "dev:http": "cross-env MCP_TRANSPORT=http tsx src/index.ts",
+    "ingest:comercio-bienes": "tsx src/ingest/mincetur-comercio-bienes.ts",
+    "ingest:comtrade": "tsx src/ingest/comtrade-benchmark.ts",
+    "ingest:wdi": "tsx src/ingest/wdi-contexto.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

@@ -1698,6 +1698,23 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
   {
+    name: "identidad_fiscal_eudr_legalidad",
+    app: "identidad-fiscal",
+    handler: "eudr-legalidad:list",
+    description:
+      "Riesgo de legalidad EUDR (art. 10 del Reglamento UE 2023/1115) para el titular (RUC) de una " +
+      "parcela/organización: parcelas EUDR registradas en identidad-fiscal + sanciones ambientales OEFA " +
+      "(infracciones-ambientales) + inhabilitaciones y multas OSCE (proveedores-sancionados). Es una señal de " +
+      "riesgo contra fuentes públicas, NO una certificación: la ausencia de hallazgos solo indica que no hay " +
+      "sanción registrada en esas fuentes. El enriquecimiento cruzado es opcional: si no hay conexión a las " +
+      "bases cruzadas, la respuesta trae `enriquecimiento.* = ENRIQUECIMIENTO_NO_CONFIGURADO` en vez de fallar.",
+    pathTemplate: "/api/eudr-legalidad",
+    pathParams: [],
+    querySchema: {
+      ruc: z.string().regex(/^\d{11}$/).describe("RUC de 11 dígitos del titular/organización."),
+    },
+  },
+  {
     name: "ceplan_geo_patrimonio_predios",
     handler: "patrimonio:predios",
     app: "ceplan-geo",
@@ -2276,6 +2293,69 @@ export const TOOL_CATALOG: ToolSpec[] = [
     app: "bcrp-comercio-exterior",
     description: "Metadata de los últimos 10 lotes de ingesta BCRP (series, rango, checksum).",
     pathTemplate: "/api/meta/sources",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
+    name: "bcrp_comercio_exterior_comtrade",
+    handler: "benchmark-externo:list",
+    app: "bcrp-comercio-exterior",
+    description:
+      "Flujos de comercio UN Comtrade (benchmark externo, en USD — no millones) por país reporter × socio × " +
+      "capítulo arancelario × año. Por defecto trae Perú (reporter 604) con socio '0' = Mundo y los principales " +
+      "destinos/orígenos; con `--reporters` en la ingesta se agregaron países comparadores (Ecuador, Colombia, " +
+      "Chile). Con `modo=rca` (requiere `anio`) calcula la ventaja comparativa revelada por capítulo usando el " +
+      "Mundo (partner '0') como denominador: RCA > 1 = ventaja relativa. Sirve para comparar Perú frente a " +
+      "competidores por producto — lo que las series nacionales (BCRP/SUNAT), agregadas, no permiten. " +
+      "Endpoint preview público de Comtrade: puede rezagarse meses respecto al cierre oficial. Sin ruta Express: " +
+      "se sirve solo por MCP (ver MCP_ONLY_PATHS en el test de paridad). " + SIN_SCHEDULER,
+    pathTemplate: "/api/comtrade",
+    pathParams: [],
+    querySchema: {
+      reporter: z.string().min(1).optional().describe("Código numético Comtrade del país reporter. Default 604 (Perú). Otros: 218 Ecuador, 170 Colombia, 152 Chile."),
+      partner: z.string().min(1).optional().describe("Código numético del socio. '0' = Mundo."),
+      cmdCode: z.string().min(1).optional().describe("Capítulo arancelario (2 dígitos, ej. '08') o 'TOTAL'."),
+      anio: z.coerce.number().int().min(1988).max(2100).optional(),
+      desde: z.coerce.number().int().min(1988).max(2100).optional(),
+      hasta: z.coerce.number().int().min(1988).max(2100).optional(),
+      flujo: z.enum(["X", "M"]).optional().describe("X = exportaciones, M = importaciones."),
+      groupBy: z.enum(["partner", "cmdCode", "cmd", "reporter", "anio", "flujo"]).optional(),
+      modo: z.enum(["rca"]).optional().describe("Ventaja comparativa revelada por capítulo. Requiere `anio`."),
+      limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 200, máximo 500."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "bcrp_comercio_exterior_wdi",
+    handler: "contexto-paises:list",
+    app: "bcrp-comercio-exterior",
+    description:
+      "Panel país × año de World Development Indicators (Banco Mundial): PBI, PBI per cápita, crecimiento, " +
+      "exportaciones e importaciones % del PIB, arancel aplicado media simple, inflación, población, uso de " +
+      "Internet, desempleo, IED — las covariables de distancia económica/institucional y tamaño de mercado " +
+      "destino para análisis de internacionalización. Países por defecto: Perú + 14 socios (APEC y LATAM). " +
+      "Consultá el catálogo con `bcrp_comercio_exterior_wdi_indicadores`. Sin ruta Express: se sirve solo por MCP " +
+      "(ver MCP_ONLY_PATHS en el test de paridad). " + SIN_SCHEDULER,
+    pathTemplate: "/api/wdi",
+    pathParams: [],
+    querySchema: {
+      pais: z.string().min(1).optional().describe("ISO3 (CHN) o código corto (CN)."),
+      indicador: z.string().min(1).optional().describe("Código del indicador (ej. NY.GDP.MKTP.CD)."),
+      anio: z.coerce.number().int().min(1960).max(2100).optional(),
+      desde: z.coerce.number().int().min(1960).max(2100).optional(),
+      hasta: z.coerce.number().int().min(1960).max(2100).optional(),
+      limit: z.coerce.number().int().min(1).max(2000).optional().describe("Default 500, máximo 2000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "bcrp_comercio_exterior_wdi_indicadores",
+    handler: "contexto-paises:indicadores",
+    app: "bcrp-comercio-exterior",
+    description:
+      "Catálogo de los indicadores WDI efectivamente ingeridos, con países cubiertos, rango de años y cantidad " +
+      "de valores no nulos — para saber qué se puede pedir antes de consultar. " + SIN_SCHEDULER,
+    pathTemplate: "/api/wdi/indicadores",
     pathParams: [],
     querySchema: {},
   },
@@ -4157,6 +4237,48 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "Metadata de frescura de la ingesta SUNAT: fecha del último lote cargado, conteo de filas por tabla, " +
       "y detalle del archivo fuente más reciente. " + SIN_SCHEDULER,
     pathTemplate: "/api/meta/freshness",
+    pathParams: [],
+    querySchema: {},
+  },
+  {
+    name: "sunat_aduanas_comercio_bienes",
+    handler: "comercio-bienes:list",
+    app: "sunat-aduanas",
+    description:
+      "Comercio exterior del Perú por subpartida arancelaria (10 dígitos) × país destino/origen × vía de " +
+      "transporte × año, en MILLONES US$ — MINCETUR/DGIECE 'Comercio Exterior de Bienes' (fuente distinta del " +
+      "Anuario SUNAT: incluye exportaciones E importaciones, sector, tipo tradicional/no tradicional, continente " +
+      "y bloque comercial del país — APEC, MERCOSUR, Comunidad Andina —, además de toneladas). Ya viene agregada " +
+      "a nivel (anio × flujo × subpartida × país × vía): las filas mensuales de la fuente están sumadas y " +
+      "`filasOrigen` indica cuántas se fusionaron. Con `groupBy` (subpartida/pais/sector/bloque/via/flujo/anio/tipo) " +
+      "devuelve totales por esa dimensión. Sin `pathTemplate` Express: se sirve solo por MCP (ver " +
+      "MCP_ONLY_PATHS en el test de paridad). " + SIN_SCHEDULER,
+    pathTemplate: "/api/comercio-bienes",
+    pathParams: [],
+    querySchema: {
+      anio: z.coerce.number().int().min(2000).max(2100).optional(),
+      desde: z.coerce.number().int().min(2000).max(2100).optional(),
+      hasta: z.coerce.number().int().min(2000).max(2100).optional(),
+      flujo: z.enum(["EXPORTACION", "IMPORTACION"]).optional(),
+      subpartida: z.string().min(1).optional().describe("Código arancelario; admite prefijo parcial (LIKE '...%')."),
+      pais: z.string().min(1).optional().describe("Código ISO2 del país o su nombre (ej. 'CL' o 'CHILE')."),
+      bloque: z.string().min(1).optional().describe("Bloque comercial del país en BLOQUE_1: APEC, MERCOSUR, COMUNIDAD ANDINA..."),
+      sector: z.string().min(1).optional().describe("Sector de la fuente (AGROPECUARIO, MINERÍA...)."),
+      tipo: z.string().min(1).optional().describe("TRADICIONAL o NO TRADICIONAL."),
+      via: z.string().min(1).optional().describe("Vía de transporte (MARITIMO, AEREO, TERRESTRE...)."),
+      groupBy: z.enum(["subpartida", "pais", "sector", "bloque", "via", "flujo", "anio", "tipo"]).optional(),
+      limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 200, máximo 500."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "sunat_aduanas_comercio_bienes_meta",
+    handler: "comercio-bienes:meta",
+    app: "sunat-aduanas",
+    description:
+      "Frescura y cobertura de la ingesta MINCETUR 'Comercio Exterior de Bienes': últimos lotes cargados " +
+      "(checksum, filas leídas) y años/flujos disponibles con su fecha de corte de la fuente. " + SIN_SCHEDULER,
+    pathTemplate: "/api/comercio-bienes/meta",
     pathParams: [],
     querySchema: {},
   },

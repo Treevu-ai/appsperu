@@ -133,6 +133,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "identidad_fiscal_contribuyentes",
     "identidad_fiscal_crossref_entidades",
     "identidad_fiscal_crossref_proveedores",
+    "identidad_fiscal_eudr_legalidad",
     "identidad_fiscal_exportaciones_fob",
     "identidad_fiscal_exportaciones_fob_resumen",
     "identidad_fiscal_ficha_ruc",
@@ -181,9 +182,12 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "seguridad_ciudadana_indice_denuncias_comparativo",
   ],
   "bcrp-comercio-exterior": [
+    "bcrp_comercio_exterior_comtrade",
     "bcrp_comercio_exterior_macro",
     "bcrp_comercio_exterior_meta_sources",
     "bcrp_comercio_exterior_trade",
+    "bcrp_comercio_exterior_wdi",
+    "bcrp_comercio_exterior_wdi_indicadores",
   ],
   "inversion-privada": [
     "inversion_privada_gis_geojson",
@@ -328,6 +332,8 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
   ],
   "smv-sanciones": ["smv_sanciones_sanciones"],
   "sunat-aduanas": [
+    "sunat_aduanas_comercio_bienes",
+    "sunat_aduanas_comercio_bienes_meta",
     "sunat_aduanas_ports",
     "sunat_aduanas_ports_subpartidas",
     "sunat_aduanas_ports_top",
