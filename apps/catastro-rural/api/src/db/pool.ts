@@ -7,7 +7,17 @@ if (!connectionString) {
   throw new Error("DATABASE_URL no está definida. Copia .env.example a .env.");
 }
 
-export const pool = new Pool({ connectionString });
+// keepAlive: sin esto, una conexión ociosa unos segundos entre páginas
+// (mientras se espera la respuesta HTTP de MIDAGRI) puede ser cortada en
+// silencio por NAT/firewall tras ~15-20 min -- confirmado en vivo: dos
+// corridas consecutivas murieron con "Connection terminated unexpectedly"
+// a los ~16 minutos exactos. keepAlive activa TCP keepalive real en el
+// socket para evitar que el camino de red la dé por muerta.
+export const pool = new Pool({
+  connectionString,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10_000,
+});
 
 // Sin este listener, un error en una conexión IDLE del pool (ej. reset de
 // red de Neon) se emite como 'error' no manejado y tumba el proceso Node

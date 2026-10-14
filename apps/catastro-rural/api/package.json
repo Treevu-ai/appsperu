@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "migrate": "tsx src/db/migrate.ts",
     "ingest:midagri": "node --use-system-ca --import=tsx src/ingest/midagri-connector.ts",
+    "backfill:geometria": "node --use-system-ca --import=tsx src/ingest/backfill-geometria.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

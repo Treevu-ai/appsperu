@@ -6,9 +6,9 @@ import { normalizeMidagri, type CanonicalPredio, type Capa, type RejectedRow, LA
 const BASE_URL = "https://georural.midagri.gob.pe/geoservicios/rest/services/public/Catastro_Rural/MapServer";
 const INSERT_BATCH_SIZE = 1000;
 
-const TOTAL_LAYERS = 10;
+export const TOTAL_LAYERS = 10;
 
-function getCapaName(layerId: number): Capa {
+export function getCapaName(layerId: number): Capa {
   return LAYER_NAMES[layerId] ?? `capa_${layerId}`;
 }
 
@@ -23,11 +23,11 @@ interface EsriQueryResponse {
   error?: { code: number; message: string };
 }
 
-function layerUrl(layerId: number): string {
+export function layerUrl(layerId: number): string {
   return `${BASE_URL}/${layerId}`;
 }
 
-function ringsToGeoJSON(rings: unknown): object | null {
+export function ringsToGeoJSON(rings: unknown): object | null {
   if (!Array.isArray(rings) || rings.length === 0) return null;
   const polygons: number[][][][] = rings.map((ring) => {
     if (!Array.isArray(ring)) return [];
@@ -93,21 +93,29 @@ async function ultimoBatchId(capa: Capa): Promise<number | null> {
   return rows[0]?.id ?? null;
 }
 
-const INSERT_COLUMNS = [
+// geometry_mp/geometry_valid_mp (no "geometry"/"geometry_valid" -- esas
+// quedaron deprecadas tras el incidente de tipo Polygon vs MultiPolygon del
+// 2026-10-14) requieren ST_GeomFromGeoJSON(), no se les puede pasar el
+// GeoJSON como parámetro plano -- el INSERT original hacía exactamente eso
+// y nunca lo notamos porque geomJson siempre era null (bug de normalize-
+// midagri.ts), así que el error de tipo nunca llegó a dispararse en vivo.
+const INSERT_COLUMNS_PLAIN = [
   "capa", "objectid", "area_ha", "perimetro", "id_dist", "cod_proy",
   "nom_dpto", "nom_prov", "nom_dist", "nombre", "estado", "fuente",
-  "tipo_proceso", "nro_titulo", "anio_titulo", "geometry",
-  "area_km2", "geometry_valid", "atributos_extra", "source_batch_id",
+  "tipo_proceso", "nro_titulo", "anio_titulo",
+  "area_km2", "atributos_extra", "source_batch_id",
 ] as const;
 
 async function insertBatch(client: PoolClient, batchId: number, rows: readonly CanonicalPredio[]): Promise<void> {
   if (rows.length === 0) return;
 
+  const columnas = [...INSERT_COLUMNS_PLAIN, "geometry_mp", "geometry_valid_mp"];
+  const nPlain = INSERT_COLUMNS_PLAIN.length;
   const values: unknown[] = [];
   const tuples: string[] = [];
 
   rows.forEach((row, i) => {
-    const base = i * INSERT_COLUMNS.length;
+    const base = i * (nPlain + 1); // +1: ambas columnas de geometría comparten el mismo parámetro GeoJSON
 
     const geomJson = ringsToGeoJSON(row.geometry_rings);
 
@@ -116,7 +124,11 @@ async function insertBatch(client: PoolClient, batchId: number, rows: readonly C
       area_km2 = row.area_ha / 100;
     }
 
-    tuples.push(`(${INSERT_COLUMNS.map((_, j) => `$${base + j + 1}`).join(",")})`);
+    const placeholdersPlain = Array.from({ length: nPlain }, (_, j) => `$${base + j + 1}`);
+    const geomParam = `$${base + nPlain + 1}`;
+    tuples.push(
+      `(${placeholdersPlain.join(",")}, ST_Multi(ST_GeomFromGeoJSON(${geomParam})), ST_Multi(ST_GeomFromGeoJSON(${geomParam})))`
+    );
     values.push(
       row.capa,
       row.objectid,
@@ -133,16 +145,15 @@ async function insertBatch(client: PoolClient, batchId: number, rows: readonly C
       row.tipo_proceso,
       row.nro_titulo,
       row.anio_titulo,
-      geomJson ? JSON.stringify(geomJson) : null,
       area_km2,
-      geomJson ? JSON.stringify(geomJson) : null,
       row.atributos_extra ? JSON.stringify(row.atributos_extra) : null,
-      batchId
+      batchId,
+      geomJson ? JSON.stringify(geomJson) : null
     );
   });
 
   await client.query(
-    `INSERT INTO catastro_rural (${INSERT_COLUMNS.join(",")}) VALUES ${tuples.join(",")}
+    `INSERT INTO catastro_rural (${columnas.join(",")}) VALUES ${tuples.join(",")}
      ON CONFLICT (capa, objectid) DO NOTHING`,
     values
   );
@@ -201,11 +212,31 @@ async function ingestCapa(layerId: number): Promise<CapaIngestSummary> {
     let offset: number;
     let batchId: number;
 
-    if (yaInsertadas >= totalEsperado && yaInsertadas > 0) {
+    // FORCE_RESCAN_OFFSET0: el contador totalInserted usado para loggear
+    // "COMPLETED" suma el tamaño de cada página recibida, sin descontar las
+    // que ON CONFLICT DO NOTHING descarta por ya existir -- confirmado en
+    // vivo: tras varias corridas con cortes/reanudaciones, el script
+    // reportó "3,060,135/3,060,135 COMPLETED" pero Neon solo tenía
+    // 3,008,135 filas reales (0 rechazadas). La reanudación usa el conteo
+    // DISTINCT como offset posicional de ArcGIS, lo que puede "adelantar"
+    // la posición real cuando hubo duplicados reinsertados, dejando un
+    // tramo genuino sin recorrer. Esta bandera fuerza un recorrido completo
+    // desde offset=0 reusando el mismo batch (sin el DELETE del arranque
+    // limpio) -- 100% seguro porque todo insert pasa por
+    // ON CONFLICT (capa, objectid) DO NOTHING.
+    const forzarRecorridoCompleto = process.env.FORCE_RESCAN_OFFSET0 === "true";
+
+    if (yaInsertadas >= totalEsperado && yaInsertadas > 0 && !forzarRecorridoCompleto) {
       const existente = await ultimoBatchId(capa);
       if (existente === null) throw new Error(`capa ${layerId} tiene ${yaInsertadas} filas pero ningún batch registrado -- estado inconsistente`);
       console.log(`[capa ${layerId} (${capa})] YA COMPLETA: ${yaInsertadas}/${totalEsperado} filas únicas, nada que hacer.`);
       return { capa, layerId, batchId: existente, filasOrigen: totalEsperado, filasInsertadas: yaInsertadas, filasRechazadas: 0 };
+    } else if (forzarRecorridoCompleto && yaInsertadas > 0) {
+      offset = 0;
+      const existente = await ultimoBatchId(capa);
+      if (existente === null) throw new Error(`capa ${layerId} tiene ${yaInsertadas} filas pero ningún batch registrado -- estado inconsistente`);
+      batchId = existente;
+      console.log(`[capa ${layerId} (${capa})] RECORRIDO COMPLETO FORZADO: ${yaInsertadas}/${totalEsperado} filas únicas en DB, re-escaneando desde offset=0 para cubrir posibles huecos (idempotente)`);
     } else if (yaInsertadas > 0) {
       offset = yaInsertadas;
       const existente = await ultimoBatchId(capa);

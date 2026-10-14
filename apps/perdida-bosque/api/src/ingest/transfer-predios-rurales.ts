@@ -19,8 +19,12 @@ const dstUrl = process.env.DATABASE_URL;
 if (!srcUrl) throw new Error("SRC_CATASTRO_RURAL_DATABASE_URL no está definida (apunta a catastro_rural).");
 if (!dstUrl) throw new Error("DATABASE_URL no está definida.");
 
-const src = new Pool({ connectionString: srcUrl });
-const dst = new Pool({ connectionString: dstUrl });
+// keepAlive: sin esto, una conexión ociosa entre páginas puede ser cortada
+// en silencio por NAT/firewall tras ~15-16 min -- confirmado en vivo en
+// catastro-rural/src/db/pool.ts (dos corridas murieron con "Connection
+// terminated unexpectedly" exactamente a los ~16 minutos).
+const src = new Pool({ connectionString: srcUrl, keepAlive: true, keepAliveInitialDelayMillis: 10_000 });
+const dst = new Pool({ connectionString: dstUrl, keepAlive: true, keepAliveInitialDelayMillis: 10_000 });
 
 // Sin estos listeners, un error en una conexión idle (ej. reset de red de
 // Neon) tumba el proceso Node completo en vez de solo descartar esa

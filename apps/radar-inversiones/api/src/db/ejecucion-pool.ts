@@ -16,3 +16,6 @@ if (!connectionString) {
  * territorial; nunca altera las tablas presupuestales.
  */
 export const ejecucionPool = new Pool({ connectionString });
+ejecucionPool.on("error", (err) => {
+  console.error("Error inesperado en conexión idle (ejecucionPool):", err.message);
+});

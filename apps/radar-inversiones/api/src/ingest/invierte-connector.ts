@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { parse } from "csv-parse/sync";
 import type { PoolClient } from "pg";
-import { pool } from "../db/pool.js";
+import { pool, connectSafe } from "../db/pool.js";
 import { ejecucionPool } from "../db/ejecucion-pool.js";
 import { normalizeInvestmentRows, type CanonicalInvestmentRow, type RejectedInvestment } from "./normalize.js";
 
@@ -186,7 +186,7 @@ export async function ingestInvestments(options: IngestOptions = {}): Promise<In
 
   const { rows: fetchedRecords, rawText } = await fetchInvestmentsCsv(maxBytes, startByte);
 
-  const client = await pool.connect();
+  const client = await connectSafe();
   try {
     await client.query("BEGIN");
     const batchId = await saveRawBatch(client, `range:${startByte}-${startByte + maxBytes}`, rawText, fetchedRecords.length);

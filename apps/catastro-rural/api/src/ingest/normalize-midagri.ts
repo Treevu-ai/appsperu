@@ -131,7 +131,19 @@ export function normalizeMidagri(features: readonly unknown[], layerId: number):
       }
     }
 
-    const geometry_rings = attrs.SHAPE ?? attrs.shape ?? attrs.geometry ?? null;
+    // BUG REAL encontrado en vivo (2026-10-14): la geometría de ArcGIS NO
+    // viene dentro de `attributes` -- viene como campo HERMANO de
+    // `attributes` en la feature (`{ attributes: {...}, geometry: { rings:
+    // [...] } }`). Buscarla en `attrs.SHAPE/shape/geometry` siempre daba
+    // null porque esos campos nunca existen ahí -- confirmado: 0 de 3.37M
+    // filas en las 10 capas tenían geometría pese a que la ingesta
+    // reportaba éxito completo. La geometría real se lee de
+    // `feature.geometry.rings`, no de `attributes`.
+    const maybeGeometry = (feature as { geometry?: unknown }).geometry;
+    const geometry_rings =
+      maybeGeometry && typeof maybeGeometry === "object" && "rings" in (maybeGeometry as Record<string, unknown>)
+        ? ((maybeGeometry as { rings?: unknown }).rings ?? null)
+        : null;
 
     rows.push({
       capa,
