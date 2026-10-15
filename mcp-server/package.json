@@ -20,9 +20,11 @@
     "dev:http": "cross-env MCP_TRANSPORT=http tsx src/index.ts",
     "ingest:comercio-bienes": "tsx src/ingest/mincetur-comercio-bienes.ts",
     "ingest:comtrade": "tsx src/ingest/comtrade-benchmark.ts",
-    "ingest:wdi": "tsx src/ingest/wdi-contexto.ts"
+    "ingest:wdi": "tsx src/ingest/wdi-contexto.ts",
+    "ingest:agromercado": "tsx src/ingest/agromercado-articulacion.ts"
   },
   "dependencies": {
+    "@appsperu/entity-matcher": "file:../packages/entity-matcher",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@neondatabase/serverless": "^1.0.0",
     "@turf/bbox": "^7.4.0",

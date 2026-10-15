@@ -6,6 +6,7 @@
 // es el namespace del módulo, de donde `resolveHandler` toma la función indicada
 // en el campo `handler` del tool ("<modulo>:<funcion>"). Ver el docblock del
 // script generador para por qué no puede ser un `import()` dinámico.
+import * as actividad_agraria_agromercado_articulacion from "./actividad-agraria/agromercado-articulacion.js";
 import * as actividad_agraria_crossref from "./actividad-agraria/crossref.js";
 import * as actividad_agraria_regional_outcome from "./actividad-agraria/regional-outcome.js";
 import * as actividad_agraria_tractor_rental from "./actividad-agraria/tractor-rental.js";
@@ -161,6 +162,7 @@ import * as violencia_escolar_casos from "./violencia-escolar/casos.js";
 import * as violencia_escolar_resumen from "./violencia-escolar/resumen.js";
 
 export const MODULOS: Record<string, Record<string, unknown>> = {
+  "actividad-agraria/agromercado-articulacion": actividad_agraria_agromercado_articulacion,
   "actividad-agraria/crossref": actividad_agraria_crossref,
   "actividad-agraria/regional-outcome": actividad_agraria_regional_outcome,
   "actividad-agraria/tractor-rental": actividad_agraria_tractor_rental,

@@ -25,6 +25,8 @@ const MCP_ONLY_PATHS: Partial<Record<AppKey, string[]>> = {
   "sunat-aduanas": ["/api/comercio-bienes", "/api/comercio-bienes/meta"],
   // UN Comtrade + Banco Mundial WDI (src/ingest/comtrade-benchmark.ts, src/ingest/wdi-contexto.ts)
   "bcrp-comercio-exterior": ["/api/comtrade", "/api/wdi", "/api/wdi/indicadores"],
+  // MIDAGRI/Agromercado, Planes de Articulación Comercial (src/ingest/agromercado-articulacion.ts)
+  "actividad-agraria": ["/api/agromercado-articulacion"],
 };
 
 describe("catálogo MCP vs. rutas Express reales (CX-15)", () => {

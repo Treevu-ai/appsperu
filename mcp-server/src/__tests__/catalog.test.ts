@@ -164,6 +164,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "proveedores_sancionados_velocidad_sancion_contrato",
   ],
   "actividad-agraria": [
+    "actividad_agraria_agromercado_articulacion",
     "actividad_agraria_crossref",
     "actividad_agraria_regional_outcome",
     "actividad_agraria_tractor_rental",

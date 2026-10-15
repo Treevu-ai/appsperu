@@ -2037,6 +2037,31 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
   {
+    name: "actividad_agraria_agromercado_articulacion",
+    handler: "agromercado-articulacion:list",
+    app: "actividad-agraria",
+    description:
+      "Organizaciones (cooperativas/asociaciones) con un Plan de Articulación Comercial vigente en 2025 bajo " +
+      "Agromercado (antes 'Sierra y Selva Exportadora', MIDAGRI) — el padrón de 'tratamiento' de un programa de " +
+      "promoción de exportación/articulación comercial real, para preguntas tipo '¿la asistencia estatal mejora " +
+      "el desempeño exportador?'. Trae producto/cadena de valor, beneficiarios, ubicación y un enlace a RUC " +
+      "(`rucMatch`) por similitud de nombre contra el padrón de identidad-fiscal — NO es un ID compartido con la " +
+      "fuente: cada fila trae `matchConfianza` ('confirmada' = coincidencia exacta tras normalizar, 'candidata' " +
+      "= similitud alta pero requiere revisión antes de análisis causal, null = sin match) y `matchScore`. Sin " +
+      "ruta Express: se sirve solo por MCP (ver MCP_ONLY_PATHS en el test de paridad). " + SIN_SCHEDULER,
+    pathTemplate: "/api/agromercado-articulacion",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      producto: z.string().min(1).optional().describe("Ej. 'CAFÉ', 'CACAO'."),
+      ruc: z.string().regex(/^\d{11}$/).optional().describe("Filtra por el RUC ya enlazado (rucMatch), exacto."),
+      soloConRuc: z.coerce.boolean().optional().describe("true = solo filas con algún match a RUC (confirmada o candidata)."),
+      confianzaMinima: z.enum(["confirmada"]).optional().describe("'confirmada' = excluye matches tipo 'candidata' y sin match."),
+      limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 200, máximo 500."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
     name: "actividad_agraria_crossref",
     handler: "crossref:list",
     app: "actividad-agraria",
