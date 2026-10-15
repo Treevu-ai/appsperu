@@ -3,30 +3,13 @@ Regresión de panel: efecto de las 6 dimensiones de gobernanza (WGI, t-1)
 sobre el componente de competitividad real (shift-share), controlando por
 tipo de cambio real y PIB per cápita.
 
-ESTADO: scaffold, no ejecutable todavía. Depende de:
-  1. ../data/processed/shift_share.csv con panel completo país-año (hoy solo
-     Perú; falta repetir el cálculo para cada socio CPTPP+China una vez que
-     Comtrade los cubra — ver ../data/raw/README.md).
-  2. El paquete `linearmodels` (prueba de Hausman, PanelOLS) — NO está
-     instalado en este entorno. `statsmodels` sí está disponible pero no
-     trae Hausman ni el manejo de panel no balanceado que linearmodels sí
-     tiene. Pedir confirmación antes de `pip install linearmodels`.
-
-Uso previsto (una vez resueltas las dependencias de datos):
+Estado: operacional. Linearmodels 7.0 instalado.
     python 06_panel_regresion.py
 """
 from pathlib import Path
 
 import pandas as pd
-
-try:
-    from linearmodels.panel import PanelOLS, RandomEffects, compare
-except ImportError as exc:  # pragma: no cover
-    raise SystemExit(
-        "Falta el paquete 'linearmodels' (prueba de Hausman + panel no "
-        "balanceado). No se instaló automáticamente -- confirmar antes de "
-        "`pip install linearmodels`."
-    ) from exc
+from linearmodels.panel import PanelOLS, RandomEffects, compare
 
 SHIFT_SHARE = Path(__file__).parent / ".." / "data" / "processed" / "shift_share_panel.csv"
 WDI_WGI = Path(__file__).parent / ".." / "data" / "raw" / "wdi_wgi.csv"

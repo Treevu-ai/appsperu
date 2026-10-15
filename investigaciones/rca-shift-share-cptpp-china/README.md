@@ -38,14 +38,54 @@ Panel balanceado: 12 socios × 9 años = 108 observaciones. Variable dependiente
 
 Esto **no invalida la propuesta** — es exactamente el tipo de hallazgo que una regresión de panel está para producir, y puede ser real (no todo efecto hipotetizado existe) o síntoma de especificación (muestra chica, posible no-linealidad, variable dependiente con outliers grandes sin transformar). No se forzó ni se maquilló el resultado.
 
+## Tercer resultado real: normalización + dimensiones separadas (`12_panel_regresion_refinado.py`)
+
+| Especificación | Coeficiente | p-valor |
+|---|---|---|
+| WGI promedio, dep. var normalizada por tamaño del mercado del socio | -0.0021 | 0.051 |
+| Estabilidad política sola (dep. var normalizada) | -0.0013 | **0.031** |
+| WGI promedio, excluyendo Brunéi | -0.0020 | 0.076 |
+| WGI promedio, sin efectos de tiempo | -0.0028 | **0.008** |
+
+Normalizar reveló una asociación negativa consistente en las 4 variantes — no es un artefacto de Brunéi como outlier. Signo contraintuitivo (mejor gobernanza → menor ganancia relativa de competitividad).
+
+## Cuarto resultado real: pruebas de endogeneidad (`14_endogeneidad.py`) — la asociación NO es causal
+
+| Chequeo | Resultado |
+|---|---|
+| Precedencia inversa: ¿competitividad(t) predice WGI(t+1)? | **Sí, significativo** (coef -23.6, p=0.012) |
+| WGI rezagado 2 años (t-2) en vez de 1 | Desaparece (coef ≈0, p=0.896) |
+| Primeras diferencias (Δcompetitividad ~ ΔWGI) | Desaparece (coef -0.0021, p=0.513) |
+
+**Veredicto**: la asociación encontrada en niveles no sobrevive el rezago más largo ni las primeras diferencias, y hay evidencia significativa de causalidad en la dirección contraria. El patrón es más consistente con una **correlación espuria** (probablemente un confusor fijo por país no absorbido del todo por `EntityEffects`) que con un efecto causal de la gobernanza sobre la competitividad exportadora bilateral. No hay, con esta muestra y este diseño, evidencia sólida a favor de la hipótesis original de la propuesta.
+
+## Investigación bibliográfica: por qué fallaba el panel chico
+
+La literatura real sobre gobernanza y comercio (Abreo Villamizar, Bustillo & Rodríguez González 2021, *Journal of Economic Structures* 10:28 — Colombia vs. 136 socios, 2005-2018; Riker 2022, USITC Working Paper 2022-10-A — 78 países) usa modelos de **gravedad bilateral** con 50-120+ países y 5-25 años, no shift-share con una muestra chica. Nuestro panel de 12 países/9 años estaba muy por debajo de ese rango — un problema de poder estadístico por diseño, no solo de especificación.
+
+## Quinto resultado real: modelo de gravedad con TODOS los socios comerciales de Perú — el hallazgo robusto (`16_modelo_gravedad.py`)
+
+Panel: Perú vs. **184 socios comerciales reales**, 2016-2024, **1,496 observaciones**. Modelo de gravedad estándar (Tinbergen 1962): log(exportaciones) ~ log(PIB del socio) + log(distancia) + WGI promedio (rezagado) + frontera + idioma común + colonia + efectos de año, errores agrupados por país.
+
+| Variable | Coeficiente | p-valor |
+|---|---|---|
+| log(PIB del socio) | 1.246 | <0.001 |
+| log(distancia) | -2.164 | <0.001 |
+| **WGI promedio (t-1)** | **0.667** | **<0.001** |
+| Colonia (vínculo colonial) | 1.186 | 0.001 |
+
+R² = 0.72. Todos los controles de gravedad se comportan como predice la teoría. **La gobernanza es positiva y fuertemente significativa** — lo opuesto del resultado espurio del panel chico.
+
+**Prueba de endogeneidad (rezago t-2 en vez de t-1)**: coeficiente 0.668, p<0.001 — **prácticamente idéntico**, sobrevive intacto. Esto contrasta directamente con el panel chico, donde el mismo chequeo hacía desaparecer el efecto.
+
+**Veredicto final**: con el diseño metodológico correcto (panel mundial, modelo de gravedad, controles estándar), sí hay evidencia robusta de una asociación positiva entre calidad institucional y desempeño exportador de Perú — consistente con la hipótesis original de la propuesta, y estable ante el cambio de rezago que había invalidado el hallazgo anterior. El camino completo (hipótesis → panel chico fallido → diagnóstico en literatura real → panel mundial robusto) queda documentado como parte del proceso, no oculto.
+
 ## Próximos pasos
 
-El pipeline completo corre de extremo a extremo con datos reales. Lo que sigue es refinar la especificación dado el resultado nulo, no destrabar datos:
-
-1. Probar variantes de especificación: normalizar el efecto de competitividad (ej. como % de las exportaciones del socio, no en niveles — los niveles tienen outliers grandes que pueden estar dominando la varianza), y/o transformación logarítmica.
-2. Probar cada una de las 6 dimensiones WGI por separado en vez del promedio (puede haber efecto en una dimensión específica que el promedio diluye).
-3. Ampliar el panel más allá de HS2 (BACI ya está en HS6 — `07_export_baci.py`/`08_export_baci_bilateral.py`/`10_export_baci_partner_imports.py` agregan a HS2 pero pueden ajustarse) para tener más variación dentro de cada socio-año.
-4. El zip de BACI (2.4GB) quedó en el scratchpad de la sesión, no en el repo — si se necesita reprocesar, volver a descargarlo de `https://www.cepii.fr/DATA_DOWNLOAD/baci/data/BACI_HS92_V202601.zip`.
+1. Completar pruebas de endogeneidad adicionales sobre el modelo de gravedad (primeras diferencias, precedencia inversa) — ya se corrió t-2, falta el resto de la batería aplicada al panel chico.
+2. Probar las 6 dimensiones WGI por separado en el modelo de gravedad (en el panel chico, estabilidad política pesaba más que el promedio).
+3. Considerar variables instrumentales ahora que N=184 lo hace viable — a diferencia del panel chico (N=12), aquí sí hay poder estadístico para IV/GMM si se identifica un instrumento válido.
+4. El zip de BACI (2.4GB) y los archivos GeoDist quedaron en `data/raw/geodist/` y en el scratchpad de la sesión — si se necesita reprocesar, las URLs están documentadas en los scripts `07`-`16`.
 
 ## Orden de ejecución de los scripts
 
@@ -58,5 +98,9 @@ El pipeline completo corre de extremo a extremo con datos reales. Lo que sigue e
 09_rca_shift_share_baci.py    # data/raw -> data/processed/rca_peru_baci.csv, shift_share_baci.csv (agregado Perú)
 10_export_baci_partner_imports.py  # BACI zip -> data/raw/baci_importaciones_socios_hs2.csv
 11_shift_share_panel_bilateral.py  # data/raw -> data/processed/shift_share_panel.csv (panel socio x año)
-06_panel_regresion.py         # data/processed + data/raw -> regresión de panel (corrido, resultado nulo)
+06_panel_regresion.py         # data/processed + data/raw -> regresión de panel bilateral chica (corrido, resultado nulo)
+15_export_baci_peru_todos_socios.py  # BACI zip -> data/raw/baci_peru_todos_socios.csv (184+ socios reales)
+16_modelo_gravedad.py         # data/raw (+ GeoDist en data/raw/geodist/) -> modelo de gravedad (corrido, resultado robusto)
 ```
+
+GeoDist (CEPII, distancias/frontera/idioma/colonia): `https://www.cepii.fr/distance/dist_cepii.zip`.
