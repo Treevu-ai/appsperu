@@ -24,6 +24,13 @@
  * preview los omite sin error, así que la lista REPORTERS_MUNDO es
  * autolimpiante (una cobertura incompleta solo subestima el total mundial).
  *
+ * Bloque `--socios` (se corre salvo `--sin-socios`): ingiere a los socios
+ * clave (SOCIOS_DEFAULT, personalizable con `--socios 156,842,...`) como
+ * reporter — sus flujos X y M con partner '0', es decir su comercio con el
+ * mundo — y los guarda con reporter_code = código del socio. Es el
+ * denominador de mercado de `modo=rca-bilateral` del handler: la importación
+ * del socio por capítulo (su flujo M) mide la demanda del mercado destino.
+ *
  * Qué trae y para qué: flujos de exportación/importación de Perú (y de países
  * comparadores opcionales) por partner y capítulo arancelario, en USD — el
  * benchmark externo que permite calcular ventaja comparativa revelada y cuota
@@ -37,6 +44,8 @@
  *   npx tsx src/ingest/comtrade-benchmark.ts                       # defaults (+ bloque --mundo)
  *   npx tsx src/ingest/comtrade-benchmark.ts --reporters 604,218   # Perú y Ecuador
  *   npx tsx src/ingest/comtrade-benchmark.ts --sin-mundo           # omite el agregado mundial
+ *   npx tsx src/ingest/comtrade-benchmark.ts --socios 156,842      # socios personalizados (RCA bilateral)
+ *   npx tsx src/ingest/comtrade-benchmark.ts --sin-pais --sin-mundo  # solo el bloque de socios
  *   npx tsx src/ingest/comtrade-benchmark.ts --dry-run             # fetch, no escribe
  */
 import { connect } from "./db.js";
@@ -48,6 +57,8 @@ const ANIOS_DEFAULT = [2019, 2020, 2021, 2022, 2023, 2024];
 const FLUJOS_DEFAULT = ["X", "M"];
 const REPORTERS_DEFAULT = ["604"]; // 604 = Perú
 const PARTNERS_DEFAULT = ["0", "842", "156", "76", "152", "484", "124", "724", "392", "410", "276", "380", "218", "170", "699"];
+/** Socios clave para RCA bilateral: se ingeren como reporter (su comercio con el mundo). */
+const SOCIOS_DEFAULT = ["156", "842", "724", "276", "699", "76"]; // China, EE.UU., España, Alemania, India, Brasil
 const CMD_DEFAULT = ["TOTAL", "01", "02", "04", "07", "08", "09", "10", "12", "15", "16", "20", "22", "24", "27", "28", "29", "30", "38", "39", "40", "44", "47", "48", "52", "54", "55", "57", "61", "62", "63", "64", "69", "70", "71", "72", "73", "74", "76", "84", "85", "86", "87", "90", "94", "95"];
 const DELAY_MS = 400;
 /**
@@ -311,9 +322,12 @@ interface Args {
   flujos: string[];
   reporters: string[];
   partners: string[];
+  socios: string[];
   cmds: string[];
   dryRun: boolean;
   sinMundo: boolean;
+  sinPais: boolean;
+  sinSocios: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -322,9 +336,12 @@ function parseArgs(argv: string[]): Args {
     flujos: FLUJOS_DEFAULT,
     reporters: REPORTERS_DEFAULT,
     partners: PARTNERS_DEFAULT,
+    socios: SOCIOS_DEFAULT,
     cmds: CMD_DEFAULT,
     dryRun: false,
     sinMundo: false,
+    sinPais: false,
+    sinSocios: false,
   };
   const lista = (raw: string | undefined, fallback: string[]) =>
     (raw ?? "").split(",").map((s) => s.trim()).filter(Boolean).length > 0
@@ -334,6 +351,8 @@ function parseArgs(argv: string[]): Args {
     const a = argv[i];
     if (a === "--dry-run") args.dryRun = true;
     else if (a === "--sin-mundo") args.sinMundo = true;
+    else if (a === "--sin-pais") args.sinPais = true;
+    else if (a === "--sin-socios") args.sinSocios = true;
     else if (a === "--years") {
       const v = (argv[++i] ?? "").split(",").map((s) => Number(s.trim())).filter((n) => Number.isInteger(n));
       if (v.length > 0) args.anios = v;
@@ -342,6 +361,7 @@ function parseArgs(argv: string[]): Args {
     else if (a === "--reporters") args.reporters = lista(argv[++i], REPORTERS_DEFAULT);
     else if (a === "--partners") args.partners = lista(argv[++i], PARTNERS_DEFAULT);
     else if (a === "--cmds") args.cmds = lista(argv[++i], CMD_DEFAULT);
+    else if (a === "--socios") args.socios = lista(argv[++i], SOCIOS_DEFAULT);
   }
   return args;
 }
@@ -455,6 +475,58 @@ async function ingestaMundo(
   return contadores;
 }
 
+/**
+ * Socios como reporter: por cada año pide sus flujos (los de `--flujos`, X y M
+ * por defecto) con partner '0' — es decir su comercio con el mundo — y los
+ * guarda con reporter_code = código del socio. Es el denominador de mercado de
+ * `modo=rca-bilateral` del handler: la importación del socio por capítulo (su
+ * flujo M) mide la demanda del mercado destino. Como son pocos reporters por
+ * request (y en lote por `lotesPorFila`), un request cubre todos los socios
+ * del año cuando hay margen.
+ */
+async function ingestaSocios(
+  args: Args,
+  pool: DbPool | null
+): Promise<{ requests: number; insertadas: number; socios: Set<string> }> {
+  const conClave = CLAVE.length > 0;
+  const contadores = { requests: 0, insertadas: 0, socios: new Set<string>() };
+  if (args.socios.length === 0) return contadores;
+  const filasPorItem = args.cmds.length * args.flujos.length;
+  for (const anio of args.anios) {
+    const lotes = lotesPorFila(
+      args.socios,
+      filasPorItem,
+      conClave ? MARGEN_FILAS_CON_CLAVE : MARGEN_FILAS
+    );
+    for (const lote of lotes) {
+      const url = buildUrl({
+        reporter: lote.join(","),
+        anio,
+        flujo: args.flujos.join(","),
+        partners: ["0"],
+        cmds: args.cmds,
+        conClave,
+      });
+      const rows = await fetchComtrade(url);
+      contadores.requests += 1;
+      validarLote(
+        rows,
+        null,
+        `socios ${anio} lote ${lotes.indexOf(lote) + 1}/${lotes.length}`,
+        conClave ? MAX_FILAS_CON_CLAVE : MAX_FILAS_API
+      );
+      for (const socio of lote) contadores.socios.add(socio);
+      const filas = rows
+        .map(normalizarComtrade)
+        .filter((r): r is ComtradeFila => r !== null && lote.includes(r.reporterCode));
+      contadores.insertadas += await insertarFilas(pool, filas);
+      process.stdout.write(`  socios ${anio} (${lote.join(",")}): ${filas.length} filas\n`);
+      await sleep(conClave ? DELAY_MS_CON_CLAVE : DELAY_MS);
+    }
+  }
+  return contadores;
+}
+
 async function main() {
   const args = parseArgs(process.argv);
   const pool = args.dryRun ? null : connect("bcrp-comercio-exterior");
@@ -463,32 +535,35 @@ async function main() {
   let insertadas = 0;
   let requests = 0;
   let reportersMundo = new Set<string>();
+  let sociosIngeridos = new Set<string>();
   try {
     // Lado país: partners en lotes dentro del límite de filas del endpoint.
     const conClave = CLAVE.length > 0;
     const maxFilas = conClave ? MAX_FILAS_CON_CLAVE : MAX_FILAS_API;
-    const lotesPartners = lotesPorFila(
-      args.partners,
-      args.cmds.length,
-      conClave ? MARGEN_FILAS_CON_CLAVE : MARGEN_FILAS
-    );
-    for (const reporter of args.reporters) {
-      for (const anio of args.anios) {
-        for (const flujo of args.flujos) {
-          for (const partnersLote of lotesPartners) {
-            const url = buildUrl({ reporter, anio, flujo, partners: partnersLote, cmds: args.cmds, conClave });
-            const rows = await fetchComtrade(url);
-            requests += 1;
-            validarLote(
-              rows,
-              partnersLote.length * args.cmds.length,
-              `reporter ${reporter} ${anio} ${flujo} partners ${partnersLote.join(",")}`,
-              maxFilas
-            );
-            const filas = rows.map(normalizarComtrade).filter((r): r is ComtradeFila => r !== null);
-            insertadas += await insertarFilas(pool, filas);
-            process.stdout.write(`  reporter ${reporter} ${anio} ${flujo}: ${filas.length} filas\n`);
-            await sleep(conClave ? DELAY_MS_CON_CLAVE : DELAY_MS);
+    if (!args.sinPais) {
+      const lotesPartners = lotesPorFila(
+        args.partners,
+        args.cmds.length,
+        conClave ? MARGEN_FILAS_CON_CLAVE : MARGEN_FILAS
+      );
+      for (const reporter of args.reporters) {
+        for (const anio of args.anios) {
+          for (const flujo of args.flujos) {
+            for (const partnersLote of lotesPartners) {
+              const url = buildUrl({ reporter, anio, flujo, partners: partnersLote, cmds: args.cmds, conClave });
+              const rows = await fetchComtrade(url);
+              requests += 1;
+              validarLote(
+                rows,
+                partnersLote.length * args.cmds.length,
+                `reporter ${reporter} ${anio} ${flujo} partners ${partnersLote.join(",")}`,
+                maxFilas
+              );
+              const filas = rows.map(normalizarComtrade).filter((r): r is ComtradeFila => r !== null);
+              insertadas += await insertarFilas(pool, filas);
+              process.stdout.write(`  reporter ${reporter} ${anio} ${flujo}: ${filas.length} filas\n`);
+              await sleep(conClave ? DELAY_MS_CON_CLAVE : DELAY_MS);
+            }
           }
         }
       }
@@ -499,12 +574,19 @@ async function main() {
       insertadas += mundo.insertadas;
       reportersMundo = mundo.reporters;
     }
+    if (!args.sinSocios) {
+      const socios = await ingestaSocios(args, pool);
+      requests += socios.requests;
+      insertadas += socios.insertadas;
+      sociosIngeridos = socios.socios;
+    }
   } finally {
     if (pool) await pool.end();
   }
   process.stdout.write(
     `comtrade-benchmark: ${requests} requests, ${insertadas} filas` +
       (args.sinMundo ? "" : `, mundo: ${reportersMundo.size} reporters`) +
+      (args.sinSocios ? "" : `, socios: ${sociosIngeridos.size}`) +
       `${args.dryRun ? " (dry-run)" : ""}\n`
   );
 }

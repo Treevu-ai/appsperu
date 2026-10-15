@@ -172,6 +172,27 @@ describe("normalizarComtrade (UN Comtrade)", () => {
     expect(partirLotes([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
     expect(partirLotes([], 3)).toEqual([]);
   });
+
+  it("parte socios en lotes considerando los dos flujos (X,M) por capítulo", () => {
+    // 6 socios × 2 flujos × 46 cmds = 552 filas por request: con margen preview
+    // (450) se parten en lotes de a 4; con margen con clave (18000) cabe todo.
+    const socios = ["156", "842", "724", "276", "699", "76"];
+    const preview = lotesPorFila(socios, 92);
+    expect(preview.map((l) => l.length)).toEqual([4, 2]);
+    for (const lote of preview) expect(lote.length * 92).toBeLessThanOrEqual(450);
+    expect(lotesPorFila(socios, 92, 18000)).toEqual([socios]);
+    // La URL de socios junta varios reporters y los dos flujos en un request.
+    const url = buildComtradeUrl({
+      reporter: "156,842",
+      anio: 2024,
+      flujo: "X,M",
+      partners: ["0"],
+      cmds: ["TOTAL", "04"],
+    });
+    expect(url).toContain("reporterCode=156%2C842");
+    expect(url).toContain("flowCode=X%2CM");
+    expect(url).toContain("partnerCode=0");
+  });
 });
 
 describe("normalizarWdi (Banco Mundial)", () => {

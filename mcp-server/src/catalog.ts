@@ -2332,7 +2332,12 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "Chile). Con `modo=rca` (requiere `anio`) calcula la ventaja comparativa revelada por capítulo: el país " +
       "son sus filas con partner '0' (Mundo como destino = total del país) y el denominador es el agregado " +
       "mundial (reporter '0', suma de todos los reporters que ingesta el conector). RCA > 1 = ventaja " +
-      "relativa. Sirve para comparar Perú frente a " +
+      "relativa. `modo=rca-serie` repite la RCA para todos los años del rango (desde/hasta) con tendencia por " +
+      "capítulo; `modo=oportunidad` cruza RCA < umbral con el CAGR de las importaciones mundiales del capítulo " +
+      "(screening de líneas exportables con mercado creciente); `modo=rca-bilateral` (requiere `anio` y " +
+      "`socio`) mide al país dentro del mercado del socio usando las importaciones de ese socio (bloque " +
+      "--socios de la ingesta); `modo=informe` resume todo en Markdown. " +
+      "Sirve para comparar Perú frente a " +
       "competidores por producto — lo que las series nacionales (BCRP/SUNAT), agregadas, no permiten. " +
       "Endpoint de Comtrade (autenticado con COMTRADE_API_KEY; preview público sin key): puede rezagarse meses respecto al cierre oficial. Sin ruta Express: " +
       "se sirve solo por MCP (ver MCP_ONLY_PATHS en el test de paridad). " + SIN_SCHEDULER,
@@ -2347,7 +2352,15 @@ export const TOOL_CATALOG: ToolSpec[] = [
       hasta: z.coerce.number().int().min(1988).max(2100).optional(),
       flujo: z.enum(["X", "M"]).optional().describe("X = exportaciones, M = importaciones."),
       groupBy: z.enum(["partner", "cmdCode", "cmd", "reporter", "anio", "flujo"]).optional(),
-      modo: z.enum(["rca"]).optional().describe("Ventaja comparativa revelada por capítulo. Requiere `anio`."),
+      modo: z.enum(["rca", "rca-serie", "oportunidad", "rca-bilateral", "informe"]).optional().describe(
+        "rca: ventaja comparativa revelada por capítulo (requiere `anio`). " +
+        "rca-serie: la misma RCA por año del rango con tendencia. " +
+        "oportunidad: RCA < umbral con demanda mundial creciente. " +
+        "rca-bilateral: el país dentro del mercado de un `socio` (requiere `anio` y `socio`). " +
+        "informe: resumen ejecutivo en Markdown (requiere `anio`)."
+      ),
+      socio: z.string().min(1).optional().describe("Código numérico Comtrade del socio para modo=rca-bilateral (ej. '156' China, '842' EE.UU.); el socio debe estar ingerido (bloque --socios de la ingesta)."),
+      umbralRca: z.coerce.number().min(0).optional().describe("Umbral RCA para modo=oportunidad (default 1)."),
       limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 200, máximo 500."),
       offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
