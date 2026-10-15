@@ -13,9 +13,14 @@ import type { ToolHandlerContext, HandlerResult } from "../registry.js";
  * - default: filas filtradas (reporter × anio × flujo × partner × cmdCode),
  *   con `groupBy` opcional (partner | cmdCode | reporter | anio).
  * - `modo=rca`: ventaja comparativa revelada por capítulo arancelario —
- *   (exportaciones del reporter en el capítulo / total del reporter) /
- *   (exportaciones del Mundo en el capítulo / total del Mundo), donde "Mundo"
- *   es partner_code = '0'. RCA > 1 indica ventaja relativa.
+ *   (exportaciones del país en el capítulo / total del país) /
+ *   (exportaciones del Mundo en el capítulo / total del Mundo). El país son sus
+ *   filas con partner_code = '0' (Mundo como destino = total del país); el Mundo
+ *   es reporter_code = '0', el agregado mundial que ingerí el conector
+ *   (suma de todos los reporters, flag --mundo). OJO: partner '0' NO son valores
+ *   mundiales — verificado contra la API el 2026-10-15: reporter 604 × partner 0
+ *   × cmd 04 = USD 59.6M, el valor de Perú, no el del mundo. RCA > 1 indica
+ *   ventaja relativa.
  *
  * @fidelity: precomputado — este módulo NO es el port de ningún route Express:
  * la fuente (UN Comtrade) es nueva y se sirve solo por MCP, así que su SQL no
@@ -87,40 +92,62 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
       };
     }
     const flujoRca = flujo ?? "X";
+    // Lado país: reporter $3 con partner '0' (= total del país por capítulo).
+    // Lado Mundo: reporter '0' = agregado mundial ingerido por el conector.
     const { rows } = await db.query<ComtradeRow>(
-      // @nuevo: capítulos no-TOTAL del reporter y del Mundo para la RCA (tabla nueva, sin route Express).
+      // @nuevo: capítulos no-TOTAL del país y del Mundo para la RCA (tabla nueva, sin route Express).
       `SELECT anio, flujo, reporter_code, partner_code, cmd_code, fob_usd, cif_usd, primary_usd,
               es_estimado, es_agregado
        FROM comtrade_flujos
-       WHERE anio = $1 AND flujo = $2 AND cmd_code <> 'TOTAL' AND partner_code IN ($3, '0')`,
+       WHERE anio = $1 AND flujo = $2 AND cmd_code <> 'TOTAL'
+         AND partner_code = '0' AND reporter_code IN ($3, '0')`,
       [anio, flujoRca, reporter]
     );
     const porCmd = new Map<string, { reporterTotal: number | null; mundoTotal: number | null }>();
     for (const r of rows) {
       const entry = porCmd.get(r.cmd_code) ?? { reporterTotal: null, mundoTotal: null };
       const valor = num(r.primary_usd) ?? num(r.fob_usd);
-      if (r.partner_code === "0") entry.mundoTotal = valor;
+      if (r.reporter_code === "0") entry.mundoTotal = valor;
       else entry.reporterTotal = valor;
       porCmd.set(r.cmd_code, entry);
     }
     // Totales "TOTAL" para los denominadores.
     const { rows: totalRows } = await db.query<ComtradeRow>(
-      // @nuevo: totales TOTAL del reporter y del Mundo, denominadores de la RCA (tabla nueva).
+      // @nuevo: totales TOTAL del país y del Mundo, denominadores de la RCA (tabla nueva).
       `SELECT anio, flujo, reporter_code, partner_code, cmd_code, fob_usd, cif_usd, primary_usd,
               es_estimado, es_agregado
        FROM comtrade_flujos
-       WHERE anio = $1 AND flujo = $2 AND cmd_code = 'TOTAL' AND partner_code IN ($3, '0')`,
+       WHERE anio = $1 AND flujo = $2 AND cmd_code = 'TOTAL'
+         AND partner_code = '0' AND reporter_code IN ($3, '0')`,
       [anio, flujoRca, reporter]
     );
     let reporterAll: number | null = null;
     let mundoAll: number | null = null;
     for (const r of totalRows) {
       const valor = num(r.primary_usd) ?? num(r.fob_usd);
-      if (r.partner_code === "0") mundoAll = valor;
+      if (r.reporter_code === "0") mundoAll = valor;
       else reporterAll = valor;
     }
+    const advertencias: string[] = [];
+    if (reporterAll === null || reporterAll <= 0) {
+      advertencias.push(
+        `Sin TOTAL del reporter ${reporter} (partner '0') para ${anio}: correr npm run ingest:comtrade.`
+      );
+    }
+    if (mundoAll === null || mundoAll <= 0) {
+      advertencias.push(
+        "Sin TOTAL del Mundo (reporter '0'): correr npm run ingest:comtrade — la RCA necesita el agregado mundial que ingesta el conector."
+      );
+    }
+    const hayNumerador = reporterAll !== null && reporterAll > 0;
+    const hayDenominador = mundoAll !== null && mundoAll > 0;
     const resultados = [...porCmd.entries()]
-      .filter(([, v]) => v.reporterTotal !== null && v.mundoTotal !== null && v.reporterTotal > 0 && v.mundoTotal > 0 && reporterAll && mundoAll)
+      .filter(
+        ([, v]) =>
+          hayNumerador && hayDenominador &&
+          v.reporterTotal !== null && v.mundoTotal !== null &&
+          v.reporterTotal > 0 && v.mundoTotal > 0
+      )
       .map(([cmd, v]) => ({
         cmdCode: cmd,
         reporterFobUsd: v.reporterTotal,
@@ -135,12 +162,13 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
         anio,
         flujo: flujoRca,
         reporter,
-        mundo: "partner_code '0' (Mundo)",
+        mundo: "reporter_code '0' (agregado mundial ingerido por el conector)",
         reporterTotalUsd: reporterAll,
         mundoTotalUsd: mundoAll,
         resultados,
+        advertencias,
         interpretacion: "RCA > 1 = ventaja comparativa revelada en ese capítulo; < 1 = desventaja.",
-        fuente: "UN Comtrade (comtradeapi.un.org, endpoint preview público)",
+        fuente: "UN Comtrade (comtradeapi.un.org, endpoint autenticado con COMTRADE_API_KEY; preview público sin key)",
         ingesta: "manual, sin scheduler — refleja la última corrida del conector",
       },
     };
@@ -170,7 +198,7 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
       body: {
         resultados: rows.map((r) => ({ dimension: groupBy, valor: r.dimension, fobUsd: Number(r.fob_usd), filas: Number(r.filas) })),
         unidad: "USD (unidades, no millones)",
-        fuente: "UN Comtrade (comtradeapi.un.org, endpoint preview público)",
+        fuente: "UN Comtrade (comtradeapi.un.org, endpoint autenticado con COMTRADE_API_KEY; preview público sin key)",
         ingesta: "manual, sin scheduler — refleja la última corrida del conector",
       },
     };

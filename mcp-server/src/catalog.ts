@@ -2329,10 +2329,12 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "Flujos de comercio UN Comtrade (benchmark externo, en USD — no millones) por país reporter × socio × " +
       "capítulo arancelario × año. Por defecto trae Perú (reporter 604) con socio '0' = Mundo y los principales " +
       "destinos/orígenos; con `--reporters` en la ingesta se agregaron países comparadores (Ecuador, Colombia, " +
-      "Chile). Con `modo=rca` (requiere `anio`) calcula la ventaja comparativa revelada por capítulo usando el " +
-      "Mundo (partner '0') como denominador: RCA > 1 = ventaja relativa. Sirve para comparar Perú frente a " +
+      "Chile). Con `modo=rca` (requiere `anio`) calcula la ventaja comparativa revelada por capítulo: el país " +
+      "son sus filas con partner '0' (Mundo como destino = total del país) y el denominador es el agregado " +
+      "mundial (reporter '0', suma de todos los reporters que ingesta el conector). RCA > 1 = ventaja " +
+      "relativa. Sirve para comparar Perú frente a " +
       "competidores por producto — lo que las series nacionales (BCRP/SUNAT), agregadas, no permiten. " +
-      "Endpoint preview público de Comtrade: puede rezagarse meses respecto al cierre oficial. Sin ruta Express: " +
+      "Endpoint de Comtrade (autenticado con COMTRADE_API_KEY; preview público sin key): puede rezagarse meses respecto al cierre oficial. Sin ruta Express: " +
       "se sirve solo por MCP (ver MCP_ONLY_PATHS en el test de paridad). " + SIN_SCHEDULER,
     pathTemplate: "/api/comtrade",
     pathParams: [],

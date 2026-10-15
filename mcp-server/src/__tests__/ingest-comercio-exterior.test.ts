@@ -12,7 +12,7 @@
 import { describe, expect, it } from "vitest";
 import { decodificarXml, parseRowCells } from "../ingest/xlsx-rows.js";
 import { AgregadorComercio, normalizarFila, parseNumeroEs } from "../ingest/mincetur-normalize.js";
-import { buildUrl as buildComtradeUrl, normalizarComtrade } from "../ingest/comtrade-benchmark.js";
+import { buildUrl as buildComtradeUrl, normalizarComtrade, lotesPorFila, partirLotes } from "../ingest/comtrade-benchmark.js";
 import { buildUrl as buildWdiUrl, normalizarWdi } from "../ingest/wdi-contexto.js";
 
 /** Fila real del XLSX 2024 (con una entidad XML en la descripción, como trae la fuente). */
@@ -155,6 +155,22 @@ describe("normalizarComtrade (UN Comtrade)", () => {
     expect(url).toContain("partnerCode=0%2C842");
     expect(url).toContain("cmdCode=TOTAL%2C04");
     expect(url).toContain("flowCode=X");
+  });
+
+  it("parte partners en lotes bajo el límite de 500 filas del preview", () => {
+    // 15 partners × 46 cmds = 690 filas: el request único salía truncado a 500
+    // sin aviso (verificado en vivo 2026-10-15). Con margen de 450: lotes de 9.
+    const partners = Array.from({ length: 15 }, (_, i) => String(i));
+    const lotes = lotesPorFila(partners, 46);
+    expect(lotes.map((l) => l.length)).toEqual([9, 6]);
+    expect(lotes.flat()).toHaveLength(15);
+    // Nunca un lote que pueda superar el límite.
+    for (const lote of lotes) expect(lote.length * 46).toBeLessThanOrEqual(450);
+  });
+
+  it("partirLotes cubre todos los ítems aunque no dividan exacto", () => {
+    expect(partirLotes([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+    expect(partirLotes([], 3)).toEqual([]);
   });
 });
 

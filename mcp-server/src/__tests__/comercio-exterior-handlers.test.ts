@@ -133,34 +133,63 @@ describe("benchmark-externo:list (Comtrade)", () => {
     expect(res.status).toBe(400);
   });
 
-  it("modo=rca calcula la razón con el Mundo (partner '0') como denominador", async () => {
+  it("modo=rca calcula la razón con el Mundo (reporter '0') como denominador", async () => {
     // Capítulo 08: Perú 5 de 100 (5%), Mundo 500 de 10000 (5%) -> RCA 1.
     // Capítulo 04: Perú 10 de 100 (10%), Mundo 100 de 10000 (1%) -> RCA 10.
+    // OJO con los códigos: el país son sus filas con partner '0' (Mundo como
+    // destino = total del país); el Mundo es reporter_code '0'. Partner '0' NO
+    // es el valor mundial y partner = reporter no lo devuelve la API (2026-10-15).
     dbQuery
       .mockResolvedValueOnce({
         rows: [
-          { anio: 2024, flujo: "X", reporter_code: "604", partner_code: "0", cmd_code: "04", fob_usd: "100", cif_usd: null, primary_usd: "100", es_estimado: false, es_agregado: true },
-          { anio: 2024, flujo: "X", reporter_code: "604", partner_code: "604", cmd_code: "04", fob_usd: "10", cif_usd: null, primary_usd: "10", es_estimado: false, es_agregado: true },
-          { anio: 2024, flujo: "X", reporter_code: "604", partner_code: "0", cmd_code: "08", fob_usd: "500", cif_usd: null, primary_usd: "500", es_estimado: false, es_agregado: true },
-          { anio: 2024, flujo: "X", reporter_code: "604", partner_code: "604", cmd_code: "08", fob_usd: "5", cif_usd: null, primary_usd: "5", es_estimado: false, es_agregado: true },
+          { anio: 2024, flujo: "X", reporter_code: "604", partner_code: "0", cmd_code: "04", fob_usd: "10", cif_usd: null, primary_usd: "10", es_estimado: false, es_agregado: true },
+          { anio: 2024, flujo: "X", reporter_code: "604", partner_code: "0", cmd_code: "08", fob_usd: "5", cif_usd: null, primary_usd: "5", es_estimado: false, es_agregado: true },
+          { anio: 2024, flujo: "X", reporter_code: "0", partner_code: "0", cmd_code: "04", fob_usd: "100", cif_usd: null, primary_usd: "100", es_estimado: false, es_agregado: true },
+          { anio: 2024, flujo: "X", reporter_code: "0", partner_code: "0", cmd_code: "08", fob_usd: "500", cif_usd: null, primary_usd: "500", es_estimado: false, es_agregado: true },
         ],
       })
       .mockResolvedValueOnce({
         rows: [
-          { anio: 2024, flujo: "X", reporter_code: "604", partner_code: "0", cmd_code: "TOTAL", fob_usd: "10000", cif_usd: null, primary_usd: "10000", es_estimado: true, es_agregado: true },
-          { anio: 2024, flujo: "X", reporter_code: "604", partner_code: "604", cmd_code: "TOTAL", fob_usd: "100", cif_usd: null, primary_usd: "100", es_estimado: true, es_agregado: true },
+          { anio: 2024, flujo: "X", reporter_code: "604", partner_code: "0", cmd_code: "TOTAL", fob_usd: "100", cif_usd: null, primary_usd: "100", es_estimado: true, es_agregado: true },
+          { anio: 2024, flujo: "X", reporter_code: "0", partner_code: "0", cmd_code: "TOTAL", fob_usd: "10000", cif_usd: null, primary_usd: "10000", es_estimado: true, es_agregado: true },
         ],
       });
 
     const res = await comtradeList(ctx({ modo: "rca", anio: 2024, reporter: "604", flujo: "X" }));
     expect(res.status).toBe(200);
-    const body = res.body as { modo: string; reporterTotalUsd: number; mundoTotalUsd: number; resultados: Array<{ cmdCode: string; rca: number }> };
+    const body = res.body as { modo: string; reporterTotalUsd: number; mundoTotalUsd: number; advertencias: string[]; resultados: Array<{ cmdCode: string; rca: number }> };
     expect(body.modo).toBe("rca");
     expect(body.reporterTotalUsd).toBe(100);
     expect(body.mundoTotalUsd).toBe(10000);
+    expect(body.advertencias).toEqual([]);
     expect(body.resultados[0].cmdCode).toBe("04");
     expect(body.resultados[0].rca).toBeCloseTo(10, 6);
     expect(body.resultados[1].rca).toBeCloseTo(1, 6);
+    // Ambas queries deben pedir país (partner '0') Y Mundo (reporter '0').
+    for (const llamada of dbQuery.mock.calls) {
+      expect(llamada[0] as string).toContain("partner_code = '0' AND reporter_code IN ($3, '0')");
+    }
+  });
+
+  it("modo=rca sin filas del Mundo devuelve resultados vacíos y advierte", async () => {
+    dbQuery
+      .mockResolvedValueOnce({
+        rows: [
+          { anio: 2024, flujo: "X", reporter_code: "604", partner_code: "0", cmd_code: "08", fob_usd: "5", cif_usd: null, primary_usd: "5", es_estimado: false, es_agregado: true },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          { anio: 2024, flujo: "X", reporter_code: "604", partner_code: "0", cmd_code: "TOTAL", fob_usd: "100", cif_usd: null, primary_usd: "100", es_estimado: true, es_agregado: true },
+        ],
+      });
+
+    const res = await comtradeList(ctx({ modo: "rca", anio: 2024 }));
+    expect(res.status).toBe(200);
+    const body = res.body as { resultados: unknown[]; advertencias: string[] };
+    expect(body.resultados).toEqual([]);
+    expect(body.advertencias).toHaveLength(1);
+    expect(body.advertencias[0]).toContain("reporter '0'");
   });
 });
 
