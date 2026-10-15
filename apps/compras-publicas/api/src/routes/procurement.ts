@@ -67,6 +67,13 @@ procurementRouter.get("/", asyncHandler(async (req, res) => {
       tags: r.tags,
       fuente: { dataset: "OECE - Contrataciones Abiertas (OCDS)", extraidoEl: r.fetched_at },
     })),
+    scope: {
+      fuente: "procurement_processes — OCDS OECE, procesos de mayor cuantía ingeridos en corridas locales",
+      ambito: departamento ? `departamento ${departamento.toUpperCase()}` : "nacional (sin filtro de departamento)",
+      cobertura:
+        "muestra parcial de corridas OCDS — no es censo del universo OECE; respuesta recortada a los 10,000 procesos más recientes",
+      filtros: { departamento: departamento ?? null, categoria: categoria ?? null, buyerId: buyerId ?? null },
+    },
   });
 }));
 

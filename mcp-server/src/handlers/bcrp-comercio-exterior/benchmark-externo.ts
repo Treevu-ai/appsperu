@@ -71,6 +71,15 @@ const NOTA_INGESTA = "manual, sin scheduler — refleja la última corrida del c
 /** Delta mínimo de RCA (fin - inicio) para declarar alza/baja; por debajo: estable. */
 const UMBRAL_TENDENCIA_RCA = 0.25;
 
+/**
+ * Umbral FOB mínimo por capítulo para `modo=rca-bilateral`: los capítulos con
+ * X(país→socio) o M(socio) por debajo de US$1M producen ratios inestables que
+ * inflan el ranking (denominadores chicos, pocos dólares de bilateral). El
+ * filtro está activo por defecto; `fobMin=0` lo desactiva y la respuesta ecoa
+ * el valor aplicado más el conteo de capítulos omitidos.
+ */
+const FOB_MIN_BILATERAL_USD = 1_000_000;
+
 /** Nombres cortos de los capítulos HS que ingesta el conector (CMD_DEFAULT). */
 const CAPITULOS_NOMBRES: Record<string, string> = {
   TOTAL: "Total",
@@ -638,6 +647,13 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
         body: { error: "`socio` '0' (Mundo) no tiene sentido bilateral: el agregado mundial ya está en modo=rca." },
       };
     }
+    const fobMin = args.fobMin !== undefined ? Number(args.fobMin) : FOB_MIN_BILATERAL_USD;
+    if (!Number.isFinite(fobMin) || fobMin < 0) {
+      return {
+        status: 400,
+        body: { error: "`fobMin` debe ser un número ≥ 0 (US$ FOB mínimo por capítulo; 0 desactiva el filtro)." },
+      };
+    }
     // Exportaciones del país y del Mundo por capítulo (numerador país + RCA clásica).
     const { rows: xRows } = await db.query<ComtradeRow>(
       // @nuevo: capítulos X del país y del Mundo para la RCA bilateral (tabla nueva, sin route Express).
@@ -767,10 +783,28 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
         participacionMercado,
       };
     };
-    const resultados = [...cmds].sort().map(mapear).filter((r) => r.rcaBilateral !== null);
+    const mapeados = [...cmds].sort().map(mapear).filter((r) => r.rcaBilateral !== null);
     if (sinDatos > 0) {
       advertencias.push(
         `${sinDatos} capítulos sin datos completos (país, socio y Mundo) se omitieron del cálculo.`
+      );
+    }
+    // Filtro de volumen: un capítulo con bilateral o demanda del socio por
+    // debajo de fobMin produce ratios inestables (denominadores chicos) que
+    // escalan al tope del ranking por puros dólares mínimos.
+    let omitidosPorFobMin = 0;
+    const resultados = mapeados.filter((r) => {
+      if (fobMin <= 0) return true;
+      const mje = mSocio.get(r.cmdCode) ?? 0;
+      if ((r.fobUsd ?? 0) < fobMin || mje < fobMin) {
+        omitidosPorFobMin += 1;
+        return false;
+      }
+      return true;
+    });
+    if (omitidosPorFobMin > 0) {
+      advertencias.push(
+        `${omitidosPorFobMin} capítulos con FOB menor a US$${fobMin.toLocaleString("en-US")} (X país→socio o importaciones del socio) se omitieron del ranking: ratios inestables en flujos mínimos. Pasar fobMin=0 para incluirlos.`
       );
     }
     return {
@@ -780,6 +814,7 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
         anio,
         reporter,
         socio,
+        fobMin,
         formulas: {
           rcaBilateral:
             "(X(país→socio, e) / M(socio, e)) / (X(país, e) / M(mundo, e)) — cuota de país en el mercado del socio relativa a su peso en la demanda mundial del capítulo",

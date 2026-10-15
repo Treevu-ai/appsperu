@@ -81,7 +81,13 @@ export interface CrossrefParams {
  * Devuelve el mismo shape que el endpoint, más el campo `ruc` en cada
  * resultado (antes solo expuesto como `rucValido: boolean`).
  */
-export async function computeCrossref(parsed: CrossrefParams): Promise<{ departamento: string; resultados: unknown[] }> {
+export async function computeCrossref(parsed: CrossrefParams): Promise<{
+  departamento: string;
+  scope: { fuente: string; ambito: string; cobertura: string };
+  advertencias: string[];
+  resultados: unknown[];
+}> {
+  const departamentoDefault = parsed.departamento === undefined;
   const wantedDepartamento = parsed.departamento?.toUpperCase().trim() ?? "LA LIBERTAD";
   const soloInhabilitados = parsed.soloInhabilitados ?? false;
   const soloNuevos = parsed.soloNuevos ?? false;
@@ -283,7 +289,19 @@ export async function computeCrossref(parsed: CrossrefParams): Promise<{ departa
     .filter((r) => !soloInhabilitados || r.tieneInhabilitacionVigente)
     .filter((r) => !soloNuevos || r.esNuevoDesdeUltimaCorrida);
 
-  return { departamento: wantedDepartamento, resultados: filtrados };
+  return {
+    departamento: wantedDepartamento,
+    scope: {
+      fuente: "awards (OECE OCDS) + minor_contracts (SEACE) cruzados por RUC exacto con inhabilitaciones del Tribunal de Contrataciones",
+      ambito: ambitoNacional ? "nacional — TODOS (awards + menores sin filtro de departamento)" : `departamento ${wantedDepartamento}`,
+      cobertura:
+        "cruce por RUC exacto sobre los datos ingeridos; `soloInhabilitados` y `soloNuevos` acotan la lista sin cambiar el alcance territorial",
+    },
+    advertencias: departamentoDefault
+      ? ["Sin `departamento`: se aplicó el default LA LIBERTAD — pasar departamento=TODOS para el cruce nacional (awards+menores)."]
+      : [],
+    resultados: filtrados,
+  };
 }
 
 crossrefRouter.get("/", asyncHandler(async (req, res) => {

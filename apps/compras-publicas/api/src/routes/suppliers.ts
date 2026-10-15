@@ -9,29 +9,58 @@ export const suppliersRouter = Router();
 
 const SuppliersQuerySchema = z.object({
   departamento: z.string().min(1).optional(),
+  categoria: z.string().min(1).optional(),
+  anio: z.coerce.number().int().min(2000).max(2100).optional(),
+  proveedor: z.string().min(1).optional(),
+  top: z.coerce.number().int().min(1).max(1000).optional(),
 });
 
 suppliersRouter.get("/", asyncHandler(async (req, res) => {
   const parsed = parseQuery(SuppliersQuerySchema, req.query, res);
   if (!parsed) return;
-  const { departamento } = parsed;
+  const { departamento, categoria, anio, proveedor, top } = parsed;
+
+  // `categoria` vive en procurement_processes (PK: ocid) — el LEFT JOIN no
+  // duplica filas de awards y solo se emite cuando se pide, para no arrastrar
+  // la ambigüedad de columnas compartidas (departamento, valor_monto,
+  // buyer_id) a la query por defecto. Con el JOIN activo, las columnas de
+  // awards se califican explícitamente en SELECT y WHERE.
+  const join = categoria ? `LEFT JOIN procurement_processes pp ON pp.ocid = awards.ocid` : "";
+  const a = (col: string): string => (categoria ? `awards.${col}` : col);
 
   const params: unknown[] = [];
-  let where = "";
+  const conditions: string[] = [];
   if (departamento) {
     params.push(departamento.toUpperCase());
-    where = `WHERE departamento = $1`;
+    conditions.push(`${a("departamento")} = $${params.length}`);
+  }
+  if (categoria) {
+    params.push(categoria);
+    conditions.push(`LOWER(pp.categoria) = $${params.length}`);
+  }
+  if (anio !== undefined) {
+    params.push(anio);
+    conditions.push(`EXTRACT(YEAR FROM ${a("fecha")}) = $${params.length}`);
+  }
+  if (proveedor) {
+    params.push(proveedor);
+    conditions.push(`${a("supplier_id")} = $${params.length}`);
   }
 
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const limitClause = top !== undefined ? `LIMIT ${top}` : "";
+
   const { rows } = await pool.query(
-    `SELECT supplier_id, supplier_name,
+    `SELECT ${a("supplier_id")}, ${a("supplier_name")},
             COUNT(*) AS adjudicaciones,
-            COUNT(DISTINCT buyer_id) AS entidades_distintas,
-            SUM(valor_monto) AS valor_total
+            COUNT(DISTINCT ${a("buyer_id")}) AS entidades_distintas,
+            SUM(${a("valor_monto")}) AS valor_total
      FROM awards
+     ${join}
      ${where}
-     GROUP BY supplier_id, supplier_name
-     ORDER BY valor_total DESC NULLS LAST`,
+     GROUP BY ${a("supplier_id")}, ${a("supplier_name")}
+     ORDER BY valor_total DESC NULLS LAST
+     ${limitClause}`,
     params
   );
 
@@ -47,7 +76,23 @@ suppliersRouter.get("/", asyncHandler(async (req, res) => {
     resultados.map((r) => ({ supplierId: r.supplierId, valorTotal: r.valorTotal }))
   );
 
-  res.json({ resultados, concentracion });
+  res.json({
+    resultados,
+    concentracion,
+    scope: {
+      fuente: "awards — OECE contrataciones abiertas (OCDS), corridas locales",
+      ambito: departamento ? `departamento ${departamento.toUpperCase()}` : "nacional (sin filtro de departamento)",
+      cobertura:
+        "muestra de adjudicaciones ingeridas — no es censo del universo OECE; grupos económicos multi-RUC no se detectan desde awards.",
+      filtros: {
+        departamento: departamento ?? null,
+        categoria: categoria ?? null,
+        anio: anio ?? null,
+        proveedor: proveedor ?? null,
+        top: top ?? null,
+      },
+    },
+  });
 }));
 
 suppliersRouter.get("/:supplierId", asyncHandler(async (req, res) => {

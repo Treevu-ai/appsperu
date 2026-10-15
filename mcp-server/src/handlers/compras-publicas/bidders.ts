@@ -194,6 +194,11 @@ export async function competition(ctx: ToolHandlerContext): Promise<HandlerResul
         descalificaciones: parseInt(r.descalificaciones),
       })),
       limitation: "Los datos provienen de una ingesta parcial de registros OCDS. La tasa no mide competencia, desempeño ni irregularidad.",
+      scope: {
+        fuente: "bidders — postores OCDS (OECE) en la muestra ingerida",
+        ambito: "nacional (la herramienta no filtra por departamento ni año)",
+        cobertura: "ingesta parcial de registros OCDS — ver limitation",
+      },
     },
   };
 }
@@ -235,6 +240,11 @@ export async function coparticipation(ctx: ToolHandlerContext): Promise<HandlerR
       })),
       threshold: "Mínimo 3 co-participaciones observadas",
       limitation: "La co-participación puede responder a rubros, zonas, periodos o cobertura de la fuente. No determina coordinación ni colusión.",
+      scope: {
+        fuente: "bidders — pares de postores que comparten ocid en la muestra ingerida",
+        ambito: "nacional (la herramienta no filtra por departamento ni año)",
+        cobertura: "ingesta parcial de registros OCDS; pares con menos de 3 co-participaciones no se listan",
+      },
     },
   };
 }

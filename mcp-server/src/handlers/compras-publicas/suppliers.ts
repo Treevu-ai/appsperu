@@ -27,23 +27,52 @@ interface SupplierAwardRow extends NeonRow {
 export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const { db, args } = ctx;
   const departamento = args.departamento as string | undefined;
+  const categoria = args.categoria as string | undefined;
+  const anio = args.anio ? Number(args.anio) : undefined;
+  const proveedor = args.proveedor as string | undefined;
+  const top = args.top ? Number(args.top) : undefined;
+
+  // `categoria` vive en procurement_processes (PK: ocid) — el LEFT JOIN no
+  // duplica filas de awards y solo se emite cuando se pide, para no arrastrar
+  // la ambigüedad de columnas compartidas (departamento, valor_monto,
+  // buyer_id) a la query por defecto. Con el JOIN activo, las columnas de
+  // awards se califican explícitamente en SELECT y WHERE.
+  const join = categoria ? `LEFT JOIN procurement_processes pp ON pp.ocid = awards.ocid` : "";
+  const a = (col: string): string => (categoria ? `awards.${col}` : col);
 
   const params: unknown[] = [];
-  let where = "";
+  const conditions: string[] = [];
   if (departamento) {
     params.push(departamento.toUpperCase());
-    where = `WHERE departamento = $1`;
+    conditions.push(`${a("departamento")} = $${params.length}`);
+  }
+  if (categoria) {
+    params.push(categoria);
+    conditions.push(`LOWER(pp.categoria) = $${params.length}`);
+  }
+  if (anio !== undefined) {
+    params.push(anio);
+    conditions.push(`EXTRACT(YEAR FROM ${a("fecha")}) = $${params.length}`);
+  }
+  if (proveedor) {
+    params.push(proveedor);
+    conditions.push(`${a("supplier_id")} = $${params.length}`);
   }
 
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const limitClause = top !== undefined ? `LIMIT ${top}` : "";
+
   const { rows } = await db.query<SupplierRow>(
-    `SELECT supplier_id, supplier_name,
+    `SELECT ${a("supplier_id")}, ${a("supplier_name")},
             COUNT(*) AS adjudicaciones,
-            COUNT(DISTINCT buyer_id) AS entidades_distintas,
-            SUM(valor_monto) AS valor_total
+            COUNT(DISTINCT ${a("buyer_id")}) AS entidades_distintas,
+            SUM(${a("valor_monto")}) AS valor_total
      FROM awards
+     ${join}
      ${where}
-     GROUP BY supplier_id, supplier_name
-     ORDER BY valor_total DESC NULLS LAST`,
+     GROUP BY ${a("supplier_id")}, ${a("supplier_name")}
+     ORDER BY valor_total DESC NULLS LAST
+     ${limitClause}`,
     params
   );
 
@@ -61,7 +90,23 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
 
   return {
     status: 200,
-    body: { resultados, concentracion },
+    body: {
+      resultados,
+      concentracion,
+      scope: {
+        fuente: "awards — OECE contrataciones abiertas (OCDS), corridas locales",
+        ambito: departamento ? `departamento ${departamento.toUpperCase()}` : "nacional (sin filtro de departamento)",
+        cobertura:
+          "muestra de adjudicaciones ingeridas — no es censo del universo OECE; grupos económicos multi-RUC no se detectan desde awards.",
+        filtros: {
+          departamento: departamento ?? null,
+          categoria: categoria ?? null,
+          anio: anio ?? null,
+          proveedor: proveedor ?? null,
+          top: top ?? null,
+        },
+      },
+    },
   };
 }
 

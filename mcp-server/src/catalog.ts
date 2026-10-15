@@ -583,11 +583,20 @@ export const TOOL_CATALOG: ToolSpec[] = [
     handler: "suppliers:list",
     description:
       "Proveedores del Estado agregados por adjudicaciones, entidades distintas y valor total, con índice de " +
-      "concentración de mercado. " +
+      "concentración de mercado. Filtros opcionales: `departamento`, `anio` (año de adjudicación), `proveedor` " +
+      "(supplier_id exacto, tal como aparece en `resultados[].supplierId`), `categoria` (goods/works/services vía " +
+      "el proceso de contratación) y `top` (N primeros por valor). La respuesta trae `scope` con fuente, ámbito " +
+      "y cobertura: los datos son una muestra de adjudicaciones ingeridas, no un censo del universo OECE. " +
       SIN_SCHEDULER,
     pathTemplate: "/api/suppliers",
     pathParams: [],
-    querySchema: { departamento: z.string().min(1).optional() },
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      categoria: z.string().min(1).optional().describe("Categoría del proceso: goods, works o services."),
+      anio: z.coerce.number().int().min(2000).max(2100).optional().describe("Año de la adjudicación (EXTRACT sobre awards.fecha)."),
+      proveedor: z.string().min(1).optional().describe("supplier_id exacto del proveedor (RUC u OCID, tal como figura en resultados[].supplierId)."),
+      top: z.coerce.number().int().min(1).max(1000).optional().describe("Devuelve solo los N proveedores con mayor valor total."),
+    },
   },
   {
     name: "compras_publicas_supplier_by_id",
@@ -1669,7 +1678,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "Aduanas-SUNAT (`aduanet.gob.pe`), sin captcha, ingesta automatizada. NO trae kilos ni peso, solo FOB " +
       "USD; esa granularidad exige el detalle de cada DUA, no público. Filas a nivel de embarque individual " +
       "(un RUC puede tener muchas filas por año) — para un total por año usa " +
-      "`identidad_fiscal_exportaciones_fob_resumen`. Paginación real: usa `limit`/`offset`; la respuesta trae " +
+      "`identidad_fiscal_exportaciones_fob_resumen`. `groupBy` agrega por dimensión (una fila con FOB total y " +
+      "nº de embarques por aduana/país/agente, paginada sobre los grupos). Paginación real: usa `limit`/`offset`; la respuesta trae " +
       "`total` y `hasMore`. " +
       SIN_SCHEDULER,
     pathTemplate: "/api/exportaciones-fob",
@@ -1679,6 +1689,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
       anio: z.coerce.number().int().min(2000).max(2100).optional(),
       mes: z.coerce.number().int().min(1).max(12).optional(),
       paisCodigo: z.string().min(1).optional().describe("Código de país de destino (ej. US, CN)."),
+      groupBy: z.enum(["aduana", "pais", "agente"]).optional().describe("Agrega las filas de embarque por la dimensión elegida (FOB total + nº de embarques por grupo)."),
       limit: z.coerce.number().int().min(1).max(1000).optional().describe("Default 200, máximo 1000."),
       offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
@@ -2336,7 +2347,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "capítulo; `modo=oportunidad` cruza RCA < umbral con el CAGR de las importaciones mundiales del capítulo " +
       "(screening de líneas exportables con mercado creciente); `modo=rca-bilateral` (requiere `anio` y " +
       "`socio`) mide al país dentro del mercado del socio usando las importaciones de ese socio (bloque " +
-      "--socios de la ingesta); `modo=informe` resume todo en Markdown. " +
+      "--socios de la ingesta; omite capítulos con FOB bajo `fobMin` para no inflar ratios con flujos mínimos); `modo=informe` resume todo en Markdown. " +
       "Sirve para comparar Perú frente a " +
       "competidores por producto — lo que las series nacionales (BCRP/SUNAT), agregadas, no permiten. " +
       "Endpoint de Comtrade (autenticado con COMTRADE_API_KEY; preview público sin key): puede rezagarse meses respecto al cierre oficial. Sin ruta Express: " +
@@ -2361,6 +2372,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
       ),
       socio: z.string().min(1).optional().describe("Código numérico Comtrade del socio para modo=rca-bilateral (ej. '156' China, '842' EE.UU.); el socio debe estar ingerido (bloque --socios de la ingesta)."),
       umbralRca: z.coerce.number().min(0).optional().describe("Umbral RCA para modo=oportunidad (default 1)."),
+      fobMin: z.coerce.number().min(0).optional().describe("US$ FOB mínimo por capítulo para modo=rca-bilateral (default 1,000,000): excluye del ranking capítulos con X país→socio o M(socio) bajo el umbral, cuyos ratios son inestables. 0 desactiva el filtro."),
       limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 200, máximo 500."),
       offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },

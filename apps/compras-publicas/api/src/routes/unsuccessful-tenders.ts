@@ -66,5 +66,12 @@ unsuccessfulTendersRouter.get("/", asyncHandler(async (req, res) => {
       fecha: r.fecha,
       fuente: { dataset: "OECE - Contrataciones Abiertas (OCDS), ítems sin adjudicar", extraidoEl: r.fetched_at },
     })),
+    scope: {
+      fuente: "unsuccessful_tenders — ítems OCDS (OECE) sin adjudicar declarados DESIERTO o NULO",
+      ambito: departamento ? `departamento ${departamento.toUpperCase()}` : "nacional (sin filtro de departamento)",
+      cobertura:
+        "muestra parcial de registros OCDS ingeridos; estados ambiguos de la fuente (RETROTRAIDO_POR_RESOLUCION, PENDIENTE_DE_REGISTRO_DE_EFECTO, CONVOCADO) quedan excluidos por diseño. Respuesta recortada a 500 filas más recientes",
+      filtros: { departamento: departamento ?? null, statusDetails: statusDetails ?? null, buyerId: buyerId ?? null },
+    },
   });
 }));

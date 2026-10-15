@@ -45,6 +45,36 @@ describe("GET /api/suppliers", () => {
     expect(sql).toMatch(/WHERE departamento = \$1/);
     expect(params).toEqual(["LA LIBERTAD"]);
   });
+
+  it("aplica categoria/anio/proveedor/top con el LEFT JOIN calificado", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+
+    const app = createApp();
+    await request(app)
+      .get("/api/suppliers")
+      .query({ departamento: "LIMA", categoria: "services", anio: 2024, proveedor: "PE-RUC-1", top: 5 });
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toMatch(/LEFT JOIN procurement_processes pp ON pp\.ocid = awards\.ocid/);
+    expect(sql).toMatch(/awards\.departamento = \$1/);
+    expect(sql).toMatch(/LOWER\(pp\.categoria\) = \$2/);
+    expect(sql).toMatch(/EXTRACT\(YEAR FROM awards\.fecha\) = \$3/);
+    expect(sql).toMatch(/awards\.supplier_id = \$4/);
+    expect(sql).toMatch(/LIMIT 5/);
+    expect(params).toEqual(["LIMA", "services", 2024, "PE-RUC-1"]);
+  });
+
+  it("devuelve el bloque scope con ambito y cobertura", async () => {
+    queryMock.mockResolvedValueOnce({ rows: [] });
+
+    const app = createApp();
+    const res = await request(app).get("/api/suppliers");
+
+    expect(res.status).toBe(200);
+    expect(res.body.scope.ambito).toBe("nacional (sin filtro de departamento)");
+    expect(res.body.scope.cobertura).toContain("no es censo");
+    expect(res.body.scope.filtros).toMatchObject({ departamento: null, categoria: null, anio: null, top: null });
+  });
 });
 
 describe("GET /api/suppliers/:supplierId", () => {

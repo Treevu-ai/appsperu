@@ -297,6 +297,7 @@ describe("benchmark-externo:list (Comtrade)", () => {
     expect((await comtradeList(ctx({ modo: "rca-bilateral", anio: 2024 }))).status).toBe(400);
     expect((await comtradeList(ctx({ modo: "rca-bilateral", anio: 2024, socio: "0" }))).status).toBe(400);
     expect((await comtradeList(ctx({ modo: "rca-bilateral", anio: 2024, socio: "604", reporter: "604" }))).status).toBe(400);
+    expect((await comtradeList(ctx({ modo: "rca-bilateral", anio: 2024, socio: "156", fobMin: -1 }))).status).toBe(400);
     expect(dbQuery).not.toHaveBeenCalled();
   });
 
@@ -343,7 +344,7 @@ describe("benchmark-externo:list (Comtrade)", () => {
         ],
       });
 
-    const res = await comtradeList(ctx({ modo: "rca-bilateral", anio: 2024, socio: "156" }));
+    const res = await comtradeList(ctx({ modo: "rca-bilateral", anio: 2024, socio: "156", fobMin: 0 }));
     expect(res.status).toBe(200);
     const body = res.body as {
       socio: string;
@@ -360,6 +361,59 @@ describe("benchmark-externo:list (Comtrade)", () => {
     expect(body.resultados[1].rcaBilateral).toBeCloseTo(5, 6);
     // La consulta de exportaciones país→socio filtra partner_code = $3 (el socio).
     expect(dbQuery.mock.calls[4][0] as string).toContain("reporter_code = $2 AND partner_code = $3");
+  });
+
+  it("modo=rca-bilateral aplica fobMin por defecto (US$1M) y advierte los omitidos", async () => {
+    // Cap 08 queda bajo el umbral en ambos flujos (500 de bilateral, 800k de
+    // demanda del socio); cap 04 supera US$1M en bilateral y demanda.
+    dbQuery
+      .mockResolvedValueOnce({
+        rows: [
+          { anio: 2024, flujo: "X", reporter_code: "604", partner_code: "0", cmd_code: "04", fob_usd: "2000000", cif_usd: null, primary_usd: "2000000", es_estimado: false, es_agregado: true },
+          { anio: 2024, flujo: "X", reporter_code: "604", partner_code: "0", cmd_code: "08", fob_usd: "500", cif_usd: null, primary_usd: "500", es_estimado: false, es_agregado: true },
+          { anio: 2024, flujo: "X", reporter_code: "0", partner_code: "0", cmd_code: "04", fob_usd: "100000000", cif_usd: null, primary_usd: "100000000", es_estimado: false, es_agregado: true },
+          { anio: 2024, flujo: "X", reporter_code: "0", partner_code: "0", cmd_code: "08", fob_usd: "500000000", cif_usd: null, primary_usd: "500000000", es_estimado: false, es_agregado: true },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          { anio: 2024, flujo: "X", reporter_code: "604", partner_code: "0", cmd_code: "TOTAL", fob_usd: "100000000", cif_usd: null, primary_usd: "100000000", es_estimado: true, es_agregado: true },
+          { anio: 2024, flujo: "X", reporter_code: "0", partner_code: "0", cmd_code: "TOTAL", fob_usd: "10000000000", cif_usd: null, primary_usd: "10000000000", es_estimado: true, es_agregado: true },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          { anio: 2024, flujo: "M", reporter_code: "156", partner_code: "0", cmd_code: "04", fob_usd: null, cif_usd: "5000000", primary_usd: "5000000", es_estimado: false, es_agregado: true },
+          { anio: 2024, flujo: "M", reporter_code: "156", partner_code: "0", cmd_code: "08", fob_usd: null, cif_usd: "800000", primary_usd: "800000", es_estimado: false, es_agregado: true },
+          { anio: 2024, flujo: "M", reporter_code: "0", partner_code: "0", cmd_code: "04", fob_usd: null, cif_usd: "2000000000", primary_usd: "2000000000", es_estimado: false, es_agregado: true },
+          { anio: 2024, flujo: "M", reporter_code: "0", partner_code: "0", cmd_code: "08", fob_usd: null, cif_usd: "5000000000", primary_usd: "5000000000", es_estimado: false, es_agregado: true },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          { anio: 2024, flujo: "M", reporter_code: "156", partner_code: "0", cmd_code: "TOTAL", fob_usd: null, cif_usd: "400000000", primary_usd: "400000000", es_estimado: true, es_agregado: true },
+          { anio: 2024, flujo: "M", reporter_code: "0", partner_code: "0", cmd_code: "TOTAL", fob_usd: null, cif_usd: "100000000000", primary_usd: "100000000000", es_estimado: true, es_agregado: true },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          { anio: 2024, flujo: "X", reporter_code: "604", partner_code: "156", cmd_code: "04", fob_usd: "2000000", cif_usd: null, primary_usd: "2000000", es_estimado: false, es_agregado: false },
+          { anio: 2024, flujo: "X", reporter_code: "604", partner_code: "156", cmd_code: "08", fob_usd: "500", cif_usd: null, primary_usd: "500", es_estimado: false, es_agregado: false },
+          { anio: 2024, flujo: "X", reporter_code: "604", partner_code: "156", cmd_code: "TOTAL", fob_usd: "2000500", cif_usd: null, primary_usd: "2000500", es_estimado: true, es_agregado: true },
+        ],
+      });
+
+    const res = await comtradeList(ctx({ modo: "rca-bilateral", anio: 2024, socio: "156" }));
+    expect(res.status).toBe(200);
+    const body = res.body as {
+      fobMin: number;
+      advertencias: string[];
+      resultados: Array<{ cmdCode: string }>;
+    };
+    expect(body.fobMin).toBe(1_000_000);
+    expect(body.resultados.map((r) => r.cmdCode)).toEqual(["04"]);
+    expect(body.advertencias.some((a) => a.includes("1 capítulos con FOB menor a US$1,000,000"))).toBe(true);
+    expect(body.advertencias.some((a) => a.includes("fobMin=0"))).toBe(true);
   });
 
   it("modo=rca-bilateral advierte cuando el socio no está ingerido", async () => {

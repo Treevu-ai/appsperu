@@ -189,8 +189,16 @@ interface ProveedorMontoRow extends NeonRow {
  */
 export async function comparativa(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const { db, args } = ctx;
+  const departamentoOmitido = args.departamento === undefined;
+  const anioOmitido = args.anio === undefined;
   const departamento = (args.departamento as string | undefined) ?? "LA LIBERTAD";
   const anio = args.anio ? Number(args.anio) : 2026;
+  const advertencias = [
+    ...(departamentoOmitido
+      ? ["Sin `departamento`: se aplicó el default LA LIBERTAD — pasar el departamento (o lista separada por comas) para el alcance que se necesita."]
+      : []),
+    ...(anioOmitido ? ["Sin `anio`: se aplicó el default 2026."] : []),
+  ];
   const deptos = departamento
     .split(",")
     .map((d) => d.trim().toUpperCase())
@@ -243,6 +251,7 @@ export async function comparativa(ctx: ToolHandlerContext): Promise<HandlerResul
     body: {
       meta: {
         cobertura: "Awards OECE (mayor cuantía) + menores SEACE (menor a 8 UIT)",
+        advertencias,
         nota: "Awards y menores son mercados distintos — la comparación directa de HHI tiene sentido solo como proxy de diversificación del proveedor, no como benchmark directo.",
         filtros: { departamentos: deptos, anio },
         fuente: { awards: "OECE / contratacionesabiertas.oece.gob.pe", menores: "SEACE / Sigma" },

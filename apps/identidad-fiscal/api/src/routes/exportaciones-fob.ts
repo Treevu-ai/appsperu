@@ -14,16 +14,24 @@ const SearchQuerySchema = z.object({
   anio: z.coerce.number().int().min(2000).max(2100).optional(),
   mes: z.coerce.number().int().min(1).max(12).optional(),
   paisCodigo: z.string().min(1).optional(),
+  groupBy: z.enum(["aduana", "pais", "agente"]).optional(),
   limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
   offset: z.coerce.number().int().min(0).default(0),
 });
+
+/** Dimensiones de agregación de `groupBy`: [código, nombre] en ruc_exportaciones_fob. */
+const GROUP_BY_DIMS: Record<string, [string, string]> = {
+  aduana: ["aduana_codigo", "aduana_nombre"],
+  pais: ["pais_codigo", "pais_nombre"],
+  agente: ["agente_codigo", "agente_nombre"],
+};
 
 exportacionesFobRouter.get(
   "/",
   asyncHandler(async (req, res) => {
     const parsed = parseQuery(SearchQuerySchema, req.query, res);
     if (!parsed) return;
-    const { ruc, anio, mes, paisCodigo, limit, offset } = parsed;
+    const { ruc, anio, mes, paisCodigo, groupBy, limit, offset } = parsed;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -46,6 +54,45 @@ exportacionesFobRouter.get(
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    // Vía de agregación: una fila por dimensión con FOB total y nº de embarques,
+    // en lugar de las filas individuales de embarque. Los filtros del where
+    // aplican igual; la paginación opera sobre los grupos.
+    if (groupBy) {
+      const [colCodigo, colNombre] = GROUP_BY_DIMS[groupBy];
+      const groupCountResult = await pool.query<{ total: string }>(
+        `SELECT COUNT(*) AS total FROM (SELECT 1 FROM ruc_exportaciones_fob ${where} GROUP BY ${colCodigo}, ${colNombre}) AS grupos`,
+        params
+      );
+      const total = Number(groupCountResult.rows[0]?.total ?? 0);
+
+      const groupDataResult = await pool.query(
+        `SELECT ${colCodigo} AS codigo, ${colNombre} AS nombre, SUM(fob_usd)::numeric(14,2) AS fob_usd,
+                COUNT(*) AS filas
+         FROM ruc_exportaciones_fob
+         ${where}
+         GROUP BY ${colCodigo}, ${colNombre}
+         ORDER BY SUM(fob_usd) DESC
+         LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+        [...params, limit, offset]
+      );
+      const groupRows = groupDataResult.rows;
+
+      res.json({
+        groupBy,
+        total,
+        limit,
+        offset,
+        hasMore: offset + groupRows.length < total,
+        resultados: groupRows.map((r) => ({
+          codigo: r.codigo,
+          nombre: r.nombre,
+          fobUsd: Number(r.fob_usd),
+          filas: Number(r.filas),
+        })),
+      });
+      return;
+    }
 
     const { rows: countRows } = await pool.query<{ total: string }>(
       `SELECT COUNT(*) AS total FROM ruc_exportaciones_fob ${where}`,

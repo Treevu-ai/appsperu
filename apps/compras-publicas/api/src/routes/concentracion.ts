@@ -252,6 +252,15 @@ concentracionRouter.get(
     const parsed = parseQuery(ComparativaQuerySchema, req.query, res);
     if (!parsed) return;
 
+    const departamentoOmitido = req.query.departamento === undefined;
+    const anioOmitido = req.query.anio === undefined;
+    const advertencias = [
+      ...(departamentoOmitido
+        ? ["Sin `departamento`: se aplicó el default LA LIBERTAD — pasar el departamento (o lista separada por comas) para el alcance que se necesita."]
+        : []),
+      ...(anioOmitido ? ["Sin `anio`: se aplicó el default 2026."] : []),
+    ];
+
     const { departamento, anio } = parsed;
     // `departamento` admite lista separada por comas (ej. "LIMA,ICA"). Se
     // descartan entradas vacías producto de comas repetidas o extremas
@@ -317,6 +326,7 @@ concentracionRouter.get(
     res.json({
       meta: {
         cobertura: "Awards OECE (mayor cuantía) + menores SEACE (menor a 8 UIT)",
+        advertencias,
         nota: "Awards y menores son mercados distintos — la comparación directa de HHI tiene sentido solo como proxy de diversificación del proveedor, no como benchmark directo.",
         filtros: { departamentos: deptos, anio },
         fuente: {

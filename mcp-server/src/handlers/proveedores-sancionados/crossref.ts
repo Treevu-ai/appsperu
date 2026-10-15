@@ -69,6 +69,7 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const fiscalDb = crossAppPool("identidad-fiscal", env);
   if (!fiscalDb) return crossAppUnavailable("identidad-fiscal");
 
+  const departamentoDefault = args.departamento === undefined;
   const wantedDepartamento = args.departamento ? (args.departamento as string).toUpperCase().trim() : "LA LIBERTAD";
   const soloInhabilitados = args.soloInhabilitados === "true";
   const soloNuevos = args.soloNuevos === "true";
@@ -267,6 +268,15 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
     status: 200,
     body: {
       departamento: wantedDepartamento,
+      scope: {
+        fuente: "awards (OECE OCDS) + minor_contracts (SEACE) cruzados por RUC exacto con inhabilitaciones del Tribunal de Contrataciones",
+        ambito: ambitoNacional ? "nacional — TODOS (awards + menores sin filtro de departamento)" : `departamento ${wantedDepartamento}`,
+        cobertura:
+          "cruce por RUC exacto sobre los datos ingeridos; `soloInhabilitados` y `soloNuevos` acotan la lista sin cambiar el alcance territorial",
+      },
+      advertencias: departamentoDefault
+        ? ["Sin `departamento`: se aplicó el default LA LIBERTAD — pasar departamento=TODOS para el cruce nacional (awards+menores)."]
+        : [],
       resultados: filtrados,
     },
   };

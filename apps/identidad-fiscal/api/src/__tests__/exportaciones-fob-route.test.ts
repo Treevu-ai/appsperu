@@ -14,6 +14,8 @@ vi.mock("../db/pool.js", () => ({
 process.env.COMPRAS_DATABASE_URL ??= "postgres://test:test@localhost:5432/test";
 process.env.EJECUCION_DATABASE_URL ??= "postgres://test:test@localhost:5432/test";
 process.env.SEGURIDAD_DATABASE_URL ??= "postgres://test:test@localhost:5432/test";
+process.env.AMBIENTAL_DATABASE_URL ??= "postgres://test:test@localhost:5432/test";
+process.env.SANCIONADOS_DATABASE_URL ??= "postgres://test:test@localhost:5432/test";
 
 const { createApp } = await import("../app.js");
 
@@ -53,6 +55,26 @@ describe("GET /api/exportaciones-fob", () => {
 
   it("rechaza un RUC que no tiene 11 dígitos sin consultar la base", async () => {
     const res = await request(createApp()).get("/api/exportaciones-fob").query({ ruc: "123" });
+    expect(res.status).toBe(400);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+
+  it("agrupa por aduana con groupBy y pagina sobre los grupos", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "1" }] })
+      .mockResolvedValueOnce({ rows: [{ codigo: "0100", nombre: "CALLAO", fob_usd: "5000000.55", filas: "40" }] });
+
+    const res = await request(createApp()).get("/api/exportaciones-fob").query({ groupBy: "aduana" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.groupBy).toBe("aduana");
+    expect(res.body.total).toBe(1);
+    expect(res.body.resultados[0]).toEqual({ codigo: "0100", nombre: "CALLAO", fobUsd: 5000000.55, filas: 40 });
+    expect(queryMock.mock.calls[0][0]).toContain("GROUP BY aduana_codigo, aduana_nombre");
+  });
+
+  it("rechaza groupBy inválido sin consultar la base", async () => {
+    const res = await request(createApp()).get("/api/exportaciones-fob").query({ groupBy: "ruc" });
     expect(res.status).toBe(400);
     expect(queryMock).not.toHaveBeenCalled();
   });
