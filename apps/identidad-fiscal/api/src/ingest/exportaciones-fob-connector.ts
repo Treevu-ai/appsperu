@@ -138,9 +138,14 @@ export async function ingestExportacionesFob(rucs: string[], anios: number[]): P
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const anios = (process.argv[2] ?? "2025,2026").split(",").map((s) => Number(s.trim()));
+  const fileFlagIndex = process.argv.indexOf("--file");
+  const seedFile = fileFlagIndex >= 0 ? process.argv[fileFlagIndex + 1] : "./cooperativas-ruc-seed.json";
+  const positional = process.argv
+    .slice(2)
+    .filter((_, i) => fileFlagIndex < 0 || (i + 2 !== fileFlagIndex && i + 2 !== fileFlagIndex + 1));
+  const anios = (positional[0] ?? "2025,2026").split(",").map((s) => Number(s.trim()));
 
-  import("./cooperativas-ruc-seed.json", { with: { type: "json" } })
+  import(seedFile, { with: { type: "json" } })
     .then(async (seedMod) => {
       const seed = seedMod.default as { ruc: string }[];
       console.log(`Consultando exportaciones FOB para ${seed.length} RUC, años ${anios.join(", ")}...`);
