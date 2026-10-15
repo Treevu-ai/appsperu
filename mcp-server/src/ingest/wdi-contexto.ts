@@ -1,5 +1,6 @@
 /**
- * Conector CLI — Banco Mundial, World Development Indicators (contexto país).
+ * Conector CLI — Banco Mundial, World Development Indicators + Worldwide
+ * Governance Indicators (contexto país).
  *
  * Fuente (verificada en vivo el 2026-10-14, SIN key):
  *   https://api.worldbank.org/v2/country/<iso3;...>/indicator/<code>?format=json&date=<desde>:<hasta>
@@ -7,12 +8,24 @@
  * (verificado: varios indicadores en la misma URL devuelven HTTP de error
  * "Invalid value"), por eso el loop es por indicador.
  *
+ * Los 6 indicadores de gobernanza (WGI, fuente/source id 3 del Banco Mundial)
+ * NO se resuelven con sus códigos clásicos ("CC.EST", "RL.EST" — devuelven
+ * "indicator was not found") contra este mismo endpoint: hay que usar la
+ * notación nueva "GOV_WGI_<código>.EST", verificada en vivo contra PER. Con
+ * ese prefijo, el JSON de respuesta tiene exactamente la misma forma que WDI
+ * (indicator/country/countryiso3code/date/value), así que reutiliza
+ * `normalizarWdi`/`fetchWdi`/`buildUrl` sin cambios.
+ *
  * Qué trae y para qué: panel país × año de indicadores de contexto para
  * internacionalización (PIB, PIB per cápita, crecimiento, exportaciones %PBI,
  * arancel aplicado, inflación, población, IDI de uso de internet) — las
  * covariables de distancia económica/institucional y tamaño de mercado que los
- * modelos de internacionalización necesitan y que Rastro no tenía en ninguna
- * forma.
+ * modelos de internacionalización necesitan — más los 6 indicadores de
+ * gobernanza (WGI: control de corrupción, efectividad gubernamental,
+ * estabilidad política, estado de derecho, calidad regulatoria, voz y
+ * rendición de cuentas) que son el insumo estándar para calcular "distancia
+ * institucional" (índice Kogut-Singh) entre Perú y cada país destino — algo
+ * que Rastro no tenía en ninguna forma.
  *
  * Escribe en la base de la app `bcrp-comercio-exterior` (dominio: comercio
  * exterior y macro). Sin app Express propia: conector + handler MCP + catálogo.
@@ -40,6 +53,14 @@ const INDICADORES_DEFAULT = [
   "IT.NET.USER.ZS",      // Personas usando Internet (% de la población)
   "SL.UEM.TOTL.ZS",      // Desempleo total (% de la fuerza laboral)
   "BX.KLT.DINV.CD.WD",   // IED, entradas netas (Balanza de pagos, US$ actuales)
+  // --- Worldwide Governance Indicators (WGI, source id 3) ---
+  // Notación "GOV_WGI_*.EST" verificada en vivo; escala aprox. -2.5 a +2.5.
+  "GOV_WGI_CC.EST",      // Control de la corrupción
+  "GOV_WGI_GE.EST",      // Efectividad gubernamental
+  "GOV_WGI_PV.EST",      // Estabilidad política y ausencia de violencia
+  "GOV_WGI_RL.EST",      // Estado de derecho
+  "GOV_WGI_RQ.EST",      // Calidad regulatoria
+  "GOV_WGI_VA.EST",      // Voz y rendición de cuentas
 ];
 
 const DDL = `

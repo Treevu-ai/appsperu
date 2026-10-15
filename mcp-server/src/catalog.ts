@@ -2330,10 +2330,14 @@ export const TOOL_CATALOG: ToolSpec[] = [
     handler: "contexto-paises:list",
     app: "bcrp-comercio-exterior",
     description:
-      "Panel país × año de World Development Indicators (Banco Mundial): PBI, PBI per cápita, crecimiento, " +
-      "exportaciones e importaciones % del PIB, arancel aplicado media simple, inflación, población, uso de " +
-      "Internet, desempleo, IED — las covariables de distancia económica/institucional y tamaño de mercado " +
-      "destino para análisis de internacionalización. Países por defecto: Perú + 14 socios (APEC y LATAM). " +
+      "Panel país × año de World Development Indicators + Worldwide Governance Indicators (Banco Mundial): PBI, " +
+      "PBI per cápita, crecimiento, exportaciones e importaciones % del PIB, arancel aplicado media simple, " +
+      "inflación, población, uso de Internet, desempleo, IED, y los 6 indicadores de gobernanza WGI (control de " +
+      "corrupción, efectividad gubernamental, estabilidad política, estado de derecho, calidad regulatoria, voz " +
+      "y rendición de cuentas — escala aprox. -2.5 a +2.5, prefijo `GOV_WGI_*.EST`) — las covariables de " +
+      "distancia económica/institucional y tamaño de mercado destino para análisis de internacionalización " +
+      "(ej. índice de distancia institucional tipo Kogut-Singh). Países por defecto: Perú + 14 socios (APEC y " +
+      "LATAM). " +
       "Consultá el catálogo con `bcrp_comercio_exterior_wdi_indicadores`. Sin ruta Express: se sirve solo por MCP " +
       "(ver MCP_ONLY_PATHS en el test de paridad). " + SIN_SCHEDULER,
     pathTemplate: "/api/wdi",
