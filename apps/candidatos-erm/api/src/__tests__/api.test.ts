@@ -6,6 +6,18 @@ const queryMock = vi.fn();
 vi.mock("../db/pool.js", () => ({
   pool: { query: queryMock },
 }));
+// `app.ts` importa los pools cross-app de la ficha electoral; si no se
+// mockean, sus módulos lanzan al importar por la falta de las variables de
+// entorno. Ninguna de estas pruebas los consulta.
+vi.mock("../db/autoridades-pool.js", () => ({
+  autoridadesPool: { query: vi.fn() },
+}));
+vi.mock("../db/renamu-pool.js", () => ({
+  renamuPool: { query: vi.fn() },
+}));
+vi.mock("../db/sancionados-pool.js", () => ({
+  sancionadosPool: { query: vi.fn() },
+}));
 
 const { createApp } = await import("../app.js");
 

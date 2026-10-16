@@ -2889,6 +2889,32 @@ export const TOOL_CATALOG: ToolSpec[] = [
       offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
+  {
+    name: "candidatos_erm_ficha_electoral",
+    handler: "ficha-electoral:get",
+    app: "candidatos-erm",
+    description:
+      "Ficha electoral por circunscripción (ERM 2026, 2026-10-15): junta candidatos de ese UBIGEO, " +
+      "autoridades electas vigentes del JNE, la municipalidad RENAMU (identificación + conectividad + " +
+      "vehículos del corte más reciente) y las sanciones del Tribunal de Contrataciones de esos candidatos " +
+      "cruzadas por DNI EXACTO. Unión de contexto, no relación causal. Tres restricciones propias de las " +
+      "fuentes, expuestas en la respuesta: (1) `autoridadesVigentes.total: 0` NO significa que la " +
+      "circunscripción no tenga autoridad — el recurso vigente del JNE verificado 2026-09-06 solo cubre " +
+      "autoridades nacionales recién proclamadas; (2) `notaSanciones` aclara que una sanción administrativa " +
+      "NO es sentencia penal y no inhabilita necesariamente la postulación; (3) `municipalidad` no trae " +
+      "nombre del alcalde porque el Módulo I de RENAMU se excluyó por PII. El DNI se enmascara siempre. " +
+      "Deliberadamente NO cruza obras paralizadas de INFOBRAS: esa app no tiene UBIGEO y su XLSX fuente " +
+      "corrompe la 'Ñ' por un espacio, así que un join exacto subestimaría en silencio circunscripciones " +
+      "como Cañete. " + SIN_SCHEDULER,
+    pathTemplate: "/api/ficha-electoral",
+    pathParams: [],
+    querySchema: {
+      ubigeo: z
+        .string()
+        .regex(/^\d{6}$/)
+        .describe("Requerido. UBIGEO distrital del INEI de 6 dígitos, ej. 130101 (Trujillo)."),
+    },
+  },
 
   // ---- autoridades-electas (JNE, datos abiertos) ----
   {

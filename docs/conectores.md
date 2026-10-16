@@ -878,6 +878,18 @@ ad-hoc.
 | **Limitación conocida** | Depende de que un tercero no oficial siga publicando el archivo con la misma estructura. `sentenciasDeclaradas` es la autodeclaración del candidato ante el JNE (sentencias judiciales) — **no** equivale a una sanción del Tribunal de Contrataciones (OSCE); son fuentes y regímenes distintos, y esa distinción es justamente el hallazgo central del ejercicio del 2026-09-10 (ver notas editoriales en `acuba/downloads/`). |
 | **Cruces** | `GET /api/crossref/candidatos-sancionados` en `proveedores-sancionados` (OE-03, implementado 2026-09-10) — ver la ficha de ese cruce más abajo, en la sección de `proveedores-sancionados`. |
 
+### `GET /api/ficha-electoral` — ficha por circunscripción (2026-10-15)
+
+| | |
+|---|---|
+| **Qué hace** | Une cuatro fuentes para un UBIGEO: (1) `candidatos_erm` de esta app; (2) `autoridades_electas` del JNE; (3) RENAMU (`renamu_municipalidades` + `renamu_conectividad` + `renamu_vehiculos`, corte más reciente); y (4) `inhabilitaciones` + `multas` de `proveedores-sancionados`, cruzadas por **DNI exacto** — nunca por nombre, porque un match difuso sobre nombre produciría acusaciones falsas contra homónimos. Las tres primeras se unen por UBIGEO, que las cuatro traen: la decisión de no usar texto libre de distrito fue lo que hizo posible el cruce sin ambigüedad. |
+| **Por qué no incluye obras paralizadas de INFOBRAS** | La idea original incluía "candidato con obras paralizadas en su circunscripción", y se descartó por una razón verificable, no por pereza: `public_works` **no tiene UBIGEO**, solo `departamento`/`provincia`/`distrito` como texto, y el XLSX fuente de la Contraloría trae la "Ñ" reemplazada por un espacio en decenas de provincias/distritos ("CA ETE" por "CAÑETE"), ya así en el archivo, no en nuestro parser (ver "Bug de la 'Ñ'" en la sección de `infobras`). Un join exacto sobre ese texto **subestimaría en silencio** circunscripciones como Cañete — justamente las que más interesan. La recuperación correcta ya existe, pero como lógica condicional en `infobras/crossref/territory-lookup.ts` (prueba variantes con "N" y acepta solo si exactamente un candidato produce una fila), que no se puede reutilizar como un join SQL desde otra app. Pendiente: resolverla en el origen (un UBIGEO en INFOBRAS) o replicar esa lógica con su propio test, no un ILIKE ingenuo. |
+| **Restricciones dentro de la respuesta** | No viven solo en la doc: `autoridadesVigentes.nota` explica que un total en 0 **no** significa que la circunscripción no tenga autoridad (el recurso vigente del JNE, verificado 2026-09-06, cubre solo las autoridades nacionales recién proclamadas; el histórico 2014-2022 que sí cubre municipios no se ingeró por PII), `notaSanciones` aclara que una sanción administrativa del Tribunal **no** es sentencia penal ni inhabilita necesariamente la postulación, y `municipalidad.nota` recuerda que el Módulo I de RENAMU se excluyó entero por PII del alcalde. |
+| **DNI** | Enmascarado en toda la respuesta (últimos 3 dígitos), mismo criterio que `GET /api/candidatos`. |
+| **Sin scheduler** | Consulta bajo demanda sobre datos ya ingeridos. |
+| **Despliegue** | Requiere tres variables nuevas en `candidatos-erm` (`AUTORIDADES_DATABASE_URL`, `RENAMU_DATABASE_URL`, `SANCIONADOS_DATABASE_URL`). Los pools lanzan al importar si faltan. |
+| **Tool MCP** | `candidatos_erm_ficha_electoral`. |
+
 ---
 
 <a id="instituciones-educativas"></a>

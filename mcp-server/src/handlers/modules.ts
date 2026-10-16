@@ -23,6 +23,7 @@ import * as bcrp_comercio_exterior_trade from "./bcrp-comercio-exterior/trade.js
 import * as bcrp_la_libertad_indicadores from "./bcrp-la-libertad/indicadores.js";
 import * as bcrp_la_libertad_meta from "./bcrp-la-libertad/meta.js";
 import * as candidatos_erm_candidatos from "./candidatos-erm/candidatos.js";
+import * as candidatos_erm_ficha_electoral from "./candidatos-erm/ficha-electoral.js";
 import * as catastro_forestal_crossref from "./catastro-forestal/crossref.js";
 import * as catastro_forestal_titulos from "./catastro-forestal/titulos.js";
 import * as catastro_minero_derechos from "./catastro-minero/derechos.js";
@@ -180,6 +181,7 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "bcrp-la-libertad/indicadores": bcrp_la_libertad_indicadores,
   "bcrp-la-libertad/meta": bcrp_la_libertad_meta,
   "candidatos-erm/candidatos": candidatos_erm_candidatos,
+  "candidatos-erm/ficha-electoral": candidatos_erm_ficha_electoral,
   "catastro-forestal/crossref": catastro_forestal_crossref,
   "catastro-forestal/titulos": catastro_forestal_titulos,
   "catastro-minero/derechos": catastro_minero_derechos,

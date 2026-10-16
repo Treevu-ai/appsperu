@@ -261,7 +261,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "riesgo_fiscal_isds_pasivos_contingentes",
     "riesgo_fiscal_isds_serie_historica",
   ],
-  "candidatos-erm": ["candidatos_erm_candidatos"],
+  "candidatos-erm": ["candidatos_erm_candidatos", "candidatos_erm_ficha_electoral"],
   "poder-judicial": [
     "poder_judicial_crimen_organizado",
     "poder_judicial_procesos",
