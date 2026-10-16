@@ -6,7 +6,7 @@
 
 ---
 
-**Proyecto en desarrollo — aplicaciones.pe**
+**Proyecto en desarrollo**
 **Versión:** 1.0 — octubre 2026
 **Equipo proponente:** [Nombre del investigador principal] y [Nombre del co-investigador / supervisora]
 **Institución:** [Nombre de la institución]
@@ -32,7 +32,7 @@
 
 Perú ha duplicado sus exportaciones en la última década — de US$37.400 millones en 2015 a US$76.800 millones en 2024 — pero la percepción internacional sobre la calidad de sus instituciones no ha seguido el mismo ritmo. El país se mantiene en el cuartil inferior global del Indicador de Control de la Corrupción y del Estado de Derecho dentro del grupo de países de ingreso medio-alto, mientras que sus exportaciones dependen desproporcionadamente de unos pocos productos primarios con baja sofisticación tecnológica.
 
-Esta disconnect tiene consecuencias concretas: los exportadores peruanos enfrentan costos comerciales informales más altos en mercados donde la gobernanza es deficiente, ven limitada su capacidad de acceder a cadenas de valor complejas donde la predictibilidad institucional es un requisito, y pierden competitividad frente a rivales regionales que han invertido en modernización institucional paralela a la apertura comercial.
+Esta desconexión (brecha entre desempeño exportador y calidad institucional) tiene consecuencias concretas: los exportadores peruanos enfrentan costos comerciales informales más altos en mercados donde la gobernanza es deficiente, ven limitada su capacidad de acceder a cadenas de valor complejas donde la predictibilidad institucional es un requisito, y pierden competitividad frente a rivales regionales que han invertido en modernización institucional paralela a la apertura comercial.
 
 La pregunta central que este proyecto busca responder es:
 
@@ -54,10 +54,10 @@ Primero, aplica por primera vez una descomposición shift-share rigurosa al caso
 
 El gobierno peruano ha priorizado la inserción internacional a través de tratados de libre comercio — incluyendo el CPTPP — y ha lanzado programas de competitividad exportadora (Promperú, Sierra Exportadora). Sin embargo, la mayoría de estos programas opera sin considerar explícitamente la calidad institucional como variable de política. Los resultados de este proyecto tendrán relevancia directa para:
 
-- El diseño de programas de promoción exportadora que incorporen компоненты de mejora institucional
+- El diseño de programas de promoción exportadora que incorporen componentes de mejora institucional
 - La negociación de futuros capítulos de gobernanza en acuerdos comerciales
 - La priorización de dimensiones institucionales específicas (corrupción, eficiencia burocrática, calidad regulatoria) donde las reformas generan mayor retorno exportador
-- La evaluación ex-post de si la членство en el CPTPP ha generado retornos comerciales por encima de lo que predice la mejora institucional
+- La evaluación ex-post de si la participación en el CPTPP ha generado retornos comerciales por encima de lo que predice la mejora institucional
 
 ### 3.3 Viabilidad
 
@@ -150,7 +150,7 @@ El tercer componente — el residual después de retirar lo que correspondería 
 
 ### 7.2 Análisis shift-share
 
-Se aplica la descomposición shift-share a las exportaciones totales peruanoa 2015–2024 usando BACI como fuente. Se verifica que la suma de los tres componentes sea igual al crecimiento observado (discrepancia < US$1).
+Se aplica la descomposición shift-share a las exportaciones totales del Perú 2015–2024 usando BACI como fuente. Se verifica que la suma de los tres componentes sea igual al crecimiento observado (discrepancia < US$1).
 
 **Resultado preliminar verificado:**
 - Demanda mundial: +US$15.810M (40% del crecimiento)
