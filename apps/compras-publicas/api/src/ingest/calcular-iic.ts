@@ -45,20 +45,33 @@ function limpiarRuc(supplierId: string | null): string | null {
   return supplierId.replace("PE-RUC-", "").trim();
 }
 
-/** Normaliza un valor dentro de [min,max] a escala 0-10. Si min===max, todos quedan en 10 (sin varianza, no se castiga). */
 /**
- * Sin varianza (min===max, ej. universo de 1 sola entidad calificable, o
- * todas con el mismo crudo), NO se puede normalizar por percentil -- se usa
- * el valor absoluto directo (crudo ya vive en [0,1]: porcentaje o HHI
- * normalizado). Bug real encontrado en tests: devolver 10 en ese caso
- * (percentil "más alto" sin más contexto) hacía que, tras invertir con
- * `10 - normalizar0a10(...)`, un crudo=0 (el mejor caso posible, 0% de
- * monto sancionado) terminara en score=0 (el peor) -- justo al revés.
+ * Escala absoluta 0-10 -- los tres sub-indicadores crudos ya viven en [0,1] con
+ * significado absoluto y bien definido: 0% de monto sancionado es bueno y 100%
+ * malo; 0% de adjudicaciones con un solo postor es bueno y 100% malo; HHI 0 es
+ * un conjunto de proveedores diversificado y 1 un monopolio. Por eso NO se
+ * normalizan contra los pares del universo calificable.
+ *
+ * CORRECCIÓN 2026-10-15 -- ver
+ * `docs/hallazgo-iic-integridad-contrataciones-2026-10.md`.
+ *
+ * Antes usaba min-max sobre el universo calificable, y eso distorsionaba el
+ * resultado cuando los pares todos eran buenos. En La Libertad el rango real del
+ * sub-indicador A sobre las 118 entidades calificables era [0, 0.0023]: ninguna
+ * entidad adjudicó más del 0.23% del monto a proveedores con inhabilitación
+ * vigente, es decir, TODOS los resultados eran excelentes en términos
+ * absolutos. Estirar ese rango a 0-10 hacía que la entidad con el valor crudo
+ * MÁS alto (0.23%) se normalizara a 10 y, tras invertir con `10 - ...`,
+ * cayera a 0: el índice la publicaba como la peor de todo el universo
+ * (MUNICIPALIDAD DISTRITAL DE CARABAMBA, score 4.93) cuando con escala absoluta
+ * obtenía 8.65.
+ *
+ * Era un ranking relativo presentado como calidad absoluta. El caso
+ * `max === min`, que antes era la excepción de esta función, pasa a ser la
+ * única regla.
  */
-function normalizar0a10(valor: number, min: number, max: number): number {
-  if (max === min) return Math.max(0, Math.min(10, valor * 10));
-  const pct = (valor - min) / (max - min);
-  return Math.max(0, Math.min(10, pct * 10));
+function aEscala0a10(crudo: number): number {
+  return Math.max(0, Math.min(10, crudo * 10));
 }
 
 async function fetchAwardsLaLibertad(): Promise<AwardRow[]> {
@@ -193,22 +206,6 @@ interface IICRow {
 }
 
 function calcularIIC(crudos: ResultadoEntidad[]): IICRow[] {
-  const calificables = crudos.filter((c) => !c.datos_insuficientes);
-
-  // Normalización min-max DENTRO del universo de entidades calificadas de
-  // La Libertad -- cada sub-indicador crudo está en [0,1] (porcentaje o
-  // HHI), más alto = peor; se invierte al convertir a escala 0-10 (10=mejor).
-  const pctSancA = calificables.map((c) => c.pctMontoSancionado).filter((v): v is number => v !== null);
-  const pctSancB = calificables.map((c) => c.pctUnSoloPostor).filter((v): v is number => v !== null);
-  const hhiVals = calificables.map((c) => c.hhi).filter((v): v is number => v !== null);
-
-  const minA = Math.min(...pctSancA, 0);
-  const maxA = Math.max(...pctSancA, 0);
-  const minB = Math.min(...pctSancB, 0);
-  const maxB = Math.max(...pctSancB, 0);
-  const minC = Math.min(...hhiVals, 0);
-  const maxC = Math.max(...hhiVals, 0);
-
   const resultado: IICRow[] = [];
   for (const c of crudos) {
     if (c.datos_insuficientes) {
@@ -228,10 +225,10 @@ function calcularIIC(crudos: ResultadoEntidad[]): IICRow[] {
       continue;
     }
 
-    // invertido: 10 - normalizado(crudo), porque crudo alto = peor
-    const subA = c.pctMontoSancionado !== null ? 10 - normalizar0a10(c.pctMontoSancionado, minA, maxA) : null;
-    const subB = c.pctUnSoloPostor !== null ? 10 - normalizar0a10(c.pctUnSoloPostor, minB, maxB) : null;
-    const subC = c.hhi !== null ? 10 - normalizar0a10(c.hhi, minC, maxC) : null;
+    // invertido: 10 - escala(crudo), porque crudo alto = peor
+    const subA = c.pctMontoSancionado !== null ? 10 - aEscala0a10(c.pctMontoSancionado) : null;
+    const subB = c.pctUnSoloPostor !== null ? 10 - aEscala0a10(c.pctUnSoloPostor) : null;
+    const subC = c.hhi !== null ? 10 - aEscala0a10(c.hhi) : null;
 
     const disponibles = [subA, subB, subC].filter((v): v is number => v !== null);
     const n_subindicadores = disponibles.length;
