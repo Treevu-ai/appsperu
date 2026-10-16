@@ -40,9 +40,31 @@ interface EntidadAgregada {
   adjudicaciones: AwardRow[];
 }
 
+/**
+ * Limpia el prefijo `PE-RUC-` y valida que lo que quede sea un RUC peruano.
+ *
+ * CORRECCIÓN 2026-10-16 — ver
+ * `docs/hallazgo-iic-integridad-contrataciones-2026-10.md`.
+ *
+ * Antes devolvía lo que quedara sin importar su longitud, y en La Libertad
+ * 1.872 de 5.986 adjudicaciones (el 31%, el 63.5% del monto) traen un
+ * identificador de 7 dígitos que no es un RUC. Un RUC peruano tiene siempre 11
+ * dígitos, así que esos valores pasaban el filtro como si lo fueran y luego no
+ * matcheaban `inhabilitaciones.ruc` jamás — empujando el sub-indicador A hacia el
+ * mejor caso sobre casi dos tercios del monto.
+ *
+ * Devolver `null` en ese caso tiene dos efectos deliberados:
+ *  - el sub-indicador A se calcula SOLO sobre el monto con RUC válido, en vez de
+ *    diluirse en un denominador que incluye identificadores no evaluables;
+ *  - si la entidad no tiene ni una adjudicación con RUC válido, A queda en `null`
+ *    (no en 10), siguiendo el mismo principio ya aplicado al sub-indicador B: no
+ *    se promedia un sin-dato como si fuera el mejor caso. La cobertura de ese
+ *    recorte se expone en `cobertura_monto_ruc`.
+ */
 function limpiarRuc(supplierId: string | null): string | null {
   if (!supplierId) return null;
-  return supplierId.replace("PE-RUC-", "").trim();
+  const limpio = supplierId.replace("PE-RUC-", "").trim();
+  return /^\d{11}$/.test(limpio) ? limpio : null;
 }
 
 /**
@@ -115,9 +137,11 @@ interface ResultadoEntidad {
   n_adjudicaciones: number;
   monto_total: number;
   datos_insuficientes: boolean;
-  pctMontoSancionado: number | null; // sub A crudo (0-1)
+  pctMontoSancionado: number | null; // sub A crudo (0-1), SOLO sobre el monto con RUC válido
   pctUnSoloPostor: number | null; // sub B crudo (0-1)
   hhi: number | null; // sub C crudo (0-1)
+  montoConRuc: number; // monto cuyo proveedor trae RUC de 11 dígitos
+  adjConRuc: number; // adjudicaciones cuyo proveedor trae RUC de 11 dígitos
 }
 
 function fechaEnVigencia(fecha: string, desde: string | null, hasta: string | null): boolean {
@@ -148,17 +172,31 @@ async function calcularCrudos(): Promise<ResultadoEntidad[]> {
     const monto_total = adjudicaciones.reduce((s, a) => s + Number(a.valor_monto), 0);
     const datos_insuficientes = n_adjudicaciones < MIN_ADJUDICACIONES;
 
-    // Sub A: % monto a proveedores con inhabilitación VIGENTE al momento de adjudicar.
+    // Sub A: % monto a proveedores con inhabilitación VIGENTE al momento de
+    // adjudicar. Se evalúa SOLO sobre las adjudicaciones cuyo proveedor trae un
+    // RUC de 11 dígitos: un identificador que no es RUC no puede matchear
+    // `inhabilitaciones.ruc`, así que incluirlo en el denominador diluiría el
+    // resultado y lo haría parecer mejor de lo que es. `montoConRuc` y
+    // `adjConRuc` dejan constancia de cuánto entró realmente, y se publican como
+    // `cobertura_monto_ruc`.
     let montoSancionado = 0;
+    let montoConRuc = 0;
+    let adjConRuc = 0;
     for (const a of adjudicaciones) {
       const ruc = limpiarRuc(a.supplier_id);
-      if (!ruc) continue;
+      if (!ruc) continue; // identificador que no es RUC: fuera del sub-indicador A
+      const monto = Number(a.valor_monto);
+      montoConRuc += monto;
+      adjConRuc += 1;
       const sanciones = inhabByRuc.get(ruc);
       if (!sanciones) continue;
       const vigenteAlAdjudicar = sanciones.some((s) => fechaEnVigencia(a.fecha, s.desde, s.hasta));
-      if (vigenteAlAdjudicar) montoSancionado += Number(a.valor_monto);
+      if (vigenteAlAdjudicar) montoSancionado += monto;
     }
-    const pctMontoSancionado = monto_total > 0 ? montoSancionado / monto_total : null;
+    // Si la entidad no tiene ni una adjudicación con RUC válido, A queda en
+    // NULL -- no en 10. No se promedia un sin-dato como si fuera el mejor caso
+    // (mismo criterio que el sub-indicador B).
+    const pctMontoSancionado = montoConRuc > 0 ? montoSancionado / montoConRuc : null;
 
     // Sub B: % de adjudicaciones cuyo ocid tiene exactamente 1 postor distinto registrado.
     const conDatosPostores = adjudicaciones.filter((a) => postoresPorOcid.has(a.ocid));
@@ -185,11 +223,15 @@ async function calcularCrudos(): Promise<ResultadoEntidad[]> {
       pctMontoSancionado,
       pctUnSoloPostor,
       hhi,
+      montoConRuc,
+      adjConRuc,
     });
   }
 
   return resultados;
 }
+
+const ESCALA = "absoluta";
 
 interface IICRow {
   buyer_id: string;
@@ -203,11 +245,18 @@ interface IICRow {
   monto_total: number;
   datos_insuficientes: boolean;
   notas: string | null;
+  /** Metodología del score — ver migración 022. Cortes de escalas distintas NO son comparables. */
+  escala: string;
+  /** Fracción de monto_total cuyo proveedor trae RUC válido, es decir, la fracción sobre la que se evaluó A. */
+  cobertura_monto_ruc: number | null;
+  n_adjudicaciones_con_ruc: number;
 }
 
 function calcularIIC(crudos: ResultadoEntidad[]): IICRow[] {
   const resultado: IICRow[] = [];
   for (const c of crudos) {
+    const cobertura = c.monto_total > 0 ? c.montoConRuc / c.monto_total : null;
+
     if (c.datos_insuficientes) {
       resultado.push({
         buyer_id: c.buyer_id,
@@ -221,6 +270,9 @@ function calcularIIC(crudos: ResultadoEntidad[]): IICRow[] {
         monto_total: c.monto_total,
         datos_insuficientes: true,
         notas: `Menos de ${MIN_ADJUDICACIONES} adjudicaciones en el período -- sin score, no se puede calificar con confianza.`,
+        escala: ESCALA,
+        cobertura_monto_ruc: cobertura,
+        n_adjudicaciones_con_ruc: c.adjConRuc,
       });
       continue;
     }
@@ -236,8 +288,21 @@ function calcularIIC(crudos: ResultadoEntidad[]): IICRow[] {
 
     const notasPartes: string[] = [];
     if (subB === null) notasPartes.push("sub-indicador B sin dato (ningún ocid de esta entidad tiene postores registrados en 'bidders')");
-    if (c.pctMontoSancionado !== null && c.pctMontoSancionado > 0) {
-      notasPartes.push(`${(c.pctMontoSancionado * 100).toFixed(1)}% del monto fue a proveedor(es) con inhabilitación vigente al adjudicar`);
+    if (c.pctMontoSancionado === null) {
+      notasPartes.push(
+        `sub-indicador A sin dato: ninguna de las ${c.n_adjudicaciones} adjudicaciones trae un proveedor con RUC de 11 dígitos`
+      );
+    } else if (c.pctMontoSancionado > 0) {
+      notasPartes.push(`${(c.pctMontoSancionado * 100).toFixed(1)}% del monto con RUC válido fue a proveedor(es) con inhabilitación vigente al adjudicar`);
+    }
+    // La cobertura va en las notas además de en su columna: un score con poca
+    // cobertura no describe a la entidad entera y quien lea solo `notas` debe
+    // poder verlo sin tener que buscar la columna.
+    if (cobertura !== null && cobertura < 1) {
+      notasPartes.push(
+        `sub-indicador A evaluado sobre el ${(cobertura * 100).toFixed(1)}% del monto ` +
+          `(${c.adjConRuc} de ${c.n_adjudicaciones} adjudicaciones con RUC de 11 dígitos); el resto no es evaluable`
+      );
     }
 
     resultado.push({
@@ -252,6 +317,9 @@ function calcularIIC(crudos: ResultadoEntidad[]): IICRow[] {
       monto_total: c.monto_total,
       datos_insuficientes: false,
       notas: notasPartes.length > 0 ? notasPartes.join("; ") : null,
+      escala: ESCALA,
+      cobertura_monto_ruc: cobertura,
+      n_adjudicaciones_con_ruc: c.adjConRuc,
     });
   }
 
@@ -268,14 +336,17 @@ async function persistir(filas: IICRow[]): Promise<void> {
       await client.query(
         `INSERT INTO indice_integridad_contrataciones
            (buyer_id, buyer_name, fecha_corte, score, sub_indicador_a, sub_indicador_b, sub_indicador_c,
-            n_subindicadores, n_adjudicaciones, monto_total, datos_insuficientes, notas)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+            n_subindicadores, n_adjudicaciones, monto_total, datos_insuficientes, notas,
+            escala, cobertura_monto_ruc, n_adjudicaciones_con_ruc)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
          ON CONFLICT (buyer_id, fecha_corte) DO UPDATE SET
            score = EXCLUDED.score, sub_indicador_a = EXCLUDED.sub_indicador_a,
            sub_indicador_b = EXCLUDED.sub_indicador_b, sub_indicador_c = EXCLUDED.sub_indicador_c,
            n_subindicadores = EXCLUDED.n_subindicadores, n_adjudicaciones = EXCLUDED.n_adjudicaciones,
            monto_total = EXCLUDED.monto_total, datos_insuficientes = EXCLUDED.datos_insuficientes,
-           notas = EXCLUDED.notas`,
+           notas = EXCLUDED.notas, escala = EXCLUDED.escala,
+           cobertura_monto_ruc = EXCLUDED.cobertura_monto_ruc,
+           n_adjudicaciones_con_ruc = EXCLUDED.n_adjudicaciones_con_ruc`,
         [
           f.buyer_id,
           f.buyer_name,
@@ -289,6 +360,9 @@ async function persistir(filas: IICRow[]): Promise<void> {
           f.monto_total,
           f.datos_insuficientes,
           f.notas,
+          f.escala,
+          f.cobertura_monto_ruc,
+          f.n_adjudicaciones_con_ruc,
         ]
       );
     }
@@ -313,12 +387,19 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     .then((filas) => {
       const calificadas = filas.filter((f) => !f.datos_insuficientes).sort((a, b) => (a.score ?? 0) - (b.score ?? 0));
       const insuficientes = filas.filter((f) => f.datos_insuficientes);
-      console.log(`\n=== IIC La Libertad -- ${calificadas.length} entidades calificadas, ${insuficientes.length} con datos insuficientes ===\n`);
+      const escala = filas[0]?.escala ?? "desconocida";
+      console.log(`\n=== IIC La Libertad -- ${calificadas.length} entidades calificadas, ${insuficientes.length} con datos insuficientes ===`);
+      console.log(`escala=${escala} (los cortes de otra escala NO son comparables con este)\n`);
       console.log("Ranking (peor a mejor score):");
       for (const f of calificadas) {
+        const cob = f.cobertura_monto_ruc;
+        // Solo se marca cuando la cobertura no es total: si sub-indicador A
+        // cubrió el 100% del monto, el dato no aporta ruido al ranking.
+        const cobertura = cob !== null && cob < 1 ? ` | cobA=${(cob * 100).toFixed(0)}%` : "";
         console.log(
-          `  ${f.score!.toFixed(2)} | ${f.buyer_name} | n=${f.n_adjudicaciones} | monto=S/${f.monto_total.toLocaleString("es-PE")} | ` +
-            `A=${f.sub_indicador_a?.toFixed(2)} B=${f.sub_indicador_b?.toFixed(2) ?? "s/d"} C=${f.sub_indicador_c?.toFixed(2)}` +
+          `  ${f.score!.toFixed(2)} | ${f.buyer_name} | n=${f.n_adjudicaciones} | monto=S/${f.monto_total.toLocaleString("es-PE")}` +
+            `${cobertura} | ` +
+            `A=${f.sub_indicador_a?.toFixed(2) ?? "s/d"} B=${f.sub_indicador_b?.toFixed(2) ?? "s/d"} C=${f.sub_indicador_c?.toFixed(2)}` +
             (f.notas ? ` | ${f.notas}` : "")
         );
       }
