@@ -7,9 +7,9 @@
 ---
 
 **Proyecto en desarrollo**
-**Versión:** 1.0 — octubre 2026
-**Equipo proponente:** [Nombre del investigador principal] y [Nombre del co-investigador / supervisora]
-**Institución:** [Nombre de la institución]
+**Versión:** 1.1 — octubre 2026
+**Equipo proponente:** Mg. Ricardo Antonio Cuba Alván (Investigador principal) y Dra. Rosa Patricia Larios Francia (Co-investigadora / Supervisora)
+**Institución:** Universidad del Pacífico (Lima, Perú)
 **Línea de investigación:** Comercio internacional, desarrollo económico e instituciones
 
 ---
@@ -226,10 +226,10 @@ El resultado más importante no es el coeficiente WGI en sí, sino el contraste 
 
 ### 8.3 Magnitud económica del efecto de gobernanza
 
-En el modelo de gravedad (el diseño que detecta el efecto), el coeficiente de 0,667 implica:
+En el modelo de gravedad (el diseño que detecta el efecto), el coeficiente de 0,667 implica —usando la transformación correcta para una variable dependiente logarítmica, %ΔX = 100·(e^(β·Δ)−1):
 
-- **Un incremento de una desviación estándar en gobernanza** (~0,7 puntos en la escala WGI) se asocia con un **47% más exportaciones bilaterales**.
-- **Mover Perú de su nivel actual al de Chile en gobernanza** (~1,4 puntos) se asociaría con un **154% más exportaciones bilaterales** hacia Chile.
+- **Un incremento de una desviación estándar en gobernanza** — 0,88 puntos WGI, la desviación estándar observada en el panel de estimación — se asocia con un **~80% más exportaciones bilaterales**. (Nota de corrección: versiones previas reportaban 47% y luego 60% ambas con supuestos de SD erróneos — 0,7 puntos — y/o sin exponenciar; la cifra correcta, calculada con la SD real del panel, es ~80%.)
+- **Mover Perú de su nivel actual al de Chile en gobernanza** — un gap de 1,07 puntos WGI (Chile 0,78 vs. Perú −0,28 en 2023) — se asociaría con un **~104% más exportaciones bilaterales**. (Corrección: versiones previas reportaban 1,4 puntos y 154%; el gap real del panel es 1,07.)
 
 Estos números deben leerse con cautela — no son causales y el intervalo de confianza es amplio — pero son económicamente relevantes y consistentes con la literatura para otros países.
 
@@ -262,13 +262,14 @@ Estos números deben leerse con cautela — no son causales y el intervalo de co
 
 ## 10. Equipo de investigación y roles
 
-| Rol | Nombre | Función |
+| Rol | Nombre | Perfil |
 |---|---|---|
-| Investigador principal | [Nombre] | Diseño metodológico, análisis econométrico, redacción |
-| Co-investigadora / Supervisora | [Nombre de la jefa] | Supervisión teórica, revisión de resultados, orientación editorial |
-| Asistente de investigación | [Nombre] | Extracción y validación de datos, revisión bibliográfica |
+| Investigador principal | **Mg. Ricardo Antonio Cuba Alván** | Economista (Univ. del Pacífico); M.A. en Innovación y Emprendimiento Estratégico (Univ. Adolfo Ibáñez); Máster en Inteligencia Artificial (NEXT MBA). Investigador asistente en el CIUP — Univ. del Pacífico, grupo de innovación y sostenibilidad en cadenas de valor productivas (MIPYME y comunidades andinas – ISCAM). |
+| Co-investigadora | **Dra. Rosa Patricia Larios Francia** | Ingeniera Industrial (Univ. de Lima); M.Ing. Industrial (Univ. Ricardo Palma); Dra. en Gestión Estratégica con mención en Gestión Empresarial y Sostenibilidad — **programa de doctorado de consorcio de cuatro universidades peruanas (PUCP, Universidad Peruana Cayetano Heredia, Universidad de Lima, Universidad del Pacífico), 2015–2019**. Investigadora calificada CONCYTEC Nivel VI. Representante del Perú ante ISO/TC 279/WG1 (sistemas de gestión de la innovación) y el comité ISO/TMB de criterios ESG; Directora del Capítulo Perú de la IAOIP. |
 
-**Sobre la coautoría:** Se propone que [Nombre de la jefa] figure como co-autora del artículo resultante, aportando supervisión metodológica, revisión editorial y credibilidad institucional. El investigador principal ([Nombre]) conducirá el análisis y la redacción del primer borrador.
+**Experiencia de política pública del investigador principal:** el Mg. Cuba Alván tiene dos décadas de trabajo aplicado en la intersección de economía, innovación y política pública en el Perú. Fue **Director de Desarrollo Artesanal del Ministerio de Comercio Exterior y Turismo (MINCETUR)**, **Director de Cooperativas e Institucionalidad del Ministerio de la Producción (PRODUCE)** y ocupó cargos en la Dirección de Desarrollo Productivo y de Articulación Empresarial; inició su carrera como economista en **INDECOPI** tras una práctica en el **BCRP**. Ha asesorado al **Banco Mundial** (políticas de CTI), al **BID** (estrategia de innovación regional) y a la **GIZ** (innovación y desarrollo económico). Lidera actualmente **Rastro**, la capa de datos que integra las fuentes públicas del Estado peruano en un pipeline reproducible — el mismo que produjo los datos comerciales y de gobernanza de este proyecto.
+
+**Sobre la coautoría:** Se propone que la Dra. Rosa Patricia Larios Francia figure como co-autora del artículo resultante, aportando supervisión metodológica, revisión editorial y credibilidad institucional. El investigador principal (Mg. Ricardo Antonio Cuba Alván) conducirá el análisis y la redacción del primer borrador. La dupla **economía y política comercial** (econometría de gravedad, experiencia en MINCETUR/PRODUCE/INDECOPI) + **ingeniería industrial y gestión estratégica** (innovación, sostenibilidad, normalización ISO/ESG, competitividad MIPYME) es complementaria para una pregunta ubicada en la intersección de ambas disciplinas.
 
 ---
 

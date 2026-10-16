@@ -184,8 +184,13 @@ r3.font.size = Pt(9); r3.font.italic = True; r3.font.color.rgb = GREY
 
 p4 = doc.add_paragraph(style='PropMeta')
 p4.paragraph_format.space_before = Pt(8)
-r4 = p4.add_run("Version 1.0  |  Octubre 2026")
+r4 = p4.add_run("Version 1.1  |  Octubre 2026  |  Universidad del Pacifico (Lima, Peru)")
 r4.font.size = Pt(9)
+
+p5 = doc.add_paragraph(style='PropMeta')
+p5.paragraph_format.space_before = Pt(2)
+r5 = p5.add_run("Equipo: Mg. Ricardo Antonio Cuba Alvan (Investigador principal)  |  Dra. Rosa Patricia Larios Francia (Co-investigadora / Supervisora)")
+r5.font.size = Pt(9)
 
 doc.add_page_break()
 

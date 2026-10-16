@@ -290,7 +290,7 @@ doc = SimpleDocTemplate(
     leftMargin=2.8*cm, rightMargin=2.8*cm,
     topMargin=2.5*cm, bottomMargin=2.5*cm,
     title="Institutional Quality and Peru's Export Performance",
-    author="Academic Research Team — aplicaciones.pe",
+    author="Academic Research Team",
 )
 
 def header_footer(canvas, doc):
@@ -305,7 +305,7 @@ def header_footer(canvas, doc):
     canvas.drawString(2.8*cm, h - 1.75*cm,
                       "Institutional Quality and Peru's Export Performance")
     canvas.drawRightString(w - 2.8*cm, h - 1.75*cm,
-                           "aplicaciones.pe research platform")
+                           "Working Paper — October 2026")
     # Footer line
     canvas.line(2.8*cm, 2.2*cm, w - 2.8*cm, 2.2*cm)
     canvas.drawString(2.8*cm, 1.7*cm, "© 2026 Academic Research Team")
@@ -321,7 +321,7 @@ def first_page(canvas, doc):
     canvas.rect(0, h - 3.5*cm, w, 3.5*cm, fill=1, stroke=0)
     canvas.setFillColor(colors.white)
     canvas.setFont('Helvetica-Bold', 11)
-    canvas.drawCentredString(w/2, h - 2.0*cm, "APLICACIONES.PE  |  RESEARCH PLATFORM")
+    canvas.drawCentredString(w/2, h - 2.0*cm, "RESEARCH PAPER")
     canvas.setFont('Helvetica', 9)
     canvas.drawCentredString(w/2, h - 2.5*cm, "Journal of International Trade and Development")
     # No regular header on first page

@@ -242,7 +242,7 @@ doc = SimpleDocTemplate(
     leftMargin=2.8*cm, rightMargin=2.8*cm,
     topMargin=2.5*cm, bottomMargin=2.5*cm,
     title="Calidad Institucional y Desempeño Exportador del Perú",
-    author="Equipo de Investigación — aplicaciones.pe",
+    author="Equipo de Investigación",
 )
 
 def first_page(canvas, doc):
@@ -252,7 +252,7 @@ def first_page(canvas, doc):
     canvas.rect(0, h - 3.5*cm, w, 3.5*cm, fill=1, stroke=0)
     canvas.setFillColor(WHITE)
     canvas.setFont('Helvetica-Bold', 11)
-    canvas.drawCentredString(w/2, h - 2.0*cm, "APLICACIONES.PE  |  PLATAFORMA DE INVESTIGACION")
+    canvas.drawCentredString(w/2, h - 2.0*cm, "DOCUMENTO DE INVESTIGACION")
     canvas.setFont('Helvetica', 9)
     canvas.drawCentredString(w/2, h - 2.5*cm, "Revista de Comercio Internacional y Desarrollo")
     canvas.restoreState()
@@ -265,7 +265,7 @@ def later_pages(canvas, doc):
     canvas.setFont('Helvetica', 8); canvas.setFillColor(GREY)
     canvas.drawString(2.8*cm, h - 1.75*cm,
         "Calidad Institucional y Desempeno Exportador del Peru")
-    canvas.drawRightString(w - 2.8*cm, h - 1.75*cm, "aplicaciones.pe")
+    canvas.drawRightString(w - 2.8*cm, h - 1.75*cm, "Documento de trabajo")
     canvas.line(2.8*cm, 2.2*cm, w - 2.8*cm, 2.2*cm)
     canvas.drawString(2.8*cm, 1.7*cm, "2026 Equipo de Investigacion Academica")
     canvas.drawCentredString(w/2, 1.7*cm, f"Pagina {doc.page}")

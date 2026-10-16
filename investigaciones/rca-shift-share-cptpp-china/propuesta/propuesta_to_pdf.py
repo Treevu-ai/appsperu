@@ -167,7 +167,7 @@ doc = SimpleDocTemplate(
     leftMargin=2.5*cm, rightMargin=2.5*cm,
     topMargin=2.5*cm, bottomMargin=2.5*cm,
     title="Propuesta: Gobernanza institucional y competitividad exportadora del Peru",
-    author="aplicaciones.pe",
+    author="Ricardo Antonio Cuba Alván — Rosa Patricia Larios Francia",
 )
 
 def first_page(canvas, doc):
@@ -176,7 +176,7 @@ def first_page(canvas, doc):
     canvas.setFillColor(BLACK); canvas.rect(0, h-4.5*cm, w, 4.5*cm, fill=1, stroke=0)
     canvas.setFillColor(WHITE)
     canvas.setFont('Helvetica-Bold', 10)
-    canvas.drawCentredString(w/2, h-1.7*cm, "APLICACIONES.PE  —  PLATAFORMA DE INVESTIGACION")
+    canvas.drawCentredString(w/2, h-1.7*cm, "PROPUESTA DE PROYECTO DE INVESTIGACION")
     canvas.setFont('Helvetica', 8)
     canvas.drawCentredString(w/2, h-2.3*cm, "Propuesta de proyecto de investigacion colaborativo")
     canvas.drawCentredString(w/2, h-2.8*cm, "Version octubre 2026")
@@ -190,7 +190,7 @@ def later_pages(canvas, doc):
     canvas.setFont('Helvetica', 8); canvas.setFillColor(GREY)
     canvas.drawString(2.5*cm, h-1.6*cm,
         "Propuesta: Gobernanza institucional y competitividad exportadora del Peru")
-    canvas.drawRightString(w-2.5*cm, h-1.6*cm, "aplicaciones.pe")
+    canvas.drawRightString(w-2.5*cm, h-1.6*cm, "Version octubre 2026")
     canvas.line(2.5*cm, 2.0*cm, w-2.5*cm, 2.0*cm)
     canvas.drawString(2.5*cm, 1.5*cm, "2026 — Investigacion en curso")
     canvas.drawCentredString(w/2, 1.5*cm, f"Pagina {doc.page}")
