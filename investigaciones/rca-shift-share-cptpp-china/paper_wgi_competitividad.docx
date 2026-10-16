@@ -32,8 +32,10 @@
 }
 
 \author{
-    {Academic Research Team}\footnote{Desarrollado dentro de la plataforma de investigación aplicaciones.pe}\\
-    \small \texttt{contacto@aplicaciones.pe}
+    {Ricardo Antonio Cuba Alván\\
+     Rosa Patricia Larios Francia}\\
+    \small Universidad del Pacífico — Lima, Perú\\
+    \small \texttt{ra.cubaa@up.edu.pe}
 }
 
 \date{\today}
