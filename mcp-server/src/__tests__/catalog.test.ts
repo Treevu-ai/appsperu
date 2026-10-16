@@ -346,6 +346,7 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "territorio_inteligencia_titulares_riesgo",
     "territorio_inteligencia_inconsistencia_presupuesto",
     "territorio_inteligencia_riesgo_eudr",
+    "territorio_inteligencia_ficha_distrital",
   ],
   "sinadef-defunciones": ["sinadef_defunciones_defunciones", "sinadef_defunciones_resumen"],
 };

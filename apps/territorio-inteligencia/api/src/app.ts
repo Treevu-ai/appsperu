@@ -3,6 +3,7 @@ import { titularesRiesgoRouter } from "./routes/titulares-riesgo.js";
 import { capturaTerritorioRouter } from "./routes/captura-territorio.js";
 import { inconsistenciaPresupuestoRouter } from "./routes/inconsistencia-presupuesto.js";
 import { riesgoEUDRRouter } from "./routes/riesgo-eudr.js";
+import { fichaDistritalRouter } from "./routes/ficha-distrital.js";
 import { pool } from "./db/pool.js";
 import { apiRateLimit, corsMiddleware, helmetMiddleware } from "./lib/security.js";
 
@@ -32,6 +33,7 @@ export function createApp() {
   app.use("/api/captura-territorio", capturaTerritorioRouter);
   app.use("/api/inconsistencia-presupuesto", inconsistenciaPresupuestoRouter);
   app.use("/api/riesgo-eudr", riesgoEUDRRouter);
+  app.use("/api/ficha-distrital", fichaDistritalRouter);
 
   app.use(errorHandler);
 

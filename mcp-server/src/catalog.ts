@@ -1049,6 +1049,7 @@ export const TOOL_CATALOG: ToolSpec[] = [
     description:
       "Obras públicas monitoreadas por la Contraloría (INFOBRAS) — avance físico/financiero, paralización, " +
       "entidad responsable. Cobertura completa (snapshot nacional del XLSX). " +
+      "Paginación real: usa `limit`/`offset`; la respuesta trae `total`, `limit`, `offset` y `hasMore`. " +
       SIN_SCHEDULER,
     pathTemplate: "/api/public-works",
     pathParams: [],
@@ -1056,6 +1057,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
       departamento: z.string().min(1).optional(),
       estado: z.string().min(1).optional().describe("estado_ejecucion de la obra."),
       conParalizacion: z.enum(["true", "false"]).optional(),
+      limit: z.coerce.number().int().min(1).max(200).optional().describe("Default 50, máximo 200."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
       distritoSospechoso: z
         .enum(["true", "false"])
         .optional()
@@ -4438,6 +4441,32 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathParams: [],
     querySchema: {
       departamento: z.string().min(1).optional().describe("Nombre de departamento (ej. 'La Libertad'). Sin esto, puede devolver muchos títulos a nivel nacional."),
+    },
+  },
+  {
+    name: "territorio_inteligencia_ficha_distrital",
+    handler: "ficha-distrital:get",
+    app: "territorio-inteligencia",
+    description:
+      "Ficha distrital de presión institucional por UBIGEO (2026-10-15): junta cuatro fuentes " +
+      "independientes que comparten UBIGEO — denuncias SIDPOL por modalidad para el año pedido, la " +
+      "cobertura social MIDIS del corte más reciente, el conteo de establecimientos RENIPRESS y las " +
+      "empresas privadas formales MTPE del corte más reciente. Es COINCIDENCIA TERRITORIAL por UBIGEO, " +
+      "no relación causal entre las series. Un `null` significa que esa fuente no publicó el distrito, " +
+      "no cero — `coberturaSocial.columnasSinDato` lista explícitamente los programas sin dato, porque " +
+      "en MIDIS un NULL es 'sin dato ese corte', no cobertura 0. SIDPOL no publica homicidio ni sicariato " +
+      "a nivel distrital (DQ-15): su ausencia acá no es ausencia de violencia letal. " + SIN_SCHEDULER,
+    pathTemplate: "/api/ficha-distrital",
+    pathParams: [],
+    querySchema: {
+      ubigeo: z
+        .string()
+        .regex(/^\d{6}$/)
+        .describe("Requerido. UBIGEO distrital del INEI de 6 dígitos, ej. 130101 (Trujillo)."),
+      anio: z
+        .string()
+        .regex(/^\d{4}$/)
+        .describe("Requerido. Año de las denuncias SIDPOL y del corte MTPE, ej. 2025."),
     },
   },
   {

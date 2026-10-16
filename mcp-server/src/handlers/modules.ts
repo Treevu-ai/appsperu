@@ -155,6 +155,7 @@ import * as sunat_aduanas_meta from "./sunat-aduanas/meta.js";
 import * as sunat_aduanas_ports from "./sunat-aduanas/ports.js";
 import * as sunedu_licenciamiento_licenciamiento from "./sunedu-licenciamiento/licenciamiento.js";
 import * as territorio_inteligencia_captura_territorio from "./territorio-inteligencia/captura-territorio.js";
+import * as territorio_inteligencia_ficha_distrital from "./territorio-inteligencia/ficha-distrital.js";
 import * as territorio_inteligencia_inconsistencia_presupuesto from "./territorio-inteligencia/inconsistencia-presupuesto.js";
 import * as territorio_inteligencia_riesgo_eudr from "./territorio-inteligencia/riesgo-eudr.js";
 import * as territorio_inteligencia_titulares_riesgo from "./territorio-inteligencia/titulares-riesgo.js";
@@ -311,6 +312,7 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "sunat-aduanas/ports": sunat_aduanas_ports,
   "sunedu-licenciamiento/licenciamiento": sunedu_licenciamiento_licenciamiento,
   "territorio-inteligencia/captura-territorio": territorio_inteligencia_captura_territorio,
+  "territorio-inteligencia/ficha-distrital": territorio_inteligencia_ficha_distrital,
   "territorio-inteligencia/inconsistencia-presupuesto": territorio_inteligencia_inconsistencia_presupuesto,
   "territorio-inteligencia/riesgo-eudr": territorio_inteligencia_riesgo_eudr,
   "territorio-inteligencia/titulares-riesgo": territorio_inteligencia_titulares_riesgo,
