@@ -34,14 +34,9 @@ ALTER TABLE indice_integridad_contrataciones
   ADD COLUMN IF NOT EXISTS n_adjudicaciones_con_ruc INTEGER;
 
 COMMENT ON COLUMN indice_integridad_contrataciones.escala IS
-  'Metodología del score. ''absoluta'' = crudo[0,1]*10 invertido (desde 2026-10-16). ' ||
-  '''relativa_minmax'' = min-max contra el universo calificable (hasta 2026-10-15), ' ||
-  'que distorsiona el resultado cuando todos los pares son buenos. Cortes de escalas ' ||
-  'distintas NO son comparables entre sí.';
+  'Metodología del score. ''absoluta'' = crudo[0,1]*10 invertido (desde 2026-10-16). ''relativa_minmax'' = min-max contra el universo calificable (hasta 2026-10-15), que distorsiona el resultado cuando todos los pares son buenos. Cortes de escalas distintas NO son comparables entre sí.';
 COMMENT ON COLUMN indice_integridad_contrataciones.cobertura_monto_ruc IS
-  'Fracción de monto_total cuyo proveedor trae un RUC de 11 dígitos, es decir, la fracción ' ||
-  'sobre la que realmente se evaluó el sub-indicador A. Un valor bajo significa que A no ' ||
-  'describe a la entidad entera.';
+  'Fracción de monto_total cuyo proveedor trae un RUC de 11 dígitos, es decir, la fracción sobre la que realmente se evaluó el sub-indicador A. Un valor bajo significa que A no describe a la entidad entera.';
 COMMENT ON COLUMN indice_integridad_contrataciones.n_adjudicaciones_con_ruc IS
   'Cuántas de n_adjudicaciones traen un proveedor con RUC válido de 11 dígitos.';
 

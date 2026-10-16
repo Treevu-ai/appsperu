@@ -79,13 +79,20 @@ Se recalculó desde el crudo con la misma lógica que documenta `calcular-iic.ts
 |---|---|---|
 | Monto total | S/ 35,397,292 | S/ 35,397,292 ✔ |
 | Monto a proveedores sancionados vigentes | **S/ 35,397,292 (100%)** | **S/ 81,363 (0.23%)** |
-| `sub_indicador_a` | **0.00** | **9.98** |
+| `sub_indicador_a` | **0.00** | **9.98** (hoy **9.79**, ver nota) |
 
 Solo **1 de 24** adjudicaciones matchea una inhabilitación vigente: RUC
 `20539700791`, por S/ 81,363.
 
 Con `sub_indicador_a = 9.98` en vez de `0.00`, el score de Carabamba pasa de 4.93
 (la peor entidad del índice) a un valor normal.
+
+> **Nota sobre el 9.98:** ese recálculo dividió entre el monto **total**
+> (S/ 35.4M), incluyendo las adjudicaciones cuyo `supplier_id` no es un RUC. El
+> arreglo del punto 3 de la sección 4 restringe el denominador al monto **con RUC
+> válido** (S/ 3.83M para Carabamba), lo que da `sub_indicador_a = 9.79` y score
+> final **8.59**. El hallazgo no cambia: 0.23% o 2.1% son ambos órdenes de
+> magnitud distintos de un "100%".
 
 ### La causa, confirmada
 
@@ -139,6 +146,14 @@ manera injustificada:
 | GRL – Educación UAE Chépén | 6.93 | 7.96 | +1.03 |
 | Municipalidad Distrital de Jequetepeque | 7.23 | 8.16 | +0.93 |
 
+> **Nota sobre estas dos tablas:** son la escala absoluta **antes** de aplicar el
+> arreglo de cobertura (punto 3 de la sección 4), es decir con el monto total
+> como denominador de A. En el corte ya publicado en la base los valores son
+> Carabamba **8.59** y promedio **9.19**, y la única fila que cambia de las
+> cuatro es Jequetepeque (8.16, sin cambio, cobertura 90.2%). La dirección y el
+> orden de cada divergencia se mantienen — lo que cambia de fondo sigue siendo la
+> escala, no la cobertura.
+
 **Lo que sí se sostiene en ambas escalas:** las dos entidades realmente más
 riesgosas son las **Unidades Ejecutoras del Gobierno Regional de La Libertad**
 (5.20 y 5.21 en la escala actual; 5.69 y 5.70 en la absoluta). En su caso el
@@ -155,15 +170,21 @@ la calcula `toISOString()` en UTC; es el corte del 2026-10-15 noche hora Perú).
 
 | | Corte 2026-10-13 (escala relativa) | Corte 2026-10-16 (escala absoluta) |
 |---|---|---|
-| Carabamba | **4.93**, `A=0.00` | **8.65**, `A=9.98` |
+| Carabamba | **4.93**, `A=0.00` | **8.59**, `A=9.79`, cobertura 10.8% |
 | Mínimo del índice | 4.93 | 5.69 |
-| Promedio | 8.86 | **9.20** |
+| Promedio | 8.86 | **9.19** |
 | Tramo <5 | 1 entidad | **0 entidades** |
 | Tramo 5–7 | 5 | 2 |
 | Tramo ≥7 | 112 | 116 |
 
+La columna de la derecha corresponde al corte **ya con ambos arreglos aplicados**
+(escala absoluta y sub-indicador A restringido al monto con RUC válido, punto 3
+de la sección 4). El sub-indicador A de Carabamba pasó de 9.98 a 9.79 porque el
+denominador dejó de ser el monto total (S/ 35.4M) y pasó a ser solo el monto con
+RUC válido (S/ 3.83M).
+
 Los dos cortes conviven en `indice_integridad_contrataciones` y **no son
-comparables entre sí** — ver la advertencia del punto 5 de la sección 4.
+comparables entre sí** — cada uno lleva su `escala` (punto 5 de la sección 4).
 
 ### Un segundo problema, de dirección opuesta y mayor alcance
 
@@ -205,22 +226,72 @@ Es el defecto contrario al de Carabamba, y no produce acusaciones falsas: produc
    regenerado. **Lo que sí sobrevive a la corrección:** las Unidades Ejecutoras
    del GRL siguen siendo las dos peores entidades (5.69 y 5.70), por el
    sub-indicador B y la concentración, no por sanciones.
-3. **Validar la longitud en `limpiarRuc()`:** si el identificador no tiene 11
-   dígitos, no debe tratarse como RUC. La pregunta de diseño es qué hacer con ese
-   63.5% del monto: excluirlo del sub-indicador A y marcar el índice como parcial,
-   o resolver el identificador en el origen. **Lo que no es aceptable es dejarlo
-   correr como si fuera un RUC válido.**
-4. **Publicar la cobertura junto al score.** Un score calculado sobre el 36.5% del
-   monto no es comparable con uno calculado sobre el 100%, y hoy la tabla no lo dice.
-5. **RESUELTO-PARCIAL: la quiebra de escala entre cortes.** Los cortes 2026-10-13
-   (relativa) y 2026-10-16 (absoluta) conviven en la misma tabla sin ninguna
-   columna que indique qué escala usa cada uno. Un comparativo ingenuo entre ambos
-   mostraría una "mejora" de +0.34 en el promedio que es **íntegramente
-   metodológica**, no real: ningún proceso de contratación cambió en dos días. Queda
-   pendiente decidir entre tres salidas — borrar el corte 2026-10-13 (que además
-   contenía el valor erróneo de Carabamba), agregar una columna de metadato con la
-   escala, o mantenerlo y dejarlo explícito en cualquier publicación. **No es una
-   decisión que deba tomarse sola.**
+3. ~~**Validar la longitud en `limpiarRuc()`:** si el identificador no tiene 11
+   dígitos, no debe tratarse como RUC.~~ **Hecho 2026-10-16:** `limpiarRuc()`
+   valida `/^\d{11}$/` y devuelve `null` para los identificadores de 7 dígitos.
+   Decisión de diseño tomada: **excluir ese monto del sub-indicador A y hacerlo
+   explícito**, en vez de resolverlo en origen (no hay un mapeo fiable de esos
+   10,411 IDs a un RUC). Consecuencias deliberadas:
+   - el denominador de A pasó de `monto_total` a `montoConRuc`, así que A ya no
+     se diluye en identificadores no evaluables — y deja de empujar el resultado
+     hacia el mejor caso sobre el 63.5% del monto;
+   - si una entidad no tiene **ni una** adjudicación con RUC válido, A queda en
+     `NULL` y no en 10: se promedia B y C solos (`n_subindicadores = 2`), con el
+     mismo criterio que ya usaba el sub-indicador B;
+   - el sub-indicador C (HHI) **no cambió**: agrupa por `supplier_id` y ese
+     identificador de 7 dígitos sigue siendo una clave de proveedor estable, que
+     es todo lo que el HHI necesita.
+4. ~~**Publicar la cobertura junto al score.**~~ **Hecho 2026-10-16:** migración
+   `022_iic_escala_y_cobertura.sql` agrega `cobertura_monto_ruc` (fracción de
+   `monto_total` con RUC válido) y `n_adjudicaciones_con_ruc`. La cobertura viaja
+   además en `notas`, en la cabecera del CLI (`escala=`) y por fila (`cobA=`),
+   para que nadie tenga que buscar la columna para notar que A no describe a la
+   entidad entera.
+   **Lo que eso destapó:** solo el **15.3%** de las 118 entidades tiene cobertura
+   ≥90%, y hay entidades con A=10.00 calculado sobre el **0.9%** del monto
+   (Taurija: 3 de 18 adjudicaciones). Es una pregunta de diseño abierta si A
+   debería anularse por debajo de algún umbral de cobertura — ver punto 6.
+5. ~~**RESUELTO: la quiebra de escala entre cortes.**~~ **Hecho 2026-10-16:**
+   resuelto con una **columna de metadato**, no borrando el corte. Decisión:
+   - Se eligió `escala` en vez de borrar el 2026-10-13 porque el borrarlo
+     eliminaría la evidencia de lo que pasó (el valor erróneo de Carabamba está
+     documentado aquí, pero la fila es su registro), y porque un cambio de
+     metodología futuro volvería a dejar cortes incomparables sin dejar rastro.
+     La columna ataca la causa —**ninguna fila delante o detrás declara qué
+     escala usa**— en vez del síntoma.
+   - `escala TEXT` con `relativa_minmax` / `absoluta`, índice
+     `(escala, fecha_corte)`, `COMMENT ON COLUMN` que explica cuál es cuál y que
+     los cortes de escalas distintas no son comparables.
+   - Backfill solo para `fecha_corte < 2026-10-16`, para no etiquetar como
+     *relativa* una fila que ya se generó con escala absoluta. Verificado:
+     `sin_escala=0`, `relativa=132`, `absoluta=132`.
+   - Verificado: la marca `escala` viaja en cada INSERT, en la cabecera del CLI
+     y en la consulta (`WHERE escala = 'absoluta'`).
+   - El comparativo ingenuo sigue mostrando +0.33 de "mejora" (8.86 → 9.19), y
+     **ahora es descubrible desde una consulta** en vez de exigir que quien lo
+     lea haya leído el changelog.
+6. **ABIERTO — umbral de cobertura para el sub-indicador A.** Hoy A se promedia
+   dentro del `score` aunque cubra el 0.9% del monto, lo que inyecta ruido en la
+   mitad de la tabla. Datos para decidir (corte 2026-10-16):
+
+   | Cobertura | Entidades | % | Promedio score |
+   |---|---|---|---|
+   | ≥90% | 18 | 15.3% | 8.35 |
+   | 50–90% | 17 | 14.4% | 9.15 |
+   | 25–50% | 41 | 34.7% | 9.53 |
+   | 10–25% | 28 | 23.7% | 9.37 |
+   | <10% | 14 | 11.9% | 8.99 |
+
+   **Argumento para no tener prisa:** el top-10 peor **no se mueve** con un
+   umbral del 50% — las nueve primeras posiciones tienen cobertura ≥50% y no
+   cambian; solo Chocope (8.5%) caería de la décima. Los hallazgos que sostienen
+   el índice (las Unidades Ejecutoras del GRL como peores) sobreviven.
+
+   **Argumento para ponerlo:** 14 entidades tienen `A=10.00` sobre <10% del
+   monto, es decir un sub-indicador perfecto que no describe a la entidad.
+
+   **No se aplicó solo** porque movería el score de ~65% de las entidades y
+   cualquier umbral (10%? 50%?) es una decisión metodológica, no un hallazgo.
 
 ---
 
