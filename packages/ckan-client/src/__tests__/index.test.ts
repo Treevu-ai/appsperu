@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { fetchCkanResources } from "../index.js";
+import { fetchCkanResources, searchCkanPackages } from "../index.js";
 
 function jsonResponse(body: unknown) {
   return { ok: true, status: 200, json: async () => body } as Response;
@@ -60,5 +60,55 @@ describe("fetchCkanResources", () => {
     vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(jsonResponse({ success: true, result: {} }))));
     const resources = await fetchCkanResources({ ckanBase: "https://x", datasetSlug: "d1", userAgent: "ua" });
     expect(resources).toEqual([]);
+  });
+});
+
+describe("searchCkanPackages", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("normaliza hits de package_search y descarta los que no traen id o name", async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(
+        jsonResponse({
+          success: true,
+          result: {
+            count: 2,
+            results: [
+              {
+                id: "1",
+                name: "pronied",
+                title: "PRONIED",
+                organization: { title: "MINEDU" },
+                resources: [{ id: "r" }],
+              },
+              { title: "incompleto" },
+            ],
+          },
+        })
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await searchCkanPackages({
+      ckanBase: "https://x",
+      query: "colegios",
+      userAgent: "ua",
+      organization: "minedu",
+    });
+
+    expect(result).toEqual({
+      count: 2,
+      packages: [{ id: "1", name: "pronied", title: "PRONIED", organization: "MINEDU", notes: undefined, metadata_modified: undefined, resourceCount: 1 }],
+    });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("package_search");
+    expect(url).toContain("fq=organization%3Aminedu");
+    expect(init.headers).toMatchObject({ "User-Agent": "ua" });
+  });
+
+  it("rechaza rows fuera de rango", async () => {
+    await expect(searchCkanPackages({ ckanBase: "https://x", query: "q", userAgent: "ua", rows: 0 })).rejects.toThrow(/rows/);
   });
 });

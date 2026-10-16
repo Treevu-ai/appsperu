@@ -62,3 +62,86 @@ export async function fetchCkanResources(options: FetchCkanResourcesOptions): Pr
 
   return result.resources ?? [];
 }
+
+export interface CkanPackageSummary {
+  id: string;
+  name: string;
+  title: string;
+  organization?: string;
+  notes?: string;
+  metadata_modified?: string;
+  resourceCount: number;
+}
+
+interface CkanPackageSearchHit {
+  id?: string;
+  name?: string;
+  title?: string;
+  notes?: string;
+  metadata_modified?: string;
+  organization?: { title?: string; name?: string } | null;
+  resources?: unknown[];
+}
+
+interface CkanPackageSearchResponse {
+  success: boolean;
+  result?: { count?: number; results?: CkanPackageSearchHit[] };
+}
+
+export interface SearchCkanPackagesOptions {
+  ckanBase: string;
+  query: string;
+  userAgent: string;
+  rows?: number;
+  start?: number;
+  organization?: string;
+}
+
+export interface SearchCkanPackagesResult {
+  count: number;
+  packages: CkanPackageSummary[];
+}
+
+/**
+ * Búsqueda de catálogo (`package_search`). Misma restricción de User-Agent
+ * que `fetchCkanResources`: el WAF de datosabiertos.gob.pe responde 418 al
+ * user-agent por defecto de `fetch`.
+ */
+export async function searchCkanPackages(options: SearchCkanPackagesOptions): Promise<SearchCkanPackagesResult> {
+  const { ckanBase, query, userAgent, organization } = options;
+  const rows = options.rows ?? 20;
+  const start = options.start ?? 0;
+  if (!Number.isInteger(rows) || rows < 1 || rows > 100) {
+    throw new Error("rows debe ser un entero entre 1 y 100.");
+  }
+  if (!Number.isInteger(start) || start < 0) {
+    throw new Error("start debe ser un entero >= 0.");
+  }
+
+  const params = new URLSearchParams({ q: query, rows: String(rows), start: String(start) });
+  if (organization) params.set("fq", `organization:${organization}`);
+  const url = `${ckanBase}/api/3/action/package_search?${params}`;
+  const res = await fetch(url, { headers: { "User-Agent": userAgent, Accept: "application/json" } });
+  if (!res.ok) {
+    throw new Error(`CKAN package_search devolvió ${res.status} para la consulta "${query}".`);
+  }
+
+  const data = (await res.json()) as CkanPackageSearchResponse;
+  if (!data.success || !data.result) {
+    throw new Error(`CKAN package_search no tuvo éxito para la consulta "${query}".`);
+  }
+
+  const packages = (data.result.results ?? [])
+    .filter((hit): hit is CkanPackageSearchHit & { id: string; name: string } => Boolean(hit.id && hit.name))
+    .map((hit) => ({
+      id: hit.id,
+      name: hit.name,
+      title: hit.title || hit.name,
+      organization: hit.organization?.title ?? hit.organization?.name,
+      notes: hit.notes,
+      metadata_modified: hit.metadata_modified,
+      resourceCount: hit.resources?.length ?? 0,
+    }));
+
+  return { count: data.result.count ?? packages.length, packages };
+}
