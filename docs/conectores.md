@@ -1056,7 +1056,7 @@ Construido 2026-10-03 para enriquecer el Índice de Vulnerabilidad Portuaria (`i
 | **Cobertura real ingerida** | Verificado en vivo 2026-10-03 contra Neon: **741 filas insertadas, 3 rechazadas** (volúmenes vacíos reales en estaciones Petroperú/Pluspetrol de la Amazonía, 2015). Sin cobertura Lacustre (Titicaca no aparece en el anuario). |
 | **Detalle completo** | [`apps/infraestructura-mtc/docs/estructura-cargas-apn-2010-2017.md`](../apps/infraestructura-mtc/docs/estructura-cargas-apn-2010-2017.md) (estructura del XLSX) y [`apps/infraestructura-mtc/docs/indice-vulnerabilidad-trafico-v2.md`](../apps/infraestructura-mtc/docs/indice-vulnerabilidad-trafico-v2.md) (join y fórmula v2). |
 | **Cruces** | Con `terminales_portuarios` (mismo app) vía `matchTerminalToPuerto` — no es un `JOIN` SQL directo, es resuelto en código por el riesgo de nombres no normalizables entre fuentes. |
-| **Pendiente** | VUL-14/15/16 (solicitud Ley 27806 a la APN pidiendo datos 2018-2025): borrador listo en `docs/VUL-14-solicitud-apn-borrador.md`, no enviado — acción del usuario. |
+| **Pendiente** | VUL-14/15/16 (solicitud Ley 27806 a la APN pidiendo datos 2018-2025): borrador listo en `docs/VUL-14-solicitud-apn-borrador.md`, no enviado — acción del usuario. **Canales y campos verificados en vivo 2026-10-16** (formulario propio de la APN en `portalweb.apn.gob.pe/formulario-solicitud/`, entrega por correo electrónico sin costo, plazo de 10 días hábiles confirmado); pasos de envío en `docs/hoja-envio-SEC-04-VUL-14.md`. |
 
 ---
 

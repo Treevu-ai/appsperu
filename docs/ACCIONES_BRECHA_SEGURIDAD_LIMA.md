@@ -384,3 +384,8 @@ Solución futura (alto esfuerzo, requiere FOIA):
 [SEC-04] FOIA MININTER: Padrón oficial + personal + tiempo respuesta
 [SEC-05] Mining de El Peruano: Resoluciones PNP (destinos comisarías)
 ```
+
+**Estado de SEC-04 (verificado en vivo 2026-10-16): borrador listo, no enviado.**
+El pedido está redactado en `docs/SEC-04-solicitud-mininter-borrador.md` y los pasos de
+envío —incluido el **canal oficial corregido** y el **formato obligatorio** de MININTER—
+en `docs/hoja-envio-SEC-04-VUL-14.md`. El envío y el seguimiento son acciones del usuario.

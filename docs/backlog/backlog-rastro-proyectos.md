@@ -266,7 +266,7 @@ geográfico en vez de pausar la épica. Decisión del usuario, ver PRD-003 secci
 - Si se reciben datos: ingest del nuevo dataset
 **Tickets técnicos:**
 - `[VUL-14]` Redactar solicitud formal a la APN pidiendo anuarios portuarios 2018-2025
-- `[VUL-15]` Enviar por la Plataforma de Transparencia
+- `[VUL-15]` Enviar por el formulario propio de la APN (`portalweb.apn.gob.pe/formulario-solicitud/`) — **no** por la Plataforma Nacional de Transparencia; verificado en vivo 2026-10-16 que el canal de la APN es ese formulario y que es donde entrega comprobante
 - `[VUL-16]` Hacer seguimiento a los 10 días hábiles
 - `[VUL-17]` Si se reciben: ingest y actualización del índice a v3
 
