@@ -31,6 +31,12 @@ logs/
 .DS_Store
 *.sw?
 
+# Bloqueos de Office — el archivo temporal ~$*.docx se crea al abrir el
+# documento en Word y jamás debe versionarse
+~$*.docx
+~$*.xlsx
+~$*.pptx
+
 # Worktrees de git usados para desarrollo en paralelo (no son contenido del repo)
 .worktrees/
 
