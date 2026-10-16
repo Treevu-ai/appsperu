@@ -293,6 +293,16 @@ Es el defecto contrario al de Carabamba, y no produce acusaciones falsas: produc
    **No se aplicó solo** porque movería el score de ~65% de las entidades y
    cualquier umbral (10%? 50%?) es una decisión metodológica, no un hallazgo.
 
+   **DECIDIDO 2026-10-16: no se aplica umbral.** Se deja A promediándose siempre
+   que haya al menos un monto con RUC válido, y la cobertura se expone para que
+   quien consuma decida. Razonamiento: el top-10 no se mueve con un umbral del
+   50%, así que el umbral no protege ningún hallazgo relevante; en cambio
+   reescribiría el score de ~65% del universo y cualquier corte sería una
+   convención elegida sin datos que la justificaran. Si más adelante un
+   consumidor concreto necesita que A se anule por debajo de cierta cobertura, el
+   filtro se aplica en la consulta (`cobertura_monto_ruc >= x`) sin regenerar el
+   corte — para eso está la columna.
+
 ---
 
 ## 5. Reproducción
