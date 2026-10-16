@@ -197,6 +197,10 @@ export const handlers = [
   // nivel de respuesta (ver apps/rastro-web/src/lib/api-client.ts).
   http.get("*/api/public-works", () =>
     HttpResponse.json({
+      total: 1,
+      limit: 50,
+      offset: 0,
+      hasMore: false,
       resultados: [
         {
           codigoInfobras: "INF-2025-001",

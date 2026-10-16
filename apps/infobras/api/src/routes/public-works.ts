@@ -7,6 +7,9 @@ import { costDriftPct, gapFisicoFinanciero } from "../signals/signals.js";
 
 export const publicWorksRouter = Router();
 
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 200;
+
 const GROUP_BY_COLUMNS = {
   sectorEntidad: "sector_entidad",
   nivelGobierno: "nivel_gobierno",
@@ -36,6 +39,8 @@ const PublicWorksQuerySchema = z.object({
   // hace más de N días" sin escribir SQL ad-hoc contra la base.
   sectorEntidad: z.string().min(1).optional(),
   diasParalizadoMin: z.coerce.number().int().min(0).optional(),
+  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+  offset: z.coerce.number().int().min(0).default(0),
   orderBy: z.enum(Object.keys(ORDER_BY_COLUMNS) as [string, ...string[]]).default("nombre_asc"),
 }).refine((value) => value.diasParalizadoMin === undefined || value.conParalizacion === "true", {
   message: "diasParalizadoMin requiere conParalizacion=true — dias_paralizado no es significativo en obras sin paralización.",
@@ -155,7 +160,7 @@ publicWorksRouter.get(
   asyncHandler(async (req, res) => {
     const parsed = parseQuery(PublicWorksQuerySchema, req.query, res);
     if (!parsed) return;
-    const { departamento, estado, conParalizacion, distritoSospechoso, sectorEntidad, diasParalizadoMin, orderBy } = parsed;
+    const { departamento, estado, conParalizacion, distritoSospechoso, sectorEntidad, diasParalizadoMin, limit, offset, orderBy } = parsed;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -185,16 +190,29 @@ publicWorksRouter.get(
     }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
+    const { rows: countRows } = await pool.query<{ total: string }>(
+      `SELECT COUNT(*) AS total FROM public_works pw ${where}`,
+      params
+    );
+    const total = Number(countRows[0]?.total ?? 0);
+
     const { rows } = await pool.query(
       `SELECT pw.*, rb.fetched_at
        FROM public_works pw
        JOIN raw_infobras_batches rb ON rb.id = pw.source_batch_id
        ${where}
-       ORDER BY ${ORDER_BY_COLUMNS[orderBy as keyof typeof ORDER_BY_COLUMNS]}`,
-      params
+       ORDER BY ${ORDER_BY_COLUMNS[orderBy as keyof typeof ORDER_BY_COLUMNS]}
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
     );
 
-    res.json({ resultados: rows.map(withSignals) });
+    res.json({
+      total,
+      limit,
+      offset,
+      hasMore: offset + rows.length < total,
+      resultados: rows.map(withSignals),
+    });
   })
 );
 

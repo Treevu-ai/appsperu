@@ -74,12 +74,16 @@ function dbRow(overrides: Record<string, unknown> = {}) {
 
 describe("GET /api/public-works", () => {
   it("returns the list with derived signals computed", async () => {
-    queryMock.mockResolvedValueOnce({ rows: [dbRow()] });
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "1" }] })
+      .mockResolvedValueOnce({ rows: [dbRow()] });
 
     const app = createApp();
     const res = await request(app).get("/api/public-works").query({ departamento: "LA LIBERTAD" });
 
     expect(res.status).toBe(200);
+    expect(res.body.total).toBe(1);
+    expect(res.body.hasMore).toBe(false);
     expect(res.body.resultados).toHaveLength(1);
     expect(res.body.resultados[0]).toMatchObject({
       codigoInfobras: "6",
@@ -88,8 +92,37 @@ describe("GET /api/public-works", () => {
     });
   });
 
+  it("aplica limit/offset por defecto y pagina el ranking nacional", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "1319" }] })
+      .mockResolvedValueOnce({ rows: [dbRow()] });
+
+    const app = createApp();
+    const res = await request(app)
+      .get("/api/public-works")
+      .query({ conParalizacion: "true", diasParalizadoMin: 180, orderBy: "diasParalizado_desc" });
+
+    expect(res.body.total).toBe(1319);
+    expect(res.body.limit).toBe(50);
+    expect(res.body.offset).toBe(0);
+    expect(res.body.hasMore).toBe(true);
+
+    const [, pageParams] = queryMock.mock.calls[1];
+    expect(pageParams).toEqual([180, 50, 0]);
+  });
+
+  it("limit mayor que MAX_LIMIT (200) responde 400, nunca se traga en silencio", async () => {
+    const app = createApp();
+    const res = await request(app).get("/api/public-works").query({ limit: 5000 });
+
+    expect(res.status).toBe(400);
+    expect(queryMock).not.toHaveBeenCalled();
+  });
+
   it("applies the departamento, estado and conParalizacion filters", async () => {
-    queryMock.mockResolvedValueOnce({ rows: [] });
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "0" }] })
+      .mockResolvedValueOnce({ rows: [] });
 
     const app = createApp();
     await request(app)
@@ -104,7 +137,9 @@ describe("GET /api/public-works", () => {
   });
 
   it("applies the distritoSospechoso filter (DQ-14)", async () => {
-    queryMock.mockResolvedValueOnce({ rows: [] });
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "0" }] })
+      .mockResolvedValueOnce({ rows: [] });
 
     const app = createApp();
     await request(app).get("/api/public-works").query({ distritoSospechoso: "true" });
@@ -114,7 +149,9 @@ describe("GET /api/public-works", () => {
   });
 
   it("PV-03: applies sectorEntidad, diasParalizadoMin and orderBy=diasParalizado_desc", async () => {
-    queryMock.mockResolvedValueOnce({ rows: [] });
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "0" }] })
+      .mockResolvedValueOnce({ rows: [] });
 
     const app = createApp();
     await request(app)
@@ -125,18 +162,22 @@ describe("GET /api/public-works", () => {
     expect(sql).toMatch(/pw\.existe_paralizacion = true/);
     expect(sql).toMatch(/pw\.sector_entidad = \$1/);
     expect(sql).toMatch(/pw\.dias_paralizado >= \$2/);
-    expect(sql).toMatch(/ORDER BY pw\.dias_paralizado DESC NULLS LAST/);
     expect(params).toEqual(["PRODUCCIÓN", 180]);
+
+    const [pageSql] = queryMock.mock.calls[1];
+    expect(pageSql).toMatch(/ORDER BY pw\.dias_paralizado DESC NULLS LAST/);
   });
 
   it("PV-03: sin orderBy mantiene el orden por nombre existente (regresión)", async () => {
-    queryMock.mockResolvedValueOnce({ rows: [] });
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "0" }] })
+      .mockResolvedValueOnce({ rows: [] });
 
     const app = createApp();
     await request(app).get("/api/public-works").query({ departamento: "LA LIBERTAD" });
 
-    const [sql] = queryMock.mock.calls[0];
-    expect(sql).toMatch(/ORDER BY pw\.nombre_obra ASC/);
+    const [pageSql] = queryMock.mock.calls[1];
+    expect(pageSql).toMatch(/ORDER BY pw\.nombre_obra ASC/);
   });
 
   it("PV-03: diasParalizadoMin sin conParalizacion=true responde 400 explícito, no lo ignora en silencio", async () => {
@@ -148,7 +189,9 @@ describe("GET /api/public-works", () => {
   });
 
   it("PV-04: sin sectorEntidad, el ranking de obras paralizadas es nacional (filtro opcional)", async () => {
-    queryMock.mockResolvedValueOnce({ rows: [] });
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ total: "0" }] })
+      .mockResolvedValueOnce({ rows: [] });
 
     const app = createApp();
     await request(app)

@@ -594,6 +594,11 @@ export interface PublicWork {
   fuente: { dataset: string; extraidoEl: string };
 }
 export interface PublicWorksResponse {
+  /** Total de obras que cumplen los filtros (sin paginar). */
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
   resultados: PublicWork[];
 }
 /** Mismas 3 claves que `ORDER_BY_COLUMNS` en `apps/infobras/api/src/routes/public-works.ts`. */
@@ -618,6 +623,10 @@ export interface InfobrasPublicWorksParams {
   diasParalizadoMin?: number;
   /** PV-03/GORE-06a: `nombre_asc` (default del backend) u orden por severidad. */
   orderBy?: InfobrasPublicWorksOrderBy;
+  /** Default 50, máximo 200 (igual que el backend). */
+  limit?: number;
+  /** Default 0. */
+  offset?: number;
 }
 
 export function getInfobrasPublicWorks(
@@ -642,6 +651,8 @@ export function getInfobrasPublicWorks(
       sectorEntidad: params.sectorEntidad,
       diasParalizadoMin: params.diasParalizadoMin,
       orderBy: params.orderBy,
+      limit: params.limit,
+      offset: params.offset,
     },
   });
 }
