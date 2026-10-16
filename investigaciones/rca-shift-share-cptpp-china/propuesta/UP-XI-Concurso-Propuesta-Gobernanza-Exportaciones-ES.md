@@ -230,22 +230,27 @@ El monto solicitado se mantiene por debajo del tope de S/ 50.000,00 del proyecto
 
 > **[PENDIENTE — estructura de la remuneración del asistente de investigación]**
 >
-> La cifra de honorarios usa un importe de referencia y **debe recalibrarse contra el monto real**, confirmado con la Administración del CIUP. Con la tarifa declarada por el asistente —**S/ 3.000 brutos mensuales**— el costo total al proyecto asciende a:
+> La cifra de honorarios usa un importe de referencia y **debe recalibrarse contra el monto real**, confirmado con la Administración del CIUP. Con la tarifa declarada por el asistente —**S/ 3.000 brutos mensuales**— el costo total al proyecto bajo el régimen de planilla asciende a:
 >
 > | Concepto | Cálculo | Monto |
 > |---|---|---|
 > | Costo mensual (sueldo + 58% de impuestos y beneficios de ley) | 3.000 × 1,58 | S/ 4.740 |
 > | Costo de 12 meses a tiempo completo | 4.740 × 12 | **S/ 56.880** |
 > | Tope total de un proyecto de un año (art. 2.2) | — | S/ 50.000 |
-> | Techo del rubro honorarios (50% del total) | — | S/ 23.865 |
+> | Techo del rubro honorarios (50% del presupuesto de S/ 47.730) | — | S/ 23.865 |
 >
-> **S/ 56.880 supera el monto total máximo del proyecto**, no solo el techo de honorarios. En consecuencia, **la planilla a tiempo completo durante los doce meses no puede financiarse íntegramente con este proyecto.** Tres vías admite el MPP para resolverlo:
+> **S/ 56.880 supera el monto total máximo del proyecto**, no solo el techo de honorarios. En consecuencia, **la planilla a tiempo completo durante los doce meses no puede financiarse íntegramente con este proyecto.**
+>
+> **Restricción de calendario.** El contrato del asistente vence el **14 de diciembre de 2026**; los resultados del Concurso se anuncian en diciembre y el proyecto inicia el **1 de marzo de 2027**. Entre ambos hay un hueco de tres meses sin vinculación con la Universidad, y la declaración de *«Relación con la Universidad»* que exige el formato de presupuesto cambia entre la presentación y el inicio. **El proyecto no puede presupuestar trabajo anterior al 1 de marzo de 2027**: ese hueco se resuelve con la renovación del contrato en el CIUP, no con esta propuesta.
+>
+> Cuatro vías admite el MPP para estructurar la remuneración:
 >
 > 1. **Fondos de contraparte.** El numeral 5.2 exige adjuntar «confirmación de fondos de contraparte, si correspondiera»: la Universidad mantiene la planilla y el proyecto cubre únicamente costos directos. Es la vía conforme sin excepción.
-> 2. **Financiamiento parcial.** El proyecto cubre una fracción del año (S/ 23.865 ÷ 4.740 ≈ **5 meses**) y la Universidad asume el resto como contraparte.
+> 2. **Financiamiento parcial.** El proyecto cubre una fracción del año —S/ 23.865 ÷ 4.740 ≈ **5 meses**— y la Universidad asume el resto como contraparte.
 > 3. **Excepción al 50% (art. 5.4).** Permite superar la proporción «de manera excepcional y justificada» cuando los recursos se destinen a **asistentes de investigación**, con aprobación del Comité de Evaluación. Aun así, el tope de S/ 50.000 sigue ligando.
+> 4. **Contratación como consultor por honorarios, sin planilla.** Al prescindir del 58% de impuestos y beneficios de ley, el costo baja de S/ 4.740 a **S/ 3.000 al mes**; con el mismo techo de honorarios cabrían S/ 23.865 ÷ 3.000 ≈ **8 meses en vez de 5**. Como el asistente no mantendría relación de dependencia con la Universidad a partir del 14 de diciembre, el ingreso calificaría como renta de cuarta categoría. **Dos objeciones sin resolver:** (a) el art. 5.3 establece que contratar asistentes de investigación cuesta «el sueldo estipulado por el CIUP» más el 58%, formulación que apunta a un vínculo de planilla; y (b) una dedicación prolongada con cuota mensual fija y exclusividad puede calificarse como relación laboral encubierta. **Su admisibilidad debe confirmarse con Administración antes de utilizarla.**
 >
-> Cualquiera de las tres requiere **confirmación previa con el Jefe de Administración del CIUP**, a quien remite el propio MPP ante dudas de presupuesto. **No debe pagarse al asistente dos veces por las mismas horas** —su planilla habitual y los honorarios del proyecto son fuentes excluyentes para un mismo tiempo de trabajo.
+> Cualquiera de las cuatro requiere **confirmación previa con el Jefe de Administración del CIUP**, a quien remite el propio MPP ante dudas de presupuesto. **No debe pagarse al asistente dos veces por las mismas horas** —la planilla habitual y los honorarios del proyecto son fuentes excluyentes para un mismo tiempo de trabajo.
 
 ---
 
