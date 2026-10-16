@@ -120,7 +120,9 @@ describe("GET /api/crossref/extorsion-sancionados", () => {
       provincia: "La Libertad",
       distrito: "Trujillo",
       denunciasExtorsion: 1322,
+      denunciasSecuestro: 0,
     });
+    expect(res.body.restriccionSecuestro).toMatchObject({ noEsHomicidio: true, noEsSicariato: true });
     expect(res.body.distritos[0].proveedoresSancionadosConContratos).toHaveLength(1);
     expect(res.body.distritos[0].proveedoresSancionadosConContratos[0]).toMatchObject({
       ruc: "20601567335",

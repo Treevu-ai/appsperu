@@ -1971,7 +1971,8 @@ export const TOOL_CATALOG: ToolSpec[] = [
     description:
       "Extorsión en distritos con proveedor sancionado (2026-09-26): para cada distrito con denuncias de " +
       "Extorsión, lista los proveedores sancionados (persona jurídica, con su RUC) con contratos en ese mismo " +
-      "distrito y año. Es una COINCIDENCIA TERRITORIAL, no prueba de relación: el sanción y la denuncia pueden " +
+      "distrito y año. Incluye denunciasSecuestro del mismo distrito como serie aparte: es denuncia SIDPOL, " +
+      "no homicidio ni sicariato. Es una COINCIDENCIA TERRITORIAL, no prueba de relación: la sanción y la denuncia pueden " +
       "no estar vinculados. Úsalo para priorizar verificación, no para concluir." + SIN_SCHEDULER,
     pathTemplate: "/api/crossref/extorsion-sancionados",
     pathParams: [],

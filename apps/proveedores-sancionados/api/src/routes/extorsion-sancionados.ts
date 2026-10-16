@@ -21,7 +21,15 @@ type DenunciaRow = {
   distrito: string;
   ubigeo: string | null;
   total_extorsion: string;
+  total_secuestro: string | null;
 };
+
+const RESTRICCION_SECUESTRO = {
+  proxy: "denuncia SIDPOL",
+  noEsHomicidio: true,
+  noEsSicariato: true,
+  nota: "Secuestro es la otra modalidad violenta del mismo dataset. No sustituye homicidio ni sicariato (DQ-15).",
+} as const;
 
 type ProveedorSancionadoRow = {
   origen: "awards" | "minor_contracts";
@@ -52,9 +60,11 @@ extorsionSancionadosRouter.get(
     }
 
     const { rows: denunciaRows } = await seguridadPool.query<DenunciaRow>(
-      `SELECT provincia, distrito, ubigeo, SUM(cantidad)::text AS total_extorsion
+      `SELECT provincia, distrito, ubigeo,
+              COALESCE(SUM(cantidad) FILTER (WHERE modalidad = 'Extorsión'), 0)::text AS total_extorsion,
+              COALESCE(SUM(cantidad) FILTER (WHERE modalidad = 'Secuestro'), 0)::text AS total_secuestro
          FROM police_reports
-        WHERE departamento = $1 AND anio = $2 AND modalidad = 'Extorsión'
+        WHERE departamento = $1 AND anio = $2 AND modalidad IN ('Extorsión', 'Secuestro')
         GROUP BY provincia, distrito, ubigeo
         ORDER BY provincia, distrito`,
       [departamento, anio]
@@ -64,6 +74,7 @@ extorsionSancionadosRouter.get(
       res.json({
         departamento,
         anio,
+        restriccionSecuestro: RESTRICCION_SECUESTRO,
         distritos: [],
       });
       return;
@@ -185,6 +196,7 @@ extorsionSancionadosRouter.get(
         distrito: d.distrito,
         ubigeo: d.ubigeo,
         denunciasExtorsion: Number(d.total_extorsion),
+        denunciasSecuestro: Number(d.total_secuestro ?? 0),
         proveedoresSancionadosConContratos: proveedores,
         totalProveedoresSancionados: proveedores.length,
       };
@@ -193,6 +205,7 @@ extorsionSancionadosRouter.get(
     res.json({
       departamento,
       anio,
+      restriccionSecuestro: RESTRICCION_SECUESTRO,
       proveedoresSancionadosSinDistrito: proveedoresSinDistrito,
       totalProveedoresSancionadosSinDistrito: proveedoresSinDistrito.length,
       distritos,
