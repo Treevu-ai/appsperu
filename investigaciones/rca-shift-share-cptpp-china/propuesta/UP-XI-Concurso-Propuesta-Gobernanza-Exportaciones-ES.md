@@ -7,6 +7,7 @@
 
 **Fecha:** ____ / ____ / 2026
 **Firma de la coordinadora:** _______________________________
+**Versión:** 2.0 — octubre 2026 (incorpora la batería de análisis avanzados, scripts 20–28)
 
 ---
 
@@ -16,7 +17,7 @@ El Perú duplicó sus exportaciones entre 2015 y 2024 —de US$37.400 a US$76.80
 
 Esta propuesta pregunta si la **calidad institucional del mercado de destino** está asociada con la competitividad exportadora peruana y, sobre todo, si esa asociación es **mayor en los productos que dependen más de contratos exigibles**. Para responderlo se construirá un panel bilateral a nivel de producto (6 dígitos del Sistema Armonizado, ~5.000 productos, 200 socios, 2015–2024), estimado con efectos fijos producto-socio y año, que interactúa el indicador de gobernanza con la intensidad contractual de cada bien. El diseño de **exposición diferencial** se identifica por variación dentro de cada país y aborda la principal debilidad de la literatura: la endogeneidad de los indicadores institucionales.
 
-Se aporta data original —un panel productivo documentado— y una estimación inédita para el Perú. Los hallazgos informan la priorización de reformas de gobernanza en los capítulos de comercio del APTPP y en los programas de facilitación comercial.
+Se aporta data original —un panel productivo documentado y una batería de robustez reproducible— y una estimación inédita para el Perú. La evidencia preliminar es precisa sobre su alcance: la asociación gobernanza–exportaciones es **robusta en niveles entre países** (estable a muestras, controles, rezagos e instrumentación) pero **no se sostiene en la variación dentro del país ni dentro de producto**. El proyecto mide esa asociación con rigor; no le atribuye causalidad. Los hallazgos informan la priorización de dimensiones de gobernanza en los programas de facilitación comercial y el diagnóstico institucional de mercados de destino. Un sondeo preliminar de diferencias en diferencias **no detecta un efecto agregado de la entrada en vigor del CPTPP**, lo que acota —y vuelve más creíble— el alcance de la recomendación de política.
 
 **Palabras clave:** gobernanza institucional, competitividad exportadora, modelo de gravedad, exposición diferencial, Perú.
 
@@ -38,7 +39,7 @@ Se aporta data original —un panel productivo documentado— y una estimación 
 
 **H2.** El indicador compuesto de gobernanza del destino está positivamente asociado con el volumen de exportaciones bilaterales del Perú, controlados los determinantes estándar de la gravedad.
 
-**H3.** La asociación de H2 es **monótonamente creciente en la intensidad contractual del producto**: los bienes contract-intensive son más sensibles a la calidad institucional del destino que los bienes homogéneos.
+**H3 (contraste central, de dos lados).** La asociación de H2 varía con la intensidad contractual del producto. La predicción teórica —bienes *contract-intensive* más sensibles a la calidad institucional del destino— es que sea **creciente**; el proyecto la contrasta contra la alternativa de una asociación uniforme o incluso decreciente. La evidencia preliminar ya disponible **rechaza la forma creciente**: tanto el sondeo con complejidad (PCI) como la prueba definitiva con la intensidad contractual de Nunn (2007) y efectos fijos producto-socio arrojan términos de exposición no positivos (y, en los productos de mayor intensidad contractual, una asociación negativa débil). H3 se plantea y se reporta, por tanto, como un contraste genuino y no como un resultado anticipado.
 
 **H4 (contraste metodológico).** La misma hipótesis evaluada sobre una muestra pequeña de países no arroja resultado significativo; el contraste es un problema de poder estadístico, no un descubrimiento empírico contradictorio.
 
@@ -79,9 +80,11 @@ De estos canales se desprende la predicción central del proyecto: **el efecto d
 
 De Groot et al. (2004), en una sección transversal de 124 países, estimaron que una mejora de una desviación estándar en la calidad institucional aumenta el comercio bilateral entre 29% y 56%. Abreo Villamizar et al. (2021) encuentran efectos de magnitud similar para Colombia. Hasnain, Manning y Andrango (2022), con un panel de 135 países en desarrollo, muestran que cada dimensión de gobernanza tiene un efecto distinto, con calidad regulatoria y estado de derecho entre las más fuertes. Riker (2022) no encuentra efecto significativo en un panel más reducido.
 
-Un aporte preliminar ya realizado por el equipo — presentado aquí como **evidencia de viabilidad**, no como resultado del proyecto — establece el punto de partida. Sobre un panel bilateral de 184 socios (1.496 observaciones, 2016–2024), el indicador compuesto de gobernanza rezagado arroja un coeficiente positivo y altamente significativo (β = 0,667; p < 0,001; R² = 0,72), robusto a la extensión del rezago y a la exclusión de valores extremos. La misma hipótesis evaluada sobre los 12 socios CPTPP+China (N = 108) no arroja resultado significativo.
+Un aporte preliminar ya realizado por el equipo — presentado aquí como **evidencia de viabilidad**, no como resultado del proyecto — establece el punto de partida. Sobre un panel bilateral de 184 socios (1.496 observaciones, 2016–2024), el indicador compuesto de gobernanza rezagado arroja un coeficiente positivo y altamente significativo (β = 0,667; p < 0,001; R² = 0,72). La misma hipótesis evaluada sobre los 12 socios CPTPP+China (N = 108) no arroja resultado significativo.
 
-Ese aporte preliminar tiene, sin embargo, una limitación que este proyecto está diseñado para corregir: **la asociación no sobrevive a primeras diferencias, y hay causalidad reversa significativa**. El coeficiente vive en la variación entre países, no dentro de ellos. La sección 7 explica por qué la exposición diferencial responde exactamente a esa limitación.
+La batería de robustez ampliada (scripts reproducibles 20–28, documentados en el Anexo 4) precisa ese diagnóstico. **En niveles, la asociación es muy estable:** sobrevive al control de acuerdos comerciales (β = 0,655; p < 0,001); instrumentada con la latitud del socio y con la gobernanza promedio de su región (leave-one-out), la primera etapa es fuerte (F = 39–67) y el 2SLS arroja 0,70–0,96 (p < 0,01), aunque el contraste de sobreidentificación no respalda del todo los instrumentos (Sargan p = 0,02–0,08); un estimador de doble aprendizaje automático con validación cruzada (DML) da θ = 0,705 (p < 0,001); las 32 combinaciones de la curva de especificaciones son positivas y significativas (mediana 0,59); y el sesgo de variable omitida de Oster arroja δ = 2,58 > 1. **En cambio, el coeficiente no se sostiene en la variación dentro de país o de producto:** en PPML cae y pierde significancia (0,16–0,38; la Gamma PML sí lo retiene, 0,696); en un panel dinámico *within* no es significativo; y en un sondeo a nivel de producto (Perú × 212 socios × HS4, 198 mil observaciones) la interacción con complejidad sale negativa. El cuadro completo es el de una **asociación robusta entre países, no un efecto causal**.
+
+En suma, la asociación preliminar **no sobrevive a primeras diferencias y hay causalidad reversa significativa**: el coeficiente vive en la variación entre países, no dentro de ellos. La sección 7 explica por qué la exposición diferencial responde exactamente a esa limitación.
 
 ---
 
@@ -120,15 +123,25 @@ La clave del diseño es que, con efectos fijos producto-socio, **el coeficiente 
 
 ### 7.5 Especificaciones complementarias y robustez
 
-- Estimación **PPML en lugar de MCO en logaritmos** (Santos Silva y Tenreyro 2006), que evita el sesgo por exclusión de flujos cero y la distorsión del logaritmo en presencia de heterocedasticidad.
-- Reemplazo de **CI(p)** por la clasificación de **Rauch (1999)** (bienes homogéneos frente a diferenciados).
-- Inclusión de las **seis dimensiones WGI por separado** para identificar qué canal institucional domina.
-- Pruebas de **primeras diferencias y precedencia inversa**, replicando la batería de endogeneidad ya desarrollada por el equipo, para documentar qué resuelve y qué no resuelve el nuevo diseño.
-- Exclusión de *outliers* y agregación alternativa (HS-4, HS-2) como contraste de sensibilidad.
+**Ya ejecutadas en la etapa preliminar** (scripts 20–28; resultados en el Anexo 4):
+
+- **PPML** (Santos Silva y Tenreyro 2006) sobre flujos positivos y sobre un panel con ceros: el coeficiente pierde significancia (0,16–0,38), a diferencia del MCO log-lineal (0,667) y de la Gamma PML (0,696). Es un hallazgo de sensibilidad al estimador que el proyecto reportará explícitamente.
+- **Control de acuerdos comerciales** (base CEPII RTA): el coeficiente de gobernanza sobrevive (0,655; p < 0,001) y el acuerdo comercial no es significativo.
+- **Variables instrumentales** (latitud del socio y gobernanza regional leave-one-out): primera etapa fuerte (F = 39–67) y 2SLS positivo (0,70–0,96; p < 0,01), con reservas por sobreidentificación (Sargan p = 0,02–0,08).
+- **Doble aprendizaje automático (DML)** y **sesgo de Oster (2019)**: θ = 0,705 (p < 0,001) y δ = 2,58 > 1, consistentes con una asociación robusta en niveles.
+- **Curva de especificaciones** (32 combinaciones de muestra, controles, rezago y efectos fijos): 100% positivas y significativas.
+- **Primeras diferencias, panel dinámico (Anderson–Hsiao)** y **sondeo a nivel de producto** (HS4, interacción con PCI): sin efecto dentro de país o de producto.
+- **Diferencias en diferencias del CPTPP** (entrada en vigor sep-2021): sin efecto agregado detectable (coeficiente ≈ 0; p = 0,90) y sin pre-tendencia.
+- **Prueba definitiva de H3**: intensidad contractual de **Nunn (2007)** y **Rauch (1999)**, mapeadas a HS6/HS4, con **efectos fijos producto-socio** y control de demanda del destino (panel HS6 Perú→mundo, 415.757 observaciones). El término de exposición diferencial gobernanza × intensidad contractual **no es positivo en ningún modelo** y, en los productos de mayor intensidad contractual, la asociación de nivel del WGI es negativa (débil). Se **rechaza la forma creciente de H3**.
+
+**Previstas para la etapa del proyecto:**
+
+- Inclusión de las **seis dimensiones WGI por separado** en el diseño de exposición diferencial.
+- Exclusión de *outliers* y **agregación alternativa (HS-6 → HS-4, HS-2)**, ya ensayada a HS-6 y HS-4.
 
 ### 7.6 Software y reproducibilidad
 
-Todo el procesamiento y la estimación se hará en Python (pandas, statsmodels, linearmodels). Los scripts, el diccionario de variables y los datos derivados se depositarán en **Datasets UP** conforme a la Política de Gestión del Repositorio de Datos de Investigación de la Universidad, permitiendo la replicación completa del resultado.
+Todo el procesamiento y la estimación se hará en Python (pandas, statsmodels, linearmodels, pyfixest, scikit-learn, pyreadr). El repositorio ya cuenta con un módulo de carga común y los scripts numerados (19–32) que reproducen la batería de robustez —PPML, IV, DML, Oster, producto, complejidad y la prueba definitiva de H3 con Nunn (2007)—, junto con el libro de resultados `analisis_avanzados_wgi.xlsx`. Los scripts, el diccionario de variables y los datos derivados se depositarán en **Datasets UP** conforme a la Política de Gestión del Repositorio de Datos de Investigación de la Universidad, permitiendo la replicación completa del resultado.
 
 ---
 
@@ -178,8 +191,9 @@ La convocatoria prevé la incorporación de colaboradores nacionales o internaci
 ### 11.2 Productos adicionales previstos
 
 - **Panel de datos documentado** depositado en Datasets UP, junto con scripts de construcción y diccionario de variables — replicable por terceros.
+- **Anexo técnico de análisis avanzados** (Anexo 4) con la batería de robustez, IV, DML, gravedad por producto, complejidad económica y la **prueba definitiva de H3** (intensidad contractual de Nunn 2007 y efectos fijos producto-socio), y su libro de resultados.
 - **Documento de trabajo del CIUP** difundible en la instancia académica institucional.
-- **Policy brief** dirigido a agencias de promoción de exportaciones y a los equipos negociadores de los capítulos de comercio del APTPP.
+- **Policy brief** dirigido a agencias de promoción de exportaciones y a los equipos negociadores de capítulos de comercio, sobre la base de la asociación documentada (no causal) y del nulo detectado para el CPTPP.
 
 Todas las publicaciones llevarán la afiliación institucional a la Universidad del Pacífico, conforme al artículo III del MPP.
 
@@ -189,7 +203,7 @@ Todas las publicaciones llevarán la afiliación institucional a la Universidad 
 
 | Mes | Actividades | Entregable |
 |---|---|---|
-| 1 | Descarga y construcción del panel HS-6; obtención y concordancia de la intensidad contractual; diccionario de variables | — |
+| 1 | Concordancia Nunn↔HS-6 y control de demanda del destino *(ya ejecutados en la fase de preparación; el panel Perú→socios por producto y la matriz país×producto están construidos desde BACI)*; diccionario de variables | — |
 | 2 | Estimación de la especificación principal y de PPML | — |
 | 3 | Batería de robustez y de endogeneidad; contrastes por dimensión WGI | — |
 | **4** | **Informe de avances narrativo y financiero** | **Informe mes 6** |
@@ -287,5 +301,6 @@ Wei, S. J. (2000). How Taxing Is Corruption on International Investors? *Review 
 ## 15. Anexos
 
 - **Anexo 1.** Diccionario de variables del panel HS-6. *(por adjuntar)*
-- **Anexo 2.** Concordancia entre clasificación Nunn (2007) y código HS-6. *(por adjuntar)*
+- **Anexo 2.** Concordancia entre la clasificación Nunn (2007) y el código HS-6, y contraste con Rauch (1999). *Construida*: `data/raw/nunn/intensidad_contractual_hs4.csv` y `intensidad_contractual_hs6.csv`.
 - **Anexo 3.** Formato de datos personales firmado por cada integrante. *(por completar y firmar)*
+- **Anexo 4.** Análisis avanzados (scripts 19–32): batería de robustez, variables instrumentales, doble aprendizaje automático, sesgo de Oster, gravedad por producto, complejidad económica y la prueba definitiva de H3 con Nunn (2007). Documento `Anexo-Tecnico-Analisis-Avanzados.md` y libro `analisis_avanzados_wgi.xlsx`.

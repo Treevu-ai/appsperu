@@ -1,2 +1,6 @@
 # Datos crudos descargados — nunca commitear (BACI pesa ~2,3 GB)
 *.zip
+
+# Extractos crudos pesados (regenerables con los scripts; no al repo)
+baci_partner_imports_hs6.csv
+rta_larch/

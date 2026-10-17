@@ -1,3 +1,7 @@
 pandas
 statsmodels
 linearmodels
+pyfixest
+scikit-learn
+scipy
+openpyxl

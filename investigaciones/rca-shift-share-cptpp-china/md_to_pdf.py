@@ -163,11 +163,19 @@ def parse_md(text):
             continue
         else:
             if in_table:
+                j = i
+                while j < len(lines) and not lines[j].strip():
+                    j += 1
+                if j < len(lines) and lines[j].strip().startswith(('*Table', '*Figure')):
+                    cap = lines[j].strip().strip('*')
+                    flush_table(table_rows, cap)
+                    i = j + 1
+                    continue
                 flush_table(table_rows, pending_caption)
 
         # Bloque de referencias
-        if '## References' in line or line.strip().startswith('Acemoglu') or in_refs:
-            if not in_refs and ('## References' in line or line.strip().startswith('Acemoglu')):
+        if '## References' in line or in_refs:
+            if not in_refs and '## References' in line:
                 if line.startswith('#'):
                     story.append(sp())
                     story.append(h1(line.lstrip('#').strip()))
@@ -275,6 +283,10 @@ def parse_md(text):
         story.append(p(text))
         i += 1
 
+    if in_table:
+        flush_table(table_rows, pending_caption)
+    if ref_block:
+        story.append(p(' '.join(ref_block)))
     return story
 
 # ── Story ─────────────────────────────────────────────────────────────────────
@@ -290,7 +302,7 @@ doc = SimpleDocTemplate(
     leftMargin=2.8*cm, rightMargin=2.8*cm,
     topMargin=2.5*cm, bottomMargin=2.5*cm,
     title="Institutional Quality and Peru's Export Performance",
-    author="Academic Research Team",
+    author="Ricardo Antonio Cuba Alván and Rosa Patricia Larios Francia",
 )
 
 def header_footer(canvas, doc):
@@ -308,7 +320,7 @@ def header_footer(canvas, doc):
                            "Working Paper — October 2026")
     # Footer line
     canvas.line(2.8*cm, 2.2*cm, w - 2.8*cm, 2.2*cm)
-    canvas.drawString(2.8*cm, 1.7*cm, "© 2026 Academic Research Team")
+    canvas.drawString(2.8*cm, 1.7*cm, "Universidad del Pacifico, 2026")
     canvas.drawCentredString(w/2, 1.7*cm, f"Page {doc.page}")
     canvas.drawRightString(w - 2.8*cm, 1.7*cm, "—")
     canvas.restoreState()
@@ -321,9 +333,9 @@ def first_page(canvas, doc):
     canvas.rect(0, h - 3.5*cm, w, 3.5*cm, fill=1, stroke=0)
     canvas.setFillColor(colors.white)
     canvas.setFont('Helvetica-Bold', 11)
-    canvas.drawCentredString(w/2, h - 2.0*cm, "RESEARCH PAPER")
+    canvas.drawCentredString(w/2, h - 2.0*cm, "WORKING PAPER")
     canvas.setFont('Helvetica', 9)
-    canvas.drawCentredString(w/2, h - 2.5*cm, "Journal of International Trade and Development")
+    canvas.drawCentredString(w/2, h - 2.5*cm, "Universidad del Pacifico")
     # No regular header on first page
     canvas.restoreState()
 

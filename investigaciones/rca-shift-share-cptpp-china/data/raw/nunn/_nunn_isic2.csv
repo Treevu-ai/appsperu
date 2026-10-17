@@ -1,0 +1,30 @@
+ISIC2_3d,industry_description,ci_nunn_lib,ci_nunn_cons
+311,Food products,0.33063576,0.35629565
+312,Misc. food products n.e.c,0.27930656,0.29926226
+313,Beverages,0.71285665,0.725322
+314,Tobacco,0.31661496,0.31824744
+321,Textiles,0.3760778,0.38427305
+322,"Wearing apparel, except footwear",0.7454111,0.7488805
+323,Leather products,0.5706084,0.64952934
+324,"Footwear, except rubber or plastic",0.6504076,0.69004005
+331,"Wood products, except furniture",0.51618814,0.54294246
+332,"Furniture, except metal",0.56765985,0.58135784
+341,Paper and products,0.34811363,0.36252826
+342,Printing and publishing,0.7128221,0.7160024
+351,Industrial chemicals,0.2402836,0.26626754
+352,Other chemicals,0.48970714,0.52212125
+353,Petroleum refineries,0.057654288,0.061725173
+354,Misc. petroleum and coal products,0.3952399,0.47429976
+355,Rubber products,0.40730718,0.5954231
+356,Plastic products,0.40773374,0.45337826
+361,"Pottery, china, earthenware",0.32875478,0.44302058
+362,Glass and products,0.55741566,0.6113764
+369,Other non-metallic mineral products,0.37658188,0.4288568
+371,Iron and steel,0.2422237,0.3382561
+372,Non-ferrous metals,0.1603983,0.19956416
+381,Fabricated metal products,0.4346565,0.5318849
+382,"Machinery, except electrical",0.7635783,0.8379552
+383,"Machinery, electric",0.74001855,0.81955606
+384,Transport equipment,0.8587404,0.8898131
+385,Professional and scientific equipment,0.78466725,0.85363644
+390,Other manufactured products,0.5467549,0.5990785

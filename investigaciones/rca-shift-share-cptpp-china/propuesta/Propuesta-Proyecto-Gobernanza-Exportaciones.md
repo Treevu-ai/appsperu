@@ -7,7 +7,7 @@
 ---
 
 **Proyecto en desarrollo**
-**Versión:** 1.1 — octubre 2026
+**Versión:** 2.0 — octubre 2026 (incorpora la batería de análisis avanzados, scripts 20–28)
 **Equipo proponente:** Mg. Ricardo Antonio Cuba Alván (Investigador principal) y Dra. Rosa Patricia Larios Francia (Co-investigadora / Supervisora)
 **Institución:** Universidad del Pacífico (Lima, Perú)
 **Línea de investigación:** Comercio internacional, desarrollo económico e instituciones
@@ -57,11 +57,11 @@ El gobierno peruano ha priorizado la inserción internacional a través de trata
 - El diseño de programas de promoción exportadora que incorporen componentes de mejora institucional
 - La negociación de futuros capítulos de gobernanza en acuerdos comerciales
 - La priorización de dimensiones institucionales específicas (corrupción, eficiencia burocrática, calidad regulatoria) donde las reformas generan mayor retorno exportador
-- La evaluación ex-post de si la participación en el CPTPP ha generado retornos comerciales por encima de lo que predice la mejora institucional
+- La evaluación ex-post de si la participación en el CPTPP ha generado retornos comerciales por encima de lo que predice la mejora institucional (un sondeo de diferencias en diferencias ya realizado no detecta un efecto agregado de la entrada en vigor)
 
 ### 3.3 Viabilidad
 
-El proyecto es viable porque los datos ya fueron extraídos, validados e integrados. El pipeline de datos (BACI, WGI, WDI, GeoDist) está operativo y documentado. Los primeros resultados ya fueron producidos computacionalmente y verificados. El equipo proponente tiene experiencia previa en análisis de comercio internacional y governanza.
+El proyecto es viable porque los datos ya fueron extraídos, validados e integrados. El pipeline de datos (BACI, WGI, WDI, GeoDist, más RTA/CEPII y atributos del Banco Mundial) está operativo y documentado. No solo los primeros resultados ya fueron producidos: también se ejecutó una batería de análisis avanzados (PPML, variables instrumentales, doble aprendizaje automático, sesgo de Oster, curva de especificaciones, gravedad por producto y complejidad económica) que acota con precisión el alcance del hallazgo. El equipo proponente tiene experiencia previa en análisis de comercio internacional y gobernanza.
 
 ---
 
@@ -145,8 +145,11 @@ El tercer componente — el residual después de retirar lo que correspondería 
 | World Bank WGI | 196 países, 2015–2024 | 6 dimensiones de gobernanza (−2.5 a +2.5) |
 | World Bank WDI | 196 países, 2015–2024 | PIB (USD corrientes) |
 | CEPII GeoDist | Perú → 224 países | Distancia, frontera, idioma, colonia |
+| CEPII RTA | Perú ↔ socios, 2015–2024 | Acuerdos comerciales (control) |
+| Banco Mundial (atributos) | 296 países | Región, nivel de ingreso, latitud |
+| BACI HS-4 | Perú → 212 socios, 1.211 productos | Panel de producto y matriz país×producto |
 
-**Estado actual:** Todos los datasets fueron extraídos, validados e integrados en un panel de 1.496 observaciones (184 países × 9 años). El pipeline de scripts (Python) está documentado y es reproducible.
+**Estado actual:** Todos los datasets fueron extraídos, validados e integrados en un panel de 1.496 observaciones (184 países × 9 años), más un panel de producto de 198.159 observaciones (Perú → socios × HS4) y una matriz país×producto para índices de complejidad. El pipeline de scripts (Python, 20–28) está documentado y es reproducible.
 
 ### 7.2 Análisis shift-share
 
@@ -189,10 +192,26 @@ MCO con errores cluster por país, efectos fijos de año. 1.496 observaciones.
 | Prueba | Panel (N=12) | Gravedad (N=184) |
 |---|---|---|
 | Rezago t−2 en vez de t−1 | Desaparece (coef ≈ 0; p = 0,896) | **Sobrevive** (coef = 0,668; p < 0,001) |
-| Precedencia inversa | Significativa en dirección reversa (p = 0,012) | No correr aún |
-| Primeras diferencias | Desaparece (p = 0,513) | No correr aún |
+| Primeras diferencias | Desaparece (p = 0,513) | **No sobrevive** (β no significativo) |
+| Precedencia inversa | Significativa en dirección reversa (p = 0,012) | Significativa en dirección reversa |
 
-El contraste es la contribución metodológica central: el mismo efecto existe en los datos, pero solo se detecta con el diseño estadísticamente potente.
+**Batería ampliada (análisis avanzados, scripts 20–28).** Sobre el panel de gravedad se añadieron:
+
+| Análisis | Resultado | Lectura |
+|---|---|---|
+| PPML (con y sin ceros) | 0,157–0,381; **no significativo** | Sensible al estimador |
+| Gamma PML | 0,696 (p < 0,001) | Retiene la asociación |
+| Control de acuerdo comercial (RTA) | WGI 0,655 (p < 0,001) | Robusto al control de FTA |
+| Variables instrumentales (latitud + gobernanza regional) | 2SLS 0,70–0,96 (p < 0,01); F = 39–67 | Fuerte primera etapa; Sargan p = 0,02–0,08 |
+| Doble ML (Robinson) | θ = 0,705 (p < 0,001) | Robusto a mal especificación funcional |
+| Curva de especificaciones (32) | 100% positivas y significativas | Muy estable en niveles |
+| Sesgo de Oster (2019) | δ = 2,58 > 1; β* = 0,41 | Robusto a no-observables |
+| Panel dinámico (Anderson–Hsiao) | β no significativo | Sin efecto dentro del país |
+| Gravedad por producto (HS4, 198 mil obs) | WGI no significativo; WGI×PCI negativo | Sin efecto positivo dentro de producto |
+| DiD del CPTPP (sep-2021) | ≈ 0 (p = 0,90); sin pre-tendencia | Sin efecto agregado |
+| Complejidad (ECI/PCI) | Perú ECI = −0,72 (2024) | Perú en la parte baja de complejidad |
+
+El contraste es la contribución metodológica central: el mismo efecto existe en los datos **en niveles entre países**, pero solo se detecta con un diseño potente y no sobrevive a la variación dentro de país o de producto.
 
 ### 7.6 Comparación de metodologías
 
@@ -233,6 +252,17 @@ En el modelo de gravedad (el diseño que detecta el efecto), el coeficiente de 0
 
 Estos números deben leerse con cautela — no son causales y el intervalo de confianza es amplio — pero son económicamente relevantes y consistentes con la literatura para otros países.
 
+### 8.4 Batería ampliada de análisis (octubre 2026)
+
+Además de los resultados anteriores, se ejecutó una batería de robustez y de identificación (scripts 20–28; ver Anexo técnico). El patrón es consistente y acota el alcance del hallazgo:
+
+- **La asociación es muy robusta en niveles entre países.** Sobrevive al control de acuerdos comerciales; la instrumentación con latitud y gobernanza regional tiene primera etapa fuerte (F = 39–67) y da 0,70–0,96; el doble aprendizaje automático da 0,705; las 32 especificaciones son positivas y significativas; y Oster (δ = 2,58) indica que haría falta un sesgo de selección dos veces y media mayor que el observado para anular el efecto.
+- **No sobrevive en la variación dentro de país ni dentro de producto.** En PPML cae a 0,16–0,38 (no significativo); en un panel dinámico *within* no es significativo; y en el panel de producto (HS4, 198 mil observaciones) la interacción gobernanza×complejidad es negativa.
+- **El CPTPP no muestra efecto agregado.** Un evento-estudio de su entrada en vigor (sep-2021) no detecta efecto ni pre-tendencia.
+- **Complejidad económica.** Perú registra un ECI de −0,72 en 2024; sus oportunidades de diversificación se concentran en productos adyacentes a su canasta actual (recursos naturales y sus transformaciones inmediatas).
+
+Este patrón —fuerte en niveles, ausente en cambios— es la razón por la que el proyecto reporta una **asociación** y no un efecto causal.
+
 ---
 
 ## 9. Contribuciones esperadas
@@ -243,7 +273,7 @@ Estos números deben leerse con cautela — no son causales y el intervalo de co
 
 2. **Contribución metodológica:** Demostración documentada de que el diseño estadístico determina si se detecta o no un efecto de gobernanza sobre el comercio — con implicaciones para la interpretación de la literatura existente.
 
-3. **Pruebas de endogeneidad completas:** Batería de chequeos que la mayoría de estudios comparables no reporta.
+3. **Batería de identificación y robustez inusualmente amplia:** PPML, variables instrumentales (latitud y gobernanza regional), doble aprendizaje automático, sesgo de Oster, curva de especificaciones, gravedad por producto y diferencias en diferencias del CPTPP — chequeos que la mayoría de estudios comparables no reporta — y una capa de complejidad económica (ECI/PCI) construida desde BACI.
 
 4. **Revistas objetivo:**
    - *International Journal of Emerging Markets* (Scopus/SSCI)
@@ -306,21 +336,21 @@ Estos números deben leerse con cautela — no son causales y el intervalo de co
 
 1. **Identificación causal:** El diseño no permite establecer causalidad. Se reportará como asociación, no como efecto causal.
 
-2. **Agregación de productos:** Los datos están a nivel HS2 (96 capítulos). Esto oculta heterogeneidad sectorial que podría ser relevante (manufacturas vs. commodities).
+2. **Agregación de productos:** El modelo de gravedad agregado usa HS2 y el panel de producto, HS6/HS4. La concordancia a HS6 con la intensidad contractual de Nunn (2007) y la clasificación de Rauch (1999) ya está construida y se usa en la prueba definitiva de H3. La cobertura de Nunn excluye los minerales, de modo que el contraste se refiere al subconjunto manufacturero y agropecuario de la canasta.
 
 3. **Período muestral:** 2015–2024 incluye shocks atípicos (pandemia, guerra comercial). Se controlará con efectos fijos de año.
 
-4. **Variables omitidas:** El modelo no controla por participación en PTAs, aranceles específicos ni infraestructura logística.
+4. **Variables omitidas:** El modelo incorpora ahora el control de acuerdos comerciales (CEPII RTA); no controla por aranceles específicos ni infraestructura logística.
 
 ---
 
 ## 14. Próximos pasos
 
 1. **Iniciar la colaboración formal** con la co-investigadora en la revisión del manuscrito.
-2. **Completar la batería de endogeneidad** sobre el modelo de gravedad (primeras diferencias, precedencia inversa).
-3. **Correr las 6 especificaciones por dimensión WGI** en el modelo de gravedad para identificar cuál pesa más.
+2. **Extender la prueba definitiva de H3** a las seis dimensiones WGI por separado y a agregaciones alternativas (HS4, HS2). *(La concordancia Nunn↔HS6 y el control de demanda del destino ya están construidos y la especificación con el WGI compuesto ya se corrió.)*
+3. **Profundizar el diseño de producto** (gobernanza × intensidad contractual con efectos fijos producto-socio). *(Ya ejecutado con el WGI compuesto: el término de exposición diferencial no es positivo y se rechaza la forma creciente de H3.)*
 4. **Redactar el primer borrador** del manuscrito.
-5. **Preseleccionar revista** según el perfil del hallazgo (un resultado robusto + un hallazgo metodológico).
+5. **Preseleccionar revista** según el perfil del hallazgo (una asociación robusta en niveles + un hallazgo metodológico sobre el diseño).
 
 ---
 

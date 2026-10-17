@@ -147,15 +147,20 @@ def parse_md(text):
             continue
         else:
             if in_table:
+                j = i
+                while j < len(lines) and not lines[j].strip():
+                    j += 1
+                if j < len(lines) and lines[j].strip().startswith(('*Tabla', '*Figura')):
+                    cap = lines[j].strip().strip('*')
+                    flush_table(table_rows, cap)
+                    i = j + 1
+                    continue
                 flush_table(table_rows, pending_caption)
 
-        # Referencias
+        # Referencias. Una línea en blanco cierra la ficha en curso, como en el parser inglés.
         stripped = line.strip()
-        if '## Referencias' in line or stripped.startswith('Acemoglu') or (
-            in_refs and stripped and not stripped.startswith('#')
-        ):
-            if not in_refs and (stripped.startswith('Acemoglu') or
-                                  '## Referencias' in line):
+        if '## Referencias' in line or in_refs:
+            if not in_refs and '## Referencias' in line:
                 if line.startswith('#'):
                     story.append(sp()); story.append(h1(line.lstrip('#').strip())); story.append(rule())
                 in_refs = True; i += 1; continue
@@ -165,7 +170,7 @@ def parse_md(text):
                         story.append(p(' '.join(ref_block))); ref_block = []
                     in_refs = False; i += 1; continue
                 ref_block.append(stripped)
-            i += 1; continue
+                i += 1; continue
 
         # Skip HRs
         if re.match(r'^---+$', stripped) or re.match(r'^\*\*\*+$', stripped):
@@ -229,6 +234,10 @@ def parse_md(text):
         text = re.sub(r'\^(\d+)', r'<sup>\1</sup>', text)
         story.append(p(text)); i += 1
 
+    if in_table:
+        flush_table(table_rows, pending_caption)
+    if ref_block:
+        story.append(p(' '.join(ref_block)))
     return story
 
 # ── Build ─────────────────────────────────────────────────────────────────────
@@ -242,7 +251,7 @@ doc = SimpleDocTemplate(
     leftMargin=2.8*cm, rightMargin=2.8*cm,
     topMargin=2.5*cm, bottomMargin=2.5*cm,
     title="Calidad Institucional y Desempeño Exportador del Perú",
-    author="Equipo de Investigación",
+    author="Ricardo Antonio Cuba Alván y Rosa Patricia Larios Francia",
 )
 
 def first_page(canvas, doc):
@@ -252,9 +261,9 @@ def first_page(canvas, doc):
     canvas.rect(0, h - 3.5*cm, w, 3.5*cm, fill=1, stroke=0)
     canvas.setFillColor(WHITE)
     canvas.setFont('Helvetica-Bold', 11)
-    canvas.drawCentredString(w/2, h - 2.0*cm, "DOCUMENTO DE INVESTIGACION")
+    canvas.drawCentredString(w/2, h - 2.0*cm, "DOCUMENTO DE TRABAJO")
     canvas.setFont('Helvetica', 9)
-    canvas.drawCentredString(w/2, h - 2.5*cm, "Revista de Comercio Internacional y Desarrollo")
+    canvas.drawCentredString(w/2, h - 2.5*cm, "Universidad del Pacifico")
     canvas.restoreState()
 
 def later_pages(canvas, doc):
@@ -267,7 +276,7 @@ def later_pages(canvas, doc):
         "Calidad Institucional y Desempeno Exportador del Peru")
     canvas.drawRightString(w - 2.8*cm, h - 1.75*cm, "Documento de trabajo")
     canvas.line(2.8*cm, 2.2*cm, w - 2.8*cm, 2.2*cm)
-    canvas.drawString(2.8*cm, 1.7*cm, "2026 Equipo de Investigacion Academica")
+    canvas.drawString(2.8*cm, 1.7*cm, "Universidad del Pacifico, 2026")
     canvas.drawCentredString(w/2, 1.7*cm, f"Pagina {doc.page}")
     canvas.drawRightString(w - 2.8*cm, 1.7*cm, "---")
     canvas.restoreState()
