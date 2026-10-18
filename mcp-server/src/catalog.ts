@@ -2392,8 +2392,9 @@ export const TOOL_CATALOG: ToolSpec[] = [
       "corrupción, efectividad gubernamental, estabilidad política, estado de derecho, calidad regulatoria, voz " +
       "y rendición de cuentas — escala aprox. -2.5 a +2.5, prefijo `GOV_WGI_*.EST`) — las covariables de " +
       "distancia económica/institucional y tamaño de mercado destino para análisis de internacionalización " +
-      "(ej. índice de distancia institucional tipo Kogut-Singh). Países por defecto: Perú + 14 socios (APEC y " +
-      "LATAM). " +
+      "(ej. índice de distancia institucional tipo Kogut-Singh). Los 6 WGI cubren country/all de la API, " +
+      "1996–2025. El resto de indicadores WDI conserva la cobertura ya cargada; el default del conector " +
+      "sigue siendo Perú + 14 socios, 2015–2024. " +
       "Consultá el catálogo con `bcrp_comercio_exterior_wdi_indicadores`. Sin ruta Express: se sirve solo por MCP " +
       "(ver MCP_ONLY_PATHS en el test de paridad). " + SIN_SCHEDULER,
     pathTemplate: "/api/wdi",
@@ -2418,6 +2419,65 @@ export const TOOL_CATALOG: ToolSpec[] = [
     pathTemplate: "/api/wdi/indicadores",
     pathParams: [],
     querySchema: {},
+  },
+  {
+    name: "bcrp_comercio_exterior_atlas_rankings",
+    handler: "atlas-rankings:list",
+    app: "bcrp-comercio-exterior",
+    description:
+      "Rankings de complejidad económica del Growth Lab (Harvard Dataverse, doi:10.7910/DVN/XTAQMC, " +
+      "versión 12, CC0): ECI SITC, HS92 y HS12, y la proyección de crecimiento, por país y año. " +
+      "Es solo el CSV growth_proj_eci_rankings.csv. No incluye la matriz país-producto. " +
+      "Sin ruta Express. " + SIN_SCHEDULER,
+    pathTemplate: "/api/atlas-rankings",
+    pathParams: [],
+    querySchema: {
+      pais: z.string().min(2).max(3).optional().describe("ISO3, por ejemplo PER."),
+      anio: z.coerce.number().int().min(1960).max(2100).optional(),
+      desde: z.coerce.number().int().min(1960).max(2100).optional(),
+      hasta: z.coerce.number().int().min(1960).max(2100).optional(),
+      limit: z.coerce.number().int().min(1).max(2000).optional().describe("Default 500, máximo 2000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "bcrp_comercio_exterior_lsci",
+    handler: "lsci:list",
+    app: "bcrp-comercio-exterior",
+    description:
+      "Liner Shipping Connectivity Index de UNCTAD (US.LSCI), trimestral, país × periodo. " +
+      "Indicadores: index (base Q1 2023 = 100), growth_yoy, growth_previous y ranking. " +
+      "No incluye la serie mensual US.LSCI_M ni la portuaria US.PLSCI. CC BY 3.0 IGO. " +
+      "Sin ruta Express. " + SIN_SCHEDULER,
+    pathTemplate: "/api/lsci",
+    pathParams: [],
+    querySchema: {
+      economia: z.string().min(1).optional().describe("Código numérico de economía tal como viene en US_LSCI, ej. 604 (Perú) o 012 (Argelia)."),
+      periodo: z.string().regex(/^\d{4}Q0[1-4]$/).optional().describe("Trimestre, ej. 2026Q03."),
+      indicador: z.enum(["index", "growth_yoy", "growth_previous", "ranking"]).optional(),
+      limit: z.coerce.number().int().min(1).max(2000).optional().describe("Default 500, máximo 2000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "bcrp_comercio_exterior_bready",
+    handler: "bready:list",
+    app: "bcrp-comercio-exterior",
+    description:
+      "Puntajes por pilar de Business Ready (B-READY) 2025, una fila por economía y pilar " +
+      "(marco regulatorio, servicios públicos, eficiencia operativa). Sale de la hoja " +
+      "00_B-READY_Pillar_Score. No incluye el detalle por tema ni Subnational Business Ready. " +
+      "Licencia custom: el catálogo del Banco Mundial no publica el texto. Uso interno. " +
+      "No se concuerda con Doing Business. Sin ruta Express. " + SIN_SCHEDULER,
+    pathTemplate: "/api/bready",
+    pathParams: [],
+    querySchema: {
+      economia: z.string().min(2).max(3).optional().describe("Código de economía de la hoja, ej. PER o AGO."),
+      edicion: z.string().regex(/^\d{4}$/).optional().describe("Edición. La ingesta actual es 2025."),
+      pilar: z.string().min(1).optional().describe("Nombre del pilar, ej. Pillar 1 Regulatory Framework."),
+      limit: z.coerce.number().int().min(1).max(2000).optional().describe("Default 500, máximo 2000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
   },
 
   // ---- inversion-privada (PROINVERSIÓN / VERTIX) ----

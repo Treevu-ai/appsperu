@@ -183,7 +183,10 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
     "seguridad_ciudadana_indice_denuncias_comparativo",
   ],
   "bcrp-comercio-exterior": [
+    "bcrp_comercio_exterior_atlas_rankings",
+    "bcrp_comercio_exterior_bready",
     "bcrp_comercio_exterior_comtrade",
+    "bcrp_comercio_exterior_lsci",
     "bcrp_comercio_exterior_macro",
     "bcrp_comercio_exterior_meta_sources",
     "bcrp_comercio_exterior_trade",

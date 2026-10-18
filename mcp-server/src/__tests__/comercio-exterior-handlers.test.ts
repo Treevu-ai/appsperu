@@ -12,6 +12,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { list as comercioList, meta as comercioMeta } from "../handlers/sunat-aduanas/comercio-bienes.js";
 import { list as comtradeList } from "../handlers/bcrp-comercio-exterior/benchmark-externo.js";
 import { list as wdiList, indicadores as wdiIndicadores } from "../handlers/bcrp-comercio-exterior/contexto-paises.js";
+import { list as atlasList } from "../handlers/bcrp-comercio-exterior/atlas-rankings.js";
+import { list as lsciList } from "../handlers/bcrp-comercio-exterior/lsci.js";
+import { list as breadyList } from "../handlers/bcrp-comercio-exterior/bready.js";
 import type { ToolHandlerContext } from "../handlers/registry.js";
 
 const dbQuery = vi.fn();
@@ -60,6 +63,14 @@ describe("comercio-bienes:list", () => {
     expect(primero.subpartida).toBe("0801110000");
     expect(primero.usdMillones).toBe(12.5);
     expect(primero.filasOrigen).toBe(12);
+  });
+
+  it("el filtro de país usa el mismo placeholder en código y nombre", async () => {
+    dbQuery.mockResolvedValueOnce({ rows: [] });
+    await comercioList(ctx({ pais: "pe" }));
+    const sql = String(dbQuery.mock.calls[0][0]);
+    expect(sql).not.toContain("$$");
+    expect(sql).toContain("(pais_codigo = $1 OR UPPER(pais_nombre) = UPPER($1))");
   });
 
   it("groupBy inválido devuelve 400 con los valores posibles", async () => {
@@ -513,6 +524,11 @@ describe("contexto-paises (WDI)", () => {
     expect(body.resultados[0].valor).toBeCloseTo(28.8839339520309, 9);
     expect(body.fuenteUltimaActualizacion).toBe("2026-10-08");
     expect(body.fuente).toContain("World Development Indicators");
+    const sql = String(dbQuery.mock.calls[0][0]);
+    expect(sql).not.toContain("$$");
+    expect(sql).toContain("UPPER(pais_iso3) = $1 OR UPPER(pais_codigo) = $1");
+    expect(sql).toContain("indicador_codigo = $2");
+    expect(dbQuery.mock.calls[0][1]).toEqual(["PER", "NE.EXP.GNFS.ZS", 500, 0]);
   });
 
   it("indicadores lista el catálogo ingerido con su cobertura", async () => {
@@ -531,5 +547,66 @@ describe("contexto-paises (WDI)", () => {
     expect(body.indicadores[0].codigo).toBe("NY.GDP.MKTP.CD");
     expect(body.indicadores[0].paises).toBe(15);
     expect(body.indicadores[0].anioMax).toBe(2024);
+  });
+});
+
+describe("atlas-rankings:list", () => {
+  it("filtra por ISO3 y devuelve el ECI HS92", async () => {
+    dbQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          country_id: 604, pais_iso3: "PER", anio: 2023, growth_proj: null, in_rankings: true,
+          eci_sitc: "0.1", eci_rank_sitc: 70, eci_hs92: "-0.2", eci_rank_hs92: 80,
+          eci_hs12: null, eci_rank_hs12: null, vintage: "V12",
+        },
+      ],
+    });
+    const res = await atlasList(ctx({ pais: "per" }));
+    expect(res.status).toBe(200);
+    const body = res.body as { resultados: Array<{ paisIso3: string; eciHs92: number; vintage: string }> };
+    expect(body.resultados[0].paisIso3).toBe("PER");
+    expect(body.resultados[0].eciHs92).toBeCloseTo(-0.2);
+    expect(body.resultados[0].vintage).toBe("V12");
+    expect(String(dbQuery.mock.calls[0][0])).toContain("atlas_rankings");
+    expect(dbQuery.mock.calls[0][1]).toContain("PER");
+  });
+});
+
+describe("lsci:list", () => {
+  it("devuelve el índice trimestral", async () => {
+    dbQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          economia_codigo: "604", economia_nombre: "Peru", periodo: "2026Q03",
+          periodo_etiqueta: "Q3 2026", indicador: "index", valor: "78.65", publicado_el: "",
+        },
+      ],
+    });
+    const res = await lsciList(ctx({ economia: "604", periodo: "2026Q03", indicador: "index" }));
+    expect(res.status).toBe(200);
+    const body = res.body as { resultados: Array<{ valor: number; periodo: string }> };
+    expect(body.resultados[0].valor).toBeCloseTo(78.65);
+    expect(body.resultados[0].periodo).toBe("2026Q03");
+    expect(String(dbQuery.mock.calls[0][0])).toContain("FROM lsci");
+  });
+});
+
+describe("bready:list", () => {
+  it("devuelve el puntaje de un pilar sin mezclar ediciones", async () => {
+    dbQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          economia: "Peru", economia_codigo: "PER", edicion: "2025",
+          pilar: "Pillar 1 Regulatory Framework", tema: "", indicador: "pillar_score", valor: "70.5",
+        },
+      ],
+    });
+    const res = await breadyList(ctx({ economia: "per", edicion: "2025" }));
+    expect(res.status).toBe(200);
+    const body = res.body as { resultados: Array<{ edicion: string; pilar: string; valor: number }>; fuente: string };
+    expect(body.resultados[0].edicion).toBe("2025");
+    expect(body.resultados[0].valor).toBeCloseTo(70.5);
+    expect(body.fuente).toContain("Doing Business");
+    expect(String(dbQuery.mock.calls[0][0])).toContain("bready_puntajes");
   });
 });

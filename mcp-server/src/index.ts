@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-import { pathToFileURL } from "node:url";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { config as loadEnvFile } from "dotenv";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -145,6 +147,15 @@ export async function invokeTool(
  */
 export function resolveStdioEnv(env: NodeJS.ProcessEnv): Record<string, unknown> | undefined {
   return env.NEON_DATABASE_URL ? { ...env } : undefined;
+}
+
+/**
+ * `.env` del paquete mcp-server, no el del cwd. Grok y Claude arrancan el
+ * proceso con cwd en la raíz del repo (`node mcp-server/dist/index.js`), y
+ * `dotenv/config` ahí no ve este archivo.
+ */
+export function mcpServerEnvFile(moduleUrl: string = import.meta.url): string {
+  return resolve(dirname(fileURLToPath(moduleUrl)), "..", ".env");
 }
 
 /**
@@ -407,7 +418,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   // Va dentro del bloque de entry a propósito (top-level await, ESM): los
   // tests importan este módulo, y que `import "../index.js"` cargue el `.env`
   // del developer contaminaría sus `process.env`.
-  await import("dotenv/config");
+  loadEnvFile({ path: mcpServerEnvFile() });
 
   // Fase 1-D: MCP_TRANSPORT=http arranca el transporte remoto (http-transport.ts) en vez de
   // stdio — default sin la variable sigue siendo stdio, comportamiento intacto.

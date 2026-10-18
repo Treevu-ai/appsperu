@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildPath, buildQuery, findTool, invokeTool, resolveStdioEnv, runRastroLlamar, validateArgs } from "../index.js";
+import { buildPath, buildQuery, findTool, invokeTool, mcpServerEnvFile, resolveStdioEnv, runRastroLlamar, validateArgs } from "../index.js";
 import { TOOL_CATALOG, type ToolSpec } from "../catalog.js";
 import { z } from "zod";
 
@@ -232,6 +232,13 @@ describe("resolveStdioEnv", () => {
   it("con NEON_DATABASE_URL pasa el entorno para que los handlers corran contra Neon (paridad Worker)", () => {
     const env = resolveStdioEnv({ NEON_DATABASE_URL: "postgres://x/y", MCP_API_KEY: "k" } as never);
     expect(env).toMatchObject({ NEON_DATABASE_URL: "postgres://x/y" });
+  });
+
+  it("resuelve el .env del paquete aunque el cwd sea la raíz del repo", () => {
+    const desdeSrc = mcpServerEnvFile("file:///C:/repo/mcp-server/src/index.ts");
+    const desdeDist = mcpServerEnvFile("file:///C:/repo/mcp-server/dist/index.js");
+    expect(desdeSrc.replaceAll("\\", "/")).toBe("C:/repo/mcp-server/.env");
+    expect(desdeDist.replaceAll("\\", "/")).toBe("C:/repo/mcp-server/.env");
   });
 
 });

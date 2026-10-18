@@ -24,7 +24,14 @@ const MCP_ONLY_PATHS: Partial<Record<AppKey, string[]>> = {
   // MINCETUR "Comercio Exterior de Bienes" (src/ingest/mincetur-comercio-bienes.ts)
   "sunat-aduanas": ["/api/comercio-bienes", "/api/comercio-bienes/meta"],
   // UN Comtrade + Banco Mundial WDI (src/ingest/comtrade-benchmark.ts, src/ingest/wdi-contexto.ts)
-  "bcrp-comercio-exterior": ["/api/comtrade", "/api/wdi", "/api/wdi/indicadores"],
+  "bcrp-comercio-exterior": [
+    "/api/comtrade",
+    "/api/wdi",
+    "/api/wdi/indicadores",
+    "/api/atlas-rankings",
+    "/api/lsci",
+    "/api/bready",
+  ],
   // MIDAGRI/Agromercado, Planes de Articulación Comercial (src/ingest/agromercado-articulacion.ts)
   "actividad-agraria": ["/api/agromercado-articulacion"],
 };

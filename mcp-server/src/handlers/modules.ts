@@ -16,8 +16,11 @@ import * as actividad_empresarial_crossref from "./actividad-empresarial/crossre
 import * as actividad_empresarial_empresas from "./actividad-empresarial/empresas.js";
 import * as areas_protegidas_areas from "./areas-protegidas/areas.js";
 import * as autoridades_electas_autoridades from "./autoridades-electas/autoridades.js";
+import * as bcrp_comercio_exterior_atlas_rankings from "./bcrp-comercio-exterior/atlas-rankings.js";
 import * as bcrp_comercio_exterior_benchmark_externo from "./bcrp-comercio-exterior/benchmark-externo.js";
+import * as bcrp_comercio_exterior_bready from "./bcrp-comercio-exterior/bready.js";
 import * as bcrp_comercio_exterior_contexto_paises from "./bcrp-comercio-exterior/contexto-paises.js";
+import * as bcrp_comercio_exterior_lsci from "./bcrp-comercio-exterior/lsci.js";
 import * as bcrp_comercio_exterior_meta from "./bcrp-comercio-exterior/meta.js";
 import * as bcrp_comercio_exterior_trade from "./bcrp-comercio-exterior/trade.js";
 import * as bcrp_la_libertad_indicadores from "./bcrp-la-libertad/indicadores.js";
@@ -174,8 +177,11 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "actividad-empresarial/empresas": actividad_empresarial_empresas,
   "areas-protegidas/areas": areas_protegidas_areas,
   "autoridades-electas/autoridades": autoridades_electas_autoridades,
+  "bcrp-comercio-exterior/atlas-rankings": bcrp_comercio_exterior_atlas_rankings,
   "bcrp-comercio-exterior/benchmark-externo": bcrp_comercio_exterior_benchmark_externo,
+  "bcrp-comercio-exterior/bready": bcrp_comercio_exterior_bready,
   "bcrp-comercio-exterior/contexto-paises": bcrp_comercio_exterior_contexto_paises,
+  "bcrp-comercio-exterior/lsci": bcrp_comercio_exterior_lsci,
   "bcrp-comercio-exterior/meta": bcrp_comercio_exterior_meta,
   "bcrp-comercio-exterior/trade": bcrp_comercio_exterior_trade,
   "bcrp-la-libertad/indicadores": bcrp_la_libertad_indicadores,

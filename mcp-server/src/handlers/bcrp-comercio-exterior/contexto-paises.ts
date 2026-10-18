@@ -38,7 +38,7 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
   const values: unknown[] = [];
   const push = (cond: string, value: unknown) => {
     values.push(value);
-    conditions.push(cond.replace("$$", `$${values.length}`));
+    conditions.push(cond.replaceAll("$$", `$${values.length}`));
   };
 
   if (args.pais) {

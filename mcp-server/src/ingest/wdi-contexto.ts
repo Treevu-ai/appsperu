@@ -31,9 +31,15 @@
  * exterior y macro). Sin app Express propia: conector + handler MCP + catálogo.
  *
  * Uso:
- *   npx tsx src/ingest/wdi-contexto.ts                       # defaults
+ *   npx tsx src/ingest/wdi-contexto.ts                       # defaults: 15 países, 2015-2024
  *   npx tsx src/ingest/wdi-contexto.ts --indicators NY.GDP.MKTP.CD
+ *   npx tsx src/ingest/wdi-contexto.ts --wgi-completo --dry-run
  *   npx tsx src/ingest/wdi-contexto.ts --dry-run             # fetch, no escribe
+ *
+ * `--wgi-completo` no toca el default macro: pide solo los 6 GOV_WGI_*.EST,
+ * country/all y 1996-2025. Cada vintage del Banco Mundial puede reescribir la
+ * historia; el upsert por país × indicador × año sustituye el valor y guarda
+ * `lastupdated` en fuente_actualizada.
  */
 import { connect } from "./db.js";
 import { pathToFileURL } from "node:url";
@@ -41,6 +47,16 @@ import { pathToFileURL } from "node:url";
 const API = "https://api.worldbank.org/v2/country";
 const ANIOS_DEFAULT = { desde: 2015, hasta: 2024 };
 const PAISES_DEFAULT = ["PER", "CHN", "USA", "ECU", "COL", "CHL", "BRA", "MEX", "CAN", "JPN", "KOR", "DEU", "ESP", "NLD", "IND"];
+/** Los 6 agregados WGI. No incluye las columnas reescaladas de fuentes comerciales. */
+export const INDICADORES_WGI = [
+  "GOV_WGI_CC.EST",      // Control de la corrupción
+  "GOV_WGI_GE.EST",      // Efectividad gubernamental
+  "GOV_WGI_PV.EST",      // Estabilidad política y ausencia de violencia
+  "GOV_WGI_RL.EST",      // Estado de derecho
+  "GOV_WGI_RQ.EST",      // Calidad regulatoria
+  "GOV_WGI_VA.EST",      // Voz y rendición de cuentas
+] as const;
+
 const INDICADORES_DEFAULT = [
   "NY.GDP.MKTP.CD",      // PIB (US$ actuales)
   "NY.GDP.PCAP.CD",      // PIB per cápita (US$ actuales)
@@ -55,12 +71,7 @@ const INDICADORES_DEFAULT = [
   "BX.KLT.DINV.CD.WD",   // IED, entradas netas (Balanza de pagos, US$ actuales)
   // --- Worldwide Governance Indicators (WGI, source id 3) ---
   // Notación "GOV_WGI_*.EST" verificada en vivo; escala aprox. -2.5 a +2.5.
-  "GOV_WGI_CC.EST",      // Control de la corrupción
-  "GOV_WGI_GE.EST",      // Efectividad gubernamental
-  "GOV_WGI_PV.EST",      // Estabilidad política y ausencia de violencia
-  "GOV_WGI_RL.EST",      // Estado de derecho
-  "GOV_WGI_RQ.EST",      // Calidad regulatoria
-  "GOV_WGI_VA.EST",      // Voz y rendición de cuentas
+  ...INDICADORES_WGI,
 ];
 
 const DDL = `
@@ -135,7 +146,12 @@ export function buildUrl(opts: {
     date: `${opts.desde}:${opts.hasta}`,
     per_page: "20000",
   });
-  return `${API}/${opts.paises.join(";")}/indicator/${opts.indicador}?${params.toString()}`;
+  // `all` es el segmento de la API, en minúscula. No se junta con una lista
+  // de ISO3: country/all es el universo, country/ALL o country/PER;all no.
+  const segmento = opts.paises.some((p) => p.toLowerCase() === "all")
+    ? "all"
+    : opts.paises.join(";");
+  return `${API}/${segmento}/indicator/${opts.indicador}?${params.toString()}`;
 }
 
 async function fetchWdi(url: string): Promise<{ rows: WdiFila[]; ultimaActualizacion: string }> {
@@ -161,10 +177,10 @@ interface Args {
   dryRun: boolean;
 }
 
-function parseArgs(argv: string[]): Args {
+export function parseArgs(argv: string[]): Args {
   const args: Args = {
     paises: PAISES_DEFAULT,
-    indicadores: INDICADORES_DEFAULT,
+    indicadores: [...INDICADORES_DEFAULT],
     desde: ANIOS_DEFAULT.desde,
     hasta: ANIOS_DEFAULT.hasta,
     dryRun: false,
@@ -172,9 +188,15 @@ function parseArgs(argv: string[]): Args {
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--dry-run") args.dryRun = true;
-    else if (a === "--paises") {
-      const v = (argv[++i] ?? "").split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
-      if (v.length > 0) args.paises = v;
+    else if (a === "--wgi-completo") {
+      args.paises = ["all"];
+      args.indicadores = [...INDICADORES_WGI];
+      args.desde = 1996;
+      args.hasta = 2025;
+    } else if (a === "--paises") {
+      const v = (argv[++i] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+      if (v.some((s) => s.toLowerCase() === "all")) args.paises = ["all"];
+      else if (v.length > 0) args.paises = v.map((s) => s.toUpperCase());
     } else if (a === "--indicators") {
       const v = (argv[++i] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
       if (v.length > 0) args.indicadores = v;
@@ -220,7 +242,7 @@ async function main() {
             valores
           );
         }
-        process.stdout.write(`  ${indicador}: ${rows.length} filas\n`);
+        process.stdout.write(`  ${indicador}: ${rows.length} filas, lastupdated=${ultimaActualizacion}\n`);
       } catch (err) {
         // Un indicador inexistente (cambio de código en la fuente) no aborta la
         // corrida: se reporta al final con exit code 0 si hubo al menos datos.

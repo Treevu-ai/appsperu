@@ -13,7 +13,12 @@ import { describe, expect, it } from "vitest";
 import { decodificarXml, parseRowCells } from "../ingest/xlsx-rows.js";
 import { AgregadorComercio, normalizarFila, parseNumeroEs } from "../ingest/mincetur-normalize.js";
 import { buildUrl as buildComtradeUrl, normalizarComtrade, lotesPorFila, partirLotes } from "../ingest/comtrade-benchmark.js";
-import { buildUrl as buildWdiUrl, normalizarWdi } from "../ingest/wdi-contexto.js";
+import { buildUrl as buildWdiUrl, normalizarWdi, parseArgs as parseWdiArgs, INDICADORES_WGI } from "../ingest/wdi-contexto.js";
+import { parseAtlasCsv } from "../ingest/atlas-rankings.js";
+import { LSCI_COLUMNAS, parseLsciCsv } from "../ingest/lsci.js";
+import { leerSharedStrings, parsePillarScore } from "../ingest/bready.js";
+import { deflateRawSync } from "node:zlib";
+import { readZipEntries } from "../ingest/zip-entries.js";
 
 /** Fila real del XLSX 2024 (con una entidad XML en la descripción, como trae la fuente). */
 const FILA_REAL = `<row r="2" s="2" customFormat="1">` +
@@ -222,5 +227,195 @@ describe("normalizarWdi (Banco Mundial)", () => {
     expect(url).toBe(
       "https://api.worldbank.org/v2/country/PER;CHN/indicator/NY.GDP.MKTP.CD?format=json&date=2015%3A2024&per_page=20000"
     );
+  });
+
+  it("normaliza una fila real de WGI (misma forma que WDI)", () => {
+    // Capturada el 2026-10-17: GOV_WGI_CC.EST, Perú, 2024 = -0.710741, lastupdated 2026-09-25.
+    const fila = normalizarWdi({
+      indicator: { id: "GOV_WGI_CC.EST", value: "Control of Corruption - Governance estimate (approx. -2.5 to +2.5)" },
+      country: { id: "PE", value: "Peru" },
+      countryiso3code: "PER",
+      date: "2024",
+      value: -0.710741,
+    });
+    expect(fila?.indicadorCodigo).toBe("GOV_WGI_CC.EST");
+    expect(fila?.paisIso3).toBe("PER");
+    expect(fila?.anio).toBe(2024);
+    expect(fila?.valor).toBe(-0.710741);
+  });
+
+  it("el default no pide country/all: 15 países, 2015-2024, macro y WGI juntos", () => {
+    const args = parseWdiArgs(["node", "wdi-contexto.ts"]);
+    expect(args.paises).toHaveLength(15);
+    expect(args.paises).not.toContain("all");
+    expect(args.desde).toBe(2015);
+    expect(args.hasta).toBe(2024);
+    expect(args.indicadores).toContain("NY.GDP.MKTP.CD");
+    expect(args.indicadores).toContain("GOV_WGI_CC.EST");
+  });
+
+  it("--wgi-completo pide los 6 indicadores, todos los países y 1996-2025", () => {
+    const args = parseWdiArgs(["node", "wdi-contexto.ts", "--wgi-completo"]);
+    expect(args.paises).toEqual(["all"]);
+    expect(args.desde).toBe(1996);
+    expect(args.hasta).toBe(2025);
+    expect(args.indicadores).toEqual([...INDICADORES_WGI]);
+    expect(args.indicadores).not.toContain("NY.GDP.MKTP.CD");
+    const url = buildWdiUrl({
+      paises: args.paises,
+      indicador: args.indicadores[0],
+      desde: args.desde,
+      hasta: args.hasta,
+    });
+    expect(url).toBe(
+      "https://api.worldbank.org/v2/country/all/indicator/GOV_WGI_CC.EST?format=json&date=1996%3A2025&per_page=20000"
+    );
+    expect(url).not.toContain("ALL");
+  });
+});
+
+const ATLAS_HEADER =
+  "country_id,country_iso3_code,year,growth_proj,in_rankings,eci_sitc,eci_rank_sitc,eci_hs92,eci_rank_hs92,eci_hs12,eci_rank_hs12";
+
+describe("parseAtlasCsv (Growth Lab V12)", () => {
+  it("lee la fila real de Afganistán 1995 y deja vacíos en null", () => {
+    const filas = parseAtlasCsv(`${ATLAS_HEADER}\n4,AFG,1995,,True,-0.616,102,-0.601,100,,\n`);
+    expect(filas).toHaveLength(1);
+    expect(filas[0]).toMatchObject({
+      countryId: 4,
+      paisIso3: "AFG",
+      anio: 1995,
+      growthProj: null,
+      inRankings: true,
+      eciSitc: -0.616,
+      eciRankSitc: 102,
+      eciHs92: -0.601,
+      eciRankHs92: 100,
+      eciHs12: null,
+      eciRankHs12: null,
+      vintage: "V12",
+      archivo: "growth_proj_eci_rankings.csv",
+    });
+  });
+
+  it("rechaza un encabezado distinto al de V12", () => {
+    expect(() => parseAtlasCsv("country,year\nAFG,1995\n")).toThrow(/Encabezado de Atlas/);
+  });
+});
+
+const LSCI_HEADER = LSCI_COLUMNAS.map((c) => (c.includes(",") ? `"${c}"` : c)).join(",");
+
+describe("parseLsciCsv (US.LSCI)", () => {
+  it("de la fila real de Perú 2006Q01 solo guarda índice y ranking", () => {
+    const linea =
+      '2006Q01,"Q1 2006",604,"Peru",78.65029,,,,,"No value reported or collected",,,"No value reported or collected",51,,';
+    const filas = parseLsciCsv(`${LSCI_HEADER}\n${linea}\n`);
+    expect(filas.map((f) => [f.indicador, f.valor])).toEqual([
+      ["index", 78.65029],
+      ["ranking", 51],
+    ]);
+    expect(filas[0]).toMatchObject({
+      economiaCodigo: "604",
+      economiaNombre: "Peru",
+      periodo: "2006Q01",
+      periodoEtiqueta: "Q1 2006",
+      archivo: "US_LSCI.csv",
+    });
+  });
+
+  it("guarda las tasas cuando el trimestre las trae", () => {
+    const linea =
+      '2026Q03,"Q3 2026",887,"Yemen",33.3198,,,-12.5425,,,-10.2241,,,106,,';
+    const filas = parseLsciCsv(`${LSCI_HEADER}\n${linea}\n`);
+    expect(filas.map((f) => f.indicador)).toEqual(["index", "growth_yoy", "growth_previous", "ranking"]);
+    expect(filas.find((f) => f.indicador === "growth_yoy")?.valor).toBe(-12.5425);
+  });
+});
+
+describe("parsePillarScore (B-READY 2025)", () => {
+  it("parte la fila real de Angola en tres pilares y no inventa tema", () => {
+    const shared = leerSharedStrings(
+      "<sst><si><t>Economy</t></si><si><t>Angola</t></si><si><t>Economy Code</t></si><si><t>AGO</t></si>" +
+        "<si><t>Pillar 1\nRegulatory Framework</t></si><si><t>Pillar 2\nPublic Services</t></si>" +
+        "<si><t>Pillar 3\nOperational Efficiency</t></si></sst>",
+    );
+    const sheet =
+      '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>2</v></c><c r="C1" t="s"><v>4</v></c>' +
+      '<c r="D1" t="s"><v>5</v></c><c r="E1" t="s"><v>6</v></c></row>' +
+      '<row r="2"><c r="A2" t="s"><v>1</v></c><c r="B2" t="s"><v>3</v></c>' +
+      "<c r=\"C2\"><v>63.878693983831759</v></c><c r=\"D2\"><v>37.480305435305432</v></c>" +
+      "<c r=\"E2\"><v>45.851326532361043</v></c></row>";
+    const filas = parsePillarScore(sheet, shared);
+    expect(filas).toHaveLength(3);
+    expect(filas.map((f) => f.pilar)).toEqual([
+      "Pillar 1 Regulatory Framework",
+      "Pillar 2 Public Services",
+      "Pillar 3 Operational Efficiency",
+    ]);
+    expect(filas[0]).toMatchObject({
+      economia: "Angola",
+      economiaCodigo: "AGO",
+      edicion: "2025",
+      tema: "",
+      indicador: "pillar_score",
+      valor: 63.878693983831759,
+    });
+  });
+
+  it("acepta el salto CRLF del encabezado del xlsx real", () => {
+    const shared = leerSharedStrings(
+      "<sst><si><t>Economy</t></si><si><t>Economy Code</t></si>" +
+        "<si><t>Pillar 1\r\nRegulatory Framework</t></si>" +
+        "<si><t>Pillar 2\r\nPublic Services</t></si>" +
+        "<si><t>Pillar 3\r\nOperational Efficiency</t></si>" +
+        "<si><t>Angola</t></si><si><t>AGO</t></si></sst>",
+    );
+    const sheet =
+      '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1" t="s"><v>2</v></c>' +
+      '<c r="D1" t="s"><v>3</v></c><c r="E1" t="s"><v>4</v></c></row>' +
+      '<row r="2"><c r="A2" t="s"><v>5</v></c><c r="B2" t="s"><v>6</v></c>' +
+      "<c r=\"C2\"><v>63.878693983831759</v></c><c r=\"D2\"><v>37.480305435305432</v></c>" +
+      "<c r=\"E2\"><v>45.851326532361043</v></c></row>";
+    const filas = parsePillarScore(sheet, shared);
+    expect(filas).toHaveLength(3);
+    expect(filas[0]).toMatchObject({ economiaCodigo: "AGO", valor: 63.878693983831759 });
+  });
+
+  it("rechaza un encabezado distinto", () => {
+    const shared = ["Otro"];
+    const sheet = '<row r="1"><c r="A1" t="s"><v>0</v></c></row>';
+    expect(() => parsePillarScore(sheet, shared)).toThrow(/Encabezado B-READY/);
+  });
+});
+
+describe("readZipEntries", () => {
+  it("lee una entrada store", () => {
+    const name = Buffer.from("hola.txt");
+    const data = Buffer.from("abc");
+    const header = Buffer.alloc(30);
+    header.writeUInt32LE(0x04034b50, 0);
+    header.writeUInt16LE(0, 8);
+    header.writeUInt32LE(data.length, 18);
+    header.writeUInt32LE(data.length, 22);
+    header.writeUInt16LE(name.length, 26);
+    const zip = Buffer.concat([header, name, data]);
+    expect(readZipEntries(zip).get("hola.txt")?.toString()).toBe("abc");
+  });
+
+  it("lee una entrada deflate cuyo tamaño está en el data descriptor", () => {
+    const name = Buffer.from("02_B-READY-2025-EconomyAnswer.xlsx");
+    const data = Buffer.from("puntajes");
+    const comp = deflateRawSync(data);
+    const header = Buffer.alloc(30);
+    header.writeUInt32LE(0x04034b50, 0);
+    header.writeUInt16LE(0x08, 6);
+    header.writeUInt16LE(8, 8);
+    header.writeUInt16LE(name.length, 26);
+    const desc = Buffer.alloc(16);
+    desc.writeUInt32LE(0x08074b50, 0);
+    desc.writeUInt32LE(comp.length, 8);
+    desc.writeUInt32LE(data.length, 12);
+    const zip = Buffer.concat([header, name, comp, desc]);
+    expect(readZipEntries(zip).get("02_B-READY-2025-EconomyAnswer.xlsx")?.toString()).toBe("puntajes");
   });
 });

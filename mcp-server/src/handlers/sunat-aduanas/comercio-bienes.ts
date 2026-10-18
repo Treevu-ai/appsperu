@@ -64,7 +64,7 @@ function buildWhere(args: Record<string, unknown>): Filtros {
   const values: unknown[] = [];
   const push = (cond: string, value: unknown) => {
     values.push(value);
-    conditions.push(cond.replace("$$", `$${values.length}`));
+    conditions.push(cond.replaceAll("$$", `$${values.length}`));
   };
 
   const anio = args.anio ? Number(args.anio) : null;
