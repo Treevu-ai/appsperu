@@ -19,7 +19,8 @@ import statsmodels.api as sm
 import statsmodels.formula.api as smf
 
 RAIZ = Path(__file__).parent.parent
-RAW = RAIZ / "data" / "raw" / "panel_bilateral_peru_2015_2024.json"
+RAW_EXPORTA = RAIZ / "data" / "raw" / "panel_bilateral_peru_2015_2024.json"
+RAW_IMPORTA = RAIZ / "data" / "raw" / "panel_bilateral_peru_importaciones_2015_2024.json"
 PROCESADO = RAIZ / "data" / "procesado"
 PROCESADO.mkdir(parents=True, exist_ok=True)
 
@@ -34,8 +35,8 @@ FORMULA = (
 )
 
 
-def cargar_panel() -> pd.DataFrame:
-    with open(RAW, "r", encoding="utf-8") as f:
+def cargar_panel(ruta: Path) -> pd.DataFrame:
+    with open(ruta, "r", encoding="utf-8") as f:
         data = json.load(f)
     df = pd.DataFrame(data)
     df = df.dropna(subset=["gdp_socio", "dist"]).copy()
@@ -73,43 +74,58 @@ def resumen(nombre: str, modelo, pseudo_r2: float, n: int) -> pd.DataFrame:
     return pd.DataFrame(filas)
 
 
-def main():
-    df = cargar_panel()
-    print(f"Panel: {len(df)} observaciones (socio x año), {df['socio_iso3'].nunique()} socios, "
-          f"{df['anio'].nunique()} años")
-
+def estimar_lado(df: pd.DataFrame, col_total: str, col_limpio: str, prefijo: str):
+    """Corre las 3 especificaciones (cruda, sin commodities, final sin hubs) para
+    un lado del comercio (exporta_* o importa_*). Devuelve (resultados, d3, m1, m2, m3)."""
     resultados = []
 
-    # 1) Modelo crudo: exportaciones totales (contaminado por oro/cobre/gas)
-    m1, r1, d1 = ajustar_ppml(df, "exporta_usd_total")
-    resultados.append(resumen("1_crudo_total", m1, r1, len(d1)))
-    print(f"\n[1] Crudo (exportaciones totales): log_dist = {m1.params['log_dist']:+.3f} "
-          f"(p={m1.pvalues['log_dist']:.3f}) — signo incorrecto si es positivo")
+    m1, r1, d1 = ajustar_ppml(df, col_total)
+    resultados.append(resumen(f"{prefijo}_1_crudo_total", m1, r1, len(d1)))
+    print(f"\n[{prefijo} 1] Crudo (total): log_dist = {m1.params['log_dist']:+.3f} "
+          f"(p={m1.pvalues['log_dist']:.3f})")
 
-    # 2) Sin HS26 (minerales/concentrados) ni HS71 (oro/plata) ni HS27 (combustibles)
-    m2, r2, d2 = ajustar_ppml(df, "exporta_usd_sin_commodities")
-    resultados.append(resumen("2_sin_commodities", m2, r2, len(d2)))
-    print(f"[2] Sin oro/minerales/combustibles: log_dist = {m2.params['log_dist']:+.3f} "
-          f"(p={m2.pvalues['log_dist']:.3f})")
+    m2, r2, d2 = ajustar_ppml(df, col_limpio)
+    resultados.append(resumen(f"{prefijo}_2_sin_commodities", m2, r2, len(d2)))
+    print(f"[{prefijo} 2] Sin oro/minerales/combustibles (HS26/71/27): "
+          f"log_dist = {m2.params['log_dist']:+.3f} (p={m2.pvalues['log_dist']:.3f})")
 
-    # 3) Además, sin los hubs de reexportación estándar de la literatura
     d3_base = df[~df["socio_iso3"].isin(HUBS_REEXPORTACION)].copy()
-    m3, r3, d3 = ajustar_ppml(d3_base, "exporta_usd_sin_commodities")
-    resultados.append(resumen("3_final_sin_hubs", m3, r3, len(d3)))
-    print(f"[3] FINAL (sin commodities, sin hubs {HUBS_REEXPORTACION}): "
+    m3, r3, d3 = ajustar_ppml(d3_base, col_limpio)
+    resultados.append(resumen(f"{prefijo}_3_final_sin_hubs", m3, r3, len(d3)))
+    print(f"[{prefijo} 3] FINAL (sin commodities, sin hubs {HUBS_REEXPORTACION}): "
           f"log_dist = {m3.params['log_dist']:+.3f} (p={m3.pvalues['log_dist']:.3f}), "
           f"pseudo-R2 = {r3:.3f}")
 
-    tabla = pd.concat(resultados, ignore_index=True)
+    return resultados, d3, m1, m2, m3
+
+
+def main():
+    df_exporta = cargar_panel(RAW_EXPORTA)
+    print(f"Panel exportaciones: {len(df_exporta)} obs., {df_exporta['socio_iso3'].nunique()} socios, "
+          f"{df_exporta['anio'].nunique()} años")
+    res_exporta, d3_exporta, *_ = estimar_lado(
+        df_exporta, "exporta_usd_total", "exporta_usd_sin_commodities", "exporta"
+    )
+
+    df_importa = cargar_panel(RAW_IMPORTA)
+    print(f"\nPanel importaciones: {len(df_importa)} obs., {df_importa['socio_iso3'].nunique()} socios, "
+          f"{df_importa['anio'].nunique()} años")
+    res_importa, d3_importa, *_ = estimar_lado(
+        df_importa, "importa_usd_total", "importa_usd_sin_commodities", "importa"
+    )
+
+    tabla = pd.concat(res_exporta + res_importa, ignore_index=True)
     tabla.to_csv(PROCESADO / "tabla_comparativa_especificaciones.csv", index=False)
 
-    d3.to_csv(PROCESADO / "panel_final_estimacion.csv", index=False)
+    d3_exporta.to_csv(PROCESADO / "panel_final_estimacion_exportaciones.csv", index=False)
+    d3_importa.to_csv(PROCESADO / "panel_final_estimacion_importaciones.csv", index=False)
 
-    print("\n=== Tabla final de coeficientes (especificación 3, la publicable) ===")
-    for k in ["log_gdp_socio", "log_dist", "contig", "comlang_off", "colony", "tiene_acuerdo"]:
-        print(f"  {k:15s} {m3.params[k]:8.4f}   p={m3.pvalues[k]:.3f}")
-
-    return m1, m2, m3, df, d3
+    print("\n=== Asimetría exportaciones vs. importaciones (especificación final, log_dist) ===")
+    fila_exp = tabla[(tabla.especificacion == "exporta_3_final_sin_hubs") & (tabla.variable == "log_dist")].iloc[0]
+    fila_imp = tabla[(tabla.especificacion == "importa_3_final_sin_hubs") & (tabla.variable == "log_dist")].iloc[0]
+    print(f"  Exportaciones: log_dist = {fila_exp.coef:+.3f} (p={fila_exp.p_valor:.3f}) — signo esperado")
+    print(f"  Importaciones: log_dist = {fila_imp.coef:+.3f} (p={fila_imp.p_valor:.3f}) — signo contrario, "
+          f"consistente con que China/EEUU/Alemania/Japón/Corea dominan la canasta importadora")
 
 
 if __name__ == "__main__":

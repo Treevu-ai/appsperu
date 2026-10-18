@@ -30,6 +30,16 @@ trabajo de depuración ya hecho (ver sección "Trampas encontradas").
 BACI — por eso `baci_flujos` pasa siempre por `baci_paises` antes de unirse
 a cualquier otra tabla.
 
+## Dos paneles espejo: exportaciones e importaciones
+
+`data/raw/panel_bilateral_peru_2015_2024.json` (exportaciones,
+`exportador=604`) y `data/raw/panel_bilateral_peru_importaciones_2015_2024.json`
+(importaciones, `importador=604`) comparten exactamente el mismo esquema y
+universo de socios — solo cambia qué lado del flujo de `baci_flujos` se
+agrega. El join con `baci_paises` también cambia de lado: para
+importaciones se une por `exportador` (el país que le vende a Perú), no por
+`importador`.
+
 ## Esquema del panel final (`data/raw/panel_bilateral_peru_2015_2024.json`)
 
 | Campo | Tipo | Origen | Notas |

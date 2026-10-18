@@ -1,4 +1,4 @@
-# Gravedad del comercio bilateral peruano, 2015-2024: el sesgo de los commodities y los hubs de reexportación
+# Por qué la distancia explica lo que Perú exporta pero no lo que importa: el espejismo del oro, el cobre y el peso de la manufactura asiática
 
 **Ricardo Cuba** · appsperu / Rastro · Octubre 2026
 
@@ -20,11 +20,16 @@ de hubs de reexportación de la literatura (Países Bajos, Bélgica, Singapur,
 Hong Kong, Panamá, Emiratos Árabes Unidos), el coeficiente de distancia
 recupera el signo negativo esperado (−0.58) y el modelo alcanza un
 pseudo-R² de 0.93. El trabajo documenta también un hallazgo negativo
-relevante: el efecto aparentemente significativo de los acuerdos comerciales
+relevante: la asociación aparente de los acuerdos comerciales con el comercio
 en la especificación cruda (+0.71, p=0.01) se disuelve por completo (−0.05,
 p=0.78) una vez removidos los commodities, sugiriendo que era una correlación
-espuria con los grandes compradores de metales y gas, no un efecto causal de
-los acuerdos sobre el comercio no-commodity.
+espuria con los grandes compradores de metales y gas, no una relación propia
+de los acuerdos con el comercio no-commodity. Al repetir el ejercicio del
+lado importador, la asimetría es reveladora: el mismo filtro de commodities y
+hubs que corrige la distancia en las exportaciones **no** corrige el signo en
+las importaciones (+0.90, p<0.001) — porque ahí no hay artefacto de medición
+que corregir: China, Alemania, Japón y Corea, todas economías manufactureras
+lejanas, dominan genuinamente la canasta importadora peruana.
 
 ## 1. Introducción
 
@@ -49,9 +54,10 @@ deseado).
 
 ## 2. Datos
 
-Se construyó un panel de 224 socios comerciales × 10 años (2015-2024) a
-partir de las siguientes fuentes, cargadas en una base Neon/PostgreSQL
-(`bcrp_comercio_exterior`):
+Se construyeron dos paneles espejo de 224 socios comerciales × 10 años
+(2015-2024) — uno con las exportaciones de Perú hacia cada socio, otro con
+las importaciones de Perú desde cada socio — a partir de las siguientes
+fuentes, cargadas en una base Neon/PostgreSQL (`bcrp_comercio_exterior`):
 
 | Fuente | Tabla | Contenido |
 |---|---|---|
@@ -61,33 +67,35 @@ partir de las siguientes fuentes, cargadas en una base Neon/PostgreSQL
 | CEPII GeoDist | `geodist_diadas` | Distancia ponderada por población, frontera común, idioma oficial común, relación colonial — 224 díadas con origen en Perú. |
 | CEPII Gravity V202211 | `gravity_acuerdos` | Indicador de acuerdo comercial (FTA de la OMC o cobertura RTA) vigente por año y par de países. |
 
-La variable dependiente es el valor total exportado por Perú a cada socio en
-cada año, en millones de USD. A diferencia de una extracción típica que
-trabaja solo con los años en que hubo comercio registrado, el panel incluye
-los ceros reales: la ausencia de una fila en BACI para un par país-año se
-interpreta como cero comercio ese año, no como dato faltante — PPML explota
-precisamente esta información, que un modelo log-lineal por MCO tendría que
-descartar.
+La variable dependiente es el valor exportado (sección 4) o importado
+(sección 5) por Perú con cada socio en cada año, en millones de USD. A
+diferencia de una extracción típica que trabaja solo con los años en que
+hubo comercio registrado, ambos paneles incluyen los ceros reales: la
+ausencia de una fila en BACI para un par país-año se interpreta como cero
+comercio ese año, no como dato faltante — PPML explota precisamente esta
+información, que un modelo log-lineal por MCO tendría que descartar.
 
 ## 3. Método
 
-Se estima, por año y variantes de la variable dependiente:
+Se estima, por año, dirección del flujo (exporta/importa) y variantes de la
+variable dependiente:
 
 ```
-exporta_ij,t = exp(β₁·log(PBI_j,t) + β₂·log(dist_ij) + β₃·frontera_ij
-                    + β₄·idioma_ij + β₅·colonia_ij + β₆·acuerdo_ij,t + γ_t) + ε_ij,t
+flujo_ij,t = exp(β₁·log(PBI_j,t) + β₂·log(dist_ij) + β₃·frontera_ij
+                  + β₄·idioma_ij + β₅·colonia_ij + β₆·acuerdo_ij,t + γ_t) + ε_ij,t
 ```
 
 estimado por PPML (GLM Poisson, función de enlace logarítmica), con errores
 estándar agrupados (*cluster*) por socio y efectos fijos de año (γₜ). El lado
-exportador (PBI o población de Perú) no se incluye como regresor explícito:
-como Perú es el único exportador del panel, esas variables no varían entre
-socios dentro de un mismo año y son perfectamente colineales con los efectos
-fijos de año, que ya las absorben — es la forma estándar de controlar por
-"resistencia multilateral" del lado exportador en un panel de un solo
-exportador.
+peruano (PBI o población de Perú) no se incluye como regresor explícito en
+ninguna de las dos direcciones: como Perú es el único reportador del panel
+(exportador en la sección 4, importador en la sección 5), esas variables no
+varían entre socios dentro de un mismo año y son perfectamente colineales con
+los efectos fijos de año, que ya las absorben — es la forma estándar de
+controlar por "resistencia multilateral" del lado peruano en un panel de un
+solo reportador.
 
-## 4. Resultados
+## 4. Resultados — exportaciones
 
 ### 4.1 Especificación cruda: el signo equivocado
 
@@ -210,7 +218,110 @@ mantiene estable en el paso 3 (filtro por país); lo que cambia entre 2 y 3 es
 principalmente la significancia estadística, que se mueve justo alrededor
 del umbral convencional de 5%.
 
-## 5. Discusión
+## 5. Resultados — importaciones
+
+¿El mismo tratamiento (filtro de commodities + hubs de reexportación)
+produce el mismo efecto del lado importador? Se repitió exactamente el
+procedimiento de la sección 4, con Perú como importador en vez de
+exportador: `baci_flujos` filtrado por `importador = 604`, mismo panel de
+224 socios, mismos controles.
+
+### 5.1 Especificación cruda
+
+| Variable | Coeficiente | p-valor |
+|---|---|---|
+| log(PBI del socio) | +1.18 | <0.001 |
+| log(distancia) | +0.35 | 0.209 |
+| Frontera común | +1.77 | <0.001 |
+| Idioma oficial común | +2.09 | <0.001 |
+| Ex-colonia | −1.38 | <0.001 |
+| Tiene acuerdo comercial | +0.01 | 0.967 |
+
+n = 1,907; pseudo-R² = 0.93. A diferencia de las exportaciones, la
+distancia ya nace con el signo "equivocado" (positivo) aunque no
+significativo — una primera señal de que la historia del lado importador
+podría ser distinta.
+
+### 5.2 Diagnóstico: ¿commodities otra vez?
+
+Antes de aplicar el mismo filtro de forma automática, se repitió el
+diagnóstico de residuos de Pearson sobre el total importado. El resultado
+confirma que sí hay un commodity dominante — pero no el mismo:
+
+| País | Producto (HS6) | Valor en la década |
+|---|---|---|
+| Nigeria | 270900 — petróleo crudo | USD 2,193 millones |
+| Trinidad y Tobago | 270900 — petróleo crudo | USD 2,077 millones |
+| Congo | 270900 — petróleo crudo | USD 228 millones |
+
+HS27 (combustibles minerales) es, de hecho, el capítulo arancelario más
+grande de toda la canasta importadora peruana (USD 64,900 millones en la
+década, más que maquinaria o vehículos) — Perú importa crudo para sus
+refinerías pese a exportar su propio gas natural licuado. Por consistencia
+metodológica se aplicó el mismo filtro HS26/HS71/HS27 usado en
+exportaciones (HS26 y HS71 no son relevantes en volumen para las
+importaciones, pero excluirlos no cambia nada y mantiene el filtro idéntico
+en ambas direcciones).
+
+### 5.3 Resultado tras el filtro: la distancia empeora, no mejora
+
+| Variable | Cruda | Sin HS26/71/27 | Final (sin hubs) |
+|---|---|---|---|
+| log(PBI del socio) | +1.18 | +1.19 | +1.19 |
+| **log(distancia)** | +0.35 (p=0.21) | **+0.88 (p=0.001)** | **+0.90 (p<0.001)** |
+| Frontera común | +1.77 | +2.16 | +2.19 |
+| Idioma oficial común | +2.09 | +2.64 | +2.64 |
+| Ex-colonia | −1.38 | −1.70 | −1.71 |
+| Tiene acuerdo comercial | +0.01 | −0.06 | −0.06 |
+
+n final = 1,847; pseudo-R² = 0.92. A diferencia de las exportaciones, quitar
+los commodities **no corrige** el signo de la distancia — lo empeora y lo
+vuelve fuertemente significativo en la dirección "incorrecta".
+
+### 5.4 Por qué esto no es el mismo artefacto: verificación
+
+Antes de aceptar este resultado como genuino (y no como otro artefacto sin
+detectar), se repitió la misma verificación que en la sección 4: ¿quién
+domina los residuos de Pearson de la especificación final, y qué compra
+Perú de los mayores socios importadores?
+
+- Los mayores residuos son **Argentina** (hasta USD 2,779 millones/año) y
+  **Bolivia** — vecinos con una relación comercial real y grande (trigo,
+  soya, gas por ducto, insumos agropecuarios), no hubs de tránsito.
+- Los mayores orígenes de importación en valor absoluto son **China** (USD
+  119,739 millones en la década — más del doble que EE.UU.), Alemania,
+  Japón e India: las grandes potencias manufactureras globales, todas muy
+  lejanas de Perú.
+
+No hay ningún país de tránsito conocido (Róterdam, Singapur, etc.)
+dominando los residuos del lado importador, como sí ocurría en
+exportaciones. La lectura más simple y consistente con la evidencia es que
+el signo positivo de la distancia en importaciones **no es un artefacto de
+medición que corregir**: refleja que la canasta importadora peruana
+—maquinaria, electrónica, vehículos, insumos industriales— está
+estructuralmente concentrada en un puñado de potencias manufactureras
+lejanas (sobre todo China), un patrón documentado en la literatura reciente
+de comercio de América Latina con Asia, y que domina sobre cualquier
+preferencia por proximidad geográfica.
+
+### 5.5 La asimetría exportación-importación
+
+| | Exportaciones (sec. 4.5) | Importaciones (sec. 5.3) |
+|---|---|---|
+| log(distancia) | **−0.58** (p=0.071) | **+0.90** (p<0.001) |
+| Frontera común | +1.02 | +2.19 |
+| Idioma oficial común | +1.12 | +2.64 |
+| Ex-colonia | +0.23 (ns) | **−1.71** (p<0.001) |
+
+Perú exporta siguiendo el patrón de gravedad clásico una vez limpia la
+distorsión de commodities (más a lo cercano), pero importa en contra del
+patrón de gravedad (más de lo lejano) — un reflejo fiel de ser, a la vez,
+un exportador de materias primas regionales y un importador de manufactura
+global concentrada en Asia. Ninguna de las dos direcciones es "la correcta";
+son dos estructuras económicas distintas que un solo coeficiente de
+distancia, mal especificado, podría haber ocultado.
+
+## 6. Discusión
 
 El hallazgo metodológico central es que, para una economía exportadora de
 commodities como Perú, un modelo de gravedad "de manual" sobre el valor
@@ -224,16 +335,26 @@ coeficiente de "tiene acuerdo comercial" (de +0.71 significativo a −0.05
 estadísticamente nulo), porque los países con acuerdos comerciales vigentes
 con Perú tienden a coincidir con los grandes compradores de oro y gas.
 
+La sección 5 muestra, además, que el mismo diagnóstico aplicado con el mismo
+rigor a las importaciones no produce el mismo resultado — y eso es, en sí
+mismo, la evidencia de que el procedimiento no está sesgado hacia "encontrar"
+el signo esperado: si lo estuviera, se habría seguido ajustando el filtro de
+importaciones hasta forzar un coeficiente de distancia negativo. No se hizo,
+porque los residuos no señalan a ningún hub de tránsito, y la explicación
+alternativa (concentración real en manufactura asiática) es más simple y
+mejor documentada que inventar una corrección adicional.
+
 Este patrón no es exclusivo de Perú: es un problema conocido en la
 literatura de gravedad para economías exportadoras de recursos naturales
 (Chile con cobre, los países del Golfo con petróleo, la República Democrática
 del Congo con cobalto). El aporte de este ejercicio es documentar el
 procedimiento completo y reproducible —diagnóstico de residuos, filtro por
 producto declarado a priori, filtro por país con lista estándar de la
-literatura, y el punto explícito en el que se decide dejar de excluir
-observaciones— en un caso real con datos públicos verificables.
+literatura, el punto explícito en el que se decide dejar de excluir
+observaciones, y la verificación simétrica del lado importador— en un caso
+real con datos públicos verificables.
 
-## 6. Limitaciones
+## 7. Limitaciones
 
 - El coeficiente de distancia, incluso en la especificación final, no
   alcanza significancia convencional al 5% (p=0.071). El signo y la
@@ -241,8 +362,16 @@ observaciones— en un caso real con datos públicos verificables.
   −0.60 según la muestra exacta), por lo que se reporta como un efecto
   económicamente plausible y robusto en dirección, pero no como un hallazgo
   estadísticamente "duro" al estándar convencional.
-- El panel cubre solo el lado exportador de Perú (2015-2024); no se estimó
-  el modelo simétrico para importaciones ni para el comercio bilateral neto.
+- El panel cubre exportaciones e importaciones por separado (2015-2024); no
+  se estimó un modelo conjunto del comercio bilateral neto (exporta menos
+  importa), que requeriría una especificación distinta (la variable
+  dependiente podría ser negativa, incompatible con PPML tal como se usó
+  aquí).
+- La explicación de la sección 5 para el signo de la distancia en
+  importaciones (concentración real en manufactura asiática) es la lectura
+  más simple consistente con los residuos observados, pero no se contrastó
+  contra una hipótesis alternativa formal (ej. un modelo de cadenas de valor
+  globales) — queda como lectura cualitativa, no como resultado probado.
 - La lista de hubs de reexportación es una convención de la literatura, no
   una verificación caso por caso de que cada flujo hacia esos seis países sea
   efectivamente tránsito — es una simplificación razonable, no una prueba
@@ -280,12 +409,16 @@ proyecto para el detalle de la verificación).
 Todo el código, los datos extraídos y el notebook ejecutado están en
 `investigaciones/gravedad-comercio-bilateral-peru/` del repositorio:
 
-- `data/raw/panel_bilateral_peru_2015_2024.json` — extracción cruda de Neon.
-- `data/procesado/panel_final_estimacion.csv` — panel final usado en la
-  especificación 3 (1,847 filas).
-- `data/procesado/tabla_comparativa_especificaciones.csv` — las tres
-  especificaciones con todos los coeficientes.
-- `scripts/estimar_gravedad.py` — script que reproduce las tres
+- `data/raw/panel_bilateral_peru_2015_2024.json` — extracción cruda de
+  exportaciones, desde Neon.
+- `data/raw/panel_bilateral_peru_importaciones_2015_2024.json` — extracción
+  cruda de importaciones.
+- `data/procesado/panel_final_estimacion_exportaciones.csv` y
+  `_importaciones.csv` — paneles finales de cada especificación 3 (1,847
+  filas cada uno).
+- `data/procesado/tabla_comparativa_especificaciones.csv` — las seis
+  especificaciones (3 exporta + 3 importa) con todos los coeficientes.
+- `scripts/estimar_gravedad.py` — script que reproduce las seis
   especificaciones de punta a punta.
 - `notebook/gravedad_comercio_peru.ipynb` — notebook narrado con el mismo
-  recorrido, ejecutado con outputs reales.
+  recorrido (exportaciones), ejecutado con outputs reales.
