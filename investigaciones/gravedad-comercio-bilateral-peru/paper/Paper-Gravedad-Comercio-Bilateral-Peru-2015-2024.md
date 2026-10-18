@@ -421,4 +421,5 @@ Todo el código, los datos extraídos y el notebook ejecutado están en
 - `scripts/estimar_gravedad.py` — script que reproduce las seis
   especificaciones de punta a punta.
 - `notebook/gravedad_comercio_peru.ipynb` — notebook narrado con el mismo
-  recorrido (exportaciones), ejecutado con outputs reales.
+  recorrido para ambos lados (Parte 1: exportaciones, Parte 2: importaciones),
+  ejecutado con outputs reales.
