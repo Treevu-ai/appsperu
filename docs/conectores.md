@@ -540,6 +540,7 @@ Tres conectores independientes, misma app y misma plataforma origen (VERTIX):
 | **Fuente de datos** | `estadisticas.bcrp.gob.pe/estadisticas/series/api` (BCRPData — Banco Central de Reserva del Perú). |
 | **Cobertura real ingerida** | Agregado nacional únicamente — un solo valor por mes y serie, sin desagregado por departamento/producto/empresa. El desagregado departamental (`RD38085BM`-`RD38111BM`) existe en la API pero está congelado desde dic-2022/dic-2023 (verificado en vivo), por eso el conector implementado usa solo las series nacionales (`PN38714BM`-`PN38723BM`), que sí están al día. |
 | **Detalle completo** | [`docs/data-contracts/bcrp-comercio-exterior.md`](data-contracts/bcrp-comercio-exterior.md) |
+| **Análisis derivado** | [Panel de gravedad del comercio bilateral peruano](../investigaciones/gravedad-comercio-bilateral-peru/) cruza `baci_flujos`, `baci_paises`, `wdi_indicadores`, `geodist_diadas` y `gravity_acuerdos` (todas tablas de esta misma app) para estimar un modelo PPML de gravedad, 224 socios, 2015-2024. No agrega ninguna fuente externa nueva ni tabla en Neon. Ficha técnica: [`docs/data-contracts/gravedad-comercio-bilateral-peru.md`](data-contracts/gravedad-comercio-bilateral-peru.md). |
 | **Nota** | Este conector **ya está implementado y activo** — corrige una entrada anterior de este catálogo que lo listaba como "candidato evaluado, no implementado". |
 
 ---

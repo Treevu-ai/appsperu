@@ -256,15 +256,24 @@ observaciones— en un caso real con datos públicos verificables.
 
 - Anderson, J. E., & van Wincoop, E. (2003). Gravity with Gravitas: A
   Solution to the Border Puzzle. *American Economic Review*, 93(1), 170-192.
+  DOI: [10.1257/000282803321455214](https://doi.org/10.1257/000282803321455214)
 - Santos Silva, J. M. C., & Tenreyro, S. (2006). The Log of Gravity. *Review
   of Economics and Statistics*, 88(4), 641-658.
+  DOI: [10.1162/rest.88.4.641](https://doi.org/10.1162/rest.88.4.641)
 - Tinbergen, J. (1962). *Shaping the World Economy: Suggestions for an
-  International Economic Policy*. Twentieth Century Fund.
+  International Economic Policy*. Twentieth Century Fund, Nueva York, 330 pp.
 - Head, K., & Mayer, T. (2014). Gravity Equations: Workhorse, Toolkit, and
-  Cookbook. CEPII, *Handbook of International Economics*, 4, 131-195.
+  Cookbook. En *Handbook of International Economics*, Vol. 4, pp. 131-195.
+  Elsevier. DOI: [10.1016/B978-0-444-54314-1.00003-3](https://doi.org/10.1016/B978-0-444-54314-1.00003-3)
 - CEPII BACI (vintage 202601), CEPII GeoDist, CEPII Gravity V202211 — centre
   d'Études Prospectives et d'Informations Internationales.
-- World Bank, World Development Indicators, `NY.GDP.MKTP.CD`.
+  [cepii.fr](https://www.cepii.fr/)
+- World Bank, World Development Indicators, `NY.GDP.MKTP.CD` (PBI corriente,
+  US$). [databank.worldbank.org/source/world-development-indicators](https://databank.worldbank.org/source/world-development-indicators)
+
+Las 4 referencias académicas fueron verificadas en vivo contra fuentes
+primarias el 2026-10-18 (ver `referencias_verificadas.md` en la raíz de este
+proyecto para el detalle de la verificación).
 
 ## Anexo — Reproducibilidad
 
