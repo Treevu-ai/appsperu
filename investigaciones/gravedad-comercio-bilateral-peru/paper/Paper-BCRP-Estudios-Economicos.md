@@ -2,7 +2,7 @@
 
 **Ricardo Cuba**¹
 
-¹ appsperu, Octubre 2026.
+¹ Octubre 2026.
 
 ## Resumen
 
