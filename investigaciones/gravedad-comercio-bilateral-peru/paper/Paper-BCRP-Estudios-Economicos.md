@@ -2,7 +2,7 @@
 
 **Ricardo Cuba**¹
 
-¹ appsperu / Rastro, Octubre 2026.
+¹ appsperu, Octubre 2026.
 
 ## Resumen
 

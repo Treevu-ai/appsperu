@@ -1,6 +1,6 @@
 # Por qué la distancia explica lo que Perú exporta pero no lo que importa: el espejismo del oro, el cobre y el peso de la manufactura asiática
 
-**Ricardo Cuba** · appsperu / Rastro · Octubre 2026
+**Ricardo Cuba** · appsperu · Octubre 2026
 
 ## Resumen
 
