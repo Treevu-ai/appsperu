@@ -62,8 +62,7 @@ El bundle JS también expone `Consulta/verificarEmpadronamiento` y `Consulta/Get
 
 - RUC `20404057805` (ACOPAGRO) → registrado, nombre `COOPERATIVA AGRARIA ACOPAGRO LTDA`.
 - RUC `20132489824` (Chancamayo) → registrado.
-- DNI `28703600` (representante legal, `ficha_ruc_representantes`) → registrado, nombre
-  `TIMOTEO OCHOA RUA`.
+- Un DNI de representante legal ya cargado en `ficha_ruc_representantes` → registrado, y el nombre devuelto coincide con el de la ficha. El número y el nombre no se reproducen en este contrato.
 - RUC inventado `20000000001` → NO registrado (`result: "-"`).
 - **Corrida completa contra las 596 cooperativas del seed: 596/596 registradas, 0 errores** —
   el registro PPA parece ser prácticamente universal para organizaciones agrarias formales de

@@ -6,7 +6,7 @@
 **Regla transversal:** ningún ticket de esta serie automatiza el acceso a una plataforma protegida contra bots (Cloudflare Turnstile, Incapsula); todo cruce nuevo distingue evidencia verificada de preselección para revisión humana; `docs/conectores.md` se actualiza en el mismo PR que introduce o cambia un conector/cruce.
 **Estimación:** XS ≤ medio día · S ≤ 1 día · M 2–3 días · L 4–6 días (esfuerzo relativo, no calendario).
 
-**Origen:** ejercicio en vivo de cruce contrataciones×sanciones×candidatos para La Libertad y Lima (2026-09-10) — ver memoria de sesión `project_rastro_sesion_2026-09-10_cruces_electorales` y las tres notas editoriales en `acuba/downloads/`.
+**Origen:** ejercicio en vivo de cruce contrataciones×sanciones×candidatos para La Libertad y Lima (2026-09-10). El detalle reproducible está en este backlog y en `docs/PRD_Observatorio_Electoral_y_Riesgo_v1.md`.
 
 > **Estado real (2026-09-10, actualizado):** OE-01 y OE-02 implementados y verificados contra datos reales.
 >

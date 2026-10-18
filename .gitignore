@@ -78,6 +78,25 @@ tools/ckan-indexer/state/
 docs/financiamiento/
 .neon
 
+# Notas internas y carpeta personal que el propio material marcaba como
+# fuera del repo publico (reports/ y research_notes/ figuraban como untracked;
+# acuba/ es material de trabajo local). No volver a versionarlas.
+/reports/
+/research_notes/
+/acuba/
+
+# Postulaciones con presupuesto (concurso UP, Hinrich y la propuesta general)
+# y los scripts que solo las regeneran. El codigo, los papers y el anexo
+# tecnico de investigaciones/ si se versionan.
+/investigaciones/rca-shift-share-cptpp-china/propuesta/UP-XI-Concurso-Propuesta-Gobernanza-Exportaciones-ES.*
+/investigaciones/rca-shift-share-cptpp-china/propuesta/Hinrich-Proposal-Governance-Trade-Peru-EN.*
+/investigaciones/rca-shift-share-cptpp-china/propuesta/Propuesta-Proyecto-Gobernanza-Exportaciones.*
+/investigaciones/rca-shift-share-cptpp-china/propuesta/up_concurso_to_docx.py
+/investigaciones/rca-shift-share-cptpp-china/propuesta/up_concurso_to_pdf.py
+/investigaciones/rca-shift-share-cptpp-china/propuesta/hinrich_to_docx.py
+/investigaciones/rca-shift-share-cptpp-china/propuesta/propuesta_to_docx.py
+/investigaciones/rca-shift-share-cptpp-china/propuesta/propuesta_to_pdf.py
+
 # Shapefile descargado manualmente de Geobosques (436MB), no va al repo
 /Bosque_NoBosque_Perdida_2001_2025_Vector.zip
 /Bosque_NoBosque_Perdida_2001_2025_Vector/
