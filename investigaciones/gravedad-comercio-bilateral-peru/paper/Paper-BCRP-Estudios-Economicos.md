@@ -433,20 +433,7 @@ proyecto para el detalle de la verificación).
 
 ## Anexo — Reproducibilidad
 
-Todo el código, los datos extraídos y el notebook ejecutado están en
-`investigaciones/gravedad-comercio-bilateral-peru/` del repositorio:
-
-- `data/raw/panel_bilateral_peru_2015_2024.json` — extracción cruda de
-  exportaciones, desde Neon.
-- `data/raw/panel_bilateral_peru_importaciones_2015_2024.json` — extracción
-  cruda de importaciones.
-- `data/procesado/panel_final_estimacion_exportaciones.csv` y
-  `_importaciones.csv` — paneles finales de cada especificación 3 (1,847
-  filas cada uno).
-- `data/procesado/tabla_comparativa_especificaciones.csv` — las seis
-  especificaciones (3 exporta + 3 importa) con todos los coeficientes.
-- `scripts/estimar_gravedad.py` — script que reproduce las seis
-  especificaciones de punta a punta.
-- `notebook/gravedad_comercio_peru.ipynb` — notebook narrado con el mismo
-  recorrido para ambos lados (Parte 1: exportaciones, Parte 2: importaciones),
-  ejecutado con outputs reales.
+El código de extracción, los paneles de datos (crudos y procesados), el
+script de estimación y el notebook ejecutado con los seis resultados
+completos (tres especificaciones para exportaciones, tres para
+importaciones) están disponibles previa solicitud a los autores.
