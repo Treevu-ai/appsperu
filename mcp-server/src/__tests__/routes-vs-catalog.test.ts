@@ -33,6 +33,7 @@ const MCP_ONLY_PATHS: Partial<Record<AppKey, string[]>> = {
     "/api/bready",
     "/api/doing-business",
     "/api/baci",
+    "/api/baci/paises",
     "/api/gravity/acuerdos",
     "/api/gravity/etiquetas",
     "/api/geodist/paises",

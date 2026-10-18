@@ -2508,10 +2508,10 @@ export const TOOL_CATALOG: ToolSpec[] = [
     app: "bcrp-comercio-exterior",
     description:
       "Flujos CEPII BACI HS92, vintage 202601: año, exportador, importador, HS6, valor en miles de USD " +
-      "y cantidad en toneladas. La carga por defecto es Perú exportador (código CEPII 604), todos los " +
-      "socios, 2015–2024. Un año mundial (2024) tiene 10580049 filas y no se carga. No mezcla otras " +
-      "revisiones del Sistema Armonizado. No es la tabla de acuerdos rta_20260111. Sin ruta Express. " +
-      SIN_SCHEDULER,
+      "y cantidad en toneladas. La carga por defecto es Perú (código CEPII 604) como exportador e " +
+      "importador, todos los socios, 2015–2024. Un año mundial (2024) tiene 10580049 filas y no se " +
+      "carga. No mezcla otras revisiones del Sistema Armonizado. No es la tabla de acuerdos " +
+      "rta_20260111. Sin ruta Express. " + SIN_SCHEDULER,
     pathTemplate: "/api/baci",
     pathParams: [],
     querySchema: {
@@ -2521,6 +2521,23 @@ export const TOOL_CATALOG: ToolSpec[] = [
       exportador: z.coerce.number().int().optional().describe("Código CEPII. Perú es 604."),
       importador: z.coerce.number().int().optional().describe("Código CEPII del socio."),
       hs6: z.string().regex(/^\d{6}$/).optional().describe("Partida HS6, con ceros a la izquierda."),
+      limit: z.coerce.number().int().min(1).max(2000).optional().describe("Default 500, máximo 2000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "bcrp_comercio_exterior_baci_paises",
+    handler: "baci:listPaises",
+    app: "bcrp-comercio-exterior",
+    description:
+      "Catálogo de países de CEPII BACI (country_codes_V202601.csv): código numérico CEPII, nombre, " +
+      "ISO2, ISO3. 225 filas. Nombra los códigos exportador/importador de bcrp_comercio_exterior_baci. " +
+      "Sin ruta Express. " + SIN_SCHEDULER,
+    pathTemplate: "/api/baci/paises",
+    pathParams: [],
+    querySchema: {
+      codigo: z.coerce.number().int().optional().describe("Código CEPII. Perú es 604."),
+      iso3: z.string().length(3).optional().describe("ISO3, por ejemplo PER."),
       limit: z.coerce.number().int().min(1).max(2000).optional().describe("Default 500, máximo 2000."),
       offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },

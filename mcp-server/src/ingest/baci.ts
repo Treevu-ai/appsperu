@@ -4,13 +4,21 @@
  * El zip local del estudio es
  *   investigaciones/rca-shift-share-cptpp-china/data/raw/BACI_HS92_V202601.zip
  * Un CSV anual no se descomprime a disco. 7-Zip lo escribe por stdout y esta
- * corrida se queda solo con un exportador.
+ * corrida se queda con un solo país foco, en los dos sentidos del flujo
+ * (como exportador y como importador).
  *
  * Conteo del 2026-10-17 sobre BACI_HS92_Y2024_V202601.csv, encabezado real
- * `t,i,j,k,v,q`: 10580049 filas mundiales y 43022 con exportador 604 (Perú,
- * 171 socios). El panel mundial no se carga. El default del estudio de
- * gravedad es Perú, todos los socios, HS6, 2015–2024. No se mezclan otras
- * revisiones del Sistema Armonizado. `rta_20260111` no es esta tabla.
+ * `t,i,j,k,v,q`: 10580049 filas mundiales, 43022 con exportador 604 (Perú) y
+ * 67793 con importador 604. El panel mundial no se carga. El default del
+ * estudio de gravedad es Perú (ambos sentidos), todos los socios, HS6,
+ * 2015–2024. No se mezclan otras revisiones del Sistema Armonizado.
+ * `rta_20260111` no es esta tabla.
+ *
+ * El mismo zip trae country_codes_V202601.csv (código CEPII, nombre, ISO2,
+ * ISO3), 238 filas. Se carga siempre junto al panel de flujos: es la única
+ * forma de nombrar a un socio sin salir de esta tabla. Cuatro códigos son
+ * agregados sin ISO2 real (ej. "Other Asia, nes", Namibia por un hueco del
+ * propio archivo fuente): iso2 queda NULL, no se inventa un valor.
  *
  * Valores `v` en miles de USD y cantidades `q` en toneladas, como el Readme
  * de la versión 202601 (publicada el 2026-01-22).
@@ -48,6 +56,17 @@ CREATE TABLE IF NOT EXISTS baci_flujos (
   UNIQUE (anio, exportador, importador, hs6, vintage)
 );
 CREATE INDEX IF NOT EXISTS idx_baci_flujos_anio ON baci_flujos (anio, exportador);
+CREATE INDEX IF NOT EXISTS idx_baci_flujos_importador ON baci_flujos (anio, importador);
+CREATE TABLE IF NOT EXISTS baci_paises (
+  id            BIGSERIAL PRIMARY KEY,
+  country_code  INTEGER NOT NULL,
+  country_name  TEXT NOT NULL,
+  iso2          TEXT,
+  iso3          TEXT NOT NULL,
+  vintage       TEXT NOT NULL,
+  archivo       TEXT NOT NULL,
+  UNIQUE (country_code, vintage)
+);
 `;
 
 export interface BaciFila {
@@ -57,6 +76,18 @@ export interface BaciFila {
   hs6: string;
   valorMilesUsd: number | null;
   cantidad: number | null;
+  vintage: string;
+  archivo: string;
+}
+
+export const BACI_PAISES_COLUMNAS = ["country_code", "country_name", "country_iso2", "country_iso3"] as const;
+export const BACI_ARCHIVO_PAISES = "country_codes_V202601.csv";
+
+export interface BaciPais {
+  countryCode: number;
+  countryName: string;
+  iso2: string | null;
+  iso3: string;
   vintage: string;
   archivo: string;
 }
@@ -102,22 +133,23 @@ export function exigirEncabezadoBaci(header: string[]): void {
   }
 }
 
-/** Devuelve null cuando el exportador no es el pedido. No rellena otras revisiones. */
+/** Devuelve null cuando el país foco no exporta ni importa en esta fila. No rellena otras revisiones. */
 export function filaBaci(
   campos: string[],
-  opts: { exportador: number; archivo: string },
+  opts: { pais: number; archivo: string },
 ): BaciFila | null {
   if (campos.length !== BACI_COLUMNAS.length) {
     throw new Error(`Fila BACI trae ${campos.length} columnas`);
   }
   const exportador = entero(campos[1], "Exportador");
-  if (exportador !== opts.exportador) return null;
+  const importador = entero(campos[2], "Importador");
+  if (exportador !== opts.pais && importador !== opts.pais) return null;
   const hs6 = campos[3];
   if (!/^\d{6}$/.test(hs6)) throw new Error(`HS6 BACI inválido: ${hs6}`);
   return {
     anio: entero(campos[0], "Año"),
     exportador,
-    importador: entero(campos[2], "Importador"),
+    importador,
     hs6,
     valorMilesUsd: numeroOpcional(campos[4], "v"),
     cantidad: numeroOpcional(campos[5], "q"),
@@ -126,18 +158,43 @@ export function filaBaci(
   };
 }
 
-export function parseBaciCsv(texto: string, exportador = BACI_PERU, archivo = archivoBaci(2024)): BaciFila[] {
+export function parseBaciCsv(texto: string, pais = BACI_PERU, archivo = archivoBaci(2024)): BaciFila[] {
   const lineas = texto.replace(/^\uFEFF/, "").split(/\r?\n/).filter((l) => l.length > 0);
   exigirEncabezadoBaci(partirCsv(lineas[0] ?? ""));
   const filas: BaciFila[] = [];
   for (let i = 1; i < lineas.length; i++) {
-    const fila = filaBaci(partirCsv(lineas[i]), { exportador, archivo });
+    const fila = filaBaci(partirCsv(lineas[i]), { pais, archivo });
     if (fila) filas.push(fila);
   }
   return filas;
 }
 
-function leerAnio(zip: string, anio: number, exportador: number): Promise<BaciFila[]> {
+export function parseBaciPaises(texto: string, archivo = BACI_ARCHIVO_PAISES): BaciPais[] {
+  const lineas = texto.replace(/^﻿/, "").split(/\r?\n/).filter((l) => l.length > 0);
+  const header = partirCsv(lineas[0] ?? "");
+  if (header.join("|") !== BACI_PAISES_COLUMNAS.join("|")) {
+    throw new Error(`Encabezado del catálogo de países BACI distinto: ${header.join(",")}`);
+  }
+  return lineas.slice(1).map((linea, i) => {
+    const c = partirCsv(linea);
+    if (c.length !== BACI_PAISES_COLUMNAS.length) {
+      throw new Error(`Fila ${i + 2} del catálogo de países BACI trae ${c.length} columnas`);
+    }
+    const [codigo, nombre, iso2, iso3] = c;
+    if (!/^\d+$/.test(codigo)) throw new Error(`Código de país BACI inválido: ${codigo}`);
+    if (!nombre || !iso3) throw new Error(`Fila ${i + 2} del catálogo de países BACI incompleta`);
+    return {
+      countryCode: Number(codigo),
+      countryName: nombre,
+      iso2: iso2 === "" ? null : iso2,
+      iso3,
+      vintage: BACI_VINTAGE,
+      archivo,
+    };
+  });
+}
+
+function leerAnio(zip: string, anio: number, pais: number): Promise<BaciFila[]> {
   const archivo = archivoBaci(anio);
   const bin = resolver7z();
   const child = spawn(bin, ["e", "-so", "-bd", zip, archivo], { windowsHide: true });
@@ -168,7 +225,7 @@ function leerAnio(zip: string, anio: number, exportador: number): Promise<BaciFi
         continue;
       }
       if (linea.length === 0) continue;
-      const fila = filaBaci(partirCsv(linea), { exportador, archivo });
+      const fila = filaBaci(partirCsv(linea), { pais, archivo });
       if (fila) filas.push(fila);
     }
     if (!headerVisto) throw new Error(`BACI no trajo encabezado en ${archivo}`);
@@ -181,6 +238,27 @@ function leerAnio(zip: string, anio: number, exportador: number): Promise<BaciFi
     const code = await cerrado;
     if (code !== 0) throw new Error(`7z salió ${code} al leer ${archivo}: ${stderr.trim()}`);
     return filas;
+  });
+}
+
+function leerPaises(zip: string): Promise<BaciPais[]> {
+  const bin = resolver7z();
+  const child = spawn(bin, ["e", "-so", "-bd", zip, BACI_ARCHIVO_PAISES], { windowsHide: true });
+  const trozos: Buffer[] = [];
+  let stderr = "";
+  child.stdout.on("data", (buf: Buffer) => trozos.push(buf));
+  child.stderr.on("data", (buf: Buffer) => {
+    stderr += buf.toString("utf8");
+  });
+  return new Promise((ok, fail) => {
+    child.on("error", (err) => fail(new Error(`No se pudo ejecutar 7z (${bin}). ${err.message}`)));
+    child.on("close", (code) => {
+      if (code !== 0) {
+        fail(new Error(`7z salió ${code} al leer ${BACI_ARCHIVO_PAISES}: ${stderr.trim()}`));
+        return;
+      }
+      ok(parseBaciPaises(Buffer.concat(trozos).toString("utf8")));
+    });
   });
 }
 
@@ -208,6 +286,24 @@ async function insertar(pool: ReturnType<typeof connect>, filas: BaciFila[]): Pr
   }
 }
 
+async function insertarPaises(pool: ReturnType<typeof connect>, filas: BaciPais[]): Promise<void> {
+  const valores: unknown[] = [];
+  const tuplas: string[] = [];
+  for (const f of filas) {
+    const base = valores.length;
+    tuplas.push(`(${Array.from({ length: 6 }, (_, j) => `$${base + j + 1}`).join(",")})`);
+    valores.push(f.countryCode, f.countryName, f.iso2, f.iso3, f.vintage, f.archivo);
+  }
+  await pool.query(
+    `INSERT INTO baci_paises (country_code, country_name, iso2, iso3, vintage, archivo)
+     VALUES ${tuplas.join(",")}
+     ON CONFLICT (country_code, vintage) DO UPDATE SET
+       country_name = EXCLUDED.country_name, iso2 = EXCLUDED.iso2, iso3 = EXCLUDED.iso3,
+       archivo = EXCLUDED.archivo`,
+    valores,
+  );
+}
+
 function argumento(argv: readonly string[], nombre: string): string | undefined {
   const i = argv.indexOf(nombre);
   if (i < 0) return undefined;
@@ -226,10 +322,10 @@ export function aniosPedidos(argv: readonly string[]): number[] {
   return anios;
 }
 
-export function exportadorPedido(argv: readonly string[]): number {
-  const raw = argumento(argv, "--exportador") ?? String(BACI_PERU);
+export function paisPedido(argv: readonly string[]): number {
+  const raw = argumento(argv, "--pais") ?? String(BACI_PERU);
   if (!/^\d+$/.test(raw)) {
-    throw new Error(`Exportador BACI inválido: ${raw}. El default es ${BACI_PERU} (Perú). No hay carga mundial.`);
+    throw new Error(`País foco BACI inválido: ${raw}. El default es ${BACI_PERU} (Perú). No hay carga mundial.`);
   }
   return Number(raw);
 }
@@ -237,24 +333,26 @@ export function exportadorPedido(argv: readonly string[]): number {
 async function main() {
   rechazarPanelMundial(process.argv);
   const dryRun = process.argv.includes("--dry-run");
-  const exportador = exportadorPedido(process.argv);
+  const pais = paisPedido(process.argv);
   const anios = aniosPedidos(process.argv);
   const zip = argumento(process.argv, "--zip") ?? zipBaciPorDefecto();
+  const paises = await leerPaises(zip);
   const filas: BaciFila[] = [];
   for (const anio of anios) {
-    const delAnio = await leerAnio(zip, anio, exportador);
-    process.stdout.write(`baci ${anio}: ${delAnio.length} filas del exportador ${exportador}\n`);
+    const delAnio = await leerAnio(zip, anio, pais);
+    process.stdout.write(`baci ${anio}: ${delAnio.length} filas del país ${pais} (exporta o importa)\n`);
     filas.push(...delAnio);
   }
   process.stdout.write(
-    `baci: ${filas.length} filas, exportador ${exportador}, años ${anios[0]}-${anios[anios.length - 1]}, ` +
-      `vintage ${BACI_VINTAGE}${dryRun ? " (dry-run)" : ""}\n`,
+    `baci: ${filas.length} filas, país ${pais}, años ${anios[0]}-${anios[anios.length - 1]}, ` +
+      `vintage ${BACI_VINTAGE}, ${paises.length} países en el catálogo${dryRun ? " (dry-run)" : ""}\n`,
   );
   if (dryRun) return;
   const pool = connect("bcrp-comercio-exterior");
   try {
     await pool.query(DDL);
     await insertar(pool, filas);
+    await insertarPaises(pool, paises);
   } finally {
     await pool.end();
   }

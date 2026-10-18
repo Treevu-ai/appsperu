@@ -1,9 +1,10 @@
 /**
- * Handlers para `bcrp_comercio_exterior_baci`.
+ * Handlers para `bcrp_comercio_exterior_baci` y `bcrp_comercio_exterior_baci_paises`.
  *
  * Flujos CEPII BACI HS92, vintage 202601. Sin ruta Express. La carga por
- * defecto es Perú exportador (604). Un año mundial 2024 tiene 10580049 filas
- * y no está en esta tabla.
+ * defecto es Perú (604), como exportador y como importador — los dos
+ * sentidos del flujo con todos los socios. Un año mundial 2024 tiene
+ * 10580049 filas y no está en esta tabla.
  *
  * @fidelity: precomputado — este módulo NO es el port de ningún route Express:
  * la fuente es nueva y se sirve solo por MCP. Cada consulta está marcada
@@ -19,6 +20,14 @@ interface Fila extends NeonRow {
   hs6: string;
   valor_miles_usd: number | string | null;
   cantidad: number | string | null;
+  vintage: string;
+}
+
+interface FilaPais extends NeonRow {
+  country_code: number;
+  country_name: string;
+  iso2: string | null;
+  iso3: string;
   vintage: string;
 }
 
@@ -68,9 +77,48 @@ export async function list(ctx: ToolHandlerContext): Promise<HandlerResult> {
       unidad: "miles de USD",
       fuente:
         "CEPII BACI HS92, vintage 202601. v en miles de USD y q en toneladas. " +
-        "La carga por defecto es Perú exportador (código 604), todos los socios, HS6, 2015–2024. " +
+        "La carga por defecto es Perú (código 604) como exportador e importador, todos los socios, HS6, 2015–2024. " +
         "Un año mundial (2024) tiene 10580049 filas y no se carga.",
-      ingesta: "manual, sin scheduler — un exportador por corrida, sin panel mundial",
+      ingesta: "manual, sin scheduler — un país foco por corrida (ambos sentidos), sin panel mundial",
+    },
+  };
+}
+
+export async function listPaises(ctx: ToolHandlerContext): Promise<HandlerResult> {
+  const { db, args } = ctx;
+  const limit = Math.min(args.limit ? Number(args.limit) : 500, 2000);
+  const offset = args.offset ? Number(args.offset) : 0;
+  const conditions: string[] = [];
+  const values: unknown[] = [];
+  const push = (cond: string, value: unknown) => {
+    values.push(value);
+    conditions.push(cond.replaceAll("$$", `$${values.length}`));
+  };
+  if (args.codigo) push("country_code = $$", Number(args.codigo));
+  if (args.iso3) push("iso3 = $$", String(args.iso3).toUpperCase());
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const { rows } = await db.query<FilaPais>(
+    // @nuevo: lectura de baci_paises, sin route Express.
+    `SELECT country_code, country_name, iso2, iso3, vintage
+     FROM baci_paises
+     ${where}
+     ORDER BY country_name
+     LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
+    [...values, limit, offset],
+  );
+  return {
+    status: 200,
+    body: {
+      resultados: rows.map((r) => ({
+        codigo: r.country_code,
+        nombre: r.country_name,
+        iso2: r.iso2,
+        iso3: r.iso3,
+        vintage: r.vintage,
+      })),
+      total: rows.length,
+      fuente: "CEPII BACI, country_codes_V202601.csv. Nombra los códigos numéricos de baci_flujos.",
+      ingesta: "manual, sin scheduler — se carga junto con el panel de flujos",
     },
   };
 }

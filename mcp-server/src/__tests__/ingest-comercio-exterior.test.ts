@@ -17,7 +17,7 @@ import { buildUrl as buildWdiUrl, normalizarWdi, parseArgs as parseWdiArgs, INDI
 import { parseAtlasCsv } from "../ingest/atlas-rankings.js";
 import { LSCI_COLUMNAS, parseLsciCsv } from "../ingest/lsci.js";
 import { leerSharedStrings, parsePillarScore } from "../ingest/bready.js";
-import { parseBaciCsv, rechazarPanelMundial, aniosPedidos, exportadorPedido } from "../ingest/baci.js";
+import { parseBaciCsv, parseBaciPaises, rechazarPanelMundial, aniosPedidos, paisPedido } from "../ingest/baci.js";
 import { GRAVITY_COLUMNAS, parseGravityCsv, parseRtaCoverage, parseRtaType } from "../ingest/gravity.js";
 import { exigirClaveCiudad, parseGeoDiadas, parseGeoPaises } from "../ingest/geodist.js";
 import { parseTrains, urlTrains } from "../ingest/trains.js";
@@ -395,12 +395,13 @@ describe("parsePillarScore (B-READY 2025)", () => {
 
 describe("parseBaciCsv (HS92 V202601)", () => {
   const header = "t,i,j,k,v,q";
-  const peru = "2024,604,8,070920,4.625,2.852";
-  const otro = "2024,4,24,080810,0.176,0.1";
+  const peruExporta = "2024,604,8,070920,4.625,2.852";
+  const peruImporta = "2024,8,604,080810,9.1,5.0";
+  const ajeno = "2024,4,24,080810,0.176,0.1";
 
-  it("guarda la fila real de Perú 2024 y descarta el exportador 4", () => {
-    const filas = parseBaciCsv(`${header}\n${otro}\n${peru}\n`);
-    expect(filas).toHaveLength(1);
+  it("guarda a Perú como exportador y como importador, y descarta el par ajeno", () => {
+    const filas = parseBaciCsv(`${header}\n${ajeno}\n${peruExporta}\n${peruImporta}\n`);
+    expect(filas).toHaveLength(2);
     expect(filas[0]).toMatchObject({
       anio: 2024,
       exportador: 604,
@@ -411,13 +412,45 @@ describe("parseBaciCsv (HS92 V202601)", () => {
       vintage: "202601",
       archivo: "BACI_HS92_Y2024_V202601.csv",
     });
+    expect(filas[1]).toMatchObject({ exportador: 8, importador: 604, hs6: "080810" });
   });
 
   it("rechaza un encabezado distinto y el panel mundial", () => {
     expect(() => parseBaciCsv("year,exporter\n2024,604\n")).toThrow(/Encabezado BACI/);
     expect(() => rechazarPanelMundial(["--mundo"])).toThrow(/10580049/);
     expect(aniosPedidos(["--anio", "2024"])).toEqual([2024]);
-    expect(exportadorPedido([])).toBe(604);
+    expect(paisPedido([])).toBe(604);
+  });
+});
+
+describe("parseBaciPaises (country_codes_V202601.csv)", () => {
+  const header = "country_code,country_name,country_iso2,country_iso3";
+  const peru = "604,Peru,PE,PER";
+
+  it("proyecta la fila real de Perú", () => {
+    const filas = parseBaciPaises(`${header}\n${peru}\n`);
+    expect(filas).toHaveLength(1);
+    expect(filas[0]).toMatchObject({
+      countryCode: 604,
+      countryName: "Peru",
+      iso2: "PE",
+      iso3: "PER",
+      vintage: "202601",
+      archivo: "country_codes_V202601.csv",
+    });
+  });
+
+  it("rechaza un encabezado distinto", () => {
+    expect(() => parseBaciPaises("code,name\n604,Peru\n")).toThrow(/Encabezado del catálogo de países BACI/);
+  });
+
+  it("deja iso2 en null para un código agregado sin ISO2, como trae el archivo real", () => {
+    const namibia = "516,Namibia,,NAM";
+    const otroAsia = '490,"Other Asia, nes",,S19';
+    const filas = parseBaciPaises(`${header}\n${namibia}\n${otroAsia}\n`);
+    expect(filas).toHaveLength(2);
+    expect(filas[0]).toMatchObject({ countryCode: 516, countryName: "Namibia", iso2: null, iso3: "NAM" });
+    expect(filas[1]).toMatchObject({ countryCode: 490, countryName: "Other Asia, nes", iso2: null, iso3: "S19" });
   });
 });
 

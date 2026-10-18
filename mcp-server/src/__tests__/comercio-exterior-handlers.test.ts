@@ -15,7 +15,7 @@ import { list as wdiList, indicadores as wdiIndicadores } from "../handlers/bcrp
 import { list as atlasList } from "../handlers/bcrp-comercio-exterior/atlas-rankings.js";
 import { list as lsciList } from "../handlers/bcrp-comercio-exterior/lsci.js";
 import { list as breadyList } from "../handlers/bcrp-comercio-exterior/bready.js";
-import { list as baciList } from "../handlers/bcrp-comercio-exterior/baci.js";
+import { list as baciList, listPaises as baciPaises } from "../handlers/bcrp-comercio-exterior/baci.js";
 import { list as gravityList, etiquetas as gravityEtiquetas } from "../handlers/bcrp-comercio-exterior/gravity.js";
 import { listPaises as geodistPaises, listDiadas as geodistDiadas } from "../handlers/bcrp-comercio-exterior/geodist.js";
 import { list as trainsList } from "../handlers/bcrp-comercio-exterior/trains.js";
@@ -642,6 +642,22 @@ describe("baci:list", () => {
     expect(sql).not.toContain("$$");
     expect(sql).toContain("FROM baci_flujos");
     expect(dbQuery.mock.calls[0][1]).toEqual([2024, 604, "070920", 500, 0]);
+  });
+});
+
+describe("baci:listPaises", () => {
+  it("nombra el código 604 con el catálogo de países BACI", async () => {
+    dbQuery.mockResolvedValueOnce({
+      rows: [{ country_code: 604, country_name: "Peru", iso2: "PE", iso3: "PER", vintage: "202601" }],
+    });
+    const res = await baciPaises(ctx({ codigo: "604" }));
+    expect(res.status).toBe(200);
+    const body = res.body as { resultados: Array<{ codigo: number; nombre: string; iso3: string }> };
+    expect(body.resultados[0]).toEqual({ codigo: 604, nombre: "Peru", iso2: "PE", iso3: "PER", vintage: "202601" });
+    const sql = String(dbQuery.mock.calls[0][0]);
+    expect(sql).not.toContain("$$");
+    expect(sql).toContain("FROM baci_paises");
+    expect(dbQuery.mock.calls[0][1]).toEqual([604, 500, 0]);
   });
 });
 
