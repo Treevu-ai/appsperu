@@ -81,12 +81,13 @@ Fecha consulta: 18/09/2026 18:34
 Volver
 Información Histórica`;
 
-// Texto real capturado el 2026-09-18 (misma consulta, botón "Representante(s) Legal(es)").
+// Misma consulta del 2026-09-18, botón "Representante(s) Legal(es)".
+// La fila de documento usa un DNI y un nombre de ejemplo, con la misma forma que la ficha real.
 const REPRESENTANTES_TEXT = `REPRESENTANTES LEGALES DE 20129156083 - COOP AGRARIA CAFET VALLE RIO APURIMAC
 Resultado de la Búsqueda
 La información exhibida en esta consulta corresponde a lo declarado por el contribuyente ante la Administración Tributaria.
 Documento Nro. Documento Nombre Cargo Fecha Desde
-DNI 28703600 OCHOA RUA TIMOTEO GERENTE GENERAL 23/02/2023
+DNI 12345678 PEREZ GOMEZ JUAN GERENTE GENERAL 23/02/2023
 Volver Imprimir
 e-mail`;
 
@@ -161,8 +162,8 @@ describe("parseRepresentantes", () => {
     expect(result).toEqual([
       {
         tipoDocumento: "DNI",
-        numeroDocumento: "28703600",
-        nombre: "OCHOA RUA TIMOTEO",
+        numeroDocumento: "12345678",
+        nombre: "PEREZ GOMEZ JUAN",
         cargo: "GERENTE GENERAL",
         fechaDesde: "2023-02-23",
       },

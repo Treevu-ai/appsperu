@@ -95,8 +95,7 @@ def main() -> None:
     md.append(
         "Este anexo documenta la batería de análisis avanzados ejecutada sobre el panel de "
         "gravedad (184 socios, 2016-2024) y los insumos de producto y acuerdos disponibles. "
-        "Complementa la propuesta al XI Concurso de Investigación 2026 de la Universidad del "
-        "Pacífico y hace explícito el alcance del hallazgo: **la asociación entre gobernanza y "
+        "Hace explícito el alcance del hallazgo: **la asociación entre gobernanza y "
         "exportaciones es robusta en niveles entre países, pero no se sostiene en la variación "
         "dentro del país ni dentro de producto**. Se reporta, por tanto, como asociación y no "
         "como efecto causal.\n"

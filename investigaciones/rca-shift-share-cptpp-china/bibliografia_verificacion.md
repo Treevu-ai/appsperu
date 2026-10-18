@@ -147,4 +147,4 @@ El 2026-10-16 se regeneraron `paper_wgi_competitividad_ENG_JOURNAL.pdf` (20 pág
 
 ## Qué no se hizo
 
-No se reestimó la gravedad. No hay PPML, ni flujos domésticos, ni ITPD-E, ni acuerdos de la OMC, ni PIB per cápita nuevo. No se editaron las propuestas Hinrich ni los docx cortos `paper_wgi_competitividad.docx` y `paper_wgi_competitividad_ENG.docx`, que conservan fichas viejas. No se hizo commit.
+No se reestimó la gravedad. No hay PPML, ni flujos domésticos, ni ITPD-E, ni acuerdos de la OMC, ni PIB per cápita nuevo. No se editaron los docx cortos `paper_wgi_competitividad.docx` y `paper_wgi_competitividad_ENG.docx`, que conservan fichas viejas. No se hizo commit.

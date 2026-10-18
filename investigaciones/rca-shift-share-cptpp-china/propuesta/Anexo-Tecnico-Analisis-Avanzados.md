@@ -4,7 +4,7 @@
 **Autores:** Mg. Ricardo A. Cuba Alván · Dra. Rosa Patricia Larios Francia.  
 **Fecha:** octubre de 2026.
 
-Este anexo documenta la batería de análisis avanzados ejecutada sobre el panel de gravedad (184 socios, 2016-2024) y los insumos de producto y acuerdos disponibles. Complementa la propuesta al XI Concurso de Investigación 2026 de la Universidad del Pacífico y hace explícito el alcance del hallazgo: **la asociación entre gobernanza y exportaciones es robusta en niveles entre países, pero no se sostiene en la variación dentro del país ni dentro de producto**. Se reporta, por tanto, como asociación y no como efecto causal.
+Este anexo documenta la batería de análisis avanzados ejecutada sobre el panel de gravedad (184 socios, 2016-2024) y los insumos de producto y acuerdos disponibles. Hace explícito el alcance del hallazgo: **la asociación entre gobernanza y exportaciones es robusta en niveles entre países, pero no se sostiene en la variación dentro del país ni dentro de producto**. Se reporta, por tanto, como asociación y no como efecto causal.
 
 Los scripts (19-32) y las tablas completas están en el repositorio del proyecto (`scripts/`, `results_avanzados/`) y en el libro `analisis_avanzados_wgi.xlsx`, hoja por análisis. Las tablas de este anexo reproducen esos resultados; las de mayor tamaño se resumen en sus primeras filas.
 

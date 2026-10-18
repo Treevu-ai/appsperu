@@ -191,8 +191,8 @@ export interface ParsedRepresentante {
 
 /**
  * `rawText` es el `body.innerText` de la sub-página "Representante(s)
- * Legal(es)". Formato real confirmado (una fila): "DNI 28703600 OCHOA RUA
- * TIMOTEO GERENTE GENERAL 23/02/2023" — tipo/número de documento al inicio,
+ * Legal(es)". Formato confirmado (una fila de ejemplo): "DNI 12345678 PEREZ GOMEZ
+ * JUAN GERENTE GENERAL 23/02/2023" — tipo/número de documento al inicio,
  * fecha al final, nombre+cargo en medio sin separador propio.
  */
 export function parseRepresentantes(rawText: string): ParsedRepresentante[] {
