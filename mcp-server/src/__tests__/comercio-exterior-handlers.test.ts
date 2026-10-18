@@ -15,6 +15,11 @@ import { list as wdiList, indicadores as wdiIndicadores } from "../handlers/bcrp
 import { list as atlasList } from "../handlers/bcrp-comercio-exterior/atlas-rankings.js";
 import { list as lsciList } from "../handlers/bcrp-comercio-exterior/lsci.js";
 import { list as breadyList } from "../handlers/bcrp-comercio-exterior/bready.js";
+import { list as baciList } from "../handlers/bcrp-comercio-exterior/baci.js";
+import { list as gravityList, etiquetas as gravityEtiquetas } from "../handlers/bcrp-comercio-exterior/gravity.js";
+import { listPaises as geodistPaises, listDiadas as geodistDiadas } from "../handlers/bcrp-comercio-exterior/geodist.js";
+import { list as trainsList } from "../handlers/bcrp-comercio-exterior/trains.js";
+import { list as doingBusinessList, codigoConsulta } from "../handlers/bcrp-comercio-exterior/doing-business.js";
 import type { ToolHandlerContext } from "../handlers/registry.js";
 
 const dbQuery = vi.fn();
@@ -608,5 +613,178 @@ describe("bready:list", () => {
     expect(body.resultados[0].valor).toBeCloseTo(70.5);
     expect(body.fuente).toContain("Doing Business");
     expect(String(dbQuery.mock.calls[0][0])).toContain("bready_puntajes");
+  });
+});
+
+describe("baci:list", () => {
+  it("devuelve el flujo real de Perú 2024 en miles de USD", async () => {
+    dbQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          anio: 2024, exportador: 604, importador: 8, hs6: "070920",
+          valor_miles_usd: "4.625", cantidad: "2.852", vintage: "202601",
+        },
+      ],
+    });
+    const res = await baciList(ctx({ anio: "2024", exportador: "604", hs6: "070920" }));
+    expect(res.status).toBe(200);
+    const body = res.body as {
+      resultados: Array<{ hs6: string; valorMilesUsd: number; importador: number }>;
+      unidad: string;
+      fuente: string;
+    };
+    expect(body.resultados[0].hs6).toBe("070920");
+    expect(body.resultados[0].valorMilesUsd).toBeCloseTo(4.625);
+    expect(body.resultados[0].importador).toBe(8);
+    expect(body.unidad).toBe("miles de USD");
+    expect(body.fuente).toContain("10580049");
+    const sql = String(dbQuery.mock.calls[0][0]);
+    expect(sql).not.toContain("$$");
+    expect(sql).toContain("FROM baci_flujos");
+    expect(dbQuery.mock.calls[0][1]).toEqual([2024, 604, "070920", 500, 0]);
+  });
+});
+
+describe("gravity:list", () => {
+  it("devuelve el par y no lo presenta como rta_20260111", async () => {
+    dbQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          anio: 1948, country_id_o: "ABW", country_id_d: "ABW", iso3_o: "ABW", iso3_d: "ABW",
+          country_exists_o: 0, country_exists_d: 0, fta_wto: null, fta_wto_raw: null,
+          rta_coverage: null, rta_type: null, vintage: "202211",
+        },
+      ],
+    });
+    const res = await gravityList(ctx({ anio: "1948", origen: "abw", destino: "abw" }));
+    const body = res.body as { resultados: Array<{ iso3O: string; vintage: string }>; fuente: string };
+    expect(body.resultados[0].iso3O).toBe("ABW");
+    expect(body.resultados[0].vintage).toBe("202211");
+    expect(body.fuente).toContain("No es el zip rta_20260111");
+    const sql = String(dbQuery.mock.calls[0][0]);
+    expect(sql).not.toContain("$$");
+    expect(sql).toContain("FROM gravity_acuerdos");
+    expect(dbQuery.mock.calls[0][1]).toEqual([1948, "ABW", "ABW", 500, 0]);
+  });
+
+  it("lista las etiquetas de rta_type", async () => {
+    dbQuery.mockResolvedValueOnce({
+      rows: [{ variable: "rta_type", codigo: "4", etiqueta: "FTA", vintage: "202211" }],
+    });
+    const res = await gravityEtiquetas(ctx({ variable: "rta_type" }));
+    const body = res.body as { resultados: Array<{ etiqueta: string }> };
+    expect(body.resultados[0].etiqueta).toBe("FTA");
+    expect(String(dbQuery.mock.calls[0][0])).toContain("FROM gravity_rta_etiquetas");
+  });
+});
+
+describe("geodist", () => {
+  it("filtra un país por iso3", async () => {
+    dbQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          iso2: "PE", iso3: "PER", cnum: 604, country: "Peru", pays: "Pérou",
+          area: "1285216", dis_int: "426.4046", landlocked: 0, continent: "America",
+          city_en: "Lima", lat: "-12.1", lon: "-77.05", cap: 1, maincity: 1,
+          colonizer1: "ESP", lang9_1: "Quecha",
+        },
+      ],
+    });
+    const res = await geodistPaises(ctx({ iso3: "per" }));
+    expect(res.status).toBe(200);
+    const body = res.body as {
+      resultados: Array<{ iso3: string; lang91: string; cap: number; maincity: number }>;
+      fuente: string;
+    };
+    expect(body.resultados[0].iso3).toBe("PER");
+    expect(body.resultados[0].lang91).toBe("Quecha");
+    expect(body.resultados[0].cap).toBe(1);
+    expect(body.resultados[0].maincity).toBe(1);
+    expect(body.fuente).toContain("Etalab 2.0");
+    expect(body.fuente).toContain("CC BY-NC-ND 3.0");
+    const sql = String(dbQuery.mock.calls[0][0]);
+    expect(sql).toContain("FROM geodist_paises");
+    expect(sql).toContain("ORDER BY iso3, cap, maincity");
+    expect(dbQuery.mock.calls[0][1][0]).toBe("PER");
+  });
+
+  it("filtra la díada por origen y destino", async () => {
+    dbQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          iso_o: "PER", iso_d: "ABW", contig: 0, comlang_off: 1, comlang_ethno: 0,
+          colony: 0, comcol: 0, curcol: 0, col45: 0, smctry: 0,
+          dist: "2848.861", distcap: "2848.861", distw: "2758.858", distwces: "2724.569",
+        },
+      ],
+    });
+    const res = await geodistDiadas(ctx({ origen: "per", destino: "abw" }));
+    const body = res.body as { resultados: Array<{ dist: number; comlangOff: number }>; unidad: string };
+    expect(body.unidad).toBe("kilómetros");
+    expect(body.resultados[0].dist).toBeCloseTo(2848.861);
+    expect(body.resultados[0].comlangOff).toBe(1);
+    const sql = String(dbQuery.mock.calls[0][0]);
+    expect(sql).not.toContain("$$");
+    expect(sql).toContain("iso_o = $1");
+    expect(sql).toContain("iso_d = $2");
+    expect(sql).toContain("FROM geodist_diadas");
+  });
+});
+
+describe("trains", () => {
+  it("filtra la partida capturada 010229", async () => {
+    dbQuery.mockResolvedValueOnce({
+      rows: [{
+        anio: 2021, reporter: "604", partner: "000", producto: "010229",
+        producto_nombre: "(2012-) -- Other", nomenclatura: "H5", tipo_arancel: "MFN",
+        promedio_simple: "3", suma_tasas: "6", tasa_min: "0", tasa_max: "6",
+        lineas_total: 2, lineas_mfn: 2, medida: "SimpleAverage",
+      }],
+    });
+    const res = await trainsList(ctx({ anio: "2021", reporter: "604", partner: "000", producto: "010229" }));
+    const body = res.body as {
+      resultados: Array<{ promedioSimple: number; sumaTasas: number }>;
+      fuente: string;
+    };
+    expect(body.resultados[0].promedioSimple).toBe(3);
+    expect(body.resultados[0].sumaTasas).toBe(6);
+    expect(body.fuente).toContain("No se redistribuye ni se vende");
+    expect(body.fuente).toContain("medidas no arancelarias");
+    const sql = String(dbQuery.mock.calls[0][0]);
+    expect(sql).not.toContain("$$");
+    expect(sql).toContain("FROM trains_aranceles");
+    expect(dbQuery.mock.calls[0][1]).toEqual([2021, "604", "000", "010229", 500, 0]);
+  });
+});
+
+describe("doing-business", () => {
+  it("devuelve el puntaje de Perú y la nota textual", async () => {
+    dbQuery.mockResolvedValueOnce({
+      rows: [{
+        country_code: "PER", economy: "Peru", region: "Latin America & Caribbean",
+        income_group: "Upper middle income", db_year: 2020, tema: "Ease of doing business",
+        indicador: "Ease of doing business score (DB17-20 methodology)",
+        valor: "68.69658", nota: null,
+      }],
+    });
+    const res = await doingBusinessList(ctx({ codigo: "per", anio: "2020" }));
+    const body = res.body as {
+      resultados: Array<{ valor: number; nota: null; dbYear: number }>;
+      fuente: string;
+    };
+    expect(body.resultados[0].valor).toBeCloseTo(68.69658);
+    expect(body.resultados[0].nota).toBeNull();
+    expect(body.resultados[0].dbYear).toBe(2020);
+    expect(body.fuente).toContain("CC BY 4.0");
+    expect(body.fuente).toContain("No se concuerda con B-READY");
+    const sql = String(dbQuery.mock.calls[0][0]);
+    expect(sql).not.toContain("$$");
+    expect(sql).toContain("FROM doingbusiness_historico");
+    expect(dbQuery.mock.calls[0][1]).toEqual(["PER", 2020, 500, 0]);
+  });
+
+  it("deja el código subnacional como está en la hoja", () => {
+    expect(codigoConsulta("per")).toBe("PER");
+    expect(codigoConsulta("BGD_Chit")).toBe("BGD_Chit");
   });
 });

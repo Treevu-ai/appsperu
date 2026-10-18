@@ -24,6 +24,11 @@
     "ingest:atlas-rankings": "tsx src/ingest/atlas-rankings.ts",
     "ingest:lsci": "tsx src/ingest/lsci.ts",
     "ingest:bready": "tsx src/ingest/bready.ts",
+    "ingest:baci": "tsx src/ingest/baci.ts",
+    "ingest:geodist": "tsx src/ingest/geodist.ts",
+    "ingest:gravity": "tsx src/ingest/gravity.ts",
+    "ingest:trains": "tsx src/ingest/trains.ts",
+    "ingest:doing-business": "tsx src/ingest/doing-business.ts",
     "ingest:agromercado": "tsx src/ingest/agromercado-articulacion.ts"
   },
   "dependencies": {

@@ -17,12 +17,17 @@ import * as actividad_empresarial_empresas from "./actividad-empresarial/empresa
 import * as areas_protegidas_areas from "./areas-protegidas/areas.js";
 import * as autoridades_electas_autoridades from "./autoridades-electas/autoridades.js";
 import * as bcrp_comercio_exterior_atlas_rankings from "./bcrp-comercio-exterior/atlas-rankings.js";
+import * as bcrp_comercio_exterior_baci from "./bcrp-comercio-exterior/baci.js";
 import * as bcrp_comercio_exterior_benchmark_externo from "./bcrp-comercio-exterior/benchmark-externo.js";
 import * as bcrp_comercio_exterior_bready from "./bcrp-comercio-exterior/bready.js";
 import * as bcrp_comercio_exterior_contexto_paises from "./bcrp-comercio-exterior/contexto-paises.js";
+import * as bcrp_comercio_exterior_doing_business from "./bcrp-comercio-exterior/doing-business.js";
+import * as bcrp_comercio_exterior_geodist from "./bcrp-comercio-exterior/geodist.js";
+import * as bcrp_comercio_exterior_gravity from "./bcrp-comercio-exterior/gravity.js";
 import * as bcrp_comercio_exterior_lsci from "./bcrp-comercio-exterior/lsci.js";
 import * as bcrp_comercio_exterior_meta from "./bcrp-comercio-exterior/meta.js";
 import * as bcrp_comercio_exterior_trade from "./bcrp-comercio-exterior/trade.js";
+import * as bcrp_comercio_exterior_trains from "./bcrp-comercio-exterior/trains.js";
 import * as bcrp_la_libertad_indicadores from "./bcrp-la-libertad/indicadores.js";
 import * as bcrp_la_libertad_meta from "./bcrp-la-libertad/meta.js";
 import * as candidatos_erm_candidatos from "./candidatos-erm/candidatos.js";
@@ -178,12 +183,17 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "areas-protegidas/areas": areas_protegidas_areas,
   "autoridades-electas/autoridades": autoridades_electas_autoridades,
   "bcrp-comercio-exterior/atlas-rankings": bcrp_comercio_exterior_atlas_rankings,
+  "bcrp-comercio-exterior/baci": bcrp_comercio_exterior_baci,
   "bcrp-comercio-exterior/benchmark-externo": bcrp_comercio_exterior_benchmark_externo,
   "bcrp-comercio-exterior/bready": bcrp_comercio_exterior_bready,
   "bcrp-comercio-exterior/contexto-paises": bcrp_comercio_exterior_contexto_paises,
+  "bcrp-comercio-exterior/doing-business": bcrp_comercio_exterior_doing_business,
+  "bcrp-comercio-exterior/geodist": bcrp_comercio_exterior_geodist,
+  "bcrp-comercio-exterior/gravity": bcrp_comercio_exterior_gravity,
   "bcrp-comercio-exterior/lsci": bcrp_comercio_exterior_lsci,
   "bcrp-comercio-exterior/meta": bcrp_comercio_exterior_meta,
   "bcrp-comercio-exterior/trade": bcrp_comercio_exterior_trade,
+  "bcrp-comercio-exterior/trains": bcrp_comercio_exterior_trains,
   "bcrp-la-libertad/indicadores": bcrp_la_libertad_indicadores,
   "bcrp-la-libertad/meta": bcrp_la_libertad_meta,
   "candidatos-erm/candidatos": candidatos_erm_candidatos,

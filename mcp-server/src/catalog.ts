@@ -2479,6 +2479,146 @@ export const TOOL_CATALOG: ToolSpec[] = [
       offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
     },
   },
+  {
+    name: "bcrp_comercio_exterior_doing_business",
+    handler: "doing-business:list",
+    app: "bcrp-comercio-exterior",
+    description:
+      "Doing Business histórico congelado, hoja All Data del Excel corregido " +
+      "(DB Year 2004–2020). El informe se discontinuó el 16 de septiembre de 2021. " +
+      "CC BY 4.0. DB Year es el año del informe en el archivo. " +
+      "Indicadores repetidos se distinguen por el tema. " +
+      "No Practice, No VAT, .. y N/A quedan en nota y no se convierten en número. " +
+      "No se concuerda con B-READY. La hoja trae códigos subnacionales además del ISO3. " +
+      "Sin ruta Express. " + SIN_SCHEDULER,
+    pathTemplate: "/api/doing-business",
+    pathParams: [],
+    querySchema: {
+      codigo: z.string().min(2).max(8).optional().describe("Código de la hoja, ej. PER o BGD_Chit. Un ISO de 2 o 3 letras se acepta en cualquier caja."),
+      anio: z.coerce.number().int().min(2004).max(2020).optional().describe("DB Year del archivo, 2004–2020."),
+      tema: z.string().min(1).optional().describe("Tema de la fila de grupos, ej. Starting a business."),
+      indicador: z.string().min(1).optional().describe("Encabezado exacto de la columna."),
+      limit: z.coerce.number().int().min(1).max(2000).optional().describe("Default 500, máximo 2000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "bcrp_comercio_exterior_baci",
+    handler: "baci:list",
+    app: "bcrp-comercio-exterior",
+    description:
+      "Flujos CEPII BACI HS92, vintage 202601: año, exportador, importador, HS6, valor en miles de USD " +
+      "y cantidad en toneladas. La carga por defecto es Perú exportador (código CEPII 604), todos los " +
+      "socios, 2015–2024. Un año mundial (2024) tiene 10580049 filas y no se carga. No mezcla otras " +
+      "revisiones del Sistema Armonizado. No es la tabla de acuerdos rta_20260111. Sin ruta Express. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/baci",
+    pathParams: [],
+    querySchema: {
+      anio: z.coerce.number().int().min(1995).max(2024).optional(),
+      desde: z.coerce.number().int().min(1995).max(2024).optional(),
+      hasta: z.coerce.number().int().min(1995).max(2024).optional(),
+      exportador: z.coerce.number().int().optional().describe("Código CEPII. Perú es 604."),
+      importador: z.coerce.number().int().optional().describe("Código CEPII del socio."),
+      hs6: z.string().regex(/^\d{6}$/).optional().describe("Partida HS6, con ceros a la izquierda."),
+      limit: z.coerce.number().int().min(1).max(2000).optional().describe("Default 500, máximo 2000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "bcrp_comercio_exterior_gravity_acuerdos",
+    handler: "gravity:list",
+    app: "bcrp-comercio-exterior",
+    description:
+      "Acuerdos de CEPII Gravity V202211 (Etalab 2.0): par de países y año, con fta_wto, fta_wto_raw, " +
+      "rta_coverage y rta_type. Es la proyección de esas columnas. No incluye el CSV ancho de 87 columnas " +
+      "(1.25 GB) ni las distancias, el PBI o los flujos. No es el archivo rta_20260111. " +
+      "Sin ruta Express. " + SIN_SCHEDULER,
+    pathTemplate: "/api/gravity/acuerdos",
+    pathParams: [],
+    querySchema: {
+      anio: z.coerce.number().int().min(1948).max(2021).optional(),
+      origen: z.string().min(2).max(3).optional().describe("ISO3 de origen."),
+      destino: z.string().min(2).max(3).optional().describe("ISO3 de destino."),
+      conAcuerdo: z.enum(["1", "true"]).optional().describe("Si está, solo filas con algún campo de acuerdo."),
+      limit: z.coerce.number().int().min(1).max(2000).optional().describe("Default 500, máximo 2000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "bcrp_comercio_exterior_gravity_etiquetas",
+    handler: "gravity:etiquetas",
+    app: "bcrp-comercio-exterior",
+    description:
+      "Etiquetas de rta_type y rta_coverage de CEPII Gravity V202211 " +
+      "(Label_rta_type_V202211.csv y Label_rta_coverage_V202211.csv). " +
+      "rta_type: 1 CU, 2 CU & EIA, 3 EIA, 4 FTA, 5 FTA & EIA, 7 PSA & EIA. " +
+      "rta_coverage: 1 Goods, 2 Goods & Services, 3 Services. No es rta_20260111. " +
+      "Sin ruta Express. " + SIN_SCHEDULER,
+    pathTemplate: "/api/gravity/etiquetas",
+    pathParams: [],
+    querySchema: {
+      variable: z.enum(["rta_type", "rta_coverage"]).optional(),
+    },
+  },
+  {
+    name: "bcrp_comercio_exterior_geodist_paises",
+    handler: "geodist:listPaises",
+    app: "bcrp-comercio-exterior",
+    description:
+      "Países de CEPII GeoDist (geo_cepii): ISO2, ISO3, código numérico CEPII (Perú 604), coordenadas, " +
+      "cap, maincity, salida al mar, primer colonizador y lang9. 238 filas y 225 ISO3: 13 países " +
+      "traen capital y ciudad principal por separado; la clave es iso3 + cap + maincity. " +
+      "La tabla guarda las 34 columnas del xls. " +
+      "Uso interno bajo la ficha vigente (Etalab 2.0). distances.htm todavía dice CC BY-NC-ND 3.0. " +
+      "No se republica el archivo ni se reemplaza geodist_peru.csv. Sin ruta Express. " + SIN_SCHEDULER,
+    pathTemplate: "/api/geodist/paises",
+    pathParams: [],
+    querySchema: {
+      iso3: z.string().length(3).optional().describe("ISO3, por ejemplo PER."),
+      limit: z.coerce.number().int().min(1).max(2000).optional().describe("Default 500, máximo 2000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "bcrp_comercio_exterior_geodist_diadas",
+    handler: "geodist:listDiadas",
+    app: "bcrp-comercio-exterior",
+    description:
+      "Díadas de CEPII GeoDist (dist_cepii): contigüidad, lengua oficial, lengua étnica, colonia, " +
+      "distancia simple y ponderada, en kilómetros. Incluye los pares que el extracto Perú no lista " +
+      "como origen. Uso interno bajo la ficha vigente (Etalab 2.0). distances.htm todavía dice " +
+      "CC BY-NC-ND 3.0. No se republica el archivo ni se reemplaza geodist_peru.csv. Sin ruta Express. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/geodist/diadas",
+    pathParams: [],
+    querySchema: {
+      origen: z.string().length(3).optional().describe("ISO3 de origen, por ejemplo PER."),
+      destino: z.string().length(3).optional().describe("ISO3 de destino."),
+      limit: z.coerce.number().int().min(1).max(2000).optional().describe("Default 500, máximo 2000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "bcrp_comercio_exterior_trains",
+    handler: "trains:list",
+    app: "bcrp-comercio-exterior",
+    description:
+      "Arancel reportado de UNCTAD TRAINS vía WITS: una llamada, Perú 604, socio Mundo 000, año 2021, " +
+      "product=All y datatype=reported. 5388 partidas HS6, nomenclatura H5, tipo MFN. El promedio simple " +
+      "es la observación; suma, mínimo y máximo son atributos aparte. No incluye medidas no arancelarias " +
+      "ni socios preferenciales. No se redistribuye ni se vende. Sin ruta Express. " + SIN_SCHEDULER,
+    pathTemplate: "/api/trains",
+    pathParams: [],
+    querySchema: {
+      anio: z.coerce.number().int().optional().describe("Año de la llamada. La ingesta es 2021."),
+      reporter: z.string().regex(/^\d+$/).optional().describe("Código WITS. Perú es 604."),
+      partner: z.string().regex(/^[A-Za-z0-9]+$/).optional().describe("Socio. Mundo es 000."),
+      producto: z.string().regex(/^\d{6}$/).optional().describe("Partida HS6."),
+      limit: z.coerce.number().int().min(1).max(2000).optional().describe("Default 500, máximo 2000."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
 
   // ---- inversion-privada (PROINVERSIÓN / VERTIX) ----
   {

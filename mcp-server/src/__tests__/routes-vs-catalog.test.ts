@@ -31,6 +31,13 @@ const MCP_ONLY_PATHS: Partial<Record<AppKey, string[]>> = {
     "/api/atlas-rankings",
     "/api/lsci",
     "/api/bready",
+    "/api/doing-business",
+    "/api/baci",
+    "/api/gravity/acuerdos",
+    "/api/gravity/etiquetas",
+    "/api/geodist/paises",
+    "/api/geodist/diadas",
+    "/api/trains",
   ],
   // MIDAGRI/Agromercado, Planes de Articulación Comercial (src/ingest/agromercado-articulacion.ts)
   "actividad-agraria": ["/api/agromercado-articulacion"],
