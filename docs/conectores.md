@@ -875,7 +875,7 @@ ad-hoc.
 | **Frecuencia** | Manual (`npm run ingest:candidatos` en `apps/candidatos-erm/api`). Snapshot completo en cada corrida. |
 | **Fuente de datos** | `datapol.lat` (tercero, no oficial) — ver decisión de fuente arriba. |
 | **Cobertura real ingerida** | Verificado en vivo 2026-09-10: 101,948 filas de origen, 101,948 insertadas, 0 rechazadas — universo nacional completo del corte. La Libertad: 4,637 inscritos; Lima: 12,770 inscritos — ambas cifras coinciden exactamente con el conteo hecho a mano ese mismo día antes de construir este conector. |
-| **Limitación conocida** | Depende de que un tercero no oficial siga publicando el archivo con la misma estructura. `sentenciasDeclaradas` es la autodeclaración del candidato ante el JNE (sentencias judiciales) — **no** equivale a una sanción del Tribunal de Contrataciones (OSCE); son fuentes y regímenes distintos, y esa distinción es justamente el hallazgo central del ejercicio del 2026-09-10 (ver notas editoriales en `acuba/downloads/`). |
+| **Limitación conocida** | Depende de que un tercero no oficial siga publicando el archivo con la misma estructura. `sentenciasDeclaradas` es la autodeclaración del candidato ante el JNE (sentencias judiciales) — **no** equivale a una sanción del Tribunal de Contrataciones (OSCE); son fuentes y regímenes distintos, y esa distinción es justamente el hallazgo central del ejercicio del 2026-09-10 (ver `docs/PRD_Observatorio_Electoral_y_Riesgo_v1.md`). |
 | **Cruces** | `GET /api/crossref/candidatos-sancionados` en `proveedores-sancionados` (OE-03, implementado 2026-09-10) — ver la ficha de ese cruce más abajo, en la sección de `proveedores-sancionados`. |
 
 ### `GET /api/ficha-electoral` — ficha por circunscripción (2026-10-15)

@@ -4,7 +4,7 @@
 **Fecha:** 2026-09-10
 **Ámbito:** `apps/compras-publicas/api/src/minor-contracts`, `apps/proveedores-sancionados/api/src/routes`, nueva app `apps/candidatos-erm`, `apps/seguridad-ciudadana`, `docs/conectores.md`
 **Horizonte:** dos a tres sprints; sin fecha comprometida ni owner asignado
-**Origen:** ejercicio en vivo de cruce contrataciones×sanciones×candidatos para La Libertad y Lima (2026-09-10), documentado en `acuba/downloads/nota-editorial-la-libertad-rastro-datos-2026-09-10.md`, `acuba/downloads/nota-editorial-lima-rastro-datos-2026-09-10.md` y `acuba/downloads/nota-editorial-lima-seguridad-gasto-2026-09-10.md`, y en la memoria de sesión `project_rastro_sesion_2026-09-10_cruces_electorales`
+**Origen:** ejercicio en vivo de cruce contrataciones×sanciones×candidatos para La Libertad y Lima (2026-09-10). Los hallazgos quedaron en este PRD y en `docs/TICKETS_Observatorio_Electoral_y_Riesgo_v1.md`.
 
 ## 1. Decisión de producto
 

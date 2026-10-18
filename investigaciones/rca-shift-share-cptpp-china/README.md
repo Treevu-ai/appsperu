@@ -19,7 +19,7 @@ Propuesta completa: [`propuesta/Propuesta-Gobernanza-Competitividad-CPTPP.docx`]
 | Script de regresión de panel | **Funcional, corrido de extremo a extremo** — ver resultado abajo |
 | Script de dimensiones WGI en gravedad (`17_`) | **Funcional, corrido** — las 6 dimensiones positivas y significativas |
 | Script de endogeneidad en gravedad (`18_`) | **Funcional, corrido** — ver resultado abajo |
-| Propuesta Hinrich (formato convocatoria, EN) | **Lista para envío** — `propuesta/Hinrich-Proposal-Governance-Trade-Peru-EN.md` |
+| Borradores de postulación (UP, Hinrich, propuesta general) | Fuera del árbol público — presupuestos y datos de postulación no se versionan |
 
 ## Primer resultado real: shift-share Perú 2015→2024
 
@@ -112,8 +112,8 @@ R² = 0.72. Todos los controles de gravedad se comportan como predice la teoría
 
 1. ~~Completar pruebas de endogeneidad adicionales sobre el modelo de gravedad~~ — **Completado** (script `18_gravedad_endogeneidad.py`: t−2, primeras diferencias, precedencia inversa).
 2. ~~Probar las 6 dimensiones WGI por separado en el modelo de gravedad~~ — **Completado** (script `17_gravedad_dimensiones_wgi.py`: las 6 positivas y significativas; calidad regulatoria y efectividad gubernamental las más fuertes).
-3. ~~Redactar propuesta en formato Hinrich Foundation en inglés~~ — **Completado**: `propuesta/Hinrich-Proposal-Governance-Trade-Peru-EN.md` (convocatoria del 31 oct 2026, área *trade governance*).
-4. Considerar variables instrumentales ahora que N=184 lo hace viable — a diferencia del panel chico (N=12), aquí sí hay poder estadístico para IV/GMM si se identifica un instrumento válido. (Nota: las primeras diferencias y la precedencia inversa sugieren que un IV sería lo más sólido para un eventual paper de revista, más allá de la propuesta Hinrich.)
+3. ~~Redactar propuesta en formato Hinrich Foundation en inglés~~ — el borrador de postulación no se versiona en este repositorio.
+4. Considerar variables instrumentales ahora que N=184 lo hace viable — a diferencia del panel chico (N=12), aquí sí hay poder estadístico para IV/GMM si se identifica un instrumento válido. (Nota: las primeras diferencias y la precedencia inversa sugieren que un IV sería lo más sólido para un eventual paper de revista.)
 5. El zip de BACI (2.4GB) y los archivos GeoDist quedaron en `data/raw/geodist/` y en el scratchpad de la sesión — si se necesita reprocesar, las URLs están documentadas en los scripts `07`-`18`.
 
 ## Orden de ejecución de los scripts
