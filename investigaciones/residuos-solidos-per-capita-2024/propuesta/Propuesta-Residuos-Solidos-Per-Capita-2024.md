@@ -43,7 +43,7 @@ Dos hechos hacen relevante un corte transversal nacional:
 3. **Priorización:** índice simple de dos dimensiones (posición en generación per cápita × posición inversa en la escala MEF A→G, i.e. municipios pequeños/no urbanos) para listar los 30 distritos de mayor presión combinada — alta generación con alto costo unitario de servicio.
 4. **Robustez:** año 2023; exclusión de distritos con población < 1.000; winsorización del 1% superior; muestra completa vs muestra con empresas (sesgo de selección).
 
-**Herramientas:** extracción con SQL directo a Neon (`scripts/diagnostico.sql` y script de extracción pendiente), análisis en Python (pandas + statsmodels), figuras en matplotlib. Todo reproducible desde `data/raw/`.
+**Herramientas:** extracción con SQL directo a Neon (`scripts/diagnostico.sql` y `scripts/extraer_datos.py`), análisis en Python (pandas + statsmodels), figuras en matplotlib. Todo reproducible desde `data/raw/`.
 
 ## 4. Entregables
 

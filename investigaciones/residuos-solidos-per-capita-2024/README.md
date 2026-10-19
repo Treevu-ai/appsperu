@@ -62,4 +62,5 @@ Ver `results/resumen_ejecutivo.md` y `results/tabla_04_regresiones.md` (8 especi
 1. ~~Extraer a `data/raw/`~~ ✅ hecho (2026-10-19).
 2. ~~Correr descriptivos, percentiles y regresión robusta~~ ✅ hecho (2026-10-19).
 3. ~~Confirmar unidades MINAM y diccionario MEF~~ ✅ hecho (2026-10-19, diccionario oficial decodificado).
-4. Generar `.docx` de la propuesta y versión pulida del resumen ejecutivo (2–3 páginas).
+4. ~~Generar `.docx` de la propuesta~~ ✅ hecho (2026-10-19: [`propuesta/Propuesta-Residuos-Solidos-Per-Capita-2024.docx`](propuesta/Propuesta-Residuos-Solidos-Per-Capita-2024.docx), 3 páginas, verificada visualmente; fuente `.md` = verdad).
+5. Versión pulida del resumen ejecutivo (2–3 páginas).
