@@ -1,6 +1,17 @@
-# data/raw — cobertura y huecos conocidos (diagnóstico 2026-10-19)
+# data/raw — cobertura, huecos conocidos y extractos
 
-Aún no hay extractos: esta carpeta documenta lo verificado en vivo contra Neon (proyecto `appsperu`, branch `production`) el **2026-10-19**, antes de correr la extracción.
+Diagnóstico verificado en vivo contra Neon (proyecto `appsperu`, branch `production`) el **2026-10-19** y extracción realizada el mismo día con `scripts/extraer_datos.py` (solo lectura, genera los CSV de esta carpeta).
+
+## 0. Extractos generados (2026-10-19)
+
+| Archivo | Filas | Columnas | Fuente |
+|---|---|---|---|
+| `residuos_distrital_2019_2024.csv` | 11.310 | 18 | `residuos_solidos.residuos_solidos_municipales` |
+| `empresas_distrital_2025.csv` | 1.510 | 7 | `actividad_empresarial.empresas_privadas_distrito` (agregado por ubigeo×año) |
+| `inversion_publica_por_ubigeo.csv` | 2.026 | 11 | `radar_inversiones.investments` (agregado por ubigeo) |
+| `cobertura_social_2026_04_30.csv` | 1.893 | 16 | `programas_sociales.cobertura_social` |
+
+Regenerar con: `python investigaciones/residuos-solidos-per-capita-2024/scripts/extraer_datos.py`
 
 ## 1. Base principal — `residuos_solidos.residuos_solidos_municipales`
 
@@ -35,6 +46,9 @@ Por clase MEF (media per cápita dom., 2024): A 0,604 (n=74) · B 0,504 (n=122) 
 ### `radar_inversiones.investments`
 - 150.042 proyectos (2001-05-24 … 2026-10-12), 149.896 con `ubigeo`, 2.026 ubigeos distintos (>1.891: hay variantes a depurar en la normalización).
 - `estado` es `ACTIVO` para las 150.042 filas → usar `situacion` o `fecha_fin_ejecucion`/`avance_ejecucion` para filtrar ejecución real.
+- **Hallazgo de calidad (2026-10-19):** `avance_ejecucion` escala 0–100 en el 99,85% de los casos, pero trae **167 valores fuera de rango** (p. ej. 717.320.069) que distorsionan cualquier promedio sin filtrar. La extracción filtra `BETWEEN 0 AND 100` y cuenta los inválidos en `avance_invalidos`.
+- **Hallazgo de calidad (2026-10-19):** de los 2.026 ubigeos, **135 filas de agregado están fuera del padrón MINAM** (`01` de 2 dígitos, `DD0000` sintéticos, `DDPP00` de provincia). El análisis inner-join contra el padrón de 1.891 distritos y descarta lo demás.
+- `costo_actualizado` con `fecha_registro <= 2024-12-31`: 86.407 proyectos acumulados; distritos sin proyectos se tratan como 0 (no como missing).
 
 ### `programas_sociales.cobertura_social`
 - 1.893 filas, un solo corte `fecha_corte` = **2026-04-30**; cruza 1.891/1.891 distritos.
@@ -56,13 +70,6 @@ Por clase MEF (media per cápita dom., 2024): A 0,604 (n=74) · B 0,504 (n=122) 
 4. **Año 2025 de residuos**: re-correr ingesta manual si la fuente ya lo publica.
 5. Desfase de cortes entre fuentes (2024 / 2025 / 2026) — documentado, no eliminable.
 
-## 4. Extractos planificados
+## 4. Uso en el análisis
 
-```
-data/raw/
-  residuos_distrital_2019_2024.csv    # tabla principal (11.310 filas)
-  empresas_distrital_2025.csv         # promedio/máximo mensual por ubigeo
-  inversion_publica_por_ubigeo.csv    # agregados por distrito
-  cobertura_social_2026_04_30.csv     # 1.893 filas
-  README.md                           # este archivo (actualizar al extraer)
-```
+Los cruces se validan contra el padrón MINAM de 1.891 ubigeos: lo que no está en el padrón se descarta (ver `scripts/analisar.py`, función `cargar()`). Filas descartadas: inversión 135 · empresas 2 · programas 2.

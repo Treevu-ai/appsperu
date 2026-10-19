@@ -2,7 +2,7 @@
 
 Propuesta de investigación: **corte transversal nacional de los 1.891 distritos del Perú (año 2024)** para medir cómo se distribuye la generación de residuos sólidos per cápita y qué relación guarda con la actividad económica formal local (empresas MTPE), la inversión pública acumulada (Invierte.pe) y la capacidad fiscal del municipio (clasificación MEF).
 
-Ver [`propuesta/`](propuesta/) para el documento completo. **Estado al 2026-10-19**: diagnóstico de datos completado contra Neon (proyecto `appsperu`, base `residuos_solidos`); extracción (`scripts/`) y análisis (`results/`) pendientes.
+Ver [`propuesta/`](propuesta/) para el documento completo. **Estado al 2026-10-19**: diagnóstico, extracción (`scripts/extraer_datos.py`) y análisis completo (`scripts/analisar.py`, resultados en [`results/`](results/)) — ver `results/resumen_ejecutivo.md`. Pendiente solo: confirmar unidades MINAM y diccionario MEF antes de publicar.
 
 ## Preguntas
 
@@ -31,10 +31,19 @@ Estadísticos de control (año 2024, n=1.891): `generacion_percapita_dom` min 0,
 
 ```
 propuesta/     # documento de propuesta (.md; .docx pendiente de generar)
-data/raw/      # README de cobertura y huecos conocidos (diagnóstico hecho)
-scripts/       # diagnostico.sql (read-only) — extracción y análisis pendientes
-results/       # pendiente
+data/raw/      # 4 CSV extraídos (16.739 filas) + README de cobertura y huecos
+scripts/       # diagnostico.sql · extraer_datos.py (extracción) · analisar.py (análisis)
+results/       # tablas CSV/MD, 4 figuras PNG y resumen_ejecutivo.md
 ```
+
+## Resultados principales (2026-10-19)
+
+Ver `results/resumen_ejecutivo.md` y `results/tabla_04_regresiones.md` (7 especificaciones, EE cluster por departamento, n=1.508 casos completos):
+
+1. **Desigualdad territorial moderada**: P90 (0,65) / P10 (0,33) = 1,97; mediana 0,45, media 0,479.
+2. **Capacidad MEF asociada pero no monótona**: vs clase A, las clases B, D, E, F, G tienen generación per cápita significativamente menor (F −0,134***); C es la única superior (+0,050***, la clase con más empresas formales).
+3. **Empresas formales**: elasticidad positiva y estable, +0,017 a +0,025 en las 7 especificaciones (significativa); **inversión pública acumulada: nunca significativa** (honest null).
+4. **Priorización**: índice 50% generación + 50% baja capacidad MEF → top 30 en `results/top30_priorizacion.csv` (30/30 en clases F/G); 5 primeros: MOLLEPAMPA (Apurímac), CAIRASCO (Cusco), VICHAYA (Cusco), JACAS GRANDE (Junín), PUÑOS (Huánuco).
 
 ## Huecos y riesgos conocidos
 
@@ -45,10 +54,11 @@ results/       # pendiente
 5. **Calidad MTPE**: 2 ubigeos huérfanos (`000401`, `160109`) y columna `distrito` ingesta como `"[object Object]"` → usar nombres de distrito desde `residuos_solidos`.
 6. **Sin dato de cobertura de recolección/tratamiento** (SINAN): el estudio mide *generación*, no servicio prestado. No afirmar brechas de cobertura.
 7. **Ingesta manual** (sin scheduler): re-correr `npm run ingest:residuos` si aparece año 2025 en la fuente.
+8. **`avance_ejecucion` de Invierte.pe con 167 valores fuera de rango** (escala 0–100 esperada): la extracción filtra `BETWEEN 0 AND 100`; no usar sin limpiar.
 
 ## Próximos pasos
 
-1. Extraer `residuos_solidos_municipales` (2024) + agregados por ubigeo de `investments`, `empresas_privadas_distrito` y `cobertura_social` a `data/raw/`.
-2. Confirmar unidades MINAM y diccionario MEF.
-3. Correr descriptivos, percentiles y regresión con errores robustos (cluster por departamento) en Python.
-4. Dejar tablas/figuras en `results/` y nota ejecutiva de 2–3 páginas.
+1. ~~Extraer a `data/raw/`~~ ✅ hecho (2026-10-19).
+2. ~~Correr descriptivos, percentiles y regresión robusta~~ ✅ hecho (2026-10-19).
+3. Confirmar unidades MINAM y diccionario MEF (bloqueantes para publicar cifras).
+4. Generar `.docx` de la propuesta y versión pulida del resumen ejecutivo (2–3 páginas).
