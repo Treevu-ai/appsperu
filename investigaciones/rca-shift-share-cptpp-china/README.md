@@ -1,6 +1,68 @@
-# Gobernanza institucional y competitividad exportadora real (CPTPP/China)
+# Espacio de productos frente a gobernanza institucional en la diversificación exportadora peruana hacia CPTPP y China
 
 Propuesta completa: [`propuesta/Propuesta-Gobernanza-Competitividad-CPTPP.docx`](propuesta/).
+
+## Actualización 2026-10-18 — replanteo del programa de investigación
+
+El hallazgo "la gobernanza es positiva y fuertemente significativa" (quinto resultado real,
+abajo, `16_modelo_gravedad.py`, OLS log-lineal) **no sobrevivió** a la corrección
+econométrica correcta para datos de comercio con ceros (PPML, Santos Silva y Tenreyro 2006)
+combinada con la depuración de commodities/hubs de reexportación que ya se había aplicado en
+el proyecto hermano [`gravedad-comercio-bilateral-peru`](../gravedad-comercio-bilateral-peru/).
+Se probó en **cuatro canales independientes**, todos con resultado nulo o contrario a la
+hipótesis original bajo PPML:
+
+| Hipótesis | OLS log-lineal (diseño original) | PPML (estimador correcto) |
+|---|---|---|
+| WGI promedio explica exportaciones | +0.667, p<0.001 (n=1,496) | +0.150, p=0.35 (misma submuestra) |
+| Las 6 dimensiones WGI por separado | 6/6 positivas y significativas, p<0.001 | 0/6 significativas al 5% |
+| Gobernanza × intensidad contractual (Nunn 2007, H3) | — | nulo o signo contrario a la teoría (interacción negativa, p=0.014 a nivel HS6) |
+| DiD de entrada en vigor del CPTPP | cp_post +0.145, p=0.043 (exportaciones totales) | +0.154 a +0.167, p=0.11-0.16 (sin commodities, sin hubs) |
+
+Diagnóstico: sin controlar por PIB del socio, el WGI promedio sube a +0.658 (p=0.07) bajo
+PPML — buena parte de lo que el OLS original capturaba como "efecto de gobernanza" era el
+nivel de desarrollo del socio, correlacionado con su puntaje WGI. El VIF de todas las
+variables es inferior a 2.2 en todas las especificaciones, lo que descarta
+multicolinealidad como explicación — el problema es el estimador (OLS log-lineal descarta
+los ceros y pondera mal la heterocedasticidad), no la estructura de los regresores.
+Script ad-hoc de esta prueba: `../gravedad-comercio-bilateral-peru/data/raw/probar_wgi_vs_commodities.py`
+(reusa el panel bilateral de ese proyecto hermano).
+
+**Nota de discrepancia, no resuelta**: al intentar replicar el DiD original (`23_did_cptpp_fta.py`,
+spec E, `results_avanzados/23_did_cptpp_fta.csv`, p=0.043 reportado), mi propia réplica con un
+panel construido independientemente dio p=0.099 en la especificación más cercana ("exportaciones
+totales"), no p=0.043. Probablemente se deba a universos de socios distintos (mi panel usa 224
+socios vía GeoDist y 2015-2024; el original usa ~184 socios vía `baci_peru_todos_socios.csv` y
+2016-2024). No se reconcilió esta diferencia — se deja registrada para quien retome el DiD.
+
+**La pregunta se replantea, no se abandona**: en vez de forzar una quinta prueba sobre la misma
+hipótesis de gobernanza, el proyecto gira hacia una hipótesis alternativa que ya tenía datos
+calculados pero nunca regresados — el **espacio de productos** (Hidalgo-Hausmann 2007, 2009).
+Script nuevo: `33_pilar_b_espacio_producto.py`. Dos pruebas independientes, ambas robustas a la
+misma depuración de commodities que mató el efecto de gobernanza:
+
+- **Prueba clásica (logit)**: de los 1,053 productos HS4 que Perú no exportaba con RCA≥1 en
+  2015, la densidad de espacio de productos en 2015 predice cuáles logró adquirir para 2024
+  — coeficiente 26.81, p<0.001 con todos los productos; 25.90, p=0.002 excluyendo commodities
+  HS26/71/27. Salidas: `results_avanzados/33a_espacio_producto_logit_{todos,sin_commodities}.csv`,
+  `data/processed/densidad_hs4_2015.csv`.
+- **Panel bilateral PPML** (HS4 × socio CPTPP/China × año, 2016-2024, no-commodity): la densidad
+  del producto es el predictor más fuerte del panel — coeficiente log(densidad) = +5.68,
+  p<0.001 — controlando por PIB del socio, distancia, frontera e idioma común. El WGI promedio
+  en esta muestra acotada (11 socios) sale significativo pero con signo negativo (-0.79,
+  p<0.001) — inestable dado el número reducido de clusters, no se interpreta como evidencia de
+  que la gobernanza perjudique. Salida: `results_avanzados/33b_bilateral_densidad_vs_wgi.csv`.
+
+Esto convierte el proyecto en un diseño de **dos pilares**: (1) la corrección metodológica en sí
+(por qué OLS log-lineal sobrestima el efecto de gobernanza en comercio) y (2) la hipótesis de
+capacidades productivas como explicación alternativa, con evidencia propia. La propuesta formal
+(`propuesta/build.js` → `.docx`) ya se reescribió con esta estructura — ver secciones
+"Pregunta de investigación", "Marco metodológico" (ahora 4 enfoques, no 3) y "Resultados
+preliminares" (nueva) del documento.
+
+Todo lo que sigue en este README bajo "Estado (2026-10-15)" documenta el camino que llevó hasta
+aquí — incluido el resultado de gobernanza hoy superado — y se conserva sin editar como registro
+del proceso, consistente con cómo se documentó cada hallazgo anterior en este mismo archivo.
 
 ## Estado (2026-10-15)
 
@@ -113,8 +175,14 @@ R² = 0.72. Todos los controles de gravedad se comportan como predice la teoría
 1. ~~Completar pruebas de endogeneidad adicionales sobre el modelo de gravedad~~ — **Completado** (script `18_gravedad_endogeneidad.py`: t−2, primeras diferencias, precedencia inversa).
 2. ~~Probar las 6 dimensiones WGI por separado en el modelo de gravedad~~ — **Completado** (script `17_gravedad_dimensiones_wgi.py`: las 6 positivas y significativas; calidad regulatoria y efectividad gubernamental las más fuertes).
 3. ~~Redactar propuesta en formato Hinrich Foundation en inglés~~ — el borrador de postulación no se versiona en este repositorio.
-4. Considerar variables instrumentales ahora que N=184 lo hace viable — a diferencia del panel chico (N=12), aquí sí hay poder estadístico para IV/GMM si se identifica un instrumento válido. (Nota: las primeras diferencias y la precedencia inversa sugieren que un IV sería lo más sólido para un eventual paper de revista.)
-5. El zip de BACI (2.4GB) y los archivos GeoDist quedaron en `data/raw/geodist/` y en el scratchpad de la sesión — si se necesita reprocesar, las URLs están documentadas en los scripts `07`-`18`.
+4. ~~Probar la interacción gobernanza × intensidad contractual (H3, Nunn 2007)~~ — **Completado** (script `31_h3_definitiva.py`: nulo o signo contrario a la teoría).
+5. ~~Reestimar WGI (promedio, 6 dimensiones), H3 y el DiD de CPTPP bajo PPML con commodities/hubs depurados~~ — **Completado** (ver "Actualización 2026-10-18" arriba): los cuatro canales de gobernanza no sobreviven.
+6. ~~Calcular ECI/PCI/densidad del espacio de productos y probar si predice la diversificación de Perú~~ — **Completado** (script `33_pilar_b_espacio_producto.py`): resultado positivo y robusto, reemplaza la gobernanza como hipótesis central.
+7. Redactar el artículo con la estructura de dos pilares (corrección metodológica + espacio de productos) — en curso, ver `propuesta/Propuesta-Gobernanza-Competitividad-CPTPP.docx`.
+8. Extender el panel de densidad bilateral al universo completo de socios de Perú (no solo CPTPP+China), como prueba de robustez fuera de muestra.
+9. Construir una visualización de red del espacio de productos de Perú para la sección de hallazgos del artículo.
+10. Reconciliar la discrepancia no resuelta entre el DiD original (p=0.043, `23_did_cptpp_fta.py`) y mi réplica (p=0.099) — ver nota de discrepancia arriba — antes de citar cualquiera de las dos cifras en el artículo final.
+11. El zip de BACI (2.4GB) y los archivos GeoDist quedaron en `data/raw/geodist/` y en el scratchpad de la sesión — si se necesita reprocesar, las URLs están documentadas en los scripts `07`-`18`.
 
 ## Orden de ejecución de los scripts
 
@@ -132,6 +200,10 @@ R² = 0.72. Todos los controles de gravedad se comportan como predice la teoría
 16_modelo_gravedad.py         # data/raw (+ GeoDist en data/raw/geodist/) -> modelo de gravedad (corrido, resultado robusto)
 17_gravedad_dimensiones_wgi.py  # 6 dimensiones WGI por separado en gravedad (corrido, todas significativas)
 18_gravedad_endogeneidad.py     # batería de endogeneidad sobre gravedad (corrido: t-2 sobrevive, primeras diferencias no, precedencia inversa significativa)
+23_did_cptpp_fta.py             # DiD de entrada en vigor del CPTPP, incl. spec PPML (corrido; ver nota de discrepancia arriba)
+27_complejidad_producto.py      # ECI/PCI/proximidad/densidad, espacio de productos (corrido; insumo de 33_)
+31_h3_definitiva.py             # H3: gobernanza x intensidad contractual (Nunn 2007), FE producto x socio (corrido, resultado nulo)
+33_pilar_b_espacio_producto.py  # Pilar B: densidad del espacio de productos vs. WGI, logit + panel bilateral PPML (corrido, resultado robusto)
 ```
 
 GeoDist (CEPII, distancias/frontera/idioma/colonia): `https://www.cepii.fr/distance/dist_cepii.zip`.
