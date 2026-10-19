@@ -43,7 +43,7 @@ Ver `results/resumen_ejecutivo.md` y `results/tabla_04_regresiones.md` (8 especi
 1. **Desigualdad territorial moderada**: P90 (0,65) / P10 (0,33) = 1,97; mediana 0,45, media 0,479 kg/hab/día.
 2. **La clasificación MEF refleja urbanización, no capacidad fiscal**: vs clase A (ciudades principales), las clases B, D, E, F, G generan significativamente menos per cápita (F −0,134***; G −0,121**); C (Lima Metropolitana) es la única superior (+0,050***, la clase con más empresas formales). Al retirar el control `% urbana` (M8) los contrastes se sostienen (F −0,141***) → son efectos de tamaño/urbanización, no de presupuesto.
 3. **Empresas formales**: elasticidad positiva y estable, +0,017 a +0,025 en las 8 especificaciones (significativa); **inversión pública acumulada: nunca significativa** (honest null).
-4. **Priorización**: índice 50% generación + 50% posición inversa en la escala MEF (distritos pequeños/no urbanos) → top 30 en `results/top30_priorizacion.csv` (30/30 en clases F/G); 5 primeros: MOLLEPAMPA (Apurímac), CAIRASCO (Cusco), VICHAYA (Cusco), JACAS GRANDE (Junín), PUÑOS (Huánuco). Lectura de política: **alto costo unitario de servicio** (generación alta en localidades dispersas), no "menor capacidad fiscal".
+4. **Priorización**: índice 50% generación + 50% posición inversa en la escala MEF (distritos pequeños/no urbanos) → top 30 en `results/top30_priorizacion.csv` (**30/30 en clase G**; 6 empatan en el máximo — MOLLEPAMPA (Huancavelica), CONDURIRI (Puno), PUÑOS (Huánuco), YAUYUCAN (Cajamarca), LIMATAMBO y OCORURO (Cusco); el orden dentro del empate es arbitrario). Lectura de política: **alto costo unitario de servicio** (generación alta en localidades dispersas), no "menor capacidad fiscal".
 
 ## Huecos y riesgos conocidos
 
@@ -63,4 +63,4 @@ Ver `results/resumen_ejecutivo.md` y `results/tabla_04_regresiones.md` (8 especi
 2. ~~Correr descriptivos, percentiles y regresión robusta~~ ✅ hecho (2026-10-19).
 3. ~~Confirmar unidades MINAM y diccionario MEF~~ ✅ hecho (2026-10-19, diccionario oficial decodificado).
 4. ~~Generar `.docx` de la propuesta~~ ✅ hecho (2026-10-19: [`propuesta/Propuesta-Residuos-Solidos-Per-Capita-2024.docx`](propuesta/Propuesta-Residuos-Solidos-Per-Capita-2024.docx), 3 páginas, verificada visualmente; fuente `.md` = verdad).
-5. Versión pulida del resumen ejecutivo (2–3 páginas).
+5. ~~Versión pulida del resumen ejecutivo (2–3 páginas)~~ ✅ hecho (2026-10-19: [`results/Nota-Ejecutiva-Residuos-Solidos-2024.docx`](results/Nota-Ejecutiva-Residuos-Solidos-2024.docx), 2 páginas con las tres implicancias de política; fuente `.md` en el mismo directorio).
