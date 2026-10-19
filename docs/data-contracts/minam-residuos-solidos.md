@@ -10,10 +10,12 @@
   (corregido 2026-10-19: 0 secuencias multibyte UTF-8 en el archivo; `Ñ` aparece como byte crudo `0xD1`
   414 veces — `BAÑOS`, `FERREÑAFE`, `NEPEÑA`, `CONSTITUCIÓN`…). Los departamentos vienen sin tildes
   (`ANCASH`, `JUNIN`), solo distritos/provincias llevan diacríticos.
-  **Bug derivado:** `apps/residuos-solidos/api/src/ingest/residuos-connector.ts:97` hace
-  `buffer.toString("utf-8")` → los ~440 bytes no-ASCII se pierden como `U+FFFD`; en la base quedan
+  **Bug corregido 2026-10-19:** `apps/residuos-solidos/api/src/ingest/residuos-connector.ts` hacía
+  `buffer.toString("utf-8")` → los ~440 bytes no-ASCII se perdían como `U+FFFD`; en la base quedan
   **222 filas / 48 nombres de distrito dañados** (`BA?OS`, `PU?OS`, `FERRE?AFE`). Afecta solo
-  etiquetas (las claves `UBIGEO` son numéricas); fix de una línea: `toString("latin1")` + re-ingesta.
+  etiquetas (las claves `UBIGEO` son numéricas). Fix: `ingest/decode-csv.ts` decide por contenido
+  (UTF-8 válido → UTF-8; si no → Latin-1), con tests (`src/__tests__/decode-csv.test.ts`).
+  **Re-ingesta manual pendiente** (`npm run ingest:residuos`) para reparar los 222 nombres ya guardados.
 - Datos alimentados por SIGERSOL (Sistema de Información para la Gestión de Residuos Sólidos),
   reportados anualmente por municipalidades provinciales/distritales al MINAM.
 

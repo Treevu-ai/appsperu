@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 import { parse } from "csv-parse/sync";
 import type { PoolClient } from "pg";
 import { pool } from "../db/pool.js";
+import { decodeCsvBuffer } from "./decode-csv.js";
 import { normalizeResiduos, type CanonicalResiduos, type RejectedRow } from "./normalize.js";
 
 const USER_AGENT =
@@ -94,7 +95,7 @@ export async function ingestResiduos(): Promise<IngestSummary> {
     throw new Error(`MINAM/PNDA devolvió ${res.status} al descargar ${FILE_URL}`);
   }
   const buffer = Buffer.from(await res.arrayBuffer());
-  const csvText = buffer.toString("utf-8");
+  const csvText = decodeCsvBuffer(buffer);
 
   const rawRows = parse(csvText, {
     columns: true,
