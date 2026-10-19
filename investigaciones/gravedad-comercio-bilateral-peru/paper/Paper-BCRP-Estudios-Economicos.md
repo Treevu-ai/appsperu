@@ -2,7 +2,7 @@
 
 **Ricardo Cuba**¹
 
-¹ Octubre 2026.
+¹ Economista. Asistente de investigación, Centro de Investigación de la Universidad del Pacífico (CIUP). Octubre 2026.
 
 ## Resumen
 
@@ -40,24 +40,53 @@ materias primas; hubs de reexportación.
 
 ## 1. Introducción
 
-Los modelos de gravedad son el instrumento estándar en economía del comercio
-internacional para explicar el volumen de comercio bilateral a partir del
-tamaño de las economías y la distancia (física, cultural, institucional)
-entre ellas (Tinbergen, 1962; Anderson y van Wincoop, 2003). Santos Silva y
-Tenreyro (2006) mostraron que la estimación log-lineal por MCO está sesgada
-bajo heterocedasticidad y subestima sistemáticamente el comercio entre países
-distantes, y propusieron PPML (Poisson pseudo-maximum likelihood) como
-alternativa consistente que además no requiere descartar observaciones de
-comercio cero.
+Desde su formulación original (Tinbergen, 1962), el modelo de gravedad ha
+sido la herramienta dominante en economía del comercio internacional para
+explicar el volumen de comercio bilateral a partir del tamaño de las
+economías involucradas y la distancia —física, cultural, institucional—
+que las separa. Su atractivo empírico (pocas variables, ajuste
+consistentemente alto) convive con una historia de fragilidad
+microfundamental que tomó tres décadas en resolverse del todo. Anderson y
+van Wincoop (2003) mostraron que una especificación de gravedad sin los
+términos de "resistencia multilateral" —el costo relativo de comerciar con
+un socio frente al costo de comerciar con el resto del mundo— produce
+estimaciones sesgadas del efecto de la distancia y de las fronteras, el
+célebre *border puzzle*. Santos Silva y Tenreyro (2006) identificaron un
+segundo problema, distinto pero igual de consecuente: la práctica estándar
+de linealizar la ecuación de gravedad tomando logaritmos e introduciendo
+MCO produce estimadores inconsistentes bajo heterocedasticidad (un supuesto
+que la teoría no da razón para descartar) y obliga a eliminar del panel
+toda observación de comercio cero, lo que sesga sistemáticamente a la baja
+el coeficiente de distancia. Su solución —estimar en niveles por
+pseudo-máxima verosimilitud de Poisson (PPML)— es hoy el estándar de la
+literatura aplicada (Head y Mayer, 2014) precisamente porque corrige ambos
+problemas a la vez: es consistente ante heterocedasticidad no especificada
+y admite el panel completo, ceros incluidos.
 
-Perú es un caso particularmente informativo para poner a prueba estas
-herramientas: es una economía exportadora de commodities (cobre, oro, gas
-natural licuado) cuya estructura comercial está fuertemente determinada por
-cadenas de procesamiento y logística global, no solo por demanda final
-bilateral. Este trabajo documenta, paso a paso, cómo esa estructura
-contamina una estimación de gravedad "de manual" y cómo corregirla sin caer
-en *data dredging* (ajustar el filtro de datos hasta obtener el resultado
-deseado).
+Estas dos correcciones, sin embargo, resuelven un problema de forma
+funcional del modelo, no un problema de qué mide la variable dependiente.
+Este trabajo documenta un tercer tipo de sesgo, de naturaleza distinta y
+hasta donde conocemos no tratado con el mismo detalle empírico en la
+literatura de gravedad aplicada a economías latinoamericanas: el que surge
+cuando el valor de la exportación o importación bilateral no refleja la
+relación económica entre el país declarante y el socio de destino, sino la
+geografía de la logística global —refinación de metales, fundición de
+concentrados, tránsito portuario— superpuesta sobre ella. Perú es un caso
+particularmente informativo para exponerlo: es, simultáneamente, una
+economía exportadora de commodities mineros y energéticos (cobre, oro, gas
+natural licuado) cuya estructura exportadora está mediada por cadenas de
+procesamiento global, y una economía importadora de manufacturas cuya
+estructura está mediada por la geografía de la producción industrial
+mundial. Ambos rasgos, veremos, distorsionan un modelo de gravedad "de
+manual" de maneras opuestas. El aporte de este trabajo es metodológico:
+documentar, con el mismo rigor y la misma vara para ambas direcciones del
+comercio, cómo diagnosticar esta contaminación mediante el análisis de
+residuos, cómo corregirla sin incurrir en *data dredging* (ajustar el
+filtro de datos observación por observación hasta obtener el resultado que
+se busca), y —el punto que distingue este ejercicio de una simple limpieza
+de datos— cómo reconocer cuándo la corrección no corresponde porque el
+patrón observado, aunque contraintuitivo, es economía real y no artefacto
+de medición.
 
 ## 2. Datos
 
@@ -130,13 +159,25 @@ fricción de transporte o información predeciría.
 
 ### 4.2 Diagnóstico: no es multicolinealidad
 
-Se descartó la hipótesis de colinealidad entre PBI y distancia (los países
-grandes y lejanos, como China, podrían estar confundiendo ambos
-coeficientes): el factor de inflación de varianza de `log_dist` es 2.08, y la
-correlación simple entre `log(PBI)` y `log(distancia)` es de solo 0.17. El
-diagnóstico correcto es el análisis de residuos de Pearson: dos observaciones
-dominan por completo el ajuste de la verosimilitud de Poisson, que pondera
-fuertemente los valores grandes.
+Una primera hipótesis, razonable antes de mirar los datos, es que el
+coeficiente de distancia esté capturando una colinealidad espuria con el
+tamaño del socio: si los países más grandes de la muestra (China, Estados
+Unidos) resultan ser también, en promedio, los más lejanos, un estimador
+que no logra separar ambos efectos podría trasladarle al coeficiente de
+distancia parte de la varianza que en realidad explica el PBI. Esta
+hipótesis se descarta con evidencia, no por supuesto: el factor de
+inflación de varianza (VIF) de `log_dist` es 2.08 —muy por debajo del
+umbral convencional de 5 o 10 que señalaría colinealidad problemática— y la
+correlación simple entre `log(PBI)` y `log(distancia)` es de apenas 0.17.
+El diagnóstico que sí resulta informativo es el análisis de los residuos de
+Pearson de la verosimilitud de Poisson, que por construcción pondera con
+mayor peso las observaciones de valor absoluto más alto: en un panel con
+una dispersión de escala tan amplia como el comercio exterior (de cientos
+de miles de dólares a miles de millones), un puñado de observaciones puede
+dominar por completo el ajuste sin que ningún diagnóstico de
+multicolinealidad lo revele, precisamente porque el problema no está en la
+estructura de correlación de los regresores sino en la variable dependiente
+misma.
 
 **Cuadro 3. Principales exportaciones a Suiza y Namibia por partida HS6.**
 
@@ -145,14 +186,26 @@ fuertemente los valores grandes.
 | Suiza | 710812 — oro semi-manufacturado, no monetario | USD 23,072 millones |
 | Namibia | 260300 — concentrados de cobre | USD 1,586 millones |
 
-Suiza es uno de los principales centros mundiales de refinación de oro; el
-oro peruano se envía allí para refinarse, no por el tamaño de la economía
-suiza como mercado de consumo. Namibia alberga la fundición Tsumeb (Dundee
-Precious Metals), especializada en procesar concentrados de cobre con alto
-contenido de arsénico — como los de minas peruanas difíciles de procesar en
-otra parte. Ambos son flujos reales, pero reflejan logística de
-procesamiento de materias primas, no demanda final del país de destino: el
-supuesto implícito del modelo de gravedad.
+La explicación no es estadística sino industrial. Suiza concentra,
+dependiendo de la fuente y del año, entre un tercio y dos quintos de la
+capacidad mundial de refinación de oro —el Secretariado de Estado de
+Economía suizo (SECO) reportó una participación del 34% del oro refinado
+mundial en 2023 (swissinfo.ch, 2025)—, de modo que una parte sustancial del
+oro extraído en cualquier punto del planeta, Perú incluido, transita por
+refinerías suizas antes de incorporarse al mercado internacional como
+lingote certificado. El valor que BACI registra como "exportación a Suiza"
+no mide, entonces, cuánto oro demanda la economía suiza como consumidor
+final —una cifra irrelevante frente al tamaño real del flujo— sino cuánto
+oro pasa por su industria de refinación camino a terceros mercados. Namibia
+ofrece un ejemplo más específico de la misma lógica: alberga la fundición
+de Tsumeb (Dundee Precious Metals), una de las pocas plantas en el mundo
+metalúrgicamente equipadas para procesar concentrados de cobre con alto
+contenido de arsénico, precisamente el perfil geoquímico de varios
+yacimientos peruanos cuyo concentrado no puede procesarse en fundiciones
+convencionales sin penalidades o inversión adicional en control de
+emisiones. En ambos casos el flujo es real y el valor declarado es
+correcto; lo que falla es el supuesto que el modelo de gravedad hace sobre
+él —que refleja demanda final del país de destino— y no el dato en sí.
 
 ### 4.3 Filtro por producto: excluir minerales, oro/plata y combustibles
 
@@ -184,20 +237,33 @@ significativo. El filtro por producto resuelve el problema.
 ### 4.4 Segundo diagnóstico: hubs de reexportación
 
 Al revisar nuevamente los residuos de Pearson tras remover los commodities,
-el país que más domina el ajuste pasa a ser **Países Bajos** — el clásico
-"efecto Róterdam": mercancía declarada hacia un puerto-hub europeo para
-redistribuirse dentro de la Unión Europea, no para consumo neerlandés real.
-Reino Unido y Panamá (zona del Canal) aparecen también entre los residuos más
-altos.
+el país que más domina el ajuste pasa a ser **Países Bajos**, seguido de
+Reino Unido y Panamá. El fenómeno tiene nombre propio en la literatura de
+estadística de comercio: el "efecto Róterdam-Amberes" (*Rotterdam-Antwerp
+effect*), documentado por las autoridades estadísticas europeas y por
+estudios de la propia Oficina Central de Estadística neerlandesa, describe
+la sobreestimación sistemática de las cifras de comercio de un país-puerto
+cuando la mercancía declarada en aduana como destinada a él en realidad
+continúa, sin transformación sustancial, hacia un tercer país. No es un
+fenómeno marginal: la UNCTAD documenta que las reexportaciones representan
+más del 40% de las exportaciones totales de Hong Kong, Singapur, Países
+Bajos y Chipre —las economías-puerto por excelencia del comercio mundial—,
+proporción que en un panel de gravedad bilateral infla artificialmente el
+coeficiente asociado a esos socios sin que exista, del lado del país
+exportador, ninguna razón económica real para privilegiarlos frente a
+otros destinos de tamaño comparable.
 
 En vez de excluir estos países uno por uno a medida que aparecen como
 residuo —lo cual degenera en *data dredging*, ajustando el filtro hasta
-lograr el resultado deseado—, se adoptó la lista **estándar de la literatura**
-de hubs de reexportación: Países Bajos, Bélgica, Singapur, Hong Kong, Panamá
-y Emiratos Árabes Unidos (el eje Róterdam-Amberes-Singapur-Hong
-Kong-Panamá-Dubái). Esta lista se fija *a priori*, por la clasificación
-habitual en estudios de comercio, no por los residuos de este dataset
-específico.
+lograr el resultado deseado—, se adoptó la lista **estándar de la
+literatura** de hubs de reexportación: Países Bajos, Bélgica, Singapur,
+Hong Kong, Panamá y Emiratos Árabes Unidos (el eje
+Róterdam-Amberes-Singapur-Hong Kong-Panamá-Dubái). Esta lista se fija *a
+priori*, por la clasificación habitual en estudios de comercio y estadística
+oficial, no por los residuos de este dataset específico —una distinción
+metodológica central: el criterio de exclusión debe ser externo y
+verificable, nunca derivado circularmente del resultado que se quiere
+obtener.
 
 ### 4.5 Especificación final
 
@@ -325,9 +391,20 @@ el signo positivo de la distancia en importaciones **no es un artefacto de
 medición que corregir**: refleja que la canasta importadora peruana
 —maquinaria, electrónica, vehículos, insumos industriales— está
 estructuralmente concentrada en un puñado de potencias manufactureras
-lejanas (sobre todo China), un patrón documentado en la literatura reciente
-de comercio de América Latina con Asia, y que domina sobre cualquier
-preferencia por proximidad geográfica.
+lejanas, sobre todo China. Este patrón, lejos de ser una peculiaridad
+peruana, es consistente con la literatura sobre el ascenso de China como
+proveedor manufacturero global: Autor, Dorn y Hanson (2013) documentan, con
+datos de EE.UU., cómo la penetración de las importaciones chinas
+reconfiguró de forma duradera la geografía de la oferta manufacturera
+mundial con independencia de la distancia al comprador, un fenómeno que la
+literatura posterior extendió a economías en desarrollo integradas a
+cadenas de valor globales centradas en Asia. Para un modelo de gravedad
+clásico, construido sobre el supuesto de que la fricción de distancia
+encarece el comercio de forma monotónica, este es precisamente el tipo de
+reconfiguración estructural que el coeficiente de distancia no está
+diseñado para absorber: no hay fricción de transporte, por baja que fuera,
+capaz de compensar la ventaja de escala, costo y especialización de las
+cadenas de suministro asiáticas en bienes manufacturados estandarizados.
 
 ### 5.5 La asimetría exportación-importación
 
@@ -350,36 +427,54 @@ distancia, mal especificado, podría haber ocultado.
 
 ## 6. Discusión
 
-El hallazgo metodológico central es que, para una economía exportadora de
-commodities como Perú, un modelo de gravedad "de manual" sobre el valor
-total exportado no mide lo que se cree que mide: una fracción sustancial del
-flujo refleja la geografía de la refinación y el tránsito global de
-materias primas (Suiza para oro, Namibia para concentrados de cobre, Países
-Bajos/Panamá como puertos de redistribución), no la relación bilateral
-económica entre Perú y el país de destino final. Ignorar esto no solo
-distorsiona el coeficiente de distancia: también infla artificialmente el
-coeficiente de "tiene acuerdo comercial" (de +0.71 significativo a −0.05
-estadísticamente nulo), porque los países con acuerdos comerciales vigentes
-con Perú tienden a coincidir con los grandes compradores de oro y gas.
+El hallazgo central tiene una lectura econométrica y una lectura de
+economía real, y conviene separarlas. Desde la econometría: para una
+economía exportadora de commodities como Perú, un modelo de gravedad "de
+manual" estimado sobre el valor total exportado no mide lo que se asume que
+mide. Una fracción sustancial del flujo registrado refleja la geografía de
+la refinación y el tránsito global de materias primas —Suiza para oro,
+Namibia para concentrados de cobre, Países Bajos y Panamá como puertos de
+redistribución— y no la relación bilateral económica entre Perú y el país
+de destino final del bien. Ignorar esta distinción no solo distorsiona el
+coeficiente de distancia: también infla artificialmente el coeficiente de
+"tiene acuerdo comercial" (de +0.71 significativo a −0.05 estadísticamente
+nulo una vez depurados los commodities), porque los países con acuerdos
+comerciales vigentes con Perú tienden a coincidir, por azar institucional
+más que por diseño, con los grandes compradores de oro y gas. Un lector
+apresurado de la especificación cruda concluiría que los tratados de libre
+comercio de Perú tienen un efecto grande y significativo sobre sus
+exportaciones; la especificación depurada muestra que esa conclusión no
+sobrevive al control de la composición sectorial del comercio.
 
-La sección 5 muestra, además, que el mismo diagnóstico aplicado con el mismo
-rigor a las importaciones no produce el mismo resultado — y eso es, en sí
-mismo, la evidencia de que el procedimiento no está sesgado hacia "encontrar"
-el signo esperado: si lo estuviera, se habría seguido ajustando el filtro de
-importaciones hasta forzar un coeficiente de distancia negativo. No se hizo,
-porque los residuos no señalan a ningún hub de tránsito, y la explicación
-alternativa (concentración real en manufactura asiática) es más simple y
-mejor documentada que inventar una corrección adicional.
+Desde la economía real: la sección 5 muestra que el mismo diagnóstico,
+aplicado con el mismo rigor a las importaciones, no reproduce el resultado
+de las exportaciones —y esa asimetría es, en sí misma, la evidencia más
+convincente de que el procedimiento no estuvo sesgado hacia "encontrar" el
+signo que la teoría predice. Si el objetivo hubiera sido forzar un
+coeficiente de distancia negativo a cualquier costo, el camino disponible
+era evidente: seguir excluyendo países hasta que los residuos cedieran. No
+se hizo, porque los residuos del lado importador no señalan a ningún hub de
+tránsito conocido, y la explicación alternativa —concentración real de las
+importaciones peruanas en un puñado de potencias manufactureras asiáticas—
+es a la vez más simple y mejor documentada en la literatura de comercio
+internacional (Autor, Dorn y Hanson, 2013) que cualquier corrección
+adicional ad hoc.
 
-Este patrón no es exclusivo de Perú: es un problema conocido en la
-literatura de gravedad para economías exportadoras de recursos naturales
-(Chile con cobre, los países del Golfo con petróleo, la República Democrática
-del Congo con cobalto). El aporte de este ejercicio es documentar el
-procedimiento completo y reproducible —diagnóstico de residuos, filtro por
-producto declarado a priori, filtro por país con lista estándar de la
-literatura, el punto explícito en el que se decide dejar de excluir
-observaciones, y la verificación simétrica del lado importador— en un caso
-real con datos públicos verificables.
+Este patrón de contaminación por commodities no es exclusivo de Perú: es un
+problema conocido en la literatura de gravedad aplicada a economías
+exportadoras de recursos naturales (Chile con cobre, los países del Golfo
+con petróleo, la República Democrática del Congo con cobalto), aunque rara
+vez se documenta con el nivel de detalle a nivel de producto (HS6) y de
+verificación de residuos que se presenta aquí. El aporte de este ejercicio
+es, en ese sentido, menos un hallazgo sustantivo nuevo sobre el comercio
+peruano que una demostración reproducible de procedimiento: diagnóstico de
+residuos antes de aceptar un coeficiente, filtro por producto declarado a
+priori y aplicado de forma pareja, filtro por país con una lista estándar
+de la literatura (no ajustada al resultado), un punto explícito en el que
+se decide dejar de excluir observaciones, y —el control que falta en la
+mayoría de ejercicios similares— la verificación simétrica del lado
+importador, que es precisamente lo que permite distinguir un artefacto de
+medición de un patrón económico real.
 
 ## 7. Limitaciones
 
@@ -413,6 +508,10 @@ real con datos públicos verificables.
 - Anderson, J. E., & van Wincoop, E. (2003). Gravity with Gravitas: A
   Solution to the Border Puzzle. *American Economic Review*, 93(1), 170-192.
   DOI: [10.1257/000282803321455214](https://doi.org/10.1257/000282803321455214)
+- Autor, D. H., Dorn, D., & Hanson, G. H. (2013). The China Syndrome: Local
+  Labor Market Effects of Import Competition in the United States.
+  *American Economic Review*, 103(6), 2121-2168.
+  DOI: [10.1257/aer.103.6.2121](https://doi.org/10.1257/aer.103.6.2121)
 - Santos Silva, J. M. C., & Tenreyro, S. (2006). The Log of Gravity. *Review
   of Economics and Statistics*, 88(4), 641-658.
   DOI: [10.1162/rest.88.4.641](https://doi.org/10.1162/rest.88.4.641)
@@ -421,15 +520,25 @@ real con datos públicos verificables.
 - Head, K., & Mayer, T. (2014). Gravity Equations: Workhorse, Toolkit, and
   Cookbook. En *Handbook of International Economics*, Vol. 4, pp. 131-195.
   Elsevier. DOI: [10.1016/B978-0-444-54314-1.00003-3](https://doi.org/10.1016/B978-0-444-54314-1.00003-3)
+- UNCTAD. *Review of Maritime Transport* y estadísticas de reexportación:
+  las reexportaciones superan el 40% de las exportaciones totales de Hong
+  Kong, Singapur, Países Bajos y Chipre.
+- swissinfo.ch (2025). US tariff negotiations reaffirm Switzerland's role
+  as a gold hub (cita cifra del Secretariado de Estado de Economía suizo,
+  SECO: 34% del oro refinado mundial en 2023).
+  [swissinfo.ch/eng/business/switzerland-the-world-s-gold-hub/33706126](https://www.swissinfo.ch/eng/business/switzerland-the-world-s-gold-hub/33706126)
 - CEPII BACI (vintage 202601), CEPII GeoDist, CEPII Gravity V202211 — centre
   d'Études Prospectives et d'Informations Internationales.
   [cepii.fr](https://www.cepii.fr/)
 - World Bank, World Development Indicators, `NY.GDP.MKTP.CD` (PBI corriente,
   US$). [databank.worldbank.org/source/world-development-indicators](https://databank.worldbank.org/source/world-development-indicators)
 
-Las 4 referencias académicas fueron verificadas en vivo contra fuentes
-primarias el 2026-10-18 (ver `referencias_verificadas.md` en la raíz de este
-proyecto para el detalle de la verificación).
+Las 7 referencias con afirmaciones verificables (4 académicas + 3 fuentes de
+estadística institucional) fueron verificadas en vivo contra fuentes
+primarias el 2026-10-18 (ver `referencias_verificadas.md` en la raíz de
+este proyecto para el detalle de la verificación de las 4 académicas; las
+3 adicionales se verificaron en la misma sesión de trabajo que incorporó
+esta revisión narrativa).
 
 ## Anexo — Reproducibilidad
 

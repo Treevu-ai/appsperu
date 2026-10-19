@@ -1,6 +1,6 @@
 # Por qué la distancia explica lo que Perú exporta pero no lo que importa: el espejismo del oro, el cobre y el peso de la manufactura asiática
 
-**Ricardo Cuba** · Octubre 2026
+**Ricardo Cuba**, economista · Asistente de investigación, CIUP · Octubre 2026
 
 ## Resumen
 
@@ -300,9 +300,11 @@ el signo positivo de la distancia en importaciones **no es un artefacto de
 medición que corregir**: refleja que la canasta importadora peruana
 —maquinaria, electrónica, vehículos, insumos industriales— está
 estructuralmente concentrada en un puñado de potencias manufactureras
-lejanas (sobre todo China), un patrón documentado en la literatura reciente
-de comercio de América Latina con Asia, y que domina sobre cualquier
-preferencia por proximidad geográfica.
+lejanas, sobre todo China. Es el mismo patrón que documentan Autor, Dorn y
+Hanson (2013) para Estados Unidos: la penetración manufacturera china
+reconfigura la geografía de la oferta mundial con independencia de la
+distancia al comprador, un efecto de escala y especialización que ninguna
+fricción de transporte, por baja que fuera, podría compensar.
 
 ### 5.5 La asimetría exportación-importación
 
@@ -386,6 +388,10 @@ real con datos públicos verificables.
 - Anderson, J. E., & van Wincoop, E. (2003). Gravity with Gravitas: A
   Solution to the Border Puzzle. *American Economic Review*, 93(1), 170-192.
   DOI: [10.1257/000282803321455214](https://doi.org/10.1257/000282803321455214)
+- Autor, D. H., Dorn, D., & Hanson, G. H. (2013). The China Syndrome: Local
+  Labor Market Effects of Import Competition in the United States.
+  *American Economic Review*, 103(6), 2121-2168.
+  DOI: [10.1257/aer.103.6.2121](https://doi.org/10.1257/aer.103.6.2121)
 - Santos Silva, J. M. C., & Tenreyro, S. (2006). The Log of Gravity. *Review
   of Economics and Statistics*, 88(4), 641-658.
   DOI: [10.1162/rest.88.4.641](https://doi.org/10.1162/rest.88.4.641)
