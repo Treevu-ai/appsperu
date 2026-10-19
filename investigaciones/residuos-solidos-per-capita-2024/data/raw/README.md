@@ -34,6 +34,10 @@ Filas por año: 2019 = 1.874 · 2020 = 1.874 · 2021 = 1.890 · 2022 = 1.890 · 
 
 Por clase MEF (media per cápita dom., 2024): A 0,604 (n=74) · B 0,504 (n=122) · C 0,661 (n=42) · D 0,550 (n=129) · E 0,473 (n=378) · F 0,460 (n=509) · G 0,453 (n=637). Gradiente visible pero no monótono → justifica el análisis, no la concluye.
 
+**Unidades (diccionario oficial MINAM, decodificado 2026-10-19):** per cápita = **kg/hab/día** (sobre población **urbana**; identidad `DOM_URBANA_TDIA × 1.000 / POB_URBANA` verificada en el 89,9% de filas y `..._TANIO ≈ ..._TDIA × 365` con dif. mediana 0,32%). La GPC sale de **estudios de caracterización** municipales (SIGERSOL), no de medición continua → serie cuantizada.
+
+**Codificación (hallazgo 2026-10-19):** el CSV de origen está en **Latin-1**, no UTF-8; la ingesta (`residuos-connector.ts:97`) lo decodifica como UTF-8 y deja **222 filas / 48 nombres de distrito con `U+FFFD`** (`BA?OS`, `PU?OS`, `FERRE?AFE`…). Solo afecta etiquetas: `ubigeo` y las columnas numéricas están intactas.
+
 ## 2. Covariables verificadas
 
 ### `actividad_empresarial.empresas_privadas_distrito`
@@ -64,11 +68,12 @@ Por clase MEF (media per cápita dom., 2024): A 0,604 (n=74) · B 0,504 (n=122) 
 
 ## 3. Huecos que hay que cerrar antes de publicar
 
-1. **Unidades** de `generacion_percapita_dom` (se asume kg/hab/día) — diccionario `.xlsx` de MINAM sin decodificar (`docs/data-contracts/minam-residuos-solidos.md`).
-2. **Diccionario MEF A–G** sin decodificar en el data contract.
+1. ~~**Unidades** de `generacion_percapita_dom`~~ → **resuelto 2026-10-19**: kg/hab/día (diccionario oficial MINAM; ver `docs/data-contracts/minam-residuos-solidos.md`). Copias del diccionario y metadatos en `data/fuentes-minam/`.
+2. ~~**Diccionario MEF A–G**~~ → **resuelto 2026-10-19**: Programa de Incentivos MEF, clasifica por tamaño de ciudad y % población urbana (no capacidad fiscal). Texto oficial en el data contract.
 3. **Cobertura MTPE** en los 383 distritos faltantes (¿cero de verdad?).
-4. **Año 2025 de residuos**: re-correr ingesta manual si la fuente ya lo publica.
+4. **Año 2025 de residuos**: re-correr ingesta manual si la fuente ya lo publica (el dataset en datosabiertos.gob.pe fue modificado 2026-03-10; nuestra ingesta es de 2026-09-30).
 5. Desfase de cortes entre fuentes (2024 / 2025 / 2026) — documentado, no eliminable.
+6. **GPC basada en estudios de caracterización** municipales, no medición continua → cuantización y comparabilidad imperfecta entre distritos (advertencia de política de datos, no bloqueo).
 
 ## 4. Uso en el análisis
 

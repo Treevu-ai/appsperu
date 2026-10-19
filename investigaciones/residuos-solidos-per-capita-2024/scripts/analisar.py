@@ -2,8 +2,9 @@
 
 Corte transversal nacional 2024 (n = 1.891 distritos): distribución de la generación
 de residuos sólidos per cápita y su asociación con actividad económica formal (MTPE
-2025), inversión pública acumulada (Invierte.pe) y capacidad fiscal municipal
-(clasificación MEF), controles de urbanización, población y región natural.
+2025), inversión pública acumulada (Invierte.pe) y clasificación MEF del municipio
+(tamaño de ciudad y % población urbana), controles de urbanización, población y
+región natural.
 
 Uso:
     python investigaciones/residuos-solidos-per-capita-2024/scripts/analisar.py
@@ -19,7 +20,14 @@ Notas de método
 - `costo_actualizado` de Invierte.pe con NaN se trata como 0 (ausencia de proyectos).
 - `empresas_prom_mensual` con NaN NO se imputa: se elimina en casos completos.
 - Errores estándar robustos clusterizados por departamento (25 clusters).
-- Unidades de generación asumidas kg/hab/día (pendiente de confirmar con MINAM).
+- Unidades confirmadas con el diccionario oficial MINAM (2026-10-19, ver
+  docs/data-contracts/minam-residuos-solidos.md): per cápita en kg/hab/día, totales
+  en toneladas; ambas per cápita sobre población URBANA. La GPC proviene de estudios
+  de caracterización municipales (SIGERSOL), no de medición continua → serie cuantizada.
+- `CLASIFICACION_MUNICIPAL_MEF` (Programa de Incentivos MEF) clasifica por tamaño de
+  ciudad y % población urbana, NO por capacidad fiscal; E/F/G son función
+  determinística del % urbana → especificación M8 sin `pct_urbana` para diagnosticar
+  colinealidad.
 """
 from __future__ import annotations
 
@@ -172,6 +180,9 @@ def correr_regresiones(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, "objec
         "M7": dict(dv="lpercap_2023",
                    rhs="log_emp + log_inv + pct_urbana + log_pob + C(clasificacion_municipal_mef) + C(region_natural)",
                    nota="DV año 2023"),
+        "M8": dict(dv="lpercap",
+                   rhs="log_emp + log_inv + log_pob + C(clasificacion_municipal_mef) + C(region_natural)",
+                   nota="M3 sin % urbana (colinealidad MEF)"),
     }
     d = df.copy()
     d["lpercap_w"] = winsorize(d["generacion_percapita_dom"])
@@ -238,7 +249,7 @@ def figuras(df: pd.DataFrame) -> None:
         ax.axvline(v, color=col, ls="--", lw=1.2)
         ax.text(v, ax.get_ylim()[1] * .95, f" {lab} {es(v)}", color=col, fontsize=9)
     ax.set_title("Generación de residuos domiciliarios per cápita, distritos del Perú (2024)")
-    ax.set_xlabel("kg/hab/día (unidades por confirmar con MINAM)")
+    ax.set_xlabel("kg/hab/día (unidades confirmadas con diccionario MINAM)")
     ax.set_ylabel("N.° de distritos")
     fig.tight_layout()
     fig.savefig(RES / "fig_01_distribucion.png", dpi=150)
@@ -251,7 +262,7 @@ def figuras(df: pd.DataFrame) -> None:
     ax.axvline(df["generacion_percapita_dom"].mean(), color="#DD8452", ls="--",
                label=f"Media nacional {es(df['generacion_percapita_dom'].mean())}")
     ax.set_title("Residuos domiciliarios per cápita promedio por departamento (2024)")
-    ax.set_xlabel("kg/hab/día (unidades por confirmar)")
+    ax.set_xlabel("kg/hab/día")
     ax.legend()
     fig.tight_layout()
     fig.savefig(RES / "fig_02_por_departamento.png", dpi=150)
@@ -262,9 +273,10 @@ def figuras(df: pd.DataFrame) -> None:
     datos = [df.loc[df["clasificacion_municipal_mef"] == c, "generacion_percapita_dom"] for c in orden]
     fig, ax = plt.subplots(figsize=(8, 4.5))
     ax.boxplot(datos, tick_labels=orden, showfliers=False)
-    ax.set_title("Residuos per cápita por clase de capacidad municipal MEF (2024)")
-    ax.set_xlabel("Clase MEF (A = mayor capacidad · G = menor capacidad)")
-    ax.set_ylabel("kg/hab/día (unidades por confirmar)")
+    ax.set_title("Residuos per cápita por clasificación MEF del municipio (2024)")
+    ax.set_xlabel("Clase MEF (A/B: ciudades principales · C: Lima Metropolitana ·\n"
+                  "E/F/G: no principales con >70%, 35–70% y <35% población urbana)")
+    ax.set_ylabel("kg/hab/día")
     fig.tight_layout()
     fig.savefig(RES / "fig_03_clase_mef.png", dpi=150)
     plt.close(fig)
@@ -326,22 +338,33 @@ def resumen(df: pd.DataFrame, diag: dict, tab_desc: pd.DataFrame, tab_reg: pd.Da
 
     # estabilidad del coeficiente de empresas en las especificaciones de robustez
     rob = []
-    for m in ["M4", "M5", "M6", "M7"]:
+    for m in ["M4", "M5", "M6", "M7", "M8"]:
         r = tab_reg[(tab_reg.modelo == m) & (tab_reg.variable == "log_emp")].iloc[0]
         rob.append(f"{m} {r.coef:+.3f}{r.estrella}")
     rob_txt = " · ".join(rob)
 
-    md = f"""# Resumen ejecutivo — residuos sólidos per cápita y capacidad municipal (corte 2024)
+    # contraste F (rural) en M8 (sin % urbana) para el diagnóstico de colinealidad
+    m8 = tab_reg[tab_reg.modelo == "M8"].set_index("variable")
+    var_f = "C(clasificacion_municipal_mef)[T.F]"
+    mef_m8_f = f"{m8.loc[var_f, 'coef']:+.3f}{m8.loc[var_f, 'estrella']}" if var_f in m8.index else "n/d"
+
+    md = f"""# Resumen ejecutivo — residuos sólidos per cápita y clasificación municipal MEF (corte 2024)
 
 *Generado por `scripts/analisar.py` · fecha: 2026-10-19 · universo {es(len(df), 0)} distritos · modelos con n = {es(n_m3, 0)} (casos completos)*
 
 ## 1. Qué se hizo
 
-Corte transversal nacional (año 2024) de la generación de residuos sólidos per cápita,
+Corte transversal nacional (año 2024) de la generación de residuos sólidos per cápita
+(kg/hab/día, unidades confirmadas con el diccionario oficial MINAM 2026-10-19),
 cruzada con empresas formales por distrito (MTPE, 2025), inversión pública acumulada
-(Invierte.pe, hasta 2024), programas sociales (corte 2026-04-30) y capacidad fiscal
-municipal (clasificación MEF). Base: panel MINAM/SIGERSOL 2019-2024 extraído de Rastro
+(Invierte.pe, hasta 2024), programas sociales (corte 2026-04-30) y la clasificación
+MEF del municipio del **Programa de Incentivos a la Mejora de la Gestión Municipal** —
+que agrupa por tamaño de ciudad y % de población urbana (A ciudades principales ·
+C Lima Metropolitana · E/F/G no principales con >70%, 35–70% y <35% urbana), **no por
+capacidad fiscal**. Base: panel MINAM/SIGERSOL 2019-2024 extraído de Rastro
 ({es(diag['padron_distritos'], 0)} distritos, 0 nulos en variables clave).
+Advertencia de origen: la GPC proviene de **estudios de caracterización** municipales,
+no de medición continua — de ahí la fuerte cuantización (pico en 0,45 kg/hab/día).
 
 ## 2. Hallazgos
 
@@ -351,30 +374,38 @@ con mediana {es(x.quantile(.50))} y media {es(x.mean())}. El rango 2024 va de
 {es(x.min())} a {es(x.max())} (la serie histórica llega a 2,00 en 2019-2020: outliers
 de reporte, por eso 2024 es el corte más limpio).
 
-**b) La capacidad fiscal municipal se asocia con la generación, pero no de forma
-monótona.** Medias por clase MEF: {' · '.join(f'{c} {es(df.loc[df.clasificacion_municipal_mef == c, "generacion_percapita_dom"].mean())}' for c in 'ABCDEFG' if c in set(df.clasificacion_municipal_mef))} kg/hab/día. En M3 (ref. = clase A):
+**b) La generación se asocia al tamaño/urbanización del municipio, no a su capacidad
+presupuestaria.** Medias por clase MEF: {' · '.join(f'{c} {es(df.loc[df.clasificacion_municipal_mef == c, "generacion_percapita_dom"].mean())}' for c in 'ABCDEFG' if c in set(df.clasificacion_municipal_mef))} kg/hab/día. En M3 (ref. = clase A):
 {mef_txt_neg} se quedan **por debajo de A y significativas**, mientras
 {mef_txt_pos} queda **por encima** ({es(df.loc[df.clasificacion_municipal_mef == 'C', 'empresas_prom_mensual'].mean(), 0)} empresas formales/mes vs
-{es(df.loc[df.clasificacion_municipal_mef == 'A', 'empresas_prom_mensual'].mean(), 0)} en A; solo 42 distritos en C). Lectura: donde el municipio tiene
-menos capacidad (F/G) la generación per cápita es ~{es(abs(float(m3.loc['C(clasificacion_municipal_mef)[T.F]', 'coef'])) * 100, 0)}% menor que en A — es decir, **menos residuos
-reportados por habitante justo en los municipios con menos recursos para gestionarlos**.
+{es(df.loc[df.clasificacion_municipal_mef == 'A', 'empresas_prom_mensual'].mean(), 0)} en A; solo 42 distritos en C, la mayoría urbano al 99%). Lectura: los
+distritos **rurales/pequeños (F/G)** generan ~{es(abs(float(m3.loc['C(clasificacion_municipal_mef)[T.F]', 'coef'])) * 100, 0)}% menos por habitante que las ciudades
+principales — coherente con que la GPC sale de estudios de caracterización y con
+menor consumo medido, **no** con "menos capacidad municipal". Como E/F/G se definen
+por % de población urbana, esos contrastes son en parte colineales con el control
+`pct_urbana`: al retirarlo (M8) el contraste F es {mef_m8_f}, lo que confirma que
+absorbe urbanización, no presupuesto.
 {mef_txt_b}
 
 **c) Actividad formal explica parte de la variación; inversión pública no.** En M3
 (R² = {r2_m3:.3f}, n = {es(n_m3, 0)}, EE cluster por departamento):
 `log(empresas formales)` = {coef('log_emp')} y `log(inversión pública acumulada)` =
-{coef('log_inv')} (**no significativo en ninguna de las 7 especificaciones**);
+{coef('log_inv')} (**no significativo en ninguna de las 8 especificaciones**);
 `población urbana` = {coef('pct_urbana')} y `log(población)` = {coef('log_pob')}.
 Lectura: un 1% más de empresas formales se asocia con ~{float(m3.loc['log_emp', 'coef']):.3f}% más de residuos
 per cápita — la generación sirve como proxy de consumo/formalidad, no solo de tamaño.
 
 **d) Los resultados son estables.** El coeficiente de empresas formales se mantiene
-positivo y significativo en las 7 especificaciones ({rob_txt}): con FE de departamento
-(M4), DV winsorizado 1%/99% (M5), DV per cápita municipal (M6) y DV del año 2023 (M7).
+positivo y significativo en las 8 especificaciones ({rob_txt}): con FE de departamento
+(M4), DV winsorizado 1%/99% (M5), DV per cápita municipal (M6), DV del año 2023 (M7)
+y sin el control de urbanización (M8, diagnóstico de colinealidad MEF).
 
-**e) Priorización.** El índice de presión (50% posición en generación + 50% baja
-capacidad MEF) identifica {len(top)} distritos prioritarios; {top_mezcla} de ellos están
-en clases F/G (menor capacidad). Los 5 primeros:
+**e) Priorización.** El índice de presión (50% posición en generación + 50% posición
+inversa en la escala MEF A→G, es decir distritos pequeños/no urbanos) identifica
+{len(top)} distritos prioritarios; {top_mezcla} de ellos están en clases F/G (distritos
+rurales). La lectura de política no es "menor capacidad fiscal" sino **alto costo
+unitario de servicio**: generación alta en localidades dispersas, donde la recolección
+por tonelada cuesta más. Los 5 primeros:
 {chr(10).join(f"   {i+1}. **{r.distrito}** ({r.departamento}, clase {r.clasificacion_municipal_mef}, {es(r.generacion_percapita_dom)} kg/hab/día, {es(r.poblacion_total, 0)} hab)" for i, r in enumerate(top.head(5).itertuples()))}.
 
 ## 3. Cobertura y limpieza aplicada
@@ -390,13 +421,18 @@ en clases F/G (menor capacidad). Los 5 primeros:
 ## 4. Advertencias para no sobreinterpretar
 
 1. **Asociación, no causalidad**: el diseño es transversal por definición.
-2. **Unidades sin confirmar** (kg/hab/día asumido) y **diccionario MEF A–G sin decodificar**:
-   confirmar antes de publicar cifras.
-3. **Desfase de cortes**: residuos 2024 · empresas 2025 · programas 2026-04-30.
-4. **383 distritos sin dato MTPE**: se excluyen, no se imputan ceros.
-5. Se mide **generación**, no cobertura de recolección/tratamiento (SINAN no está en el catálogo).
-6. `avance_ejecucion` de Invierte.pe trae {int(df['avance_invalidos'].fillna(0).sum())} valores fuera de rango
+2. ~~Unidades y diccionario MEF pendientes~~ → **resueltos 2026-10-19** con el
+   diccionario oficial MINAM: per cápita en kg/hab/día y MEF = Programa de Incentivos
+   (tamaño de ciudad + % urbana), **no** capacidad fiscal.
+3. **GPC basada en estudios de caracterización** municipales (SIGERSOL), no medición
+   continua: valores cuantizados y comparabilidad imperfecta entre distritos.
+4. **Desfase de cortes**: residuos 2024 · empresas 2025 · programas 2026-04-30.
+5. **383 distritos sin dato MTPE**: se excluyen, no se imputan ceros.
+6. Se mide **generación**, no cobertura de recolección/tratamiento (SINAN no está en el catálogo).
+7. `avance_ejecucion` de Invierte.pe trae {int(df['avance_invalidos'].fillna(0).sum())} valores fuera de rango
    (0-100 esperado): se filtra en la extracción; no usar sin limpiar.
+8. **Nombres de distrito con ``** en la fuente MINAM (bug de codificación Latin-1→UTF-8 en la
+   ingesta; 48 nombres): afecta solo etiquetas, no claves (`ubigeo`) ni resultados.
 
 ## 5. Salidas
 

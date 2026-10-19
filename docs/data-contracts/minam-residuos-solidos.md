@@ -6,7 +6,14 @@
 ## Fuente confirmada
 
 - **Descarga directa real**: `https://www.datosabiertos.gob.pe/sites/default/files/1.%20Dataset%20Generaci%C3%B3n%20anual%20de%20residuos%20s%C3%B3lidos%20domiciliarios%20y%20municipales.csv`
-  — confirmado 2026-09-06, 1.32 MB, CSV `;`-delimitado, **UTF-8**.
+  — confirmado 2026-09-06, 1.32 MB, CSV `;`-delimitado. **Codificación Latin-1/ISO-8859-1, no UTF-8**
+  (corregido 2026-10-19: 0 secuencias multibyte UTF-8 en el archivo; `Ñ` aparece como byte crudo `0xD1`
+  414 veces — `BAÑOS`, `FERREÑAFE`, `NEPEÑA`, `CONSTITUCIÓN`…). Los departamentos vienen sin tildes
+  (`ANCASH`, `JUNIN`), solo distritos/provincias llevan diacríticos.
+  **Bug derivado:** `apps/residuos-solidos/api/src/ingest/residuos-connector.ts:97` hace
+  `buffer.toString("utf-8")` → los ~440 bytes no-ASCII se pierden como `U+FFFD`; en la base quedan
+  **222 filas / 48 nombres de distrito dañados** (`BA?OS`, `PU?OS`, `FERRE?AFE`). Afecta solo
+  etiquetas (las claves `UBIGEO` son numéricas); fix de una línea: `toString("latin1")` + re-ingesta.
 - Datos alimentados por SIGERSOL (Sistema de Información para la Gestión de Residuos Sólidos),
   reportados anualmente por municipalidades provinciales/distritales al MINAM.
 
@@ -41,9 +48,65 @@ GENERACION_MUN_TANIO, GENERACION_MUN_TDIA, GENERACION_PER_CAPITA_MUNICIPAL
 
 **500 filas** (todas las combinaciones distrito×año, 2019-2024), 12 provincias representadas.
 
+## Diccionario de datos (decodificado 2026-10-19)
+
+Fuente: [Diccionario de Datos (xlsx)](https://www.datosabiertos.gob.pe/sites/default/files/3.%20Formato_DiccionarioDatos_Generaci%C3%B3n%20anual%20de%20residuos%20s%C3%B3lidos%20domiciliarios%20y%20municipales.xlsx)
+y [Metadatos (docx)](https://www.datosabiertos.gob.pe/sites/default/files/2.%20Formato_Metadatos_Generaci%C3%B3n%20anual%20de%20residuos%20s%C3%B3lidos%20domiciliarios%20y%20municipales.docx)
+del dataset (`b7fa86e4-f7ec-4c2a-95aa-4feade465b3f`, página
+[datosabiertos.gob.pe](https://www.datosabiertos.gob.pe/dataset/generaci%C3%B3n-anual-de-residuos-s%C3%B3lidos-domiciliarios-y-municipales-ministerio-del-ambiente)).
+Copias en `investigaciones/residuos-solidos-per-capita-2024/data/fuentes-minam/`.
+
+### Unidades por variable (oficial)
+
+| Variable | Unidad oficial |
+|---|---|
+| `GENERACION_PER_CAPITA_DOM` | **kg/hab/día** |
+| `GENERACION_DOM_URBANA_TDIA` | t/día |
+| `GENERACION_DOM URBANA_TANIO` | toneladas/año |
+| `GENERACION_MUN_TDIA` | t/día |
+| `GENERACION_MUN_TANIO` | toneladas/año |
+| `GENERACION_PER_CAPITA_MUNICIPAL` | **kg/hab/día** |
+
+Identidades verificadas contra los datos (2019–2024, 11.310 filas):
+`PER_CAPITA_DOM ≈ DOM_URBANA_TDIA × 1.000 / POB_URBANA` (89,9% de filas con
+diferencia ≤ 0,011) y `..._TANIO ≈ ..._TDIA × 365` (diferencia relativa mediana 0,32%).
+Ambas per cápita se calculan sobre **población urbana**, no total.
+
+### `CLASIFICACION_MUNICIPAL_MEF` (oficial, fuente MEF — Programa de Incentivos a la
+### Mejora de la Gestión Municipal)
+
+**NO es una medida de capacidad fiscal**: clasifica por **tamaño de ciudad y
+población urbana**. Valores (n nacional 2024 entre paréntesis):
+
+- **A** (74): municipalidades pertenecientes a ciudades principales *(provinciales)*
+- **B** (122): municipalidades no pertenecientes a ciudades principales *(provinciales)*
+- **C** (42): municipalidad de Lima Metropolitana *(distritales)*
+- **D** (129): municipalidades pertenecientes a otras ciudades principales *(distritales)*
+- **E** (378): no ciudades principales, con **más de 70%** de población urbana
+- **F** (509): no ciudades principales, con población urbana **entre 35% y 70%**
+- **G** (637): no ciudades principales, con **menos de 35%** de población urbana
+
+Verificado empíricamente: A+B = 196 provincias; C = 42 distritos limeños; urbanidad
+mediana por clase C 99,4% · D 88% · E 84% · F 47% · G 15,5% (consistente con los
+umbrales 70%/35%). **Consecuencia analítica:** E/F/G son función determinística del
+% urbana → las clases MEF y el control `pct_urbana` son colineales por construcción;
+interpretar los contrastes MEF como "efectos de urbanización/tamaño", no de capacidad
+presupuestaria.
+
+### Otras notas del diccionario/metadatos
+
+- La GPC domiciliaria **proviene de los estudios de caracterización** hechos por las
+  municipalidades (SIGERSOL), no de medición continua → explica la fuerte
+  cuantización de la serie (p. ej. el pico en 0,45 kg/hab/día).
+- Los residuos domiciliarios son ~70% del total municipal según CEPIS (30% no
+  domiciliario: comercio, mercados, barrido, etc.).
+- Metadatos oficiales: entidad MINAM, fuente Dirección General de Gestión de
+  Residuos Sólidos, actualización **anual**, última actualización 2025-12-18,
+  cobertura Perú 2019–2024, contacto `msandoval@minam.gob.pe`.
+
 ## Pendiente / limitaciones conocidas
 
-1. Diccionario de datos (`.xlsx`) no decodificado — las columnas ya son suficientemente
-   auto-descriptivas.
-2. `CLASIFICACION_MUNICIPAL_MEF` (valores observados: `A`, `F`, ...) no decodificada a su
-   significado — se ingiere tal cual.
+1. ~~Diccionario de datos (`.xlsx`) no decodificado~~ → **resuelto 2026-10-19** (arriba).
+2. ~~`CLASIFICACION_MUNICIPAL_MEF` no decodificada~~ → **resuelta 2026-10-19**: es la
+   clasificación del Programa de Incentivos MEF por tamaño de ciudad y % urbana
+   (ver tabla arriba), no capacidad fiscal.
