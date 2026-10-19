@@ -1,0 +1,121 @@
+codigo_aerodromo,nombre,tipo_aerodromo,estado,es_concesionado,departamento,provincia,distrito,latitud,longitud,fecha_corte
+0321ANS,ANDAHUAYLAS,Aeropuerto,Operativo,,APURÍMAC,ANDAHUAYLAS,ANDAHUAYLAS,-13.708819,-73.351556,2022-12-31
+0411AQP,AREQUIPA - INTERNACIONAL ALFREDO RODRÍGUEZ BALLON,Aeropuerto Internacional,Operativo,True,AREQUIPA,AREQUIPA,CAYMA,-16.340611,-71.570792,2022-12-31
+0521AYP,AYACUCHO - CRNL. FAP ALFREDO MENDIVIL,Aeropuerto,Operativo,True,AYACUCHO,HUAMANGA,ANDRÉS AVELINO CÁCERES,-13.15483611,-74.20441667,2022-12-31
+1021HUU,Alf. FAP. David Figueroa Fernandini,Aeropuerto,Operativo,False,Huánuco,Huánuco,Huánuco,-9.878681,-76.204569,2023-12-31
+1021HUU,Alf. FAP. David Figueroa Fernandini,Aeropuerto,Operativo,False,Huánuco,Huánuco,Huánuco,-9.878681,-76.204569,2024-12-31
+1021HUU,Alf. FAP. David Figueroa Fernandini,Aeropuerto,Operativo,False,Huánuco,Huánuco,Huánuco,-9.878681,-76.204569,2025-12-31
+0411AQP,Alfredo Rodríguez Ballon,Aeropuerto Internacional,Operativo,True,Arequipa,Arequipa,Cayma,-16.340611,-71.570792,2023-12-31
+0411AQP,Alfredo Rodríguez Ballon,Aeropuerto Internacional,Operativo,True,Arequipa,Arequipa,Cayma,-16.340611,-71.570792,2024-12-31
+0411AQP,Alfredo Rodríguez Ballón,Aeropuerto Internacional,Operativo,True,Arequipa,Arequipa,Cerro Colorado,-16.340611,-71.570792,2025-12-31
+0321ANS,Andahuaylas,Aeropuerto,Operativo,,Apurímac,Andahuaylas,Andahuaylas,-13.708819,-73.351556,2024-12-31
+0321ANS,Andahuaylas,Aeropuerto,Operativo,,Apurímac,Andahuaylas,Andahuaylas,-13.708819,-73.351556,2025-12-31
+0321ANS,Andahuaylas,Aeropuerto,Operativo,,Apurímac,Andahuaylas,Andahuaylas,-13.708819,-73.351556,2023-12-31
+0621CJA,CAJAMARCA - MAY.GRAL.FAP ARMANDO REVOREDO IGLESIAS,Aeropuerto,Operativo,True,CAJAMARCA,CAJAMARCA,BAÑOS DEL INCA,-7.139144,-78.489581,2022-12-31
+0121CHH,CHACHAPOYAS,Aeropuerto,Operativo,True,AMAZONAS,CHACHAPOYAS,CHACHAPOYAS,-6.202042,-77.856,2022-12-31
+1411CIX,CHICLAYO - INTERNACIONAL CAP. FAP JOSÉ ABELARDO QUIÑONES GONZALES,Aeropuerto Internacional,Operativo,True,LAMBAYEQUE,CHICLAYO,CHICLAYO,-6.787478,-79.8281,2022-12-31
+0231CHM,CHIMBOTE - TNTE.FAP JAIME A. DE MONTREUIL MORALES,Aeropuerto,Operativo,False,ÁNCASH,SANTA,NUEVO CHIMBOTE,-9.149711,-78.523564,2022-12-31
+0811CUZ,CUSCO - INTERNACIONAL TNTE. FAP ALEJANDRO VELASCO ASTETE,Aeropuerto Internacional,Operativo,False,CUSCO,CUSCO,SAN SEBASTIÁN,-13.535722,-71.938778,2022-12-31
+2221TPP,Cadete FAP. Guillermo del Castillo Paredes,Aeropuerto,Operativo,True,San Martín,San Martín,Tarapoto,-6.508744,-76.373247,2024-12-31
+2221TPP,Cadete FAP. Guillermo del Castillo Paredes,Aeropuerto,Operativo,True,San Martín,San Martín,Tarapoto,-6.508744,-76.373247,2025-12-31
+2221TPP,Cadete FAP. Guillermo del Castillo Paredes,Aeropuerto,Operativo,True,San Martín,San Martín,Tarapoto,-6.508744,-76.373247,2023-12-31
+1311TRU,Cap. Carlos Martinez de Pinillos,Aeropuerto Internacional,Operativo,True,La Libertad,Trujillo,Huanchaco,-8.081708,-79.108644,2023-12-31
+1311TRU,Cap. Carlos Martinez de Pinillos,Aeropuerto Internacional,Operativo,True,La Libertad,Trujillo,Huanchaco,-8.081708,-79.108644,2024-12-31
+1411CIX,Cap. FAP José Abelardo Quiñones Gonzales,Aeropuerto Internacional,Operativo,True,Lambayeque,Chiclayo,Chiclayo,-6.787478,-79.8281,2025-12-31
+1311TRU,Cap. FAP. Carlos Martinez de Pinillos,Aeropuerto Internacional,Operativo,True,La Libertad,Trujillo,Huanchaco,-8.081708,-79.108644,2025-12-31
+2511PCL,Cap. FAP. David Armando Abensur Rengifo,Aeropuerto Internacional,Operativo,True,Ucayali,Coronel Portillo,Yarinacocha,-8.377942,-74.574297,2025-12-31
+2511PCL,Cap. FAP. David Armando Abensur Rengifo,Aeropuerto Internacional,Operativo,True,Ucayali,Coronel Portillo,Calleria,-8.377942,-74.574297,2024-12-31
+2511PCL,Cap. FAP. David Armando Abensur Rengifo,Aeropuerto Internacional,Operativo,True,Ucayali,Coronel Portillo,Calleria,-8.377942,-74.574297,2023-12-31
+2021PIU,Cap. FAP. Guillermo Concha Iberico,Aeropuerto,Operativo,True,Piura,Piura,Castilla,-5.205764,-80.616389,2024-12-31
+2021PIU,Cap. FAP. Guillermo Concha Iberico,Aeropuerto,Operativo,True,Piura,Piura,Castilla,-5.205764,-80.616389,2025-12-31
+2021PIU,Cap. FAP. Guillermo Concha Iberico,Aeropuerto,Operativo,True,Piura,Piura,Castilla,-5.205764,-80.616389,2023-12-31
+1411CIX,Cap. FAP. José Abelardo Quiñones Gonzales,Aeropuerto Internacional,Operativo,True,Lambayeque,Chiclayo,Chiclayo,-6.787478,-79.8281,2023-12-31
+1411CIX,Cap. FAP. José Abelardo Quiñones Gonzales,Aeropuerto Internacional,Operativo,True,Lambayeque,Chiclayo,Chiclayo,-6.787478,-79.8281,2024-12-31
+2421TBP,Cap. FAP. Pedro Canga Rodríguez,Aeropuerto,Operativo,True,Tumbes,Tumbes,Tumbes,-3.552264,-80.381069,2023-12-31
+2421TBP,Cap. FAP. Pedro Canga Rodríguez,Aeropuerto,Operativo,True,Tumbes,Tumbes,Tumbes,-3.552264,-80.381069,2025-12-31
+2421TBP,Cap. FAP. Pedro Canga Rodríguez,Aeropuerto,Operativo,True,Tumbes,Tumbes,Tumbes,-3.552264,-80.381069,2024-12-31
+2011TYL,Cap. FAP. Victor Montes Arias,Aeropuerto Internacional,Operativo,True,Piura,Talara,Pariñas,-4.576611111,-81.25405833,2025-12-31
+0121CHH,Chachapoyas,Aeropuerto,Operativo,True,Amazonas,Chachapoyas,Chachapoyas,-6.202042,-77.856,2025-12-31
+0121CHH,Chachapoyas,Aeropuerto,Operativo,True,Amazonas,Chachapoyas,Chachapoyas,-6.202042,-77.856,2023-12-31
+0121CHH,Chachapoyas,Aeropuerto,Operativo,True,Amazonas,Chachapoyas,Chachapoyas,-6.202042,-77.856,2024-12-31
+0221ATA,Cmdt. FAP. German Arias Graziani,Aeropuerto,Operativo,True,Áncash,Carhuaz,Anta,-9.347333,-77.598308,2023-12-31
+0221ATA,Cmdt. FAP. German Arias Graziani,Aeropuerto,Operativo,True,Áncash,Carhuaz,Anta,-9.347333,-77.598308,2024-12-31
+0221ATA,Cmdte. FAP. German Arias Graziani,Aeropuerto,Operativo,True,Áncash,Carhuaz,Anta,-9.347333,-77.598308,2025-12-31
+1611IQT,Crnl. FAP Francisco Secada Vignetta,Aeropuerto Internacional,Operativo,True,Loreto,Maynas,San Juan Bautista,-3.784739,-73.308806,2025-12-31
+0521AYP,Crnl. FAP. Alfredo Mendivil,Aeropuerto,Operativo,True,Ayacucho,Huamanga,Andrés Avelino Cáceres,-13.154836,-74.20441667,2025-12-31
+0521AYP,Crnl. FAP. Alfredo Mendivil,Aeropuerto,Operativo,True,Ayacucho,Huamanga,Andrés Avelino Cáceres,-13.154836,-74.20441667,2023-12-31
+0521AYP,Crnl. FAP. Alfredo Mendivil,Aeropuerto,Operativo,True,Ayacucho,Huamanga,Andrés Avelino Cáceres,-13.154836,-74.20441667,2024-12-31
+2311TCQ,Crnl. FAP. Carlos Ciriani Santa Rosa,Aeropuerto Internacional,Operativo,True,Tacna,Tacna,Tacna,-18.053286,-70.275822,2024-12-31
+2311TCQ,Crnl. FAP. Carlos Ciriani Santa Rosa,Aeropuerto Internacional,Operativo,True,Tacna,Tacna,Tacna,-18.053286,-70.275822,2025-12-31
+2311TCQ,Crnl. FAP. Carlos Ciriani Santa Rosa,Aeropuerto Internacional,Operativo,True,Tacna,Tacna,Tacna,-18.053286,-70.275822,2023-12-31
+1611IQT,Crnl. FAP. Francisco Secada Vignetta,Aeropuerto Internacional,Operativo,True,Loreto,Maynas,San Juan Bautista,-3.784739,-73.308806,2023-12-31
+1611IQT,Crnl. FAP. Francisco Secada Vignetta,Aeropuerto Internacional,Operativo,True,Loreto,Maynas,San Juan Bautista,-3.784739,-73.308806,2024-12-31
+0621JAN,Fernando Belaunde Terry,Aeropuerto,Operativo,False,Cajamarca,Jaén,Bellavista,-5.592611,-78.774264,2025-12-31
+0621JAN,Fernando Belaunde Terry,Aeropuerto,Operativo,False,Cajamarca,Jaén,Bellavista,-5.592611,-78.774264,2023-12-31
+0621JAN,Fernando Belaunde Terry,Aeropuerto,Operativo,False,Cajamarca,Jaén,Bellavista,-5.592611,-78.774264,2024-12-31
+1221JAU,Francisco Carlé,Aeropuerto,Operativo,False,Junín,Jauja,Sausa,-11.783389,-75.473347,2024-12-31
+1221JAU,Francisco Carlé,Aeropuerto,Operativo,False,Junín,Jauja,Jauja,-11.783389,-75.473347,2025-12-31
+1221JAU,Francisco Carlé,Aeropuerto,Operativo,False,Junín,Jauja,Sausa,-11.783389,-75.473347,2023-12-31
+1831ILO,Gral. Jorge F. Maldonado Solari,Aeropuerto,Operativo,False,Moquegua,Ilo,Ilo,-17.695028,-71.343931,2024-12-31
+1831ILO,Gral. Jorge F. Maldonado Solari,Aeropuerto,Operativo,False,Moquegua,Ilo,Ilo,-17.695028,-71.343931,2025-12-31
+1831ILO,Gral. Jorge F. Maldonado Solari,Aeropuerto,Operativo,False,Moquegua,Ilo,Ilo,-17.695028,-71.343931,2023-12-31
+0221ATA,HUASCARÁN (ANTA - HUARAZ),Aeropuerto,Operativo,True,ÁNCASH,CARHUAZ,ANTA,-9.347333,-77.598308,2022-12-31
+1021HUU,HUÁNUCO - ALF. FAP DAVID FIGUEROA FERNANDINI,Aeropuerto,Operativo,False,HUÁNUCO,HUÁNUCO,HUÁNUCO,-9.878681,-76.204569,2022-12-31
+1831ILO,ILO,Aeropuerto,Operativo,False,MOQUEGUA,ILO,ILO,-17.695028,-71.343931,2022-12-31
+0711LIM,INTERNACIONAL JORGE CHÁVEZ,Aeropuerto Internacional,Operativo,True,LIMA,CALLAO,CALLAO,-12.021886,-77.114317,2022-12-31
+1611IQT,IQUITOS - INTERNACIONAL CRNL. FAP FRANCISCO SECADA VIGNETTA,Aeropuerto Internacional,Operativo,True,LORETO,MAYNAS,SAN JUAN BAUTISTA,-3.784739,-73.308806,2022-12-31
+2111JUL,Inca Manco Capac,Aeropuerto Internacional,Operativo,True,Puno,San Román,Juliaca,-15.466856,-70.157883,2023-12-31
+2111JUL,Inca Manco Capac,Aeropuerto Internacional,Operativo,True,Puno,San Román,Juliaca,-15.466856,-70.157883,2024-12-31
+2111JUL,Inca Manco Capac,Aeropuerto Internacional,Operativo,True,Puno,San Román,Juliaca,-15.466856,-70.157883,2025-12-31
+2011TYL,Internacional Cap. FAP. Victor Montes Arias,Aeropuerto Internacional,Operativo,True,Piura,Talara,Pariñas,-4.576611111,-81.25405833,2023-12-31
+2011TYL,Internacional Cap. FAP. Victor Montes Arias,Aeropuerto Internacional,Operativo,True,Piura,Talara,Pariñas,-4.576611111,-81.25405833,2024-12-31
+1221JAU,JAUJA,Aeropuerto,Operativo,False,JUNÍN,JAUJA,SAUSA,-11.783389,-75.473347,2022-12-31
+0621JAN,JAÉN,Aeropuerto,Operativo,False,CAJAMARCA,JAÉN,BELLAVISTA,-5.592611,-78.774264,2022-12-31
+2231JJI,JUANJUI,Aeropuerto,Operativo,False,SAN MARTÍN,MARISCAL CÁCERES,JUANJUI,-7.168875,-76.728581,2022-12-31
+2111JUL,JULIACA - INTERNACIONAL INCA MANCO CAPAC,Aeropuerto Internacional,Operativo,True,PUNO,SAN ROMÁN,JULIACA,-15.466856,-70.157883,2022-12-31
+0711LIM,Jorge Chávez,Aeropuerto Internacional,Operativo,True,Lima,Callao,Callao,-12.021886,-77.114317,2024-12-31
+0711LIM,Jorge Chávez,Aeropuerto Internacional,Operativo,True,Lima,Callao,Callao,-12.021886,-77.114317,2025-12-31
+0711LIM,Jorge Chávez,Aeropuerto Internacional,Operativo,True,Lima,Callao,Callao,-12.021886,-77.114317,2023-12-31
+2231RIJ,Juan Simons Vela,Aeropuerto,Operativo,False,San Martín,Rioja,Rioja,-6.067792,-77.159806,2024-12-31
+2231RIJ,Juan Simons Vela,Aeropuerto,Operativo,False,San Martín,Rioja,Rioja,-6.067792,-77.159806,2025-12-31
+2231RIJ,Juan Simons Vela,Aeropuerto,Operativo,False,San Martín,Rioja,Rioja,-6.067792,-77.159806,2023-12-31
+2231JJI,Juanjui,Aeropuerto,Operativo,False,San Martín,Mariscal Cáceres,Juanjui,-7.168875,-76.728581,2024-12-31
+2231JJI,Juanjui,Aeropuerto,Operativo,False,San Martín,Mariscal Cáceres,Juanjui,-7.168875,-76.728581,2023-12-31
+2231JJI,Juanjui,Aeropuerto,Operativo,False,San Martín,Mariscal Cáceres,Juanjui,-7.168875,-76.728581,2025-12-31
+0621CJA,May.Gral.FAP. Armando Revoredo Iglesias,Aeropuerto,Operativo,True,Cajamarca,Cajamarca,Baños del Inca,-7.139144,-78.489581,2023-12-31
+0621CJA,May.Gral.FAP. Armando Revoredo Iglesias,Aeropuerto,Operativo,True,Cajamarca,Cajamarca,Baños del Inca,-7.139144,-78.489581,2025-12-31
+0621CJA,May.Gral.FAP. Armando Revoredo Iglesias,Aeropuerto,Operativo,True,Cajamarca,Cajamarca,Baños del Inca,-7.139144,-78.489581,2024-12-31
+1631YMS,Moisés Benzaquén Rengifo,Aeropuerto,Operativo,False,Loreto,Alto Amazonas,Yurimaguas,-5.893611,-76.118056,2024-12-31
+1631YMS,Moisés Benzaquén Rengifo,Aeropuerto,Operativo,False,Loreto,Alto Amazonas,Yurimaguas,-5.893611,-76.118056,2023-12-31
+1631YMS,Moisés Benzaquén Rengifo,Aeropuerto,Operativo,False,Loreto,Alto Amazonas,Yurimaguas,-5.893611,-76.118056,2025-12-31
+1111PIO,PISCO INTERNACIONAL,Aeropuerto Internacional,Operativo,True,ICA,PISCO,SAN ANDRÉS,-13.7448,-76.220411,2022-12-31
+2021PIU,PIURA - CAP.FAP GUILLERMO CONCHA IBERICO,Aeropuerto,Operativo,True,PIURA,PIURA,CASTILLA,-5.205764,-80.616389,2022-12-31
+2511PCL,PUCALLPA - INTERNACIONAL CAP. FAP DAVID ARMANDO ABENSUR RENGIFO,Aeropuerto Internacional,Operativo,True,UCAYALI,CORONEL PORTILLO,CALLERIA,-8.377942,-74.574297,2022-12-31
+1721PEM,PUERTO MALDONADO - PADRE ALDAMIZ,Aeropuerto,Operativo,True,MADRE DE DIOS,TAMBOPATA,TAMBOPATA,-12.613831,-69.228678,2022-12-31
+1721PEM,Padre Aldamiz,Aeropuerto,Operativo,True,Madre De Dios,Tambopata,Tambopata,-12.613831,-69.228678,2023-12-31
+1721PEM,Padre Aldamiz,Aeropuerto,Operativo,True,Madre De Dios,Tambopata,Tambopata,-12.613831,-69.228678,2024-12-31
+1721PEM,Padre José Aldamiz,Aeropuerto,Operativo,True,Madre de Dios,Tambopata,Tambopata,-12.613831,-69.228678,2025-12-31
+1111PIO,Pisco,Aeropuerto Internacional,Operativo,True,Ica,Pisco,San Andrés,-13.7448,-76.220411,2024-12-31
+1111PIO,Pisco,Aeropuerto Internacional,Operativo,True,Ica,Pisco,San Andrés,-13.7448,-76.220411,2025-12-31
+1111PIO,Pisco,Aeropuerto Internacional,Operativo,True,Ica,Pisco,San Andrés,-13.7448,-76.220411,2023-12-31
+2231RIJ,RIOJA - JUAN SIMONS VELA,Aeropuerto,Operativo,False,SAN MARTÍN,RIOJA,RIOJA,-6.067792,-77.159806,2022-12-31
+0131RMD,RODRÍGUEZ DE MENDOZA,Aeropuerto,Operativo,False,AMAZONAS,RODRÍGUEZ DE MENDOZA,OSCAR R. BENAVIDES,-6.392617,-77.500589,2022-12-31
+0131RMD,Rodríguez de Mendoza,Aeropuerto,Operativo,False,Amazonas,Rodríguez de Mendoza,Oscar R. Benavides,-6.392617,-77.500589,2024-12-31
+0131RMD,Rodríguez de Mendoza,Aeropuerto,Operativo,False,Amazonas,Rodríguez de Mendoza,Oscar R. Benavides,-6.392617,-77.500589,2023-12-31
+0131RMD,Rodríguez de Mendoza,Aeropuerto,Operativo,False,Amazonas,Rodríguez de Mendoza,Oscar R. Benavides,-6.392617,-77.500589,2025-12-31
+2311TCQ,TACNA - INTERNACIONAL CRNL. FAP CARLOS CIRIANI SANTA ROSA,Aeropuerto Internacional,Operativo,True,TACNA,TACNA,TACNA,-18.053286,-70.275822,2022-12-31
+2011TYL,TALARA - INTERNACIONAL CAP.FAP VICTOR MONTES ARIAS,Aeropuerto Internacional,Operativo,True,PIURA,TALARA,PARIÑAS,-4.576611111,-81.25405833,2022-12-31
+2221TPP,TARAPOTO - CADETE FAP GUILLERMO DEL CASTILLO PAREDES,Aeropuerto,Operativo,True,SAN MARTÍN,SAN MARTÍN,TARAPOTO,-6.508744,-76.373247,2022-12-31
+1031TIG,TINGO MARÍA,Aeropuerto,Operativo,False,HUÁNUCO,LEONCIO PRADO,RUPA RUPA,-9.289375,-76.005042,2022-12-31
+1311TRU,TRUJILLO - INTERNACIONAL CAP. CARLOS MARTINEZ DE PINILLOS,Aeropuerto Internacional,Operativo,True,LA LIBERTAD,TRUJILLO,HUANCHACO,-8.081708,-79.108644,2022-12-31
+2421TBP,TUMBES - CAP.FAP PEDRO CANGA RODRÍGUEZ,Aeropuerto,Operativo,True,TUMBES,TUMBES,TUMBES,-3.552264,-80.381069,2022-12-31
+1031TIG,Tingo María,Aeropuerto,Operativo,False,Huánuco,Leoncio Prado,Rupa Rupa,-9.289375,-76.005042,2023-12-31
+1031TIG,Tingo María,Aeropuerto,Operativo,False,Huánuco,Leoncio Prado,Rupa Rupa,-9.289375,-76.005042,2024-12-31
+1031TIG,Tingo María,Aeropuerto,Operativo,False,Huánuco,Leoncio Prado,Castillo Grande,-9.289375,-76.005042,2025-12-31
+0811CUZ,Tnte. FAP Alejandro Velasco Astete,Aeropuerto Internacional,Operativo,False,Cusco,Cusco,Wanchaq,-13.535722,-71.938778,2025-12-31
+0811CUZ,Tnte. FAP. Alejandro Velasco Astete,Aeropuerto Internacional,Operativo,False,Cusco,Cusco,San Sebastián,-13.535722,-71.938778,2024-12-31
+0811CUZ,Tnte. FAP. Alejandro Velasco Astete,Aeropuerto Internacional,Operativo,False,Cusco,Cusco,San Sebastián,-13.535722,-71.938778,2023-12-31
+0231CHM,Tnte. FAP. Jaime A. de Montreuil Morales,Aeropuerto,Operativo,False,Áncash,Santa,Nuevo Chimbote,-9.149711,-78.523564,2025-12-31
+0231CHM,Tnte. FAP. Jaime A. de Montreuil Morales,Aeropuerto,Operativo,False,Áncash,Santa,Nuevo Chimbote,-9.149711,-78.523564,2023-12-31
+0231CHM,Tnte. FAP. Jaime A. de Montreuil Morales,Aeropuerto,Operativo,False,Áncash,Santa,Nuevo Chimbote,-9.149711,-78.523564,2024-12-31
+1631YMS,YURIMAGUAS - MOISÉS BENZAQUÉN RENGIFO,Aeropuerto,Operativo,False,LORETO,ALTO AMAZONAS,YURIMAGUAS,-5.893611,-76.118056,2022-12-31

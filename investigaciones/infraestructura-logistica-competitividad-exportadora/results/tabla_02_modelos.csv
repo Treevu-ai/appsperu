@@ -1,0 +1,6 @@
+modelo,coef,p,n,r2
+entre-aduanas: log FOB/mes ~ concesion,2.3235,0.0731,15,0.226
+entre-aduanas: log FOB/mes ~ log_cargas,0.338,0.2972,8,0.178
+entre-aduanas: log FOB/mes ~ pct_bueno,5.2206,0.3652,8,0.138
+panel log FOB ~ concesión + FE tiempo (cluster aduana),7.1021,0.0121,1260,0.247
+panel log RUC ~ concesión + FE tiempo (cluster aduana),1.4375,0.0292,1260,0.314

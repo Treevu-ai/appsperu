@@ -1,0 +1,6 @@
+modelo,coef,p,n,r2
+M1 inversión(t) → exp(t),-0.1214,0.2048,175,0.989
+M2 inversión(t..t-3) → exp(t),-0.0014,0.9911,175,0.99
+M3 log(1+exp) ~ inversión(t),-0.0339,0.1775,175,0.963
+M4 exp(t..t-3) → inversión(t) [dirección inversa],"[-0.0009, 0.0176, 0.0055, -0.0165]","[0.9636, 0.773, 0.9349, 0.5323]",100,0.884
+M5 clasificación por pliego (sector),-0.059,0.1774,175,0.99

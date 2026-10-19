@@ -1,0 +1,152 @@
+codigo_puerto,nombre_terminal,ambito,alcance,estado_conservacion,es_concesionado,score_vulnerabilidad,fecha_corte,calculado_en
+021CHB1,Chimbote,Marítimo,Nacional,Malo,False,20.75,2025-12-31,2026-10-06
+021CHB2,Muelle Siderperú,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+021CHB3,Multiboyas Chimbote,Marítimo,Regional,Bueno,False,12.25,2025-12-31,2026-10-06
+021CHB4,Multiboyas Colpex - Chimbote,Marítimo,Regional,Bueno,False,12.25,2025-12-31,2026-10-06
+021CSH1,Pesquero Austral - Coishco,Marítimo,Nacional,Regular,False,14.50,2025-12-31,2026-10-06
+021HUY1,Punta Lobitos - Antamina,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+021SCO1,Casamar,Marítimo,Nacional,Regular,False,14.50,2025-12-31,2026-10-06
+041MRI1,Matarani (Muelle 1A y 1B),Marítimo,Nacional,Bueno,True,5.75,2025-12-31,2026-10-06
+041MRI2,Multiboyas Mollendo,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+041MRI3,Multiboyas Monte Azul,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+071CLL1-1,Callao (Terminal Multipropósito Muelle Norte ),Marítimo,Nacional,Bueno,True,5.75,2025-12-31,2026-10-06
+071CLL1-2,Callao (Terminal de Contenedores Muelle Sur),Marítimo,Nacional,Bueno,True,5.75,2025-12-31,2026-10-06
+071CLL1-3,Callao (Terminal de Embarque de Concentrado de Minerales),Marítimo,Nacional,Bueno,True,5.75,2025-12-31,2026-10-06
+071CLL10,Multiboyas Valero Perú S.A.C,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+071CLL11,Refinería La Pampilla S.A.A. (Amarradero Multiboyas 1),Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+071CLL12,Refinería La Pampilla S.A.A. (Amarradero Multiboyas 2),Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+071CLL13,Refinería La Pampilla S.A.A. (Amarradero Multiboyas 4),Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+071CLL2,Multiboyas Zeta Gas Andino,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+071CLL3,Multiboyas Sudamericana de Fibras,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+071CLL4,Multiboyas Quimpac - Oquendo,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+071CLL6,Multiboyas Solgas - Ventanilla,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+071CLL7,Multiboyas TRALSA,Marítimo,Nacional,Regular,False,14.50,2025-12-31,2026-10-06
+071CLL8,Refinería La Pampilla S.A.A. (Amarradero Multiboyas 3),Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+071CLL9,Muelle de Capitanes,Marítimo,Regional,Información no disponible,False,22.25,2025-12-31,2026-10-06
+111MJU,Multiboyas Mina Justa,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+111PCO1,General San Martín,Marítimo,Nacional,Bueno,True,5.75,2025-12-31,2026-10-06
+111PCO2,Pluspetrol - Pisco,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+111PCO3,Multiboyas Pisco,Marítimo,Regional,Bueno,False,12.25,2025-12-31,2026-10-06
+111SJA1,Shougang Hierro Perú,Marítimo,Nacional,Regular,False,14.50,2025-12-31,2026-10-06
+131SVY1,Multipropósito de Salaverry,Marítimo,Nacional,Bueno,True,5.75,2025-12-31,2026-10-06
+131SVY2,Multiboyas Salaverry,Marítimo,Regional,Bueno,False,12.25,2025-12-31,2026-10-06
+141ETE1,Multiboyas Eten,Marítimo,Regional,Bueno,False,12.25,2025-12-31,2026-10-06
+151CHAY1,Multiboyas Blue Pacific Oils - Chancay,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+151CHAY2,Multipropósito de Chancay,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+151CON1,Multiboyas Conchán,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+151CON2,Unión Andina de Cementos,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+151HCO1,Huacho,Marítimo,Regional,Bueno,False,12.25,2025-12-31,2026-10-06
+151MTA1,Perú LNG Melchorita,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+151SUP1,Supe,Marítimo,Regional,Bueno,False,12.25,2025-12-31,2026-10-06
+151SUP2,Multiboyas Supe,Marítimo,Regional,Bueno,False,12.25,2025-12-31,2026-10-06
+151SUP3,Multiboyas Colpex - Supe,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+151SUP4,Multiboyas Quimpac - Paramonga,Marítimo,Regional,Regular,False,16.00,2025-12-31,2026-10-06
+162ADS2,Pluspetrol - Andoas,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162BR95,Lote 95  Bretaña,Fluvial,Nacional,Regular,False,15.00,2025-12-31,2026-10-06
+162CNT1,Contamana,Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+162CNT2,Maple - Contamana,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162CPJ1,Cabo Pantoja,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162CSR1,Campo Serio,Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+162EST1,El Estrecho,Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+162INH1,Inahuaya,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162IQT1,Iquitos,Fluvial,Nacional,Bueno,False,11.25,2025-12-31,2026-10-06
+162IQT10,COMANA S.A.C,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162IQT11,Servicios y Equipos Amazónicos,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162IQT12,Fluvial Júpiter,Fluvial,Nacional,Regular,False,15.00,2025-12-31,2026-10-06
+162IQT13,"Transporte Fluvial ""JV""",Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162IQT14,Trans Linares,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162IQT15,Triplay Martín S.A.C.,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162IQT16,Exploraciones Amazónicas,Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+162IQT17,Eduardo - Iquitos,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162IQT18,INPOLOR,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162IQT19,JESSMARA,Fluvial,Regional,Malo,False,22.75,2025-12-31,2026-10-06
+162IQT2,Silfo Alván del Castillo - Masusa,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162IQT20,Mercado de Productores,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162IQT21,Morochita 2,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162IQT22,Petroperú,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162IQT24,Trans Linares 2,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162IQT25,TRIMASA,Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+162IQT26,Valverde,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162IQT27,Iquitos (Pasajeros),Fluvial,Nacional,Bueno,False,11.25,2025-12-31,2026-10-06
+162IQT28,Turístico de Iquitos - El Huequito,Fluvial,Regional,Bueno,False,12.75,2025-12-31,2026-10-06
+162IQT29,SANTA ROSA,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162IQT3,Petroperú - Iquitos,Fluvial,Nacional,Bueno,False,11.25,2025-12-31,2026-10-06
+162IQT4,Mario Da Costa Manzur,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162IQT5,Henry - Iquitos,Fluvial,Nacional,Regular,False,15.00,2025-12-31,2026-10-06
+162IQT6,GLP Amazónico,Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+162IQT7,Morochita,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162IQT8,Mercado Mayorista Belén,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162IQT9,Mazán,Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+162ISL1,Islandia,Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+162NAG1,Nueva Angusilla,Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+162NAT1,Aqua Expeditions,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162NAT2,Eduardo - Nauta,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162NAT3,Delfin Amazon Cruises,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162NAT4,Global Romero,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162NAT5,Nauta Port,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162NAT6,Transportes Miguel,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162NSP1,Nueva Esperanza,Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+162PEB1,Pebas,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162RQN0,Requena,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162SCL1,Santa Clotilde,Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+162SMD1,Santa Mercedes,Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+162SPA2,San Pablo,Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+162SRO2,Petroperú - San José de Saramuro (Estación 1),Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+162SRS1,Santa Rosa,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162SRZ1,Petroperù - Saramiriza (Estación 5),Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+162SVA1,Soplín Vargas,Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+162TFR1,Tres Fronteras,Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+162VTS1,Pluspetrol - Villa Trompeteros,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162YMS1,Yurimaguas,Fluvial,Regional,Malo,False,22.75,2025-12-31,2026-10-06
+162YMS2,Petroperú - Yurimaguas,Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+162YMS3,TP Eduardo - Yurimaguas,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162YMS4,Yurimaguas - Nueva Reforma,Fluvial,Nacional,Bueno,True,6.25,2025-12-31,2026-10-06
+162YMS5,Inversiones NH EIRL,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162YMS6,Jorge Delgado Peña (La Ramada),Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162YMS7,Flor de Café,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162YMS8,HP (Hector de Paz),Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+162YMS9,MARBLU SAC (La Charapita),Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+172PEM1,Puerto Maldonado,Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+181ILO1,Ilo,Marítimo,Nacional,Malo,False,20.75,2025-12-31,2026-10-06
+181ILO2,Multiboyas Ilo,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+181ILO3,Southern Perú,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+181ILO4,Multiboyas TLT,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+181PPA1,ENGIE,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+181TBN1,Tablones - SOUTHERN (Amarradero Multiboyas),Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+181TBN2,Tablones - SOUTHERN (Muelle),Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+201BAY1,Petroperú - Bayóvar,Marítimo,Nacional,Malo,False,20.75,2025-12-31,2026-10-06
+201BAY2,San Pedro 1,Marítimo,Regional,Regular,False,16.00,2025-12-31,2026-10-06
+201BAY3,Miski Mayo,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+201BAY4,Bayóvar,Marítimo,Nacional,Regular,False,14.50,2025-12-31,2026-10-06
+201BRN1,La Brea y Negritos,Marítimo,Regional,Bueno,False,12.25,2025-12-31,2026-10-06
+201PAI1,Paita,Marítimo,Nacional,Bueno,True,5.75,2025-12-31,2026-10-06
+201PAI2,Multiboyas Penta Tanks Terminals,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+201PAI3,Estación Naval de Paita,Marítimo,Nacional,Regular,False,14.50,2025-12-31,2026-10-06
+201PAS0,Multiboyas Punta Arenas,Marítimo,Nacional,Regular,False,14.50,2025-12-31,2026-10-06
+201TGA1,Tortuga,Marítimo,Regional,Regular,False,16.00,2025-12-31,2026-10-06
+201TGA2,Mc Donald,Marítimo,Regional,Regular,False,16.00,2025-12-31,2026-10-06
+201TGA3,Parcela 25,Marítimo,Regional,Información no disponible,False,22.25,2025-12-31,2026-10-06
+201TYL1,Muelle MU1,Marítimo,Nacional,Regular,False,14.50,2025-12-31,2026-10-06
+201TYL3,Muelle Hibrido MU2,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+213JLI1,Juli,Lacustre,Regional,Regular,False,15.50,2025-12-31,2026-10-06
+213PUN0,Ferrovias - Puno,Lacustre,Regional,Regular,False,15.50,2025-12-31,2026-10-06
+213PUN1,Puno,Lacustre,Regional,Malo,False,21.75,2025-12-31,2026-10-06
+231ARIC1,Malecón de Atraque al Servicio del Perú en Arica,Marítimo,Nacional,Bueno,False,10.75,2025-12-31,2026-10-06
+241ZOR1,BPZ  Albacora,Marítimo,Regional,Información no disponible,False,22.25,2025-12-31,2026-10-06
+241ZOR2,BPZ Corvina,Marítimo,Regional,Información no disponible,False,22.25,2025-12-31,2026-10-06
+252PCL10,Carrillo,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+252PCL11,Chiu Hermanos S.R.L (USHICO),Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+252PCL12,A.N KERO E.I.R.L,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+252PCL13,Arias,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+252PCL14,León Eleuterio Valverde Loayza,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+252PCL15,Representaciones Mishael E.I.R.L.,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+252PCL16,Augusto Granda Daza,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+252PCL17,Negociación Maderera Travi Satipo,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+252PCL18,Maderera Marañón,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+252PCL19,El  Bambino,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+252PCL4,Henry - Pucallpa,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+252PCL5,Logística Peruana del Oriente de Pucallpa,Fluvial,Regional,Bueno,False,12.75,2025-12-31,2026-10-06
+252PCL6,Alpi Cargo,Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
+252PCL7,Terranova,Fluvial,Regional,Bueno,False,12.75,2025-12-31,2026-10-06
+252PCL8,Logística Selva,Fluvial,Regional,Regular,False,16.50,2025-12-31,2026-10-06
+252PCL9,IMSA (Ex Rocha),Fluvial,Regional,Información no disponible,False,22.75,2025-12-31,2026-10-06
