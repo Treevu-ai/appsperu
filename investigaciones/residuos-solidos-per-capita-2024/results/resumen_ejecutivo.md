@@ -58,7 +58,7 @@ unitario de servicio**: generación alta en localidades dispersas, donde la reco
 por tonelada cuesta más. Los 5 primeros:
    1. **MOLLEPAMPA** (HUANCAVELICA, clase G, 0,80 kg/hab/día, 1.067 hab)
    2. **CONDURIRI** (PUNO, clase G, 0,80 kg/hab/día, 2.013 hab)
-   3. **PU�OS** (HUANUCO, clase G, 0,80 kg/hab/día, 3.815 hab)
+   3. **PUÑOS** (HUANUCO, clase G, 0,80 kg/hab/día, 3.815 hab)
    4. **YAUYUCAN** (CAJAMARCA, clase G, 0,80 kg/hab/día, 2.661 hab)
    5. **LIMATAMBO** (CUSCO, clase G, 0,80 kg/hab/día, 7.517 hab).
 

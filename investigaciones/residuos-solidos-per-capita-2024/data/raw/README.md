@@ -36,7 +36,7 @@ Por clase MEF (media per cápita dom., 2024): A 0,604 (n=74) · B 0,504 (n=122) 
 
 **Unidades (diccionario oficial MINAM, decodificado 2026-10-19):** per cápita = **kg/hab/día** (sobre población **urbana**; identidad `DOM_URBANA_TDIA × 1.000 / POB_URBANA` verificada en el 89,9% de filas y `..._TANIO ≈ ..._TDIA × 365` con dif. mediana 0,32%). La GPC sale de **estudios de caracterización** municipales (SIGERSOL), no de medición continua → serie cuantizada.
 
-**Codificación (hallazgo 2026-10-19):** el CSV de origen está en **Latin-1**, no UTF-8; la ingesta (`residuos-connector.ts:97`) lo decodifica como UTF-8 y deja **222 filas / 48 nombres de distrito con `U+FFFD`** (`BA?OS`, `PU?OS`, `FERRE?AFE`…). Solo afecta etiquetas: `ubigeo` y las columnas numéricas están intactas.
+**Codificación (hallazgo 2026-10-19):** el CSV de origen está en **Latin-1**, no UTF-8; la ingesta lo decodificaba como UTF-8 y dejó **222 filas / 48 nombres de distrito con `U+FFFD`** (`BA?OS`, `PU?OS`, `FERRE?AFE`…). **Reparado el mismo día** con `ingest/decode-csv.ts` + re-ingesta (batch 2): 0 filas dañadas en Neon; solo afectaba etiquetas — `ubigeo` y las columnas numéricas nunca se tocaron (396 filas de este CSV cambian, solo en nombre/departamento/provincia).
 
 ## 2. Covariables verificadas
 

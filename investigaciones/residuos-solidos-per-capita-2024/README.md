@@ -55,7 +55,7 @@ Ver `results/resumen_ejecutivo.md` y `results/tabla_04_regresiones.md` (8 especi
 6. **Sin dato de cobertura de recolección/tratamiento** (SINAN): el estudio mide *generación*, no servicio prestado. No afirmar brechas de cobertura.
 7. **Ingesta manual** (sin scheduler): re-correr `npm run ingest:residuos` si aparece año 2025 en la fuente.
 8. **`avance_ejecucion` de Invierte.pe con 167 valores fuera de rango** (escala 0–100 esperada): la extracción filtra `BETWEEN 0 AND 100`; no usar sin limpiar.
-9. **Nombres de distrito con ``** (hallazgo 2026-10-19): el CSV de MINAM viene en **Latin-1** y la ingesta lo decodificaba como UTF-8 → 222 filas / 48 nombres dañados en la base (`PU?OS` por `PUÑOS`). Solo etiquetas — `ubigeo` y lo numérico están intactos. **Fix aplicado** (2026-10-19: `ingest/decode-csv.ts`, decodificación por contenido, 23 tests ✅); la reparación de los 222 nombres requiere **re-ingesta manual** (`npm run ingest:residuos`), pendiente.
+9. ~~**Nombres de distrito con ``**~~ → **resuelto 2026-10-19**: el CSV de MINAM viene en **Latin-1** y la ingesta lo decodificaba como UTF-8 (222 filas / 48 nombres dañados: `PU?OS` por `PUÑOS`). Fix en `ingest/decode-csv.ts` (decodificación por contenido, 23 tests ✅) + **re-ingesta ejecutada y verificada** (batch 2 de `raw_residuos_solidos_batches`, 11.310 filas upserteadas, **0 filas dañadas** en Neon, 36 nombres con Ñ correcta). CSV de `data/raw/` re-extraídos (396 filas con solo cambios de nombre) y resultados refrescados — coeficientes idénticos.
 
 ## Próximos pasos
 

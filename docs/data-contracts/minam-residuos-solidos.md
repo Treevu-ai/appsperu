@@ -15,7 +15,9 @@
   **222 filas / 48 nombres de distrito dañados** (`BA?OS`, `PU?OS`, `FERRE?AFE`). Afecta solo
   etiquetas (las claves `UBIGEO` son numéricas). Fix: `ingest/decode-csv.ts` decide por contenido
   (UTF-8 válido → UTF-8; si no → Latin-1), con tests (`src/__tests__/decode-csv.test.ts`).
-  **Re-ingesta manual pendiente** (`npm run ingest:residuos`) para reparar los 222 nombres ya guardados.
+  **Re-ingesta ejecutada y verificada 2026-10-19** (`npm run ingest:residuos` con `DATABASE_URL` de
+  `.env.local` re-escrita a `/residuos_solidos`): batch 2, 11.310 filas upserteadas, 0 rechazadas,
+  **0 nombres dañados** en la base (36 distritos ahora con Ñ correcta) y 0 cambios numéricos.
 - Datos alimentados por SIGERSOL (Sistema de Información para la Gestión de Residuos Sólidos),
   reportados anualmente por municipalidades provinciales/distritales al MINAM.
 
