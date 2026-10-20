@@ -17,7 +17,14 @@ async function migrate() {
     )
   `);
 
-  const migrationFiles = ["001_init.sql", "002_normalizer_version.sql"];
+  const migrationFiles = [
+    "001_init.sql",
+    "002_normalizer_version.sql",
+    "003_trade_flat_ranking.sql",
+    "004_trade_cuode_sector_ranking.sql",
+    "005_trade_country_ranking.sql",
+    "006_trade_summary_bilateral_customs.sql",
+  ];
 
   for (const file of migrationFiles) {
     const result = await pool.query<{ name: string }>(
