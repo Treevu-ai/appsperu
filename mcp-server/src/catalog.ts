@@ -4746,4 +4746,32 @@ export const TOOL_CATALOG: ToolSpec[] = [
       anio: z.coerce.number().int().min(2000).max(2100).optional(),
     },
   },
+  // ---- evidencia-cientifica (CrossRef — papers académicos por taxonomía de exportación) ----
+  {
+    name: "evidencia_cientifica_works",
+    handler: "works:works",
+    app: "evidencia-cientifica",
+    description:
+      "Papers académicos indexados en CrossRef (DOI, título, editorial, año, score de relevancia) para la " +
+      "taxonomía de categorías de exportación no tradicional de CLI Market/Rastro (cacao, quinoa, maca, arándano, " +
+      "aguaymanto, café especial, etc.). NO es un espejo completo de CrossRef — solo lo que matchea los términos " +
+      "de búsqueda ingeridos (`CROSSREF_QUERY_TERMS`), 20 resultados por término y corrida. " +
+      SIN_SCHEDULER,
+    pathTemplate: "/api/works",
+    pathParams: [],
+    querySchema: {
+      term: z.string().min(1).optional().describe("Término de búsqueda exacto usado en la ingesta (ej. cacao, quinoa, maca)."),
+      anio: z.string().regex(/^\d{4}$/).optional().describe("Año de publicación."),
+      limit: z.string().regex(/^\d+$/).optional().describe("Máximo de resultados (tope 200, default 50)."),
+    },
+  },
+  {
+    name: "evidencia_cientifica_meta_sources",
+    handler: "meta:sources",
+    app: "evidencia-cientifica",
+    description: "Metadata de los últimos 10 lotes de ingesta CrossRef (término, filas pedidas, checksum).",
+    pathTemplate: "/api/meta/sources",
+    pathParams: [],
+    querySchema: {},
+  },
 ];

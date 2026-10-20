@@ -1,0 +1,16 @@
+name: evidencia-cientifica
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: evidencia_cientifica
+      POSTGRES_PASSWORD: evidencia_cientifica
+      POSTGRES_DB: evidencia_cientifica
+    ports:
+      - "127.0.0.1:5443:5432"
+    volumes:
+      - evidencia_cientifica_pgdata:/var/lib/postgresql/data
+
+volumes:
+  evidencia_cientifica_pgdata:

@@ -61,6 +61,8 @@ import * as compras_publicas_suppliers from "./compras-publicas/suppliers.js";
 import * as compras_publicas_unsuccessful_tenders from "./compras-publicas/unsuccessful-tenders.js";
 import * as emergencias_indeci_crossref from "./emergencias-indeci/crossref.js";
 import * as emergencias_indeci_emergencias from "./emergencias-indeci/emergencias.js";
+import * as evidencia_cientifica_meta from "./evidencia-cientifica/meta.js";
+import * as evidencia_cientifica_works from "./evidencia-cientifica/works.js";
 import * as fonafe_empresarial_empresas from "./fonafe-empresarial/empresas.js";
 import * as fonafe_empresarial_presupuesto from "./fonafe-empresarial/presupuesto.js";
 import * as geo_intersections_communities from "./geo-intersections/communities.js";
@@ -227,6 +229,8 @@ export const MODULOS: Record<string, Record<string, unknown>> = {
   "compras-publicas/unsuccessful-tenders": compras_publicas_unsuccessful_tenders,
   "emergencias-indeci/crossref": emergencias_indeci_crossref,
   "emergencias-indeci/emergencias": emergencias_indeci_emergencias,
+  "evidencia-cientifica/meta": evidencia_cientifica_meta,
+  "evidencia-cientifica/works": evidencia_cientifica_works,
   "fonafe-empresarial/empresas": fonafe_empresarial_empresas,
   "fonafe-empresarial/presupuesto": fonafe_empresarial_presupuesto,
   "geo-intersections/communities": geo_intersections_communities,

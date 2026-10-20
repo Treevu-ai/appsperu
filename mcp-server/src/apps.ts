@@ -50,6 +50,7 @@ export const APP_KEYS = [
   "sunedu-licenciamiento",
   "territorio-inteligencia",
   "sinadef-defunciones",
+  "evidencia-cientifica",
 ] as const;
 
 export type AppKey = (typeof APP_KEYS)[number];
@@ -102,6 +103,7 @@ const DEFAULT_PORTS: Record<AppKey, number> = {
   "sunedu-licenciamiento": 4045,
   "territorio-inteligencia": 4047,
   "sinadef-defunciones": 4048,
+  "evidencia-cientifica": 4100,
 };
 
 function envVarFor(app: AppKey): string {
