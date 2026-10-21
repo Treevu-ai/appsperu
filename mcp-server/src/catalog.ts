@@ -2077,6 +2077,81 @@ export const TOOL_CATALOG: ToolSpec[] = [
     },
   },
   {
+    name: "actividad_agraria_agromercado_asistencias_tecnicas",
+    handler: "agromercado-asistencias-tecnicas:list",
+    app: "actividad-agraria",
+    description:
+      "Asistencias técnicas individuales prestadas por Agromercado (MIDAGRI, antes 'Sierra y Selva Exportadora') " +
+      "a organizaciones agroexportadoras en 2025: tema, actividad, ubicación y beneficiarios directos de cada " +
+      "asesoría. NO es un padrón de organizaciones -- es un log de ~9980 asistencias puntuales, sin nombre de " +
+      "organización que enlazar a RUC (a diferencia de agromercado_articulacion). `codigoAt` no es una clave " +
+      "única: varias líneas temáticas pueden compartir el mismo código de ficha. Sin ruta Express: se sirve " +
+      "solo por MCP (ver MCP_ONLY_PATHS en el test de paridad). " + SIN_SCHEDULER,
+    pathTemplate: "/api/agromercado-asistencias-tecnicas",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      tematica: z.string().min(1).optional().describe("Ej. 'Asociatividad y Cooperativismo'."),
+      regionNatural: z.enum(["COSTA", "SIERRA", "SELVA"]).optional(),
+      limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 200, máximo 500."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "actividad_agraria_agromercado_organizaciones_distrito",
+    handler: "agromercado-organizaciones-distrito:list",
+    app: "actividad-agraria",
+    description:
+      "Mapa agregado por distrito del número de organizaciones asistidas por Agromercado (MIDAGRI) en 2025. " +
+      "A pesar del nombre de la fuente ('Organizaciones Asistidas'), el dato real es un CONTEO por distrito " +
+      "(`numOrganizaciones`), no un listado de organizaciones individuales -- no hay nombre que enlazar a RUC. " +
+      "Sin ruta Express: se sirve solo por MCP (ver MCP_ONLY_PATHS en el test de paridad). " + SIN_SCHEDULER,
+    pathTemplate: "/api/agromercado-organizaciones-distrito",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      ubigeo: z.string().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 200, máximo 500."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "actividad_agraria_agromercado_eventos_articulacion",
+    handler: "agromercado-eventos-articulacion:list",
+    app: "actividad-agraria",
+    description:
+      "Eventos de articulación comercial (ferias, ruedas de negocio, activaciones) realizados por Agromercado " +
+      "(MIDAGRI) en 2025, con producto/cadena, tipo, alcance de mercado y número de organizaciones participantes " +
+      "(`numOrganizaciones`, un CONTEO, no nombres de organización -- no hay enlace a RUC). Sin ruta Express: " +
+      "se sirve solo por MCP (ver MCP_ONLY_PATHS en el test de paridad). " + SIN_SCHEDULER,
+    pathTemplate: "/api/agromercado-eventos-articulacion",
+    pathParams: [],
+    querySchema: {
+      departamento: z.string().min(1).optional(),
+      tipo: z.string().min(1).optional().describe("Ej. 'Encuentro comercial', 'Activación', 'Otro'."),
+      alcanceMercado: z.enum(["Nacional", "Regional"]).optional(),
+      limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 200, máximo 500."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
+    name: "actividad_agraria_agromercado_estudios_mercado",
+    handler: "agromercado-estudios-mercado:list",
+    app: "actividad-agraria",
+    description:
+      "Catálogo de perfiles/estudios de mercado publicados por Agromercado (MIDAGRI) al 2025, con cadena de " +
+      "valor, región y el `uri` al informe público en gob.pe. Fuente chica (5 filas verificadas 2026-10-20). " +
+      "Sin ruta Express: se sirve solo por MCP (ver MCP_ONLY_PATHS en el test de paridad). " + SIN_SCHEDULER,
+    pathTemplate: "/api/agromercado-estudios-mercado",
+    pathParams: [],
+    querySchema: {
+      cadena: z.string().min(1).optional().describe("Ej. 'AGUAJE', 'MIEL DE ABEJA'."),
+      region: z.string().min(1).optional().describe("Coincidencia parcial, ej. 'LORETO'."),
+      limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 200, máximo 500."),
+      offset: z.coerce.number().int().min(0).optional().describe("Default 0."),
+    },
+  },
+  {
     name: "actividad_agraria_crossref",
     handler: "crossref:list",
     app: "actividad-agraria",

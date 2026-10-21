@@ -40,8 +40,16 @@ const MCP_ONLY_PATHS: Partial<Record<AppKey, string[]>> = {
     "/api/geodist/diadas",
     "/api/trains",
   ],
-  // MIDAGRI/Agromercado, Planes de Articulación Comercial (src/ingest/agromercado-articulacion.ts)
-  "actividad-agraria": ["/api/agromercado-articulacion"],
+  // MIDAGRI/Agromercado: Planes de Articulación (src/ingest/agromercado-articulacion.ts) +
+  // Asistencias Técnicas, Organizaciones por Distrito, Eventos y Estudios de Mercado
+  // (src/ingest/agromercado-{asistencias-tecnicas,organizaciones-distrito,eventos-articulacion,estudios-mercado}.ts)
+  "actividad-agraria": [
+    "/api/agromercado-articulacion",
+    "/api/agromercado-asistencias-tecnicas",
+    "/api/agromercado-organizaciones-distrito",
+    "/api/agromercado-eventos-articulacion",
+    "/api/agromercado-estudios-mercado",
+  ],
 };
 
 describe("catálogo MCP vs. rutas Express reales (CX-15)", () => {

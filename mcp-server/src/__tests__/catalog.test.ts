@@ -165,6 +165,10 @@ const EXPECTED_TOOLS_BY_APP: Record<AppKey, string[]> = {
   ],
   "actividad-agraria": [
     "actividad_agraria_agromercado_articulacion",
+    "actividad_agraria_agromercado_asistencias_tecnicas",
+    "actividad_agraria_agromercado_eventos_articulacion",
+    "actividad_agraria_agromercado_estudios_mercado",
+    "actividad_agraria_agromercado_organizaciones_distrito",
     "actividad_agraria_crossref",
     "actividad_agraria_regional_outcome",
     "actividad_agraria_tractor_rental",
