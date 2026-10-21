@@ -62,13 +62,27 @@ async function extractAndMerge(page) {
 async function clickGridCell(page) {
   // a real click is required -- programmatic .focus() does not register as a
   // "selected cell" with Power BI's internal grid state, so PageDown is a
-  // no-op without it. Click the Region column (plain text, no hyperlink) to
-  // avoid accidentally activating a WEB link. A click triggers Power BI's
-  // quick-insights tooltip (bar chart), so we press Escape right after to
-  // dismiss it before it can accumulate and leak renderer memory.
-  const cell = page.locator('div.innerContainer div[role="row"] div[role="gridcell"]').nth(5);
-  await cell.click({ timeout: 5000 }).catch(() => {});
-  await page.keyboard.press('Escape').catch(() => {});
+  // no-op without it. IMPORTANT: use page.mouse.click(x, y) (a raw mouse
+  // down+up at a coordinate), NOT locator.click() -- Playwright's
+  // locator.click() performs an internal hover/move-and-settle step first,
+  // and hovering (not clicking) is what triggers Power BI's quick-insights
+  // tooltip (a bar-chart popup) on this visual. That tooltip, retriggered on
+  // every single click via locator.click(), is what leaked renderer memory
+  // and crashed the browser after ~40 iterations. A bare mouse.click() does
+  // not dwell long enough to trigger the hover tooltip and was confirmed
+  // (manually, in a real browser) to select the cell and enable PageDown
+  // without ever showing the popup.
+  const box = await page.evaluate(() => {
+    const row = document.querySelector('div.innerContainer div[role="row"]');
+    if (!row) return null;
+    const cells = row.querySelectorAll('div[role="gridcell"]');
+    if (cells.length < 6) return null;
+    const r = cells[5].getBoundingClientRect(); // Region column: plain text, no link
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+  if (box) {
+    await page.mouse.click(box.x, box.y);
+  }
 }
 
 async function runSession(sessionIdx) {
@@ -88,9 +102,10 @@ async function runSession(sessionIdx) {
     console.log(`Inicial sesión: ${map.size} filas`);
 
     // click ONCE to establish selection/focus on the grid -- repeated clicks
-    // trigger Power BI's quick-insights tooltip each time, which is what
-    // leaked memory and crashed the renderer. If focus survives across
-    // PageDown presses without re-clicking, we never trigger that tooltip.
+    // before every PageDown were tested live (2026-10-19) and made things
+    // worse: 0 rows added across 80 iterations in two separate sessions,
+    // vs. the original every-10-stall re-click which at least made partial
+    // progress. Do not change this back without re-testing live.
     await clickGridCell(page);
 
     let stall = 0;
