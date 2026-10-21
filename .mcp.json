@@ -3,6 +3,14 @@
     "rastro": {
       "command": "node",
       "args": ["mcp-server/dist/index.js"]
+    },
+    "neon-rastro-readonly": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "${RASTRO_READONLY_URL}"
+      ]
     }
   }
 }
