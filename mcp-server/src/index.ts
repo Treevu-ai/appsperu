@@ -383,7 +383,8 @@ export async function resolveActiveKey(): Promise<ApiKeyRecord | null> {
  * Fase 1-D (HTTP): un `McpServer` por sesión, no uno por proceso — a diferencia
  * de stdio (un proceso = un `activeKey` fijo para toda su vida), un mismo
  * proceso HTTP sirve muchas sesiones con códigos distintos a la vez. Extraído
- * para que `http-transport.ts` lo reuse sin duplicar el registro de tools.
+ * para que `worker.ts` (Cloudflare Worker, el único transporte HTTP hoy) lo
+ * reuse sin duplicar el registro de tools.
  */
 export function buildMcpServer(activeKey: ApiKeyRecord | null, env?: Record<string, unknown>): McpServer {
   const server = new McpServer({ name: "appsperu-mcp-server", version: "0.1.0" });
@@ -420,16 +421,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   // del developer contaminaría sus `process.env`.
   loadEnvFile({ path: mcpServerEnvFile() });
 
-  // Fase 1-D: MCP_TRANSPORT=http arranca el transporte remoto (http-transport.ts) en vez de
-  // stdio — default sin la variable sigue siendo stdio, comportamiento intacto.
-  const startServer =
-    process.env.MCP_TRANSPORT === "http"
-      ? async () => {
-          const { startHttpTransport } = await import("./http-transport.js");
-          await startHttpTransport();
-        }
-      : main;
-  startServer().catch((err) => {
+  // El transporte HTTP remoto se eliminó (era Express + pg Pool, construido para el
+  // Fly.io ya decommissionado — ver docs/ENDPOINTS.md). El único HTTP remoto hoy es
+  // el Cloudflare Worker (worker.ts, `npm run dev:worker` / `wrangler deploy`), que
+  // no pasa por este entry point. stdio sigue siendo el único modo de este archivo.
+  main().catch((err) => {
     console.error("appsperu-mcp-server falló al iniciar:", err);
     process.exit(1);
   });

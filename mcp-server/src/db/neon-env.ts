@@ -3,9 +3,10 @@ import { APP_KEYS, type AppKey } from "../apps.js";
 
 /**
  * Entorno del MCP Worker. A diferencia de D1 (que exige un binding por base),
- * Neon expone un único secret porque las 36 bases viven en el mismo proyecto
- * — mismo host, mismo rol, mismo compute. Lo único que cambia entre apps es
- * el nombre de la base, que se deriva del `AppKey`.
+ * Neon expone un único secret porque todas las bases (una por `AppKey` en
+ * `APP_KEYS`, ver `src/apps.ts`) viven en el mismo proyecto — mismo host,
+ * mismo rol, mismo compute. Lo único que cambia entre apps es el nombre de
+ * la base, que se deriva del `AppKey`.
  *
  * Secret:  NEON_DATABASE_URL  →  postgresql://USER:PASS@ep-xxx.region.aws.neon.tech/postgres
  * Derivado: postgresql://USER:PASS@ep-xxx.region.aws.neon.tech/radar_ejecucion

@@ -61,7 +61,8 @@ function jsonResponse(body: unknown, status: number): Response {
 }
 
 /**
- * Cloudflare Worker handler — reemplaza Express http-transport.ts.
+ * Cloudflare Worker handler — único transporte HTTP remoto (el Express +
+ * pg Pool que corría en Fly.io se eliminó; ver docs/ENDPOINTS.md).
  * Soporta MCP sobre Streamable HTTP (Claude Desktop, Cursor, agents).
  */
 export default {

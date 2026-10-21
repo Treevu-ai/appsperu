@@ -11,13 +11,15 @@ Monorepo que conecta datos abiertos del Estado peruano — presupuesto, contrata
 ```
 Agentes IA (Claude Code, Cursor, Claude Desktop)
     → MCP Worker (Cloudflare Workers — rastro.fyi/mcp)
-        → Neon: 1 proyecto Postgres, 36 bases (una por app)
+        → Neon: 1 proyecto Postgres, 1 base por app (ver tabla de abajo)
                 ↑
     Scripts de ingestión (locales, on-demand → Neon con pg)
 ```
 
-- **MCP Server** (`mcp-server/`): Worker de Cloudflare que expone **209 tools de solo lectura** vía 3 meta-tools (`rastro_buscar_tools` + `rastro_llamar` + `rastro_health`).
-- **Data layer**: Neon (Postgres 17 serverless) — un proyecto, 36 bases, un rol. Se eligió Neon sobre D1: D1 no tiene PostGIS, ni transacciones, ni advisory locks, y el repo los usa. Ver [`docs/adr/0024-neon-en-lugar-de-d1.md`](docs/adr/0024-neon-en-lugar-de-d1.md).
+- **MCP Server** (`mcp-server/`): Worker de Cloudflare que expone el catálogo de tools de solo
+  lectura (la cifra exacta crece con cada conector — ver [`mcp-server/README.md`](mcp-server/README.md))
+  vía 4 meta-tools (`rastro_buscar_tools` + `rastro_llamar` + `rastro_health` + `riesgo_territorial_resumen`).
+- **Data layer**: Neon (Postgres 17 serverless) — un proyecto, 1 base por app, un rol. Se eligió Neon sobre D1: D1 no tiene PostGIS, ni transacciones, ni advisory locks, y el repo los usa. Ver [`docs/adr/0024-neon-en-lugar-de-d1.md`](docs/adr/0024-neon-en-lugar-de-d1.md).
 - **Ingreso de datos**: scripts locales (`apps/<app>/api/src/ingest/*`) que corren a demanda y escriben a Neon con `pg` de siempre. No cambian.
 - **Provisioning**: [`mcp-server/RUNBOOK_NEON.md`](mcp-server/RUNBOOK_NEON.md).
 
@@ -46,7 +48,7 @@ Agentes IA (Claude Code, Cursor, Claude Desktop)
 | `mimp` | Violencia contra la mujer (CEM) + Chat 100 | `mimp` |
 | `renamu` | Capacidad institucional municipal | `renamu` |
 | `autoridades-electas` | Autoridades proclamadas (JNE) | `autoridades_electas` |
-| `instituciones-educivas` | Padrón nacional de instituciones educativas | `instituciones_educativas` |
+| `instituciones-educativas` | Padrón nacional de instituciones educativas | `instituciones_educativas` |
 | `infracciones-ambientales` | Infractores ambientales sancionados (OEFA/RUIAS) | `infracciones_ambientales` |
 | `red-vial-subnacional` | Intervenciones en redes viales (MTC/Provías) | `red_vial_subnacional` |
 | `residuos-solidos` | Residuos sólidos por distrito (MINAM/SIGERSOL) | `residuos_solidos` |
@@ -62,6 +64,18 @@ Agentes IA (Claude Code, Cursor, Claude Desktop)
 | `catastro-forestal` | Catastro forestal (SERFOR) | `catastro_forestal` |
 | `emergencias-indeci` | Emergencias y daños (INDECI/SINPAD) | `emergencias_indeci` |
 | `geo-intersections` | Cruce geográfico de capas territoriales | `geo_intersections` |
+| `fonafe-empresarial` | Presupuesto empresarial de las 34 empresas FONAFE | `fonafe_empresarial` |
+| `onp-presupuesto` | Padrón de pensionistas y presupuesto (ONP) | `onp_presupuesto` |
+| `osinergmin-combustibles` | Grifos/estaciones y precios de combustibles (OSINERGMIN) | `osinergmin_combustibles` |
+| `ositran-reclamos` | Reclamos, tráfico y recaudación en carreteras concesionadas (OSITRAN) | `ositran_reclamos` |
+| `smv-sanciones` | Sanciones del mercado de valores (SMV) | `smv_sanciones` |
+| `sunat-aduanas` | Comercio exterior — Anuario SUNAT | `sunat_aduanas` |
+| `sunedu-licenciamiento` | Licenciamiento universitario (SUNEDU) | `sunedu_licenciamiento` |
+| `territorio-inteligencia` | Inteligencia territorial (catastro × sanciones × OxI × MINAM × UBIGEO) | `territorio_inteligencia` |
+| `sinadef-defunciones` | Defunciones registradas, línea base histórica La Libertad (SINADEF/MINSA) | `sinadef_defunciones` |
+
+> Tabla verificada contra `APP_KEYS` en `mcp-server/src/apps.ts` (46 apps, 2026-10-21). Si agregas
+> una app nueva al catálogo MCP, agrégala aquí también — este README se queda atrás fácil.
 
 ## Uso del MCP Server (Worker)
 
@@ -73,22 +87,18 @@ npm ci
 npm run dev          # transporte stdio — para usar desde Claude Code/Cursor local
 ```
 
-Configura el cliente MCP (`.mcp.json` o `~/.cursor/mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "rastro": {
-      "command": "node",
-      "args": ["mcp-server/dist/index.js"]
-    }
-  }
-}
-```
+Configura el cliente MCP — ver [`CONFIGURACION_MCP_CLIENTES.md`](CONFIGURACION_MCP_CLIENTES.md)
+para la config completa de cada cliente (Claude Desktop, Claude Code, Cursor, Kiro, MiniMax) y la
+matriz de variables de entorno. El `.mcp.json` de este repo ya trae la entrada `rastro` con ruta
+relativa (funciona porque Claude Code fija el cwd en la raíz del proyecto); otros clientes
+necesitan ruta absoluta.
 
 ### Producción (Cloudflare Worker)
 
-El MCP server está desplegado como un Worker de Cloudflare en `https://rastro.fyi/mcp` (Streamable HTTP, autenticado con API key `x-api-key`).
+El MCP server está desplegado como un Worker de Cloudflare en `https://www.rastro.fyi/mcp`
+(Streamable HTTP, `x-api-key` obligatoria — sin modo sin-auth en este transporte). Detalle,
+verificación con `curl` y qué endpoints quedaron decommissionados (Fly.io, VPS) en
+[`docs/ENDPOINTS.md`](docs/ENDPOINTS.md).
 
 El secret `NEON_DATABASE_URL` apunta a una base cualquiera del proyecto; el resolver reescribe el nombre por app. Ver [`mcp-server/src/db/neon-env.ts`](mcp-server/src/db/neon-env.ts) y el runbook de provisioning.
 
@@ -116,3 +126,5 @@ Ver [`docs/conectores.md`](docs/conectores.md) — ficha técnica por conector.
 - [`docs/data-contracts/`](docs/data-contracts/) — un archivo por fuente externa.
 - [`docs/adr/`](docs/adr/) — decisiones arquitectónicas.
 - [`mcp-server/README.md`](mcp-server/README.md) — arquitectura interna del servidor MCP.
+- [`CONFIGURACION_MCP_CLIENTES.md`](CONFIGURACION_MCP_CLIENTES.md) — config oficial por cliente MCP (local y remoto) + matriz de variables de entorno.
+- [`docs/ENDPOINTS.md`](docs/ENDPOINTS.md) — estado real de cada endpoint de producción.
