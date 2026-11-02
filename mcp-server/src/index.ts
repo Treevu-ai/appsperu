@@ -54,6 +54,41 @@ export interface ToolResult {
   isError: boolean;
 }
 
+export interface ToolTelemetryEvent {
+  tool: string;
+  app: string;
+  durationMs: number;
+  isError: boolean;
+  args: Record<string, unknown>;
+  resultSummary: {
+    bytes: number;
+    rows?: number;
+  };
+}
+
+/**
+ * Postea telemetry de una tool call al bridge local de Hermes3D. No-op total
+ * si HERMES_INGEST_URL o HERMES_INGEST_TOKEN no están seteadas (el caso del
+ * Worker desplegado en Cloudflare, y el de cualquier test que no las setee).
+ * Fire-and-forget: nunca se espera ni se propaga su resultado — una tool
+ * call real no debe demorarse ni romperse por esto.
+ */
+export function emitTelemetry(event: ToolTelemetryEvent): void {
+  const url = process.env.HERMES_INGEST_URL;
+  const token = process.env.HERMES_INGEST_TOKEN;
+  if (!url || !token) return;
+
+  fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-ingest-token": token,
+    },
+    body: JSON.stringify(event),
+    signal: AbortSignal.timeout(1500),
+  }).catch(() => {});
+}
+
 /**
  * Valida `args` contra el `querySchema` (Zod) del tool antes de construir la URL real. Sin esto,
  * `buildQuery` solo hacía `String(value)` de lo que llegara del cliente MCP: un `limit` fuera de

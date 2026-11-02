@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildPath, buildQuery, findTool, invokeTool, mcpServerEnvFile, resolveStdioEnv, runRastroLlamar, validateArgs } from "../index.js";
+import { buildPath, buildQuery, emitTelemetry, findTool, invokeTool, mcpServerEnvFile, resolveStdioEnv, runRastroLlamar, type ToolTelemetryEvent, validateArgs } from "../index.js";
 import { TOOL_CATALOG, type ToolSpec } from "../catalog.js";
 import { z } from "zod";
 
@@ -200,6 +200,75 @@ describe("invokeTool", () => {
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toMatch(/ruc/);
     expect(fetchSpy).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("emitTelemetry", () => {
+  const sampleEvent: ToolTelemetryEvent = {
+    tool: "test_tool",
+    app: "renamu",
+    durationMs: 12.5,
+    isError: false,
+    args: { departamento: "LA LIBERTAD" },
+    resultSummary: { bytes: 42, rows: 3 },
+  };
+
+  it("does nothing when HERMES_INGEST_URL is not set", () => {
+    vi.stubEnv("HERMES_INGEST_URL", "");
+    vi.stubEnv("HERMES_INGEST_TOKEN", "test-token");
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    emitTelemetry(sampleEvent);
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("does nothing when HERMES_INGEST_TOKEN is not set", () => {
+    vi.stubEnv("HERMES_INGEST_URL", "http://localhost:4000/ingest");
+    vi.stubEnv("HERMES_INGEST_TOKEN", "");
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    emitTelemetry(sampleEvent);
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("posts the event with the token header when both env vars are set", () => {
+    vi.stubEnv("HERMES_INGEST_URL", "http://localhost:4000/ingest");
+    vi.stubEnv("HERMES_INGEST_TOKEN", "test-token");
+    const fetchSpy = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    emitTelemetry(sampleEvent);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchSpy.mock.calls[0];
+    expect(url).toBe("http://localhost:4000/ingest");
+    expect(init.method).toBe("POST");
+    expect(init.headers["x-ingest-token"]).toBe("test-token");
+    expect(init.headers["Content-Type"]).toBe("application/json");
+    expect(JSON.parse(init.body)).toEqual(sampleEvent);
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("does not throw when the fetch rejects", async () => {
+    vi.stubEnv("HERMES_INGEST_URL", "http://localhost:4000/ingest");
+    vi.stubEnv("HERMES_INGEST_TOKEN", "test-token");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+
+    expect(() => emitTelemetry(sampleEvent)).not.toThrow();
+    // let the rejected promise's .catch() settle before the test ends
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
   });
 });
