@@ -202,6 +202,89 @@ describe("invokeTool", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
+
+  it("fires telemetry with the tool name, app, and isError on a successful call, without changing the result", async () => {
+    vi.stubEnv("HERMES_INGEST_URL", "http://localhost:4000/ingest");
+    vi.stubEnv("HERMES_INGEST_TOKEN", "test-token");
+    const telemetryFetch = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", telemetryFetch);
+    // The HTTP-proxy call inside invokeTool and the telemetry POST both go
+    // through the same stubbed global fetch here — distinguish by call order:
+    // call[0] is the tool's own HTTP-proxy request, call[1] is telemetry.
+    telemetryFetch
+      .mockResolvedValueOnce({ status: 200, headers: new Headers({ "content-type": "application/json" }), json: async () => ({ ok: true }) })
+      .mockResolvedValueOnce({ ok: true });
+
+    const tool = makeTool({ name: "test_tool", app: "renamu", pathTemplate: "/api/recurso", pathParams: [] });
+    const result = await invokeTool(tool, { filtro: "x" });
+
+    expect(result.isError).toBe(false);
+    expect(result.content[0].text).toContain('"ok": true');
+    expect(telemetryFetch).toHaveBeenCalledTimes(2);
+    const [telemetryUrl, telemetryInit] = telemetryFetch.mock.calls[1];
+    expect(telemetryUrl).toBe("http://localhost:4000/ingest");
+    const payload = JSON.parse(telemetryInit.body);
+    expect(payload.tool).toBe("test_tool");
+    expect(payload.app).toBe("renamu");
+    expect(payload.isError).toBe(false);
+    expect(payload.args).toEqual({ filtro: "x" });
+    expect(typeof payload.durationMs).toBe("number");
+    expect(payload.resultSummary.bytes).toBeGreaterThan(0);
+
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("fires telemetry with isError true when the call fails, without changing the result", async () => {
+    vi.stubEnv("HERMES_INGEST_URL", "http://localhost:4000/ingest");
+    vi.stubEnv("HERMES_INGEST_TOKEN", "test-token");
+    const telemetryFetch = vi.fn();
+    telemetryFetch
+      .mockResolvedValueOnce({ status: 503, headers: new Headers({ "content-type": "application/json" }), json: async () => ({ error: "down" }) })
+      .mockResolvedValueOnce({ ok: true });
+    vi.stubGlobal("fetch", telemetryFetch);
+
+    const tool = makeTool({ name: "test_tool", app: "renamu", pathTemplate: "/api/recurso", pathParams: [] });
+    const result = await invokeTool(tool, {});
+
+    expect(result.isError).toBe(true);
+    const payload = JSON.parse(telemetryFetch.mock.calls[1][1].body);
+    expect(payload.isError).toBe(true);
+
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("does not call fetch for telemetry when HERMES_INGEST_URL is unset (existing tests' default env)", async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({ status: 200, headers: new Headers({ "content-type": "application/json" }), json: async () => ({ ok: true }) });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const tool = makeTool({ pathTemplate: "/api/recurso", pathParams: [] });
+    await invokeTool(tool, {});
+
+    // Only the tool's own HTTP-proxy call — no second (telemetry) call.
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
+  });
+
+  it("still returns the tool's result even when the telemetry POST rejects", async () => {
+    vi.stubEnv("HERMES_INGEST_URL", "http://localhost:4000/ingest");
+    vi.stubEnv("HERMES_INGEST_TOKEN", "test-token");
+    const telemetryFetch = vi.fn();
+    telemetryFetch
+      .mockResolvedValueOnce({ status: 200, headers: new Headers({ "content-type": "application/json" }), json: async () => ({ ok: true }) })
+      .mockRejectedValueOnce(new Error("ingest down"));
+    vi.stubGlobal("fetch", telemetryFetch);
+
+    const tool = makeTool({ pathTemplate: "/api/recurso", pathParams: [] });
+    const result = await invokeTool(tool, {});
+
+    expect(result.isError).toBe(false);
+    expect(result.content[0].text).toContain('"ok": true');
+
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
 });
 
 describe("emitTelemetry", () => {

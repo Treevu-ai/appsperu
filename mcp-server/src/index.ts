@@ -128,41 +128,57 @@ export async function invokeTool(
   args: Record<string, unknown>,
   ctx?: InvokeContext
 ): Promise<ToolResult> {
+  const startedAt = performance.now();
+
+  const record = (result: ToolResult, body: unknown): ToolResult => {
+    emitTelemetry({
+      tool: tool.name,
+      app: tool.app,
+      durationMs: performance.now() - startedAt,
+      isError: result.isError,
+      args,
+      resultSummary: {
+        bytes: JSON.stringify(body).length,
+        rows: Array.isArray(body) ? body.length : undefined,
+      },
+    });
+    return result;
+  };
+
   try {
     const validated = validateArgs(tool, args);
     if (!validated.ok) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify({ error: "Argumentos inválidos para este tool.", detalles: validated.errors }, null, 2),
-          },
-        ],
-        isError: true,
-      };
+      const body = { error: "Argumentos inválidos para este tool.", detalles: validated.errors };
+      return record(
+        {
+          content: [{ type: "text" as const, text: JSON.stringify(body, null, 2) }],
+          isError: true,
+        },
+        body
+      );
     }
 
     const handlerKey = tool.handler;
     if (handlerKey && ctx?.env) {
       const { executeHandler } = await import("./handlers/registry.js");
       const { status, body } = await executeHandler(ctx.env as Record<string, unknown>, tool, validated.data);
-      return {
-        content: [{ type: "text" as const, text: serializeToolResponse(status, body) }],
-        isError: status >= 500,
-      };
+      return record(
+        { content: [{ type: "text" as const, text: serializeToolResponse(status, body) }], isError: status >= 500 },
+        body
+      );
     }
 
     const path = buildPath(tool, args);
     const query = buildQuery(tool, validated.data);
     const url = buildUrl(baseUrlFor(tool.app), path, query);
     const { status, body } = await callApi(url);
-    return {
-      content: [{ type: "text" as const, text: serializeToolResponse(status, body) }],
-      isError: status >= 500,
-    };
+    return record(
+      { content: [{ type: "text" as const, text: serializeToolResponse(status, body) }], isError: status >= 500 },
+      body
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return { content: [{ type: "text" as const, text: message }], isError: true };
+    return record({ content: [{ type: "text" as const, text: message }], isError: true }, { error: message });
   }
 }
 
