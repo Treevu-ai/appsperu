@@ -1,5 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildPath, buildQuery, emitTelemetry, findTool, invokeTool, mcpServerEnvFile, resolveStdioEnv, runRastroLlamar, type ToolTelemetryEvent, validateArgs } from "../index.js";
+import {
+  buildPath,
+  buildQuery,
+  emitTelemetry,
+  findTool,
+  invokeTool,
+  mcpServerEnvFile,
+  redactSensitiveArgs,
+  resolveStdioEnv,
+  runRastroLlamar,
+  telemetryEnabled,
+  type ToolTelemetryEvent,
+  validateArgs,
+} from "../index.js";
 import { TOOL_CATALOG, type ToolSpec } from "../catalog.js";
 import { z } from "zod";
 
@@ -284,6 +297,156 @@ describe("invokeTool", () => {
 
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+  });
+
+  it("does not compute the telemetry result summary when telemetry is disabled (Finding 1 regression guard)", async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({ status: 200, headers: new Headers({ "content-type": "application/json" }), json: async () => ({ ok: true }) });
+    vi.stubGlobal("fetch", fetchSpy);
+    const stringifySpy = vi.spyOn(JSON, "stringify");
+
+    const tool = makeTool({ pathTemplate: "/api/recurso", pathParams: [] });
+    await invokeTool(tool, {});
+
+    // Exactly one JSON.stringify call: serializeToolResponse's own
+    // {status, body} serialization. If `record` still built
+    // `resultSummary.bytes` via a second `JSON.stringify(body).length`
+    // before checking `telemetryEnabled()`, this would be 2 even though
+    // HERMES_INGEST_URL/TOKEN are unset.
+    expect(stringifySpy).toHaveBeenCalledTimes(1);
+
+    stringifySpy.mockRestore();
+    vi.unstubAllGlobals();
+  });
+
+  it("does compute the telemetry result summary when telemetry is enabled", async () => {
+    vi.stubEnv("HERMES_INGEST_URL", "http://localhost:4000/ingest");
+    vi.stubEnv("HERMES_INGEST_TOKEN", "test-token");
+    const telemetryFetch = vi.fn();
+    telemetryFetch
+      .mockResolvedValueOnce({ status: 200, headers: new Headers({ "content-type": "application/json" }), json: async () => ({ ok: true }) })
+      .mockResolvedValueOnce({ ok: true });
+    vi.stubGlobal("fetch", telemetryFetch);
+    const stringifySpy = vi.spyOn(JSON, "stringify");
+
+    const tool = makeTool({ pathTemplate: "/api/recurso", pathParams: [] });
+    await invokeTool(tool, {});
+
+    // Three calls: serializeToolResponse's own serialization, record()'s
+    // resultSummary.bytes computation, and emitTelemetry's own
+    // JSON.stringify(event) for the POST body — strictly more than the
+    // single call in the disabled case above.
+    expect(stringifySpy).toHaveBeenCalledTimes(3);
+
+    stringifySpy.mockRestore();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("derives resultSummary.rows from the 'resultados' wrapper key (Finding 2 regression guard)", async () => {
+    vi.stubEnv("HERMES_INGEST_URL", "http://localhost:4000/ingest");
+    vi.stubEnv("HERMES_INGEST_TOKEN", "test-token");
+    const telemetryFetch = vi.fn();
+    telemetryFetch
+      .mockResolvedValueOnce({
+        status: 200,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => ({ resultados: [{ id: 1 }, { id: 2 }, { id: 3 }] }),
+      })
+      .mockResolvedValueOnce({ ok: true });
+    vi.stubGlobal("fetch", telemetryFetch);
+
+    const tool = makeTool({ pathTemplate: "/api/recurso", pathParams: [] });
+    await invokeTool(tool, {});
+
+    const payload = JSON.parse(telemetryFetch.mock.calls[1][1].body);
+    expect(payload.resultSummary.rows).toBe(3);
+
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("redacts a 'dni' arg before sending telemetry (Finding 3 regression guard)", async () => {
+    vi.stubEnv("HERMES_INGEST_URL", "http://localhost:4000/ingest");
+    vi.stubEnv("HERMES_INGEST_TOKEN", "test-token");
+    const telemetryFetch = vi.fn();
+    telemetryFetch
+      .mockResolvedValueOnce({ status: 200, headers: new Headers({ "content-type": "application/json" }), json: async () => ({ ok: true }) })
+      .mockResolvedValueOnce({ ok: true });
+    vi.stubGlobal("fetch", telemetryFetch);
+
+    const tool = makeTool({ name: "proveedores_sancionados_personas", pathTemplate: "/api/recurso", pathParams: [] });
+    await invokeTool(tool, { dni: "12345678" });
+
+    const payload = JSON.parse(telemetryFetch.mock.calls[1][1].body);
+    expect(payload.args.dni).toBe("[redacted]");
+
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("redacts the tool-specific sensitive 'ruc' arg on proveedores_sancionados_doble_inhabilitacion, but not on other tools", async () => {
+    vi.stubEnv("HERMES_INGEST_URL", "http://localhost:4000/ingest");
+    vi.stubEnv("HERMES_INGEST_TOKEN", "test-token");
+    const telemetryFetch = vi.fn();
+    telemetryFetch
+      .mockResolvedValueOnce({ status: 200, headers: new Headers({ "content-type": "application/json" }), json: async () => ({ ok: true }) })
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ status: 200, headers: new Headers({ "content-type": "application/json" }), json: async () => ({ ok: true }) })
+      .mockResolvedValueOnce({ ok: true });
+    vi.stubGlobal("fetch", telemetryFetch);
+
+    const sensitiveTool = makeTool({ name: "proveedores_sancionados_doble_inhabilitacion", pathTemplate: "/api/recurso", pathParams: [] });
+    await invokeTool(sensitiveTool, { ruc: "12345678" });
+    const sensitivePayload = JSON.parse(telemetryFetch.mock.calls[1][1].body);
+    expect(sensitivePayload.args.ruc).toBe("[redacted]");
+
+    const publicTool = makeTool({ name: "catastro_minero_derechos", pathTemplate: "/api/recurso", pathParams: [] });
+    await invokeTool(publicTool, { ruc: "20123456789" });
+    const publicPayload = JSON.parse(telemetryFetch.mock.calls[3][1].body);
+    expect(publicPayload.args.ruc).toBe("20123456789");
+
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("telemetryEnabled", () => {
+  it("is true only when both HERMES_INGEST_URL and HERMES_INGEST_TOKEN are set", () => {
+    vi.stubEnv("HERMES_INGEST_URL", "http://localhost:4000/ingest");
+    vi.stubEnv("HERMES_INGEST_TOKEN", "test-token");
+    expect(telemetryEnabled()).toBe(true);
+    vi.unstubAllEnvs();
+  });
+
+  it("is false when HERMES_INGEST_URL is missing", () => {
+    vi.stubEnv("HERMES_INGEST_URL", "");
+    vi.stubEnv("HERMES_INGEST_TOKEN", "test-token");
+    expect(telemetryEnabled()).toBe(false);
+    vi.unstubAllEnvs();
+  });
+
+  it("is false when HERMES_INGEST_TOKEN is missing", () => {
+    vi.stubEnv("HERMES_INGEST_URL", "http://localhost:4000/ingest");
+    vi.stubEnv("HERMES_INGEST_TOKEN", "");
+    expect(telemetryEnabled()).toBe(false);
+    vi.unstubAllEnvs();
+  });
+});
+
+describe("redactSensitiveArgs", () => {
+  it("redacts 'dni' and 'rucDni' regardless of casing", () => {
+    const result = redactSensitiveArgs("some_tool", { DNI: "12345678", rucDni: "87654321", departamento: "LIMA" });
+    expect(result).toEqual({ DNI: "[redacted]", rucDni: "[redacted]", departamento: "LIMA" });
+  });
+
+  it("leaves a plain 'ruc' arg untouched for tools other than the known dual-use one", () => {
+    const result = redactSensitiveArgs("catastro_minero_derechos", { ruc: "20123456789" });
+    expect(result).toEqual({ ruc: "20123456789" });
+  });
+
+  it("redacts 'ruc' specifically for proveedores_sancionados_doble_inhabilitacion", () => {
+    const result = redactSensitiveArgs("proveedores_sancionados_doble_inhabilitacion", { ruc: "12345678" });
+    expect(result).toEqual({ ruc: "[redacted]" });
   });
 });
 

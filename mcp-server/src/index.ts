@@ -90,6 +90,78 @@ export function emitTelemetry(event: ToolTelemetryEvent): void {
 }
 
 /**
+ * Único gate real para saber si vale la pena construir un `ToolTelemetryEvent`.
+ * `emitTelemetry` ya revisa estas mismas dos env vars internamente, pero eso
+ * pasa DESPUÉS de que `record` ya pagó el costo de serializar el body entero
+ * (`JSON.stringify(body).length`) en cada tool call — incluyendo en el Worker
+ * desplegado, donde estas vars nunca están seteadas. Exportar el check acá
+ * permite a `record` cortar antes de construir nada.
+ */
+export function telemetryEnabled(): boolean {
+  return Boolean(process.env.HERMES_INGEST_URL && process.env.HERMES_INGEST_TOKEN);
+}
+
+/**
+ * Query params que representan un documento de identidad nacional y que
+ * algunos tools de `catalog.ts` dejan pasar SIN enmascarar en el filtro
+ * (aunque la respuesta sí los enmascare) — ver `dni` y `rucDni` en varios
+ * `querySchema`. Reenviarlos tal cual por telemetry expondría ese valor sin
+ * auth en el lado de lectura del bridge (`GET /events`). `ruc` NO entra acá:
+ * en 9 de los 10 tools que lo usan es un identificador público de 11 dígitos
+ * (RUC de empresa), reforzado por regex — solo
+ * `proveedores_sancionados_doble_inhabilitacion` lo deja como texto libre que
+ * puede llevar un DNI ("busca en ambos lados del JOIN"), así que ese caso se
+ * redacta por nombre de tool, no globalmente por nombre de parámetro.
+ */
+const SENSITIVE_ARG_KEYS = new Set(["dni", "rucdni"]);
+
+/**
+ * Tools cuyo querySchema reusa un nombre de parámetro no-sensible por sí
+ * mismo (p. ej. `ruc`) para también aceptar un valor sensible en ese tool
+ * específico. Ver comentario de `SENSITIVE_ARG_KEYS`.
+ */
+const TOOL_SPECIFIC_SENSITIVE_ARG_KEYS: Record<string, Set<string>> = {
+  proveedores_sancionados_doble_inhabilitacion: new Set(["ruc"]),
+};
+
+/**
+ * Redacta valores de args sensibles (documentos de identidad sin enmascarar)
+ * antes de que `record` los reenvíe a `emitTelemetry`. Comparación de claves
+ * case-insensitive porque `querySchema` no garantiza una casing única.
+ */
+export function redactSensitiveArgs(toolName: string, rawArgs: Record<string, unknown>): Record<string, unknown> {
+  const toolSpecificKeys = TOOL_SPECIFIC_SENSITIVE_ARG_KEYS[toolName];
+  const redacted: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(rawArgs)) {
+    const keyLower = key.toLowerCase();
+    const isSensitive = SENSITIVE_ARG_KEYS.has(keyLower) || Boolean(toolSpecificKeys?.has(key));
+    redacted[key] = isSensitive ? "[redacted]" : value;
+  }
+  return redacted;
+}
+
+/**
+ * Nombres de propiedad, en orden de prioridad, bajo los que los handlers de
+ * este repo envuelven un arreglo "tabular" en el body de respuesta. Un grep
+ * real sobre `src/handlers/.../*.ts` (2026-11-02) no encontró NINGÚN handler
+ * que devuelva un array desnudo — todos envuelven en un objeto, mayoría con
+ * `resultados` (191+ ocurrencias), seguido de `registros` e `items`; `data`
+ * se deja como fallback por si algún caller externo sí llega a usarlo.
+ */
+const ROW_WRAPPER_KEYS = ["resultados", "registros", "items", "data"] as const;
+
+function countRows(body: unknown): number | undefined {
+  if (Array.isArray(body)) return body.length;
+  if (body && typeof body === "object") {
+    for (const key of ROW_WRAPPER_KEYS) {
+      const value = (body as Record<string, unknown>)[key];
+      if (Array.isArray(value)) return value.length;
+    }
+  }
+  return undefined;
+}
+
+/**
  * Valida `args` contra el `querySchema` (Zod) del tool antes de construir la URL real. Sin esto,
  * `buildQuery` solo hacía `String(value)` de lo que llegara del cliente MCP: un `limit` fuera de
  * rango, un enum inválido o un campo requerido faltante (ej. `ruc` en
@@ -131,15 +203,16 @@ export async function invokeTool(
   const startedAt = performance.now();
 
   const record = (result: ToolResult, body: unknown): ToolResult => {
+    if (!telemetryEnabled()) return result;
     emitTelemetry({
       tool: tool.name,
       app: tool.app,
       durationMs: performance.now() - startedAt,
       isError: result.isError,
-      args,
+      args: redactSensitiveArgs(tool.name, args),
       resultSummary: {
         bytes: JSON.stringify(body).length,
-        rows: Array.isArray(body) ? body.length : undefined,
+        rows: countRows(body),
       },
     });
     return result;
